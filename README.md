@@ -106,9 +106,16 @@ Tarayıcınızda `http://localhost:8000` adresine gidin.
 3. PostgreSQL eklentisi ekleyin
 4. Ortam değişkenlerini ayarlayın:
    - `DATABASE_URL` (Otomatik eklenir)
-   - `SECRET_KEY`
+   - `SECRET_KEY` (Güvenli bir key)
    - `DEBUG=False`
-   - `ALLOWED_HOSTS`
+   - `DJANGO_SUPERUSER_USERNAME=admin` (Opsiyonel)
+   - `DJANGO_SUPERUSER_EMAIL=admin@example.com` (Opsiyonel)
+   - `DJANGO_SUPERUSER_PASSWORD=güvenli_şifre` (Opsiyonel)
+
+**Not:** Superuser environment variables ayarlanmazsa varsayılan değerler kullanılır:
+- Username: `admin`
+- Email: `admin@mestakip.com`
+- Password: `admin123` (İlk girişten sonra mutlaka değiştirin!)
 
 ### Gunicorn ile Çalıştırma
 ```bash

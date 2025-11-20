@@ -11,6 +11,10 @@ if [ -n "$RAILWAY_ENVIRONMENT" ]; then
     echo "📊 Running migrations..."
     python manage.py migrate --noinput
     
+    # Create superuser if needed
+    echo "👤 Creating superuser if needed..."
+    python create_superuser.py
+    
     # Collect static files
     echo "📦 Collecting static files..."
     python manage.py collectstatic --noinput

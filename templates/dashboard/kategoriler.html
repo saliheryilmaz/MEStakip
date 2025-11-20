@@ -163,11 +163,14 @@
                     <div class="mb-3">
                         <label class="form-label">Üst Kategori (Opsiyonel)</label>
                         <select class="form-select" name="parent_id">
-                            <option value="">SEÇİN...</option>
-                            {% for kategori in ana_kategoriler %}
-                            <option value="{{ kategori.id }}">{{ kategori.name }}</option>
+                            <option value="">Ana Kategori (Üst Kategori Yok)</option>
+                            {% for kategori in tum_kategoriler %}
+                            <option value="{{ kategori.id }}">
+                                {% if kategori.parent %}└─ {% endif %}{{ kategori.name }}
+                            </option>
                             {% endfor %}
                         </select>
+                        <small class="form-text text-muted">Boş bırakırsanız ana kategori olarak oluşturulur</small>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -197,28 +200,22 @@
                             required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Üst Kategori</label>
+                        <label class="form-label">Üst Kategori (Opsiyonel)</label>
                         <select class="form-select" name="parent_id">
-                            <option value="">Ana Kategori</option>
-                            {% for ana_kat in ana_kategoriler %}
-                            <option value="{{ ana_kat.id }}" {% if kategori.parent and kategori.parent.id == ana_kat.id %}selected{% endif %}>{{ ana_kat.name }}</option>
+                            <option value="">Ana Kategori (Üst Kategori Yok)</option>
+                            {% for kat in tum_kategoriler %}
+                            {% if kat.id != kategori.id %}
+                            <option value="{{ kat.id }}" {% if kategori.parent and kategori.parent.id == kat.id %}selected{% endif %}>
+                                {% if kat.parent %}└─ {% endif %}{{ kat.name }}
+                            </option>
+                            {% endif %}
                             {% endfor %}
                         </select>
+                        <small class="form-text text-muted">Boş bırakırsanız ana kategori olur</small>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Kaydı Açan</label>
-                        <select class="form-select" name="kaydi_acan_id">
-                            {% if kategori.created_by %}
-                            <option value="{{ kategori.created_by.id }}" selected>{{ kategori.get_created_by_display }}</option>
-                            {% else %}
-                            <option value="">Seçiniz...</option>
-                            {% endif %}
-                            {% for kullanici in tum_kullanicilar %}
-                            {% if not kategori.created_by or kullanici.id != kategori.created_by.id %}
-                            <option value="{{ kullanici.id }}">{{ kullanici.get_full_name|default:kullanici.username }}</option>
-                            {% endif %}
-                            {% endfor %}
-                        </select>
+                        <input type="text" class="form-control" value="{{ kategori.get_created_by_display }}" readonly>
                     </div>
                 </div>
                 <div class="modal-footer">

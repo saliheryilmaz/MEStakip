@@ -224,7 +224,7 @@ class TransactionCategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Transaction)
 class TransactionAdmin(admin.ModelAdmin):
-    list_display = ['id', 'hareket_tipi', 'tarih', 'kasa_adi', 'nakit', 'kredi_karti', 'cari', 'toplam', 'kategori1', 'kategori2', 'kategori3', 'created_by']
+    list_display = ['id', 'hareket_tipi', 'tarih', 'kasa_adi', 'nakit', 'kredi_karti', 'sanal_pos', 'cari', 'toplam', 'kategori1', 'kategori2', 'kategori3', 'created_by']
     list_filter = ['hareket_tipi', 'tarih', 'kategori1', 'kategori2', 'kategori3']
     search_fields = ['aciklama', 'kasa_adi']
     readonly_fields = ['created_at', 'updated_at']

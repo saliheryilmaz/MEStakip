@@ -11,12 +11,16 @@ from datetime import datetime, timedelta, date
 import json
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
+from django.urls import reverse
+from django.views.decorators.http import require_POST
+from decimal import Decimal
 from .models import Siparis, UserProfile, Notification, Transaction, TransactionCategory, Event, MalzemeHareketi, MalzemeDosya
 from .forms import SiparisForm, TransactionForm, MalzemeExcelUploadForm
 # pandas removed - using openpyxl instead
 from collections import defaultdict
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.dateparse import parse_date
+from .utils import parse_decimal_value
 
 @login_required
 def index(request):
@@ -85,7 +89,7 @@ def index(request):
     monthly_income = []
     monthly_expense = []
     monthly_labels = []
-    toplam_ifade = (F('nakit') + F('kredi_karti') + F('cari') + F('mehmet_havale'))
+    toplam_ifade = (F('nakit') + F('kredi_karti') + F('sanal_pos') + F('cari') + F('mehmet_havale'))
     
     for i in range(11, -1, -1):
         start_date = timezone.now() - timedelta(days=30*i)
@@ -257,7 +261,7 @@ def products(request):
     qs = qs.order_by('-created_at')
     
     # Özet bilgileri
-    toplam_ifade = (F('nakit') + F('kredi_karti') + F('cari') + F('mehmet_havale'))
+    toplam_ifade = (F('nakit') + F('kredi_karti') + F('sanal_pos') + F('cari') + F('mehmet_havale') + F('banka_havale'))
     
     gun_ozeti = qs.aggregate(
         gelir=Sum(Case(When(hareket_tipi='gelir', then=toplam_ifade), default=0, output_field=DecimalField(max_digits=12, decimal_places=2))),
@@ -270,23 +274,30 @@ def products(request):
     gun_ozeti['islem_sayisi'] = qs.count()
     
     # Ödeme yöntemlerine göre toplamlar (gelir - gider)
+    # Merkez Satış kasasını hariç tut
     # Gelir toplamları
-    gelir_nakit = qs.filter(hareket_tipi='gelir').aggregate(total=Sum('nakit', default=0))['total'] or 0
-    gelir_kredi_karti = qs.filter(hareket_tipi='gelir').aggregate(total=Sum('kredi_karti', default=0))['total'] or 0
-    gelir_cari = qs.filter(hareket_tipi='gelir').aggregate(total=Sum('cari', default=0))['total'] or 0
-    gelir_mehmet_havale = qs.filter(hareket_tipi='gelir').aggregate(total=Sum('mehmet_havale', default=0))['total'] or 0
+    gelir_nakit = qs.filter(hareket_tipi='gelir').exclude(kasa_adi='merkez-satis').aggregate(total=Sum('nakit', default=0))['total'] or 0
+    gelir_kredi_karti = qs.filter(hareket_tipi='gelir').exclude(kasa_adi='merkez-satis').aggregate(total=Sum('kredi_karti', default=0))['total'] or 0
+    gelir_cari = qs.filter(hareket_tipi='gelir').exclude(kasa_adi='merkez-satis').aggregate(total=Sum('cari', default=0))['total'] or 0
+    gelir_sanal_pos = qs.filter(hareket_tipi='gelir').exclude(kasa_adi='merkez-satis').aggregate(total=Sum('sanal_pos', default=0))['total'] or 0
+    gelir_mehmet_havale = qs.filter(hareket_tipi='gelir').exclude(kasa_adi='merkez-satis').aggregate(total=Sum('mehmet_havale', default=0))['total'] or 0
+    gelir_banka_havale = qs.filter(hareket_tipi='gelir').exclude(kasa_adi='merkez-satis').aggregate(total=Sum('banka_havale', default=0))['total'] or 0
     
     # Gider toplamları
-    gider_nakit = qs.filter(hareket_tipi='gider').aggregate(total=Sum('nakit', default=0))['total'] or 0
-    gider_kredi_karti = qs.filter(hareket_tipi='gider').aggregate(total=Sum('kredi_karti', default=0))['total'] or 0
-    gider_cari = qs.filter(hareket_tipi='gider').aggregate(total=Sum('cari', default=0))['total'] or 0
-    gider_mehmet_havale = qs.filter(hareket_tipi='gider').aggregate(total=Sum('mehmet_havale', default=0))['total'] or 0
+    gider_nakit = qs.filter(hareket_tipi='gider').exclude(kasa_adi='merkez-satis').aggregate(total=Sum('nakit', default=0))['total'] or 0
+    gider_kredi_karti = qs.filter(hareket_tipi='gider').exclude(kasa_adi='merkez-satis').aggregate(total=Sum('kredi_karti', default=0))['total'] or 0
+    gider_cari = qs.filter(hareket_tipi='gider').exclude(kasa_adi='merkez-satis').aggregate(total=Sum('cari', default=0))['total'] or 0
+    gider_sanal_pos = qs.filter(hareket_tipi='gider').exclude(kasa_adi='merkez-satis').aggregate(total=Sum('sanal_pos', default=0))['total'] or 0
+    gider_mehmet_havale = qs.filter(hareket_tipi='gider').exclude(kasa_adi='merkez-satis').aggregate(total=Sum('mehmet_havale', default=0))['total'] or 0
+    gider_banka_havale = qs.filter(hareket_tipi='gider').exclude(kasa_adi='merkez-satis').aggregate(total=Sum('banka_havale', default=0))['total'] or 0
     
-    # Net toplamlar (gelir - gider)
-    gun_ozeti['nakit_toplam'] = gelir_nakit - gider_nakit
-    gun_ozeti['kredi_karti_toplam'] = gelir_kredi_karti - gider_kredi_karti
-    gun_ozeti['cari_toplam'] = gelir_cari - gider_cari
-    gun_ozeti['mehmet_havale_toplam'] = gelir_mehmet_havale - gider_mehmet_havale
+    # Ödeme yöntemi kartlarında yalnızca gelirleri göster
+    gun_ozeti['nakit_toplam'] = gelir_nakit
+    gun_ozeti['kredi_karti_toplam'] = gelir_kredi_karti
+    gun_ozeti['cari_toplam'] = gelir_cari
+    gun_ozeti['sanal_pos_toplam'] = gelir_sanal_pos
+    gun_ozeti['mehmet_havale_toplam'] = gelir_mehmet_havale
+    gun_ozeti['banka_havale_toplam'] = gelir_banka_havale
 
     # Excel verileri için tarih filtrelemesi
     hareketler = MalzemeHareketi.objects.filter(kullanici=request.user).order_by('-tarih')
@@ -359,10 +370,11 @@ def products(request):
     
     # Ödeme şekillerine göre grupla ve topla
     excel_odeme_dict = {
-        'Nakit': 0,
-        'Kredi_Karti': 0,
-        'Cari': 0,
-        'Sanal_Pos': 0
+        'Nakit': Decimal('0'),
+        'Kredi_Karti': Decimal('0'),
+        'Cari': Decimal('0'),
+        'Sanal_Pos': Decimal('0'),
+        'Banka_Havale': Decimal('0')
     }
     
     for satir in excel_satirlar:
@@ -373,16 +385,17 @@ def products(request):
         
         # Ana ödeme şekillerini belirle (tam eşleşme ve içerme kontrolü)
         # Nakit kontrolü
+        amount = parse_decimal_value(satir.tutar)
         if (odeme_sekli_original.lower() == 'nakit' or 
             'nakit' in odeme_sekli_normalized or 
             odeme_sekli_normalized == 'nakit'):
-            excel_odeme_dict['Nakit'] += float(satir.tutar)
+            excel_odeme_dict['Nakit'] += amount
         # Kredi Kartı kontrolü
         elif ('kart' in odeme_sekli_normalized or 
               'kredi' in odeme_sekli_normalized or 
               'kredit' in odeme_sekli_normalized or
               odeme_sekli_original.lower() in ['kredi kartı', 'kredi karti', 'kart', 'credit card']):
-            excel_odeme_dict['Kredi_Karti'] += float(satir.tutar)
+            excel_odeme_dict['Kredi_Karti'] += amount
         # Sanal Pos kontrolü
         elif ('sanal' in odeme_sekli_normalized or 
               'pos' in odeme_sekli_normalized or
@@ -392,26 +405,48 @@ def products(request):
               'mehmet' in odeme_sekli_normalized or
               'mhavale' in odeme_sekli_normalized or
               odeme_sekli_original.lower() in ['sanal pos', 'sanalpos', 'pos', 'm.havale', 'm havale', 'mhavale', 'mehmet havale']):
-            excel_odeme_dict['Sanal_Pos'] += float(satir.tutar)
+            excel_odeme_dict['Sanal_Pos'] += amount
         # Cari kontrolü
         elif ('cari' in odeme_sekli_normalized or 
               odeme_sekli_original.lower() == 'cari' or
               odeme_sekli_normalized == 'cari'):
-            excel_odeme_dict['Cari'] += float(satir.tutar)
+            excel_odeme_dict['Cari'] += amount
         else:
             # Eğer eşleşme yoksa, varsayılan olarak hiçbir şeye eklenmez
             pass
     
+    # Merkez Satış kasasındaki işlemleri de Excel toplamlarına ekle
+    merkez_satis_islemler = qs.filter(kasa_adi='merkez-satis')
+    
+    # Merkez Satış işlemlerini ödeme şekillerine göre grupla
+    for islem in merkez_satis_islemler:
+        # Sadece gelir işlemlerini hesapla
+        if islem.hareket_tipi == 'gelir':
+            # Her ödeme şeklini ayrı ayrı topla
+            excel_odeme_dict['Nakit'] += parse_decimal_value(islem.nakit)
+            excel_odeme_dict['Kredi_Karti'] += parse_decimal_value(islem.kredi_karti)
+            excel_odeme_dict['Cari'] += parse_decimal_value(islem.cari)
+            excel_odeme_dict['Sanal_Pos'] += parse_decimal_value(islem.sanal_pos) + parse_decimal_value(islem.mehmet_havale)
+            excel_odeme_dict['Banka_Havale'] += parse_decimal_value(islem.banka_havale)
+    
     # Dictionary'yi context'e gönder
     excel_odeme_toplamlari = excel_odeme_dict
     
+    merkez_ekstra_islemler = qs.filter(kasa_adi='merkez-satis')
+    detayli_islemler = qs.exclude(kasa_adi='merkez-satis')
+    merkez_ekstra_toplam = merkez_ekstra_islemler.aggregate(
+        total=Sum(toplam_ifade, default=0)
+    )['total'] or 0
+
     context = {
         'page_title': 'Products',
         'secilen_tarih': secilen_tarih or date.today().strftime('%Y-%m-%d'),
         'baslangic_tarih': baslangic_tarih,
         'bitis_tarih': bitis_tarih,
         'gun_ozeti': gun_ozeti,
-        'gunun_islemleri': qs,
+        'gunun_islemleri': detayli_islemler,
+        'merkez_ekstra_islemler': merkez_ekstra_islemler,
+        'merkez_ekstra_toplam': merkez_ekstra_toplam,
         'malzeme_gunluk': gunluk_sorted,
         'gunluk_excel': gunluk_excel_sorted,
         'secilen_gun_excel': secilen_gun_excel,
@@ -425,40 +460,25 @@ def products(request):
     }
     return render(request, 'dashboard/products.html', context)
 
+
+
+
 @login_required
-def finance(request):
-    """Gelir/Gider İşlemleri form sayfası"""
-    form = TransactionForm(request.POST or None, user=request.user)
-    if request.method == 'POST':
-        if form.is_valid():
-            tx = form.save(commit=False)
-            tx.created_by = request.user
-            tx.save()
-            messages.success(request, 'İşlem kaydedildi.')
-            next_url = request.POST.get('next') or request.GET.get('next')
-            if next_url and next_url.startswith('/'):
-                return redirect(next_url)
-            return redirect('dashboard:products')
-        else:
-            # Form geçersizse hataları göster
-            messages.error(request, 'Form hatası! Lütfen aşağıdaki hataları kontrol edin.')
-            print("Form Errors:", form.errors)  # Debug için
+@require_POST
+def transaction_sil(request, transaction_id):
+    """Detaylı işlemler tablosundan tek bir Transaction kaydını sil."""
+    transaction = get_object_or_404(Transaction, id=transaction_id, created_by=request.user)
+    next_url = request.POST.get('next') or request.META.get('HTTP_REFERER') or reverse('dashboard:products')
 
-    ana_kategoriler = TransactionCategory.objects.filter(parent=None, created_by=request.user).order_by('name')
-    last_transactions = Transaction.objects.filter(created_by=request.user).order_by('-tarih', '-id')[:10]
-    
-    # Debug için
-    print(f"Ana Kategoriler Sayısı: {ana_kategoriler.count()}")
-    for kat in ana_kategoriler:
-        print(f"  - {kat.name} (ID: {kat.id})")
+    try:
+        aciklama = transaction.aciklama or f'#{transaction.id}'
+        transaction.delete()
+        messages.success(request, f'"{aciklama}" işlemi silindi.')
+    except Exception as exc:
+        messages.error(request, f'İşlem silinirken bir hata oluştu: {exc}')
 
-    context = {
-        'page_title': 'Gelir/Gider İşlemleri',
-        'form': form,
-        'ana_kategoriler': ana_kategoriler,
-        'transactions': last_transactions,
-    }
-    return render(request, 'dashboard/finance.html', context)
+    return redirect(next_url)
+
 
 @login_required
 def orders(request):
@@ -1006,6 +1026,28 @@ def messages_view(request):
     """Gelir/Gider Toplamları sayfası (kasa bazında ve genel toplam)."""
     qs = Transaction.objects.filter(created_by=request.user)
 
+    start_date_str = request.GET.get('baslangic_tarih') or request.GET.get('start_date') or ''
+    end_date_str = request.GET.get('bitis_tarih') or request.GET.get('end_date') or ''
+    start_date = end_date = None
+
+    if start_date_str:
+        try:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            qs = qs.filter(tarih__gte=start_date)
+        except ValueError:
+            start_date_str = ''
+
+    if end_date_str:
+        try:
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            qs = qs.filter(tarih__lte=end_date)
+        except ValueError:
+            end_date_str = ''
+
+    if start_date and end_date and start_date > end_date:
+        start_date, end_date = end_date, start_date
+        start_date_str, end_date_str = end_date_str, start_date_str
+
     def build_entries(queryset, amount_getter):
         entries = []
         for tx in queryset.order_by('-tarih', '-id'):
@@ -1031,7 +1073,7 @@ def messages_view(request):
         return entries
 
     # Kasa bazında hesaplama için mehmet_havale'yi dahil etmiyoruz (ayrı hesaplanacak)
-    kasa_toplam_ifade = (F('nakit') + F('kredi_karti') + F('cari'))
+    kasa_toplam_ifade = (F('nakit') + F('kredi_karti') + F('sanal_pos') + F('cari'))
 
     # Kasa bazında gelir, gider ve net (gelir - gider) - mehmet_havale hariç
     kasa_ozet = (
@@ -1045,8 +1087,6 @@ def messages_view(request):
     )
 
     # Kartlar için belirli kasalar
-    servis_toplam = 0
-    merkez_satis_toplam = 0
     canta_toplam = 0
     mehmet_havale_toplam = 0
     genel_toplam = 0
@@ -1057,12 +1097,7 @@ def messages_view(request):
         net = float(row['net'] or 0)
         rows.append({'kasa_adi': kasa, 'bakiye': net})
         genel_toplam += net
-        
-        if kasa == 'servis':
-            servis_toplam = net
-        elif kasa == 'merkez-satis':
-            merkez_satis_toplam = net
-        elif kasa == 'canta':
+        if kasa == 'canta':
             canta_toplam = net
         elif kasa == 'mehmet-havale':
             mehmet_havale_toplam = net
@@ -1074,57 +1109,81 @@ def messages_view(request):
     )
     mehmet_havale_toplam = float((mehmet_havale_field_toplam['mehmet_havale_gelir'] or 0) - (mehmet_havale_field_toplam['mehmet_havale_gider'] or 0))
     
+    # Banka havale field'ından toplam hesapla
+    banka_havale_field_toplam = qs.aggregate(
+        banka_havale_gelir=Sum(Case(When(hareket_tipi='gelir', then='banka_havale'), default=0, output_field=DecimalField(max_digits=14, decimal_places=2))),
+        banka_havale_gider=Sum(Case(When(hareket_tipi='gider', then='banka_havale'), default=0, output_field=DecimalField(max_digits=14, decimal_places=2)))
+    )
+    banka_havale_toplam = float((banka_havale_field_toplam['banka_havale_gelir'] or 0) - (banka_havale_field_toplam['banka_havale_gider'] or 0))
+    
     # Ödeme yöntemlerine göre toplamlar (Detaylı İşlemler'den)
     # Gelir toplamları
     gelir_nakit = qs.filter(hareket_tipi='gelir').aggregate(total=Sum('nakit', default=0))['total'] or 0
     gelir_kredi_karti = qs.filter(hareket_tipi='gelir').aggregate(total=Sum('kredi_karti', default=0))['total'] or 0
     gelir_cari = qs.filter(hareket_tipi='gelir').aggregate(total=Sum('cari', default=0))['total'] or 0
+    gelir_sanal_pos = qs.filter(hareket_tipi='gelir').aggregate(total=Sum('sanal_pos', default=0))['total'] or 0
     gelir_mehmet_havale = qs.filter(hareket_tipi='gelir').aggregate(total=Sum('mehmet_havale', default=0))['total'] or 0
+    gelir_banka_havale = qs.filter(hareket_tipi='gelir').aggregate(total=Sum('banka_havale', default=0))['total'] or 0
     
     # Gider toplamları
     gider_nakit = qs.filter(hareket_tipi='gider').aggregate(total=Sum('nakit', default=0))['total'] or 0
     gider_kredi_karti = qs.filter(hareket_tipi='gider').aggregate(total=Sum('kredi_karti', default=0))['total'] or 0
     gider_cari = qs.filter(hareket_tipi='gider').aggregate(total=Sum('cari', default=0))['total'] or 0
+    gider_sanal_pos = qs.filter(hareket_tipi='gider').aggregate(total=Sum('sanal_pos', default=0))['total'] or 0
     gider_mehmet_havale = qs.filter(hareket_tipi='gider').aggregate(total=Sum('mehmet_havale', default=0))['total'] or 0
+    gider_banka_havale = qs.filter(hareket_tipi='gider').aggregate(total=Sum('banka_havale', default=0))['total'] or 0
     
     # Net toplamlar (gelir - gider)
     nakit_net = float(gelir_nakit - gider_nakit)
     kredi_karti_net = float(gelir_kredi_karti - gider_kredi_karti)
     cari_net = float(gelir_cari - gider_cari)
+    sanal_pos_net = float(gelir_sanal_pos - gider_sanal_pos)
     mehmet_havale_field_net = float(gelir_mehmet_havale - gider_mehmet_havale)
+    banka_havale_field_net = float(gelir_banka_havale - gider_banka_havale)
     
     # Nakit → Çanta'ya ekle
     canta_toplam += nakit_net
     
-    # Genel toplamı güncelle (tüm kasaların toplamı)
-    genel_toplam = sum([servis_toplam, merkez_satis_toplam, canta_toplam, mehmet_havale_toplam])
-
-    servis_entries = build_entries(qs.filter(kasa_adi='servis'), lambda tx: tx.toplam)
-    merkez_entries = build_entries(qs.filter(kasa_adi='merkez-satis'), lambda tx: tx.toplam)
+    # Kart modal verileri
     canta_entries = build_entries(qs.filter(Q(kasa_adi='canta') | ~Q(nakit=0)), lambda tx: tx.nakit)
     mehmet_havale_entries = build_entries(qs.filter(~Q(mehmet_havale=0)), lambda tx: tx.mehmet_havale)
+    banka_havale_entries = build_entries(qs.filter(~Q(banka_havale=0)), lambda tx: tx.banka_havale)
     genel_entries = build_entries(qs, lambda tx: tx.toplam)
+
+    if start_date and end_date:
+        date_range_label = f"{start_date.strftime('%d.%m.%Y')} - {end_date.strftime('%d.%m.%Y')}"
+    elif start_date:
+        date_range_label = f"{start_date.strftime('%d.%m.%Y')} sonrası"
+    elif end_date:
+        date_range_label = f"{end_date.strftime('%d.%m.%Y')} öncesi"
+    else:
+        date_range_label = "Tüm zamanlar"
 
     context = {
         'page_title': 'Gelir/Gider Toplamları',
-        'servis_toplam': servis_toplam,
-        'merkez_satis_toplam': merkez_satis_toplam,
         'canta_toplam': canta_toplam,
         'mehmet_havale_toplam': mehmet_havale_toplam,
+        'banka_havale_toplam': banka_havale_toplam,
         'genel_toplam': genel_toplam,
         'kasa_satirlari': rows,
-        'servis_islemleri': servis_entries,
-        'merkez_islemleri': merkez_entries,
         'canta_islemleri': canta_entries,
         'mehmet_havale_islemleri': mehmet_havale_entries,
+        'banka_havale_islemleri': banka_havale_entries,
         'genel_islemleri': genel_entries,
         # Ödeme yöntemleri toplamları (debug/ekstra bilgi için)
         'odeme_toplamlari': {
             'nakit': nakit_net,
             'kredi_karti': kredi_karti_net,
+            'sanal_pos': sanal_pos_net,
             'cari': cari_net,
             'mehmet_havale': mehmet_havale_field_net,
+            'banka_havale': banka_havale_field_net,
         },
+        'filters': {
+            'start_date': start_date_str,
+            'end_date': end_date_str,
+        },
+        'date_range_label': date_range_label,
     }
     return render(request, 'dashboard/messages.html', context)
 
@@ -1135,7 +1194,7 @@ def finance_overview(request):
         labels = []
         income = []
         expense = []
-        toplam_ifade = (F('nakit') + F('kredi_karti') + F('cari') + F('mehmet_havale'))
+        toplam_ifade = (F('nakit') + F('kredi_karti') + F('sanal_pos') + F('cari') + F('mehmet_havale'))
 
         now = timezone.now()
         for i in range(11, -1, -1):
@@ -2072,8 +2131,9 @@ def create_event_notifications(event):
 @login_required
 def finance(request):
     """Gelir/Gider İşlemleri sayfası"""
+    form = TransactionForm(request.POST or None, user=request.user)
+    
     if request.method == 'POST':
-        form = TransactionForm(request.POST)
         if form.is_valid():
             transaction = form.save(commit=False)
             transaction.created_by = request.user
@@ -2082,19 +2142,35 @@ def finance(request):
             messages.success(request, 'İşlem başarıyla kaydedildi!')
             
             # next parametresi varsa oraya yönlendir
-            next_url = request.POST.get('next')
-            if next_url:
+            next_url = request.POST.get('next') or request.GET.get('next')
+            if next_url and next_url.startswith('/'):
                 return redirect(next_url)
-            else:
-                return redirect('dashboard:finance')
+            return redirect('dashboard:products')
         else:
             messages.error(request, 'Form hatası! Lütfen alanları kontrol edin.')
-    else:
-        form = TransactionForm()
+            print("Form Errors:", form.errors)  # Debug için
+    
+    # Ana kategorileri context'e ekle
+    ana_kategoriler = TransactionCategory.objects.filter(
+        parent=None, 
+        created_by=request.user
+    ).order_by('name')
+    
+    # Son işlemleri getir
+    last_transactions = Transaction.objects.filter(
+        created_by=request.user
+    ).order_by('-tarih', '-id')[:10]
+    
+    # Debug için
+    print(f"Ana Kategoriler Sayısı: {ana_kategoriler.count()}")
+    for kat in ana_kategoriler:
+        print(f"  - {kat.name} (ID: {kat.id})")
     
     context = {
         'page_title': 'Gelir/Gider İşlemleri',
         'form': form,
+        'ana_kategoriler': ana_kategoriler,
+        'transactions': last_transactions,
     }
     return render(request, 'dashboard/finance.html', context)
 
@@ -2119,7 +2195,6 @@ def kategori_duzenle(request, kategori_id):
     if request.method == 'POST':
         kategori_adi = request.POST.get('kategori_adi')
         parent_id = request.POST.get('parent_id')
-        kaydi_acan_id = request.POST.get('kaydi_acan_id')
         
         if kategori_adi:
             # Üst kategori kontrolü
@@ -2134,15 +2209,7 @@ def kategori_duzenle(request, kategori_id):
                 except TransactionCategory.DoesNotExist:
                     pass
             
-            # Kaydı açan kullanıcıyı güncelle
-            if kaydi_acan_id:
-                try:
-                    user = User.objects.get(id=kaydi_acan_id)
-                    kategori.created_by = user
-                except User.DoesNotExist:
-                    messages.warning(request, 'Seçilen kullanıcı bulunamadı. Kaydı açan değiştirilmedi.')
-            
-            # Kategoriyi güncelle
+            # Kategoriyi güncelle (created_by değiştirilmez)
             eski_ad = kategori.name
             kategori.name = kategori_adi
             kategori.parent = parent
@@ -2158,19 +2225,47 @@ def kategori_duzenle(request, kategori_id):
 def get_alt_kategoriler(request, ana_kategori_id):
     """Ana kategoriye ait alt kategorileri JSON olarak döndür"""
     try:
-        ana_kategori = get_object_or_404(TransactionCategory, id=ana_kategori_id, parent=None, created_by=request.user)
-        alt_kategoriler = ana_kategori.children.filter(created_by=request.user).order_by('name')
+        # Ana kategoriyi kontrol et
+        ana_kategori = get_object_or_404(
+            TransactionCategory, 
+            id=ana_kategori_id, 
+            parent=None, 
+            created_by=request.user
+        )
         
-        data = []
-        for alt_kategori in alt_kategoriler:
-            data.append({
-                'id': alt_kategori.id,
-                'name': alt_kategori.name
-            })
+        # Alt kategorileri getir
+        alt_kategoriler = TransactionCategory.objects.filter(
+            parent=ana_kategori,
+            created_by=request.user
+        ).order_by('order', 'name')
         
-        return JsonResponse(data, safe=False)
+        # JSON formatında döndür
+        data = {
+            'success': True,
+            'ana_kategori': {
+                'id': ana_kategori.id,
+                'name': ana_kategori.name
+            },
+            'alt_kategoriler': [
+                {
+                    'id': alt_kat.id,
+                    'name': alt_kat.name
+                }
+                for alt_kat in alt_kategoriler
+            ]
+        }
+        
+        return JsonResponse(data)
+    except TransactionCategory.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Ana kategori bulunamadı'
+        }, status=404)
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=400)
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=400)
 
 @login_required
 def brand_distribution_api(request):
@@ -2266,10 +2361,7 @@ def malzeme_excel_upload(request):
                             tarih = date.today()
 
                         tutar_raw = row_data.get('TUTAR') or '0'
-                        try:
-                            tutar = float(str(tutar_raw).replace('.', '').replace(',', '.')) if tutar_raw else 0
-                        except:
-                            tutar = 0
+                        tutar = parse_decimal_value(tutar_raw)
                             
                         hareket = MalzemeHareketi(
                             dosya=dosya,
@@ -2420,30 +2512,7 @@ def malzeme_excel_kaydet(request):
                         odeme_sekli = str(val).strip() if val is not None else ''
                         break
                 
-                # Tutar işleme - daha esnek
-                tutar = 0
-                try:
-                    if tutar_raw is not None and tutar_raw != '':
-                        if isinstance(tutar_raw, (int, float)):
-                            tutar = float(tutar_raw)
-                        else:
-                            # String işleme - Türkçe sayı formatını destekle
-                            tutar_str = str(tutar_raw).strip()
-                            if tutar_str:
-                                # Virgül ve nokta işleme
-                                if ',' in tutar_str and '.' in tutar_str:
-                                    # 1.234,56 formatı
-                                    tutar_str = tutar_str.replace('.', '').replace(',', '.')
-                                elif ',' in tutar_str:
-                                    # 1234,56 formatı
-                                    tutar_str = tutar_str.replace(',', '.')
-                                # Sadece sayı ve nokta bırak
-                                import re
-                                tutar_str = re.sub(r'[^\d.]', '', tutar_str)
-                                tutar = float(tutar_str) if tutar_str else 0
-                except Exception as e:
-                    print(f"Tutar parse hatası: {e}, raw: {tutar_raw}")
-                    tutar = 0
+                tutar = parse_decimal_value(tutar_raw)
                 
                 print(f"İşlenmiş veri: TARİH={tarih}, FATURANO='{faturano}', MÜŞTERİ='{musteri}', ÜRÜN='{urun}', TUTAR={tutar}, ÖDEME='{odeme_sekli}'")
                 
@@ -2510,3 +2579,95 @@ def malzeme_excel_kaydet(request):
 def health_check(request):
     """Railway health check endpoint"""
     return JsonResponse({'status': 'healthy', 'timestamp': datetime.now().isoformat()})
+
+
+@login_required
+def income_expense_report(request):
+    """Gelir/Gider Raporu sayfası"""
+    # Filtreleme parametreleri
+    baslangic_tarih = request.GET.get('baslangic_tarih', '')
+    bitis_tarih = request.GET.get('bitis_tarih', '')
+    hareket_tipi = request.GET.get('hareket_tipi', '')
+    kasa_adi = request.GET.get('kasa_adi', '')
+    kategori_id = request.GET.get('kategori', '')
+    
+    # İşlemleri filtrele
+    islemler = Transaction.objects.filter(created_by=request.user).order_by('-tarih', '-created_at')
+    
+    # Tarih filtreleri
+    if baslangic_tarih:
+        try:
+            baslangic = datetime.strptime(baslangic_tarih, '%Y-%m-%d').date()
+            islemler = islemler.filter(tarih__gte=baslangic)
+        except ValueError:
+            baslangic_tarih = ''
+    
+    if bitis_tarih:
+        try:
+            bitis = datetime.strptime(bitis_tarih, '%Y-%m-%d').date()
+            islemler = islemler.filter(tarih__lte=bitis)
+        except ValueError:
+            bitis_tarih = ''
+    
+    # Hareket tipi filtresi
+    if hareket_tipi:
+        islemler = islemler.filter(hareket_tipi=hareket_tipi)
+    
+    # Kasa filtresi
+    if kasa_adi:
+        islemler = islemler.filter(kasa_adi=kasa_adi)
+    
+    # Kategori filtresi (sadece ana kategoriler)
+    if kategori_id:
+        islemler = islemler.filter(kategori1_id=kategori_id)
+    
+    # Özet hesaplamaları
+    summary = {
+        'nakit': 0,
+        'kredi_karti': 0,
+        'cari': 0,
+        'sanal_pos': 0,
+        'mehmet_havale': 0,
+        'banka_havale': 0,
+        'toplam': 0
+    }
+    
+    for islem in islemler:
+        multiplier = 1 if islem.hareket_tipi == 'gelir' else -1
+        summary['nakit'] += float(islem.nakit or 0) * multiplier
+        summary['kredi_karti'] += float(islem.kredi_karti or 0) * multiplier
+        summary['cari'] += float(islem.cari or 0) * multiplier
+        summary['sanal_pos'] += float(islem.sanal_pos or 0) * multiplier
+        summary['mehmet_havale'] += float(islem.mehmet_havale or 0) * multiplier
+        summary['banka_havale'] += float(islem.banka_havale or 0) * multiplier
+    
+    summary['toplam'] = (
+        summary['nakit'] + 
+        summary['kredi_karti'] + 
+        summary['cari'] + 
+        summary['sanal_pos'] + 
+        summary['mehmet_havale'] + 
+        summary['banka_havale']
+    )
+    
+    # Ana kategorileri al (parent'ı olmayan)
+    kategoriler = TransactionCategory.objects.filter(
+        created_by=request.user,
+        parent__isnull=True
+    ).order_by('order', 'name')
+    
+    context = {
+        'page_title': 'Gelir/Gider Raporu',
+        'islemler': islemler,
+        'summary': summary,
+        'kategoriler': kategoriler,
+        'filters': {
+            'baslangic_tarih': baslangic_tarih,
+            'bitis_tarih': bitis_tarih,
+            'hareket_tipi': hareket_tipi,
+            'kasa_adi': kasa_adi,
+            'kategori': kategori_id,
+        }
+    }
+    
+    return render(request, 'dashboard/income_expense_report.html', context)

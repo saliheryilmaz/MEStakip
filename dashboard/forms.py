@@ -9,8 +9,8 @@ class TransactionForm(forms.ModelForm):
     class Meta:
         model = Transaction
         fields = [
-            'hareket_tipi', 'tarih', 'kasa_adi', 'nakit', 'kredi_karti', 'cari', 'mehmet_havale',
-            'aciklama', 'kategori1'
+            'hareket_tipi', 'tarih', 'kasa_adi', 'nakit', 'kredi_karti', 'cari', 'sanal_pos',
+            'mehmet_havale', 'banka_havale', 'aciklama', 'kategori1'
         ]
         widgets = {
             'tarih': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
@@ -19,7 +19,9 @@ class TransactionForm(forms.ModelForm):
             'nakit': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'value': '0'}),
             'kredi_karti': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'value': '0'}),
             'cari': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'value': '0'}),
+            'sanal_pos': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'value': '0'}),
             'mehmet_havale': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'value': '0'}),
+            'banka_havale': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'value': '0'}),
             'aciklama': forms.TextInput(attrs={'class': 'form-control'}),
             'kategori1': forms.Select(attrs={'class': 'form-select'}),
         }
@@ -31,6 +33,8 @@ class TransactionForm(forms.ModelForm):
         
         # Kategori1'i opsiyonel yap
         self.fields['kategori1'].required = False
+        self.fields['kategori1'].empty_label = "Alt Kategori Seçiniz (Opsiyonel)"
+        
         # Açıklama alanını opsiyonel yap
         self.fields['aciklama'].required = False
         
@@ -44,21 +48,25 @@ class TransactionForm(forms.ModelForm):
             self.fields['tarih'].initial = timezone.now().date()
         
         # Kategori seçeneklerini kullanıcıya göre filtrele
+        # Not: Alt kategoriler JavaScript ile dinamik olarak yüklenecek
         if user:
+            # Tüm kategorileri queryset'e ekle (hem ana hem alt)
             self.fields['kategori1'].queryset = TransactionCategory.objects.filter(
-                created_by=user, parent=None
-            ).order_by('name')
+                created_by=user
+            ).order_by('parent__id', 'name')
 
     def clean(self):
         cleaned = super().clean()
         nakit = cleaned.get('nakit') or 0
         kredi = cleaned.get('kredi_karti') or 0
         cari = cleaned.get('cari') or 0
+        sanal = cleaned.get('sanal_pos') or 0
         mehmet = cleaned.get('mehmet_havale') or 0
+        banka = cleaned.get('banka_havale') or 0
         
         # En az bir ödeme alanı dolu olmalı
-        if nakit + kredi + cari + mehmet <= 0:
-            raise forms.ValidationError('En az bir ödeme alanı (Nakit, Kredi Kartı, Cari veya Mehmet Havale) doldurulmalıdır.')
+        if nakit + kredi + cari + sanal + mehmet + banka <= 0:
+            raise forms.ValidationError('En az bir ödeme alanı (Nakit, Kredi Kartı, Sanal Pos, Cari, Mehmet Havale veya Banka Havale) doldurulmalıdır.')
         
         # Sadece bir ödeme türü seçilmeli
         filled_fields = []
@@ -68,8 +76,12 @@ class TransactionForm(forms.ModelForm):
             filled_fields.append('Kredi Kartı')
         if cari > 0:
             filled_fields.append('Cari')
+        if sanal > 0:
+            filled_fields.append('Sanal Pos')
         if mehmet > 0:
             filled_fields.append('Mehmet Havale')
+        if banka > 0:
+            filled_fields.append('Banka Havale')
             
         if len(filled_fields) > 1:
             raise forms.ValidationError(f'Sadece bir ödeme türü seçilmelidir. Şu anda seçili: {", ".join(filled_fields)}')
@@ -208,3 +220,47 @@ class SiparisForm(forms.ModelForm):
 
 class MalzemeExcelUploadForm(forms.Form):
     file = forms.FileField(label='Excel Dosyası (*.xls, *.xlsx)', required=True)
+
+
+class TransactionCategoryForm(forms.ModelForm):
+    """Kategori ekleme/düzenleme formu"""
+    
+    class Meta:
+        model = TransactionCategory
+        fields = ['name', 'parent', 'order']
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Kategori adını girin'
+            }),
+            'parent': forms.Select(attrs={
+                'class': 'form-select'
+            }),
+            'order': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': '0',
+                'value': '0'
+            })
+        }
+        labels = {
+            'name': 'Kategori Adı',
+            'parent': 'Üst Kategori (Opsiyonel)',
+            'order': 'Sıra'
+        }
+    
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        
+        # Parent alanını opsiyonel yap
+        self.fields['parent'].required = False
+        self.fields['parent'].empty_label = "Ana Kategori (Üst Kategori Yok)"
+        
+        # Order alanını opsiyonel yap
+        self.fields['order'].required = False
+        
+        # Kullanıcıya ait kategorileri göster
+        if user:
+            self.fields['parent'].queryset = TransactionCategory.objects.filter(
+                created_by=user
+            ).order_by('parent__id', 'order', 'name')

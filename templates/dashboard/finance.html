@@ -86,8 +86,16 @@
                         {{ form.cari }}
                     </div>
                     <div class="col-md-3">
+                        <label class="form-label">💳 Sanal Pos</label>
+                        {{ form.sanal_pos }}
+                    </div>
+                    <div class="col-md-3">
                         <label class="form-label">🏦 Mehmet Havale</label>
                         {{ form.mehmet_havale }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">🏦 Banka Havale</label>
+                        {{ form.banka_havale }}
                     </div>
 
                     <div class="col-12">
@@ -104,7 +112,9 @@
             <div class="card-header">
                 <h5 class="card-title mb-0">
                     Kategori
-                    <span class="badge bg-info ms-2">{{ ana_kategoriler.count }} ana kategori</span>
+                    <a href="{% url 'dashboard:kategoriler' %}" class="btn btn-sm btn-outline-primary ms-2" title="Kategori Yönetimi">
+                        <i class="bi bi-gear me-1"></i>Kategori Yönet
+                    </a>
                 </h5>
             </div>
             <div class="card-body">
@@ -112,18 +122,26 @@
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label class="form-label">Ana Kategori Seçin (Opsiyonel)</label>
-                        <select class="form-select" name="ana_kategori" id="ana-kategori-select">
+                        <select class="form-select" name="ana_kategori_temp" id="ana-kategori-select">
                             <option value="">Ana Kategori Seçiniz</option>
                             {% for kategori in ana_kategoriler %}
                             <option value="{{ kategori.id }}">{{ kategori.name }}</option>
                             {% endfor %}
                         </select>
+                        <small class="form-text text-muted d-block mt-1">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Önce ana kategori seçin
+                        </small>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Alt Kategori Seçin (Opsiyonel)</label>
                         <select class="form-select" name="kategori1" id="alt-kategori-select" disabled>
                             <option value="">Önce ana kategori seçin</option>
                         </select>
+                        <small class="form-text text-muted d-block mt-1">
+                            <i class="bi bi-lightbulb me-1"></i>
+                            Ana kategoriye göre alt kategoriler yüklenir
+                        </small>
                     </div>
                 </div>
             </div>
@@ -192,6 +210,111 @@
                 tarihInput.value = todayStr;
             }
         }
+
+        // Kategori yönetimi - Ana kategori seçildiğinde alt kategorileri yükle
+        const anaKategoriSelect = document.getElementById('ana-kategori-select');
+        const altKategoriSelect = document.getElementById('alt-kategori-select');
+        
+        if (anaKategoriSelect && altKategoriSelect) {
+            anaKategoriSelect.addEventListener('change', function() {
+                const anaKategoriId = this.value;
+                
+                // Alt kategori dropdown'ını temizle
+                altKategoriSelect.innerHTML = '<option value="">Yükleniyor...</option>';
+                altKategoriSelect.disabled = true;
+                
+                if (!anaKategoriId) {
+                    // Ana kategori seçilmemişse
+                    altKategoriSelect.innerHTML = '<option value="">Önce ana kategori seçin</option>';
+                    altKategoriSelect.disabled = true;
+                    return;
+                }
+                
+                // AJAX ile alt kategorileri yükle
+                fetch(`/dashboard/api/alt-kategoriler/${anaKategoriId}/`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Alt kategorileri dropdown'a ekle
+                            altKategoriSelect.innerHTML = '<option value="">Alt Kategori Seçiniz (Opsiyonel)</option>';
+                            
+                            if (data.alt_kategoriler.length === 0) {
+                                altKategoriSelect.innerHTML += '<option value="" disabled>Bu kategorinin alt kategorisi yok</option>';
+                            } else {
+                                data.alt_kategoriler.forEach(kategori => {
+                                    const option = document.createElement('option');
+                                    option.value = kategori.id;
+                                    option.textContent = kategori.name;
+                                    altKategoriSelect.appendChild(option);
+                                });
+                            }
+                            
+                            altKategoriSelect.disabled = false;
+                        } else {
+                            altKategoriSelect.innerHTML = '<option value="">Hata: Alt kategoriler yüklenemedi</option>';
+                            console.error('Alt kategoriler yüklenemedi:', data.error);
+                        }
+                    })
+                    .catch(error => {
+                        altKategoriSelect.innerHTML = '<option value="">Hata: Bağlantı hatası</option>';
+                        console.error('AJAX hatası:', error);
+                    });
+            });
+        }
+
+        // Ödeme alanları yönetimi - Sadece bir ödeme türü seçilebilsin
+        const paymentFields = ['nakit', 'kredi_karti', 'cari', 'sanal_pos', 'mehmet_havale', 'banka_havale'];
+        const paymentInputs = {};
+        const paymentInfo = document.getElementById('payment-info');
+        const paymentInfoText = document.getElementById('payment-info-text');
+        
+        // Tüm ödeme input'larını al
+        paymentFields.forEach(field => {
+            const input = document.querySelector(`input[name="${field}"]`);
+            if (input) {
+                paymentInputs[field] = input;
+            }
+        });
+        
+        // Her input için change event'i ekle
+        Object.keys(paymentInputs).forEach(fieldName => {
+            const input = paymentInputs[fieldName];
+            
+            input.addEventListener('input', function() {
+                const value = parseFloat(this.value) || 0;
+                
+                if (value > 0) {
+                    // Bu alan dolduruldu, diğerlerini temizle
+                    Object.keys(paymentInputs).forEach(otherField => {
+                        if (otherField !== fieldName) {
+                            paymentInputs[otherField].value = '0';
+                        }
+                    });
+                    
+                    // Bilgi mesajını göster
+                    const fieldLabels = {
+                        'nakit': '💰 Nakit',
+                        'kredi_karti': '💳 Kredi Kartı',
+                        'cari': '🏢 Cari',
+                        'sanal_pos': '💳 Sanal Pos',
+                        'mehmet_havale': '🏦 Mehmet Havale',
+                        'banka_havale': '🏦 Banka Havale'
+                    };
+                    
+                    paymentInfoText.textContent = `${fieldLabels[fieldName]} seçildi: ${value.toFixed(2)} ₺`;
+                    paymentInfo.classList.remove('d-none');
+                } else {
+                    // Değer 0 ise bilgi mesajını gizle
+                    const anyFilled = Object.keys(paymentInputs).some(f => {
+                        return parseFloat(paymentInputs[f].value) > 0;
+                    });
+                    
+                    if (!anyFilled) {
+                        paymentInfo.classList.add('d-none');
+                    }
+                }
+            });
+        });
 
         const tableContainer = document.getElementById('excel-table-container');
         const fileInput = document.getElementById('excelFileInput');

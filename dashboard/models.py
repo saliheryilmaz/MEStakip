@@ -423,7 +423,9 @@ class Transaction(models.Model):
     nakit = models.DecimalField(max_digits=12, decimal_places=2, default=0, validators=[MinValueValidator(0)], verbose_name="Nakit")
     kredi_karti = models.DecimalField(max_digits=12, decimal_places=2, default=0, validators=[MinValueValidator(0)], verbose_name="Kredi Kartı")
     cari = models.DecimalField(max_digits=12, decimal_places=2, default=0, validators=[MinValueValidator(0)], verbose_name="Cari")
+    sanal_pos = models.DecimalField(max_digits=12, decimal_places=2, default=0, validators=[MinValueValidator(0)], verbose_name="Sanal Pos")
     mehmet_havale = models.DecimalField(max_digits=12, decimal_places=2, default=0, validators=[MinValueValidator(0)], verbose_name="Mehmet Havale")
+    banka_havale = models.DecimalField(max_digits=12, decimal_places=2, default=0, validators=[MinValueValidator(0)], verbose_name="Banka Havale")
     aciklama = models.CharField(max_length=255, blank=True, null=True, verbose_name="Açıklama")
 
     kategori1 = models.ForeignKey(TransactionCategory, on_delete=models.SET_NULL, null=True, blank=True, related_name='level1_transactions', verbose_name="1. Kategori")
@@ -444,7 +446,14 @@ class Transaction(models.Model):
 
     @property
     def toplam(self):
-        return (self.nakit or 0) + (self.kredi_karti or 0) + (self.cari or 0) + (self.mehmet_havale or 0)
+        return (
+            (self.nakit or 0)
+            + (self.kredi_karti or 0)
+            + (self.sanal_pos or 0)
+            + (self.cari or 0)
+            + (self.mehmet_havale or 0)
+            + (self.banka_havale or 0)
+        )
 
 class MalzemeDosya(models.Model):
     dosya_adi = models.CharField(max_length=200)

@@ -72,36 +72,39 @@
 {% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex justify-content-between flex-wrap gap-3 mb-3">
     <div>
         <h1 class="h3 mb-0">Gelir/Gider Toplamları</h1>
         <p class="text-muted mb-0">Kasa bazında net bakiye ve genel toplam.</p>
     </div>
+    <form class="row g-2 align-items-end" method="get">
+        <div class="col-auto">
+            <label class="form-label mb-1 text-muted small">Başlangıç</label>
+            <input type="date" class="form-control form-control-sm" name="start_date" value="{{ filters.start_date }}">
+        </div>
+        <div class="col-auto">
+            <label class="form-label mb-1 text-muted small">Bitiş</label>
+            <input type="date" class="form-control form-control-sm" name="end_date" value="{{ filters.end_date }}">
+        </div>
+        <div class="col-auto d-flex gap-2">
+            <button class="btn btn-sm btn-primary" type="submit">
+                <i class="bi bi-funnel me-1"></i> Filtrele
+            </button>
+            {% if filters.start_date or filters.end_date %}
+            <a href="{% url 'dashboard:messages' %}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-x-circle me-1"></i> Temizle
+            </a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+<div class="alert alert-info py-2 px-3 mb-4 d-flex align-items-center gap-2">
+    <i class="bi bi-calendar-event"></i>
+    <span><strong>Tarih aralığı:</strong> {{ date_range_label }}</span>
 </div>
 
 <div class="row g-4 mb-4">
-    <div class="col-lg-2 col-md-4 col-sm-6">
-        <div class="card text-white clickable-card" style="background:#4e79a7;" data-bs-toggle="modal" data-bs-target="#modalServis">
-            <div class="card-body d-flex justify-content-between align-items-center">
-                <div>
-                    <div class="fs-3 fw-bold">{{ servis_toplam|floatformat:0 }}</div>
-                    <div class="text-white-50">SERVİS</div>
-                </div>
-                <i class="bi bi-tools fs-1 opacity-50"></i>
-            </div>
-        </div>
-    </div>
-    <div class="col-lg-2 col-md-4 col-sm-6">
-        <div class="card text-white clickable-card" style="background:#4e79a7;" data-bs-toggle="modal" data-bs-target="#modalMerkez">
-            <div class="card-body d-flex justify-content-between align-items-center">
-                <div>
-                    <div class="fs-3 fw-bold">{{ merkez_satis_toplam|floatformat:0 }}</div>
-                    <div class="text-white-50">MERKEZ SATIŞ</div>
-                </div>
-                <i class="bi bi-shop fs-1 opacity-50"></i>
-            </div>
-        </div>
-    </div>
     <div class="col-lg-2 col-md-4 col-sm-6">
         <div class="card text-white clickable-card" style="background:#e74c3c;" data-bs-toggle="modal" data-bs-target="#modalCanta">
             <div class="card-body d-flex justify-content-between align-items-center">
@@ -121,6 +124,17 @@
                     <div class="text-white-50">MEHMET HAVALE</div>
                 </div>
                 <i class="bi bi-bank fs-1 opacity-50"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-2 col-md-4 col-sm-6">
+        <div class="card text-white clickable-card" style="background:#8e44ad;" data-bs-toggle="modal" data-bs-target="#modalBankaHavale">
+            <div class="card-body d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="fs-3 fw-bold">{{ banka_havale_toplam|floatformat:0 }}</div>
+                    <div class="text-white-50">BANKA HAVALE</div>
+                </div>
+                <i class="bi bi-bank2 fs-1 opacity-50"></i>
             </div>
         </div>
     </div>
@@ -168,9 +182,8 @@
 </div>
 
 <!-- Modals -->
-{% include 'dashboard/partials/finance-modal.html' with modal_id='modalServis' title='Servis İşlemleri' entries=servis_islemleri total=servis_toplam color_class='primary' %}
-{% include 'dashboard/partials/finance-modal.html' with modal_id='modalMerkez' title='Merkez Satış İşlemleri' entries=merkez_islemleri total=merkez_satis_toplam color_class='info' %}
-{% include 'dashboard/partials/finance-modal.html' with modal_id='modalCanta' title='Çanta İşlemleri (Nakit)' entries=canta_islemleri total=canta_toplam color_class='danger' %}
-{% include 'dashboard/partials/finance-modal.html' with modal_id='modalMehmetHavale' title='Mehmet Havale İşlemleri' entries=mehmet_havale_islemleri total=mehmet_havale_toplam color_class='secondary' %}
-{% include 'dashboard/partials/finance-modal.html' with modal_id='modalGenel' title='Genel Toplam İşlemleri' entries=genel_islemleri total=genel_toplam color_class='success' %}
+{% include 'dashboard/partials/finance-modal.html' with modal_id='modalCanta' title='Çanta İşlemleri (Nakit)' entries=canta_islemleri total=canta_toplam color_class='danger' selected_range=date_range_label %}
+{% include 'dashboard/partials/finance-modal.html' with modal_id='modalMehmetHavale' title='Mehmet Havale İşlemleri' entries=mehmet_havale_islemleri total=mehmet_havale_toplam color_class='secondary' selected_range=date_range_label %}
+{% include 'dashboard/partials/finance-modal.html' with modal_id='modalBankaHavale' title='Banka Havale İşlemleri' entries=banka_havale_islemleri total=banka_havale_toplam color_class='info' selected_range=date_range_label %}
+{% include 'dashboard/partials/finance-modal.html' with modal_id='modalGenel' title='Genel Toplam İşlemleri' entries=genel_islemleri total=genel_toplam color_class='success' selected_range=date_range_label %}
 {% endblock %}

@@ -13,8 +13,7 @@ cmds = [
 cmds = [
     'npm run build',
     'python manage.py collectstatic --noinput',
-    'chmod +x railway_start.sh',
-    'chmod +x railway_deploy.py'
+    'chmod +x railway_start.sh'
 ]
 
 [start]

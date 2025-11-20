@@ -7,9 +7,13 @@ echo "🚀 Starting Railway deployment..."
 if [ -n "$RAILWAY_ENVIRONMENT" ]; then
     echo "🚂 Railway environment detected"
     
-    # Run deployment script
-    echo "📋 Running deployment checks..."
-    python railway_deploy.py
+    # Run migrations
+    echo "📊 Running migrations..."
+    python manage.py migrate --noinput
+    
+    # Collect static files
+    echo "📦 Collecting static files..."
+    python manage.py collectstatic --noinput
     
     echo "🌐 Starting Gunicorn on PORT: ${PORT:-8000}"
     

@@ -37,6 +37,7 @@ ALLOWED_HOSTS = [
     '.up.railway.app',
     'mestakip2.up.railway.app',
     '0.0.0.0',
+    '*',  # Production'da güvenlik için kaldırılmalı
 ]
 
 # Railway domain varsa ekle

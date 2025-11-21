@@ -2631,6 +2631,9 @@ def income_expense_report(request):
     # Kasa filtresi
     if kasa_adi:
         islemler = islemler.filter(kasa_adi=kasa_adi)
+        # Merkez Satış kasası seçildiğinde sadece giderleri göster
+        if kasa_adi == 'merkez-satis':
+            islemler = islemler.filter(hareket_tipi='gider')
     
     # Kategori filtresi (ana kategoriye göre)
     if kategori_id:

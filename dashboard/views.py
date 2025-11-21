@@ -75,7 +75,9 @@ def index(request):
     son_islemler = Siparis.objects.filter(user=request.user).exclude(durum='iptal').order_by('-olusturma_tarihi')[:5]
     
     # Son finance işlemleri (kullanıcının işlemlerinden son 5 kayıt)
-    son_finance_islemleri = Transaction.objects.filter(created_by=request.user).order_by('-created_at')[:5]
+    son_finance_islemleri = Transaction.objects.filter(created_by=request.user).select_related(
+        'kategori1', 'kategori1__parent', 'kategori2', 'kategori2__parent', 'kategori3', 'kategori3__parent'
+    ).order_by('-created_at')[:5]
     
     # Gerçek istatistikler - sadece kullanıcının siparişleri (iptal edilenler hariç)
     aktif_siparisler = Siparis.objects.filter(user=request.user).exclude(durum='iptal')
@@ -248,8 +250,10 @@ def products(request):
     if not secilen_tarih and not baslangic_tarih and not bitis_tarih:
         secilen_tarih = date.today().strftime('%Y-%m-%d')
     
-    # İşlemleri filtrele
-    qs = Transaction.objects.filter(created_by=request.user)
+    # İşlemleri filtrele (kategorileri ve parent kategorileri de yükle)
+    qs = Transaction.objects.filter(created_by=request.user).select_related(
+        'kategori1', 'kategori1__parent', 'kategori2', 'kategori2__parent', 'kategori3', 'kategori3__parent'
+    )
     
     if baslangic_tarih:
         qs = qs.filter(tarih__gte=baslangic_tarih)
@@ -2156,9 +2160,11 @@ def finance(request):
         created_by=request.user
     ).order_by('name')
     
-    # Son işlemleri getir
+    # Son işlemleri getir (kategorileri ve parent kategorileri de yükle)
     last_transactions = Transaction.objects.filter(
         created_by=request.user
+    ).select_related(
+        'kategori1', 'kategori1__parent', 'kategori2', 'kategori2__parent', 'kategori3', 'kategori3__parent'
     ).order_by('-tarih', '-id')[:10]
     
     # Debug için
@@ -2584,15 +2590,24 @@ def health_check(request):
 @login_required
 def income_expense_report(request):
     """Gelir/Gider Raporu sayfası"""
+    from datetime import date, timedelta
+    
     # Filtreleme parametreleri
-    baslangic_tarih = request.GET.get('baslangic_tarih', '')
-    bitis_tarih = request.GET.get('bitis_tarih', '')
+    # Default: Son 30 gün
+    today = date.today()
+    default_start = (today - timedelta(days=30)).strftime('%Y-%m-%d')
+    default_end = today.strftime('%Y-%m-%d')
+    
+    baslangic_tarih = request.GET.get('baslangic_tarih', default_start if not request.GET else '')
+    bitis_tarih = request.GET.get('bitis_tarih', default_end if not request.GET else '')
     hareket_tipi = request.GET.get('hareket_tipi', '')
     kasa_adi = request.GET.get('kasa_adi', '')
     kategori_id = request.GET.get('kategori', '')
     
-    # İşlemleri filtrele
-    islemler = Transaction.objects.filter(created_by=request.user).order_by('-tarih', '-created_at')
+    # İşlemleri filtrele (kategorileri ve parent kategorileri de yükle)
+    islemler = Transaction.objects.filter(created_by=request.user).select_related(
+        'kategori1', 'kategori1__parent', 'kategori2', 'kategori2__parent', 'kategori3', 'kategori3__parent'
+    ).order_by('-tarih', '-created_at')
     
     # Tarih filtreleri
     if baslangic_tarih:
@@ -2617,9 +2632,20 @@ def income_expense_report(request):
     if kasa_adi:
         islemler = islemler.filter(kasa_adi=kasa_adi)
     
-    # Kategori filtresi (sadece ana kategoriler)
+    # Kategori filtresi (ana kategoriye göre)
     if kategori_id:
-        islemler = islemler.filter(kategori1_id=kategori_id)
+        # Seçilen ana kategoriye ait alt kategorileri bul
+        alt_kategoriler = TransactionCategory.objects.filter(
+            parent_id=kategori_id,
+            created_by=request.user
+        ).values_list('id', flat=True)
+        
+        # Ana kategori veya alt kategorilerden biri ile eşleşenleri filtrele
+        from django.db.models import Q
+        islemler = islemler.filter(
+            Q(kategori1_id=kategori_id) |  # Doğrudan ana kategori
+            Q(kategori1_id__in=alt_kategoriler)  # Alt kategorilerden biri
+        )
     
     # Özet hesaplamaları
     summary = {
@@ -2656,11 +2682,15 @@ def income_expense_report(request):
         parent__isnull=True
     ).order_by('order', 'name')
     
+    # Kasa seçeneklerini al
+    kasa_choices = Transaction.KASA_CHOICES
+    
     context = {
         'page_title': 'Gelir/Gider Raporu',
         'islemler': islemler,
         'summary': summary,
         'kategoriler': kategoriler,
+        'kasa_choices': kasa_choices,
         'filters': {
             'baslangic_tarih': baslangic_tarih,
             'bitis_tarih': bitis_tarih,

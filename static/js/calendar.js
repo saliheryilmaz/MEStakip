@@ -461,23 +461,19 @@ document.addEventListener('alpine:init', () => {
     },
 
     addEvent() {
-      console.log('Opening add event modal...');
       // Open the add event modal
       const modalElement = document.getElementById('addEventModal');
       if (modalElement) {
         try {
           const modal = new bootstrap.Modal(modalElement);
           modal.show();
-          console.log('Modal opened successfully');
         } catch (error) {
-          console.error('Error opening modal:', error);
           // Fallback: jQuery modal açma
           if (typeof $ !== 'undefined') {
             $('#addEventModal').modal('show');
           }
         }
       } else {
-        console.error('Modal element not found');
         this.showNotification('Modal bulunamadı. Sayfayı yenileyin.', 'error');
       }
     },
@@ -546,11 +542,9 @@ document.addEventListener('alpine:init', () => {
             };
           });
         } else {
-          console.error('Etkinlikler yüklenirken hata:', data.error);
           this.loadSampleEvents(); // Fallback to sample events
         }
       } catch (error) {
-        console.error('API hatası:', error);
         this.loadSampleEvents(); // Fallback to sample events
       }
     }
@@ -606,12 +600,9 @@ document.addEventListener('alpine:init', () => {
       this.$watch('eventData.selectedReminders', (newValue) => {
         this.eventData.reminders = newValue;
       });
-
-      console.log('Modal initialized with data:', this.eventData);
     },
 
     async submitEvent() {
-      console.log('submitEvent called with data:', this.eventData);
 
       if (!this.eventData.title.trim()) {
         this.showValidationError('Lütfen etkinlik başlığı girin');
@@ -653,8 +644,6 @@ document.addEventListener('alpine:init', () => {
           }
         }
 
-        console.log('CSRF Token:', csrfToken);
-
         if (!csrfToken) {
           this.showValidationError('CSRF token bulunamadı. Sayfayı yenileyin.');
           return;
@@ -677,7 +666,6 @@ document.addEventListener('alpine:init', () => {
           'Content-Type': 'application/json',
           'X-CSRFToken': csrfToken,
         });
-        console.log('Body:', JSON.stringify(eventData));
 
         const response = await fetch('/dashboard/api/events/create/', {
           method: 'POST',
@@ -688,11 +676,7 @@ document.addEventListener('alpine:init', () => {
           body: JSON.stringify(eventData)
         });
 
-        console.log('Response status:', response.status);
-        console.log('Response headers:', response.headers);
-
         const result = await response.json();
-        console.log('API Response:', result);
 
         if (result.success) {
           // Önce hemen alert göster (sayfa yenilenmeden önce)
@@ -747,7 +731,6 @@ document.addEventListener('alpine:init', () => {
         }
 
       } catch (error) {
-        console.error('API Error:', error);
         this.showValidationError('Sunucu ile iletişim kurulurken hata oluştu: ' + error.message);
       }
     },
@@ -788,7 +771,6 @@ document.addEventListener('alpine:init', () => {
     },
 
     closeModal() {
-      console.log('Closing modal...');
       const modal = document.getElementById('addEventModal');
       if (modal) {
         // Bootstrap 5 modal kapatma
@@ -799,7 +781,6 @@ document.addEventListener('alpine:init', () => {
     },
 
     resetForm() {
-      console.log('Resetting form...');
       const today = new Date();
       const year = today.getFullYear();
       const month = String(today.getMonth() + 1).padStart(2, '0');

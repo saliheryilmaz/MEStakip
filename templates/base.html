@@ -759,7 +759,6 @@
         if (typeof Chart !== 'undefined') {
             // Chart.js v4+ has Filler plugin built-in, just need to ensure defaults are set
             Chart.defaults.elements.line.fill = false; // Disable fill by default to avoid warnings
-            console.log('Chart.js loaded successfully, version:', Chart.version);
         }
     </script>
 
@@ -781,7 +780,6 @@
                                     text.includes('Dashboard Manager initialized')) {
                                     // Remove the toast immediately
                                     node.remove();
-                                    console.log('🔇 Blocked unwanted toast notification');
                                 }
                             }
                         }
@@ -871,8 +869,6 @@
                 originalWarn.apply(console, args);
             };
 
-            // Log that filter is active
-            originalLog('%c🔇 Console Filter Active', 'color: #888; font-style: italic;');
         })();
     </script>
 
@@ -889,12 +885,8 @@
         localStorage.setItem('sidebar-collapsed', 'false');
 
         document.addEventListener('DOMContentLoaded', function () {
-            console.log('Sidebar toggle script loaded');
             const toggleButton = document.querySelector('[data-sidebar-toggle]');
             const wrapper = document.getElementById('admin-wrapper');
-
-            console.log('Toggle button found:', toggleButton);
-            console.log('Wrapper found:', wrapper);
 
             if (toggleButton && wrapper) {
                 // Set initial state from localStorage (default: open/false)
@@ -940,7 +932,6 @@
                             // Show sidebar
                             wrapper.classList.remove('sidebar-collapsed');
                             localStorage.setItem('sidebar-collapsed', 'false');
-                            console.log('Sidebar opened via logo click');
                         }
                         // Eğer sidebar açıksa, normal link davranışı (dashboard'a git)
                     });
@@ -975,8 +966,6 @@
 
                     // Update button icon
                     updateThemeIcon(newTheme);
-
-                    console.log('Theme changed to:', newTheme);
                 });
             }
 
@@ -1012,14 +1001,14 @@
                     document.documentElement.requestFullscreen().then(() => {
                         updateFullscreenIcon(true);
                     }).catch(err => {
-                        console.log('Tam ekran modu desteklenmiyor:', err);
+                        // Tam ekran modu desteklenmiyor
                     });
                 } else {
                     // Tam ekrandan çık
                     document.exitFullscreen().then(() => {
                         updateFullscreenIcon(false);
                     }).catch(err => {
-                        console.log('Tam ekrandan çıkma hatası:', err);
+                        // Tam ekrandan çıkma hatası
                     });
                 }
             }
@@ -1349,7 +1338,6 @@
                     localStorage.setItem('shownNotifications', JSON.stringify(cleaned));
                     return cleaned;
                 } catch (error) {
-                    console.warn('shownNotifications parse error:', error);
                     localStorage.removeItem('shownNotifications');
                     return {};
                 }
@@ -1359,7 +1347,7 @@
                 try {
                     localStorage.setItem('shownNotifications', JSON.stringify(this.shownNotifications));
                 } catch (error) {
-                    console.warn('shownNotifications save error:', error);
+                    // Save error
                 }
             }
 
@@ -1412,7 +1400,6 @@
                         newlyAdded.forEach(notification => {
                             if ((notification.type === 'event_start' || notification.type === 'event_reminder') && !this.isNotificationShown(notification.id)) {
                                 // Yeni eklenen ve kritik bir hatırlatıcı ise kontrol döngüsünün hemen yakalaması için işaretleme yapma
-                                console.log('⏰ Yeni zamanlanmış bildirim yüklendi:', notification.title);
                             } else if (notification.type === 'event_created') {
                                 // Oluşturma bildirimlerini otomatik olarak toast şeklinde göstermiyoruz.
                                 // Kullanıcı dilerse bildirim dropdown'ından görebilir.
@@ -1425,7 +1412,6 @@
                     }
                     return Promise.resolve();
                 } catch (error) {
-                    console.error('Bildirimler yüklenirken hata:', error);
                     return Promise.reject(error);
                 }
             }
@@ -1523,7 +1509,6 @@
                         this.showToast('Bildirim okundu olarak işaretlendi', 'success');
                     }
                 } catch (error) {
-                    console.error('Bildirim işaretlenirken hata:', error);
                     this.showToast('Bir hata oluştu', 'error');
                 }
             }
@@ -1544,7 +1529,6 @@
                         this.showToast(data.message, 'success');
                     }
                 } catch (error) {
-                    console.error('Bildirimler işaretlenirken hata:', error);
                     this.showToast('Bir hata oluştu', 'error');
                 }
             }
@@ -1565,15 +1549,12 @@
                         this.showToast('Bildirim kapatıldı', 'success');
                     }
                 } catch (error) {
-                    console.error('Bildirim kapatılırken hata:', error);
                     this.showToast('Bir hata oluştu', 'error');
                 }
             }
 
             startPeriodicCheck() {
                 // İlk kontrolü hemen yap (sayfa yüklendiğinde)
-                console.log('🔔 Bildirim kontrol sistemi başlatıldı');
-                
                 // İlk yükleme ve kontrol
                 this.loadNotifications().then(() => {
                     this.checkReminders();
@@ -1592,21 +1573,7 @@
                     this.checkReminders();
                 }, 2000); // Her 2 saniyede bir kontrol et
                 
-                // Her 1 dakikada bir detaylı log (debug için)
-                setInterval(() => {
-                    const pendingReminders = this.notifications.filter(n => 
-                        (n.type === 'event_reminder' || n.type === 'event_start') && 
-                        (n.status === 'pending' || n.status === 'sent') && 
-                        !n.shown
-                    );
-                    if (pendingReminders.length > 0) {
-                        console.log(`📋 Bekleyen hatırlatıcılar: ${pendingReminders.length}`, pendingReminders.map(n => ({
-                            title: n.title,
-                            time: n.scheduled_time,
-                            type: n.type
-                        })));
-                    }
-                }, 60000); // Her 1 dakikada bir
+
             }
 
             checkReminders() {
@@ -1678,8 +1645,6 @@
                         }
                         
                         if (shouldShow) {
-                            console.log('🔔 Hatırlatıcı gösteriliyor:', notification.title, 'Zaman farkı:', minutesDiff.toFixed(1), 'dakika');
-                            
                             // Bildirimi HEMEN "gösterildi" olarak işaretle (çift gösterimi önlemek için)
                             notification.shown = true;
                             this.markLocalNotificationShown(notification.id);
@@ -1714,14 +1679,12 @@
                                             this.close();
                                         };
                                     } catch (error) {
-                                        console.error('Tarayıcı bildirimi gösterilirken hata:', error);
+                                        // Tarayıcı bildirimi gösterilirken hata
                                     }
                                 } else if (Notification.permission === 'default') {
                                     // İzin iste
                                     Notification.requestPermission().then(permission => {
-                                        if (permission === 'granted') {
-                                            console.log('✅ Tarayıcı bildirim izni verildi');
-                                        }
+                                        // İzin verildi
                                     });
                                 }
                             }
@@ -1752,7 +1715,7 @@
                         }
                     });
                 } catch (error) {
-                    console.error('Bildirim gönderildi olarak işaretlenirken hata:', error);
+                    // Bildirim gönderildi olarak işaretlenirken hata
                 }
             }
 
@@ -1950,17 +1913,13 @@
 
         // Sayfa yüklendiğinde bildirim sistemini başlat
         document.addEventListener('DOMContentLoaded', function () {
-            console.log('=== Bildirim Sistemi Başlatılıyor ===');
-
             // Bootstrap'in yüklenmesini bekle
             function initializeDropdowns() {
                 // Bootstrap kontrolü
                 if (typeof bootstrap === 'undefined') {
-                    console.warn('Bootstrap henüz yüklenmedi, bekleniyor...');
                     setTimeout(initializeDropdowns, 100);
                     return;
                 }
-                console.log('✓ Bootstrap yüklendi, versiyon:', bootstrap.Dropdown.VERSION);
 
                 // Bildirim sistemini başlat
                 window.notificationSystem = new NotificationSystem();
@@ -1971,7 +1930,6 @@
                 const notificationDropdown = document.getElementById('notificationDropdownMenu');
 
                 if (notificationButton && notificationDropdown) {
-                    console.log('✓ Bildirim butonu ve dropdown bulundu');
 
                     // Bootstrap Dropdown instance oluştur
                     try {
@@ -1984,35 +1942,15 @@
                                 autoClose: 'outside',
                                 boundary: 'viewport'
                             });
-                            console.log('✓ Dropdown instance oluşturuldu');
-                        } else {
-                            console.log('✓ Dropdown instance zaten mevcut');
                         }
-
-                        // Test için butona tıklandığında log
-                        notificationButton.addEventListener('click', function (e) {
-                            console.log('Bildirim butonuna tıklandı');
-                            console.log('Dropdown instance:', dropdownInstance);
-                            console.log('Button aria-expanded:', notificationButton.getAttribute('aria-expanded'));
-                        });
 
                         // Dropdown açıldığında
                         notificationButton.addEventListener('shown.bs.dropdown', function () {
-                            console.log('✓ Dropdown açıldı!');
                             window.notificationSystem.loadNotifications();
                         });
-
-                        // Dropdown kapandığında
-                        notificationButton.addEventListener('hidden.bs.dropdown', function () {
-                            console.log('✓ Dropdown kapandı');
-                        });
                     } catch (error) {
-                        console.error('Dropdown oluşturma hatası:', error);
+                        // Dropdown oluşturma hatası
                     }
-                } else {
-                    console.error('HATA: Bildirim butonu veya dropdown bulunamadı!');
-                    console.log('notificationButton:', notificationButton);
-                    console.log('notificationDropdown:', notificationDropdown);
                 }
 
                 // Kullanıcı menüsü dropdown'ını başlat
@@ -2020,8 +1958,6 @@
                 const userMenuDropdown = document.getElementById('userMenuDropdown');
 
                 if (userMenuButton && userMenuDropdown) {
-                    console.log('✓ Kullanıcı menüsü butonu ve dropdown bulundu');
-
                     try {
                         // Önce mevcut instance'ı kontrol et
                         let userDropdownInstance = bootstrap.Dropdown.getInstance(userMenuButton);
@@ -2032,35 +1968,11 @@
                                 autoClose: true,
                                 boundary: 'viewport'
                             });
-                            console.log('✓ Kullanıcı menüsü dropdown instance oluşturuldu');
-                        } else {
-                            console.log('✓ Kullanıcı menüsü dropdown instance zaten mevcut');
                         }
-
-                        // Test için butona tıklandığında log
-                        userMenuButton.addEventListener('click', function (e) {
-                            console.log('Kullanıcı menüsü butonuna tıklandı');
-                            console.log('Dropdown instance:', userDropdownInstance);
-                            console.log('Button aria-expanded:', userMenuButton.getAttribute('aria-expanded'));
-                        });
-
-                        // Dropdown açıldığında
-                        userMenuButton.addEventListener('shown.bs.dropdown', function () {
-                            console.log('✓ Kullanıcı menüsü açıldı!');
-                        });
-
-                        // Dropdown kapandığında
-                        userMenuButton.addEventListener('hidden.bs.dropdown', function () {
-                            console.log('✓ Kullanıcı menüsü kapandı');
-                        });
                     } catch (error) {
-                        console.error('Kullanıcı menüsü dropdown oluşturma hatası:', error);
+                        // Kullanıcı menüsü dropdown oluşturma hatası
                     }
-                } else {
-                    console.log('Kullanıcı menüsü bulunamadı (kullanıcı giriş yapmamış olabilir)');
                 }
-
-                console.log('=== Bildirim Sistemi Hazır ===');
             }
 
             // İlk çağrı
@@ -2133,97 +2045,7 @@
     </style>
 
     <!-- Dropdown Manuel Başlatma -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            console.log('=== Dropdown Başlatma Scripti ===');
 
-            // Bootstrap'in yüklendiğini kontrol et
-            if (typeof bootstrap === 'undefined') {
-                console.error('Bootstrap yüklenmedi!');
-                return;
-            }
-
-            console.log('✓ Bootstrap yüklendi, versiyon:', bootstrap.Dropdown.VERSION);
-
-            // Bildirim dropdown'ını başlat
-            const notificationButton = document.getElementById('notificationButton');
-            const notificationDropdown = document.getElementById('notificationDropdownMenu');
-
-            if (notificationButton && notificationDropdown) {
-                console.log('✓ Bildirim butonu ve dropdown bulundu');
-
-                // Dropdown instance oluştur
-                const notificationDropdownInstance = new bootstrap.Dropdown(notificationButton, {
-                    autoClose: 'outside',
-                    boundary: 'viewport'
-                });
-
-                console.log('✓ Bildirim dropdown instance oluşturuldu');
-
-                // Manuel toggle için event listener ekle
-                notificationButton.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-
-                    console.log('Bildirim butonuna tıklandı');
-                    console.log('Dropdown instance:', notificationDropdownInstance);
-                    console.log('Button aria-expanded:', notificationButton.getAttribute('aria-expanded'));
-
-                    // Dropdown'ı toggle et
-                    notificationDropdownInstance.toggle();
-
-                    // Açıldığında/kapandığında log
-                    if (notificationButton.getAttribute('aria-expanded') === 'true') {
-                        console.log('✓ Dropdown açıldı!');
-                    } else {
-                        console.log('✓ Dropdown kapandı');
-                    }
-                });
-            } else {
-                console.error('Bildirim butonu veya dropdown bulunamadı!');
-            }
-
-            // Kullanıcı menüsü dropdown'ını başlat
-            const userMenuButton = document.getElementById('userMenuButton');
-            const userMenuDropdown = document.getElementById('userMenuDropdown');
-
-            if (userMenuButton && userMenuDropdown) {
-                console.log('✓ Kullanıcı menüsü butonu ve dropdown bulundu');
-
-                // Dropdown instance oluştur
-                const userMenuDropdownInstance = new bootstrap.Dropdown(userMenuButton, {
-                    autoClose: true,
-                    boundary: 'viewport'
-                });
-
-                console.log('✓ Kullanıcı menüsü dropdown instance oluşturuldu');
-
-                // Manuel toggle için event listener ekle
-                userMenuButton.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-
-                    console.log('Kullanıcı menüsü butonuna tıklandı');
-                    console.log('Dropdown instance:', userMenuDropdownInstance);
-                    console.log('Button aria-expanded:', userMenuButton.getAttribute('aria-expanded'));
-
-                    // Dropdown'ı toggle et
-                    userMenuDropdownInstance.toggle();
-
-                    // Açıldığında/kapandığında log
-                    if (userMenuButton.getAttribute('aria-expanded') === 'true') {
-                        console.log('✓ Kullanıcı menüsü açıldı!');
-                    } else {
-                        console.log('✓ Kullanıcı menüsü kapandı');
-                    }
-                });
-            } else {
-                console.error('Kullanıcı menüsü butonu veya dropdown bulunamadı!');
-            }
-
-            console.log('=== Dropdown Sistemi Hazır ===');
-        });
-    </script>
     </body>
 
     </html>

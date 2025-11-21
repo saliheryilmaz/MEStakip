@@ -51,8 +51,11 @@
                     <label class="form-label">Kasa</label>
                     <select name="kasa_adi" class="form-select">
                         <option value="">Tümü</option>
-                        <option value="servis" {% if filters.kasa_adi == 'servis' %}selected{% endif %}>Servis</option>
-                        <option value="merkez-satis" {% if filters.kasa_adi == 'merkez-satis' %}selected{% endif %}>Merkez Satış</option>
+                        {% for kasa_value, kasa_label in kasa_choices %}
+                        <option value="{{ kasa_value }}" {% if filters.kasa_adi == kasa_value %}selected{% endif %}>
+                            {{ kasa_label }}
+                        </option>
+                        {% endfor %}
                     </select>
                 </div>
                 
@@ -157,9 +160,8 @@
                     <tr>
                         <th>TARİH</th>
                         <th>KASA</th>
-                        <th>1.KATEGORİ</th>
-                        <th>2.KATEGORİ</th>
-                        <th>3.KATEGORİ</th>
+                        <th>ANA KATEGORİ</th>
+                        <th>ALT KATEGORİ</th>
                         <th class="text-end">NAKİT</th>
                         <th class="text-end">KREDİ KARTI</th>
                         <th class="text-end">CARİ</th>
@@ -174,9 +176,26 @@
                     <tr>
                         <td>{{ islem.tarih|date:'d.m.Y' }}</td>
                         <td>{{ islem.get_kasa_adi_display }}</td>
-                        <td>{{ islem.kategori1.name|default:"-" }}</td>
-                        <td>{{ islem.kategori2.name|default:"-" }}</td>
-                        <td>{{ islem.kategori3.name|default:"-" }}</td>
+                        <td>
+                            {% if islem.kategori1.parent %}
+                                {{ islem.kategori1.parent.name }}
+                            {% elif islem.kategori1 %}
+                                {{ islem.kategori1.name }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if islem.kategori1.parent %}
+                                {{ islem.kategori1.name }}
+                            {% elif islem.kategori2 %}
+                                {{ islem.kategori2.name }}
+                            {% elif islem.kategori3 %}
+                                {{ islem.kategori3.name }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
                         <td class="text-end">
                             {% if islem.nakit > 0 %}
                                 <span class="badge bg-{% if islem.hareket_tipi == 'gelir' %}success{% else %}danger{% endif %}">

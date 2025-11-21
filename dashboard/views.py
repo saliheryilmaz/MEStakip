@@ -2605,7 +2605,11 @@ def income_expense_report(request):
     kategori_id = request.GET.get('kategori', '')
     
     # İşlemleri filtrele (kategorileri ve parent kategorileri de yükle)
-    islemler = Transaction.objects.filter(created_by=request.user).select_related(
+    # Merkez Satış kasasından sadece giderleri çek
+    from django.db.models import Q
+    islemler = Transaction.objects.filter(created_by=request.user).exclude(
+        Q(kasa_adi='merkez-satis') & Q(hareket_tipi='gelir')
+    ).select_related(
         'kategori1', 'kategori1__parent', 'kategori2', 'kategori2__parent', 'kategori3', 'kategori3__parent'
     ).order_by('-tarih', '-created_at')
     
@@ -2631,9 +2635,6 @@ def income_expense_report(request):
     # Kasa filtresi
     if kasa_adi:
         islemler = islemler.filter(kasa_adi=kasa_adi)
-        # Merkez Satış kasası seçildiğinde sadece giderleri göster
-        if kasa_adi == 'merkez-satis':
-            islemler = islemler.filter(hareket_tipi='gider')
     
     # Kategori filtresi (ana kategoriye göre)
     if kategori_id:
@@ -2644,7 +2645,6 @@ def income_expense_report(request):
         ).values_list('id', flat=True)
         
         # Ana kategori veya alt kategorilerden biri ile eşleşenleri filtrele
-        from django.db.models import Q
         islemler = islemler.filter(
             Q(kategori1_id=kategori_id) |  # Doğrudan ana kategori
             Q(kategori1_id__in=alt_kategoriler)  # Alt kategorilerden biri

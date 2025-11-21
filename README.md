@@ -163,7 +163,7 @@ Bu proje MIT lisansı altında lisanslanmıştır. Detaylar için [LICENSE.md](L
 
 ## 📧 İletişim
 
-Proje Sahibi - [GitHub](https://github.com/yourusername)
+Proje Sahibi - [GitHub](https://github.com/saliheryilmaz)
 
 Proje Linki: [https://github.com/yourusername/mestakip-crm](https://github.com/yourusername/mestakip-crm)
 

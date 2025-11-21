@@ -166,6 +166,8 @@
                         <th class="text-end">KREDİ KARTI</th>
                         <th class="text-end">CARİ</th>
                         <th class="text-end">SANAL POS</th>
+                        <th class="text-end">M.HAVALE</th>
+                        <th class="text-end">B.HAVALE</th>
                         <th class="text-end">TOPLAM</th>
                         <th class="text-end">AÇIKLAMA</th>
                         <th class="text-end">İŞLEM</th>
@@ -221,6 +223,20 @@
                             {% if islem.sanal_pos > 0 %}
                                 <span class="badge bg-{% if islem.hareket_tipi == 'gelir' %}success{% else %}danger{% endif %}">
                                     {{ islem.sanal_pos|floatformat:0 }}
+                                </span>
+                            {% else %}-{% endif %}
+                        </td>
+                        <td class="text-end">
+                            {% if islem.mehmet_havale > 0 %}
+                                <span class="badge bg-{% if islem.hareket_tipi == 'gelir' %}success{% else %}danger{% endif %}">
+                                    {{ islem.mehmet_havale|floatformat:0 }}
+                                </span>
+                            {% else %}-{% endif %}
+                        </td>
+                        <td class="text-end">
+                            {% if islem.banka_havale > 0 %}
+                                <span class="badge bg-{% if islem.hareket_tipi == 'gelir' %}success{% else %}danger{% endif %}">
+                                    {{ islem.banka_havale|floatformat:0 }}
                                 </span>
                             {% else %}-{% endif %}
                         </td>

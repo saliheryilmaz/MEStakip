@@ -138,26 +138,10 @@
                         </div>
                     </div>
                     <div class="col-md-3">
-                        <div class="card {% if gun_ozeti.sanal_pos_toplam >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10">
-                            <div class="card-body text-center">
-                                <h6 class="card-title {% if gun_ozeti.sanal_pos_toplam >= 0 %}text-success{% else %}text-danger{% endif %} mb-1">💳 Sanal Pos</h6>
-                                <h4 class="mb-0 {% if gun_ozeti.sanal_pos_toplam >= 0 %}text-success{% else %}text-danger{% endif %}">₺{{ gun_ozeti.sanal_pos_toplam|turkish_format }}</h4>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-2">
                         <div class="card {% if gun_ozeti.mehmet_havale_toplam >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10">
                             <div class="card-body text-center">
                                 <h6 class="card-title {% if gun_ozeti.mehmet_havale_toplam >= 0 %}text-success{% else %}text-danger{% endif %} mb-1">🏦 M.Havale</h6>
                                 <h4 class="mb-0 {% if gun_ozeti.mehmet_havale_toplam >= 0 %}text-success{% else %}text-danger{% endif %}">₺{{ gun_ozeti.mehmet_havale_toplam|turkish_format }}</h4>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-2">
-                        <div class="card {% if gun_ozeti.banka_havale_toplam >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10">
-                            <div class="card-body text-center">
-                                <h6 class="card-title {% if gun_ozeti.banka_havale_toplam >= 0 %}text-success{% else %}text-danger{% endif %} mb-1">🏦 B.Havale</h6>
-                                <h4 class="mb-0 {% if gun_ozeti.banka_havale_toplam >= 0 %}text-success{% else %}text-danger{% endif %}">₺{{ gun_ozeti.banka_havale_toplam|turkish_format }}</h4>
                             </div>
                         </div>
                     </div>
@@ -194,10 +178,8 @@
                                 <th>Kasa</th>
                                 <th>Nakit</th>
                                 <th>Kredi Kartı</th>
-                                <th>Sanal Pos</th>
                                 <th>Cari</th>
                                 <th>M.Havale</th>
-                                <th>B.Havale</th>
                                 <th>Kategori</th>
                                 <th>Açıklama</th>
                                 <th class="text-end">İşlem</th>
@@ -216,10 +198,8 @@
                                 <td>{{ tx.kasa_adi }}</td>
                                 <td>{% if tx.nakit > 0 %}₺{{ tx.nakit|floatformat:0 }}{% else %}-{% endif %}</td>
                                 <td>{% if tx.kredi_karti > 0 %}₺{{ tx.kredi_karti|floatformat:0 }}{% else %}-{% endif %}</td>
-                                <td>{% if tx.sanal_pos > 0 %}₺{{ tx.sanal_pos|floatformat:0 }}{% else %}-{% endif %}</td>
                                 <td>{% if tx.cari > 0 %}₺{{ tx.cari|floatformat:0 }}{% else %}-{% endif %}</td>
                                 <td>{% if tx.mehmet_havale > 0 %}₺{{ tx.mehmet_havale|floatformat:0 }}{% else %}-{% endif %}</td>
-                                <td>{% if tx.banka_havale > 0 %}₺{{ tx.banka_havale|floatformat:0 }}{% else %}-{% endif %}</td>
                                 <td>
                                     {% if tx.kategori1.parent %}
                                         {{ tx.kategori1.parent.name }} / {{ tx.kategori1.name }}
@@ -491,10 +471,8 @@
                                     <th>Hareket</th>
                                     <th>Nakit</th>
                                     <th>Kredi Kartı</th>
-                                    <th>Sanal Pos</th>
                                     <th>Cari</th>
                                     <th>M.Havale</th>
-                                    <th>B.Havale</th>
                                     <th>Açıklama</th>
                                 </tr>
                             </thead>
@@ -509,10 +487,8 @@
                                     </td>
                                     <td>{% if tx.nakit > 0 %}₺{{ tx.nakit|turkish_format }}{% else %}-{% endif %}</td>
                                     <td>{% if tx.kredi_karti > 0 %}₺{{ tx.kredi_karti|turkish_format }}{% else %}-{% endif %}</td>
-                                    <td>{% if tx.sanal_pos > 0 %}₺{{ tx.sanal_pos|turkish_format }}{% else %}-{% endif %}</td>
                                     <td>{% if tx.cari > 0 %}₺{{ tx.cari|turkish_format }}{% else %}-{% endif %}</td>
                                     <td>{% if tx.mehmet_havale > 0 %}₺{{ tx.mehmet_havale|turkish_format }}{% else %}-{% endif %}</td>
-                                    <td>{% if tx.banka_havale > 0 %}₺{{ tx.banka_havale|turkish_format }}{% else %}-{% endif %}</td>
                                     <td class="d-flex justify-content-between align-items-center">
                                         <span>{{ tx.aciklama|default:"-" }}</span>
                                         <form method="post" action="{% url 'dashboard:transaction_sil' tx.id %}" class="ms-2">

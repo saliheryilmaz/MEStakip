@@ -147,30 +147,38 @@
 
 <!-- Yeni Kategori Modal -->
 <div class="modal fade" id="yeniKategoriModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Yeni Kategori Ekle</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="post">
+            <form method="post" id="yeniKategoriForm">
                 {% csrf_token %}
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Kategori Adı</label>
-                        <input type="text" class="form-control" name="kategori_adi" required>
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Ana Kategori Adı <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="kategori_adi" id="anaKategoriAdi" placeholder="Örn: Giderler, Gelirler" required>
                     </div>
+                    
+                    <hr>
+                    
                     <div class="mb-3">
-                        <label class="form-label">Üst Kategori (Opsiyonel)</label>
-                        <select class="form-select" name="parent_id">
-                            <option value="">Ana Kategori (Üst Kategori Yok)</option>
-                            {% for kategori in tum_kategoriler %}
-                            <option value="{{ kategori.id }}">
-                                {% if kategori.parent %}└─ {% endif %}{{ kategori.name }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                        <small class="form-text text-muted">Boş bırakırsanız ana kategori olarak oluşturulur</small>
+                        <label class="form-label fw-bold">Alt Kategoriler (Opsiyonel)</label>
+                        <small class="form-text text-muted d-block mb-2">Ana kategorinizin altına eklemek istediğiniz alt kategorileri girin</small>
+                        
+                        <div id="altKategorilerContainer">
+                            <div class="input-group mb-2">
+                                <input type="text" class="form-control" name="alt_kategoriler[]" placeholder="Alt kategori adı">
+                                <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="altKategoriEkleBtn">
+                            <i class="bi bi-plus-circle me-1"></i>Alt Kategori Ekle
+                        </button>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -582,6 +590,21 @@
 {% block extra_js %}
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        // Alt kategori ekleme butonu
+        document.getElementById('altKategoriEkleBtn').addEventListener('click', function() {
+            const container = document.getElementById('altKategorilerContainer');
+            const newInput = document.createElement('div');
+            newInput.className = 'input-group mb-2';
+            newInput.innerHTML = `
+                <input type="text" class="form-control" name="alt_kategoriler[]" placeholder="Alt kategori adı">
+                <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()">
+                    <i class="bi bi-trash"></i>
+                </button>
+            `;
+            container.appendChild(newInput);
+            newInput.querySelector('input').focus();
+        });
+        
         // Modal açıldığında input'a focus
         document.querySelectorAll('.modal').forEach(modal => {
             modal.addEventListener('shown.bs.modal', function () {

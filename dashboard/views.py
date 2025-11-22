@@ -264,8 +264,8 @@ def products(request):
     
     qs = qs.order_by('-created_at')
     
-    # Özet bilgileri
-    toplam_ifade = (F('nakit') + F('kredi_karti') + F('sanal_pos') + F('cari') + F('mehmet_havale') + F('banka_havale'))
+    # Özet bilgileri (Sanal Pos ve Banka Havale hariç)
+    toplam_ifade = (F('nakit') + F('kredi_karti') + F('cari') + F('mehmet_havale'))
     
     gun_ozeti = qs.aggregate(
         gelir=Sum(Case(When(hareket_tipi='gelir', then=toplam_ifade), default=0, output_field=DecimalField(max_digits=12, decimal_places=2))),
@@ -437,7 +437,8 @@ def products(request):
     excel_odeme_toplamlari = excel_odeme_dict
     
     merkez_ekstra_islemler = qs.filter(kasa_adi='merkez-satis')
-    detayli_islemler = qs.exclude(kasa_adi='merkez-satis')
+    # Detaylı işlemlerden Merkez Satış, Sanal Pos ve Banka Havale ile yapılan işlemleri hariç tut
+    detayli_islemler = qs.exclude(kasa_adi='merkez-satis').exclude(sanal_pos__gt=0).exclude(banka_havale__gt=0)
     merkez_ekstra_toplam = merkez_ekstra_islemler.aggregate(
         total=Sum(toplam_ifade, default=0)
     )['total'] or 0
@@ -1373,6 +1374,7 @@ def kategoriler(request):
         # Yeni kategori ekleme
         kategori_adi = request.POST.get('kategori_adi')
         parent_id = request.POST.get('parent_id')
+        alt_kategoriler = request.POST.getlist('alt_kategoriler[]')
         
         if kategori_adi:
             parent = None
@@ -1382,12 +1384,30 @@ def kategoriler(request):
                 except TransactionCategory.DoesNotExist:
                     pass
             
-            TransactionCategory.objects.create(
+            # Ana kategoriyi oluştur
+            ana_kategori = TransactionCategory.objects.create(
                 name=kategori_adi,
                 parent=parent,
                 created_by=request.user
             )
-            if parent:
+            
+            # Alt kategorileri oluştur (eğer varsa ve parent_id yoksa)
+            if not parent_id and alt_kategoriler:
+                eklenen_alt_kategoriler = 0
+                for alt_kategori_adi in alt_kategoriler:
+                    if alt_kategori_adi.strip():  # Boş değilse
+                        TransactionCategory.objects.create(
+                            name=alt_kategori_adi.strip(),
+                            parent=ana_kategori,
+                            created_by=request.user
+                        )
+                        eklenen_alt_kategoriler += 1
+                
+                if eklenen_alt_kategoriler > 0:
+                    messages.success(request, f'Ana kategori "{kategori_adi}" ve {eklenen_alt_kategoriler} alt kategori başarıyla eklendi!')
+                else:
+                    messages.success(request, f'Ana kategori "{kategori_adi}" başarıyla eklendi!')
+            elif parent:
                 messages.success(request, f'Alt kategori "{kategori_adi}" başarıyla "{parent.name}" kategorisinin altına eklendi!')
             else:
                 messages.success(request, f'Ana kategori "{kategori_adi}" başarıyla eklendi!')
@@ -2593,9 +2613,9 @@ def income_expense_report(request):
     from datetime import date, timedelta
     
     # Filtreleme parametreleri
-    # Default: Son 30 gün
+    # Default: Bugün
     today = date.today()
-    default_start = (today - timedelta(days=30)).strftime('%Y-%m-%d')
+    default_start = today.strftime('%Y-%m-%d')
     default_end = today.strftime('%Y-%m-%d')
     
     baslangic_tarih = request.GET.get('baslangic_tarih', default_start if not request.GET else '')
@@ -2704,3 +2724,157 @@ def income_expense_report(request):
     }
     
     return render(request, 'dashboard/income_expense_report.html', context)
+
+
+@login_required
+def export_income_expense_excel(request):
+    """Gelir/Gider Raporu Excel'e aktar"""
+    from datetime import date, timedelta
+    
+    # Filtreleme parametreleri
+    today = date.today()
+    default_start = today.strftime('%Y-%m-%d')
+    default_end = today.strftime('%Y-%m-%d')
+    
+    baslangic_tarih = request.GET.get('baslangic_tarih', default_start if not request.GET else '')
+    bitis_tarih = request.GET.get('bitis_tarih', default_end if not request.GET else '')
+    hareket_tipi = request.GET.get('hareket_tipi', '')
+    kasa_adi = request.GET.get('kasa_adi', '')
+    kategori_id = request.GET.get('kategori', '')
+    
+    # İşlemleri filtrele (kategorileri ve parent kategorileri de yükle)
+    # Merkez Satış kasasından sadece giderleri çek
+    from django.db.models import Q
+    islemler = Transaction.objects.filter(created_by=request.user).exclude(
+        Q(kasa_adi='merkez-satis') & Q(hareket_tipi='gelir')
+    ).select_related(
+        'kategori1', 'kategori1__parent', 'kategori2', 'kategori2__parent', 'kategori3', 'kategori3__parent'
+    ).order_by('-tarih', '-created_at')
+    
+    # Tarih filtreleri
+    if baslangic_tarih:
+        try:
+            baslangic = datetime.strptime(baslangic_tarih, '%Y-%m-%d').date()
+            islemler = islemler.filter(tarih__gte=baslangic)
+        except ValueError:
+            baslangic_tarih = ''
+    
+    if bitis_tarih:
+        try:
+            bitis = datetime.strptime(bitis_tarih, '%Y-%m-%d').date()
+            islemler = islemler.filter(tarih__lte=bitis)
+        except ValueError:
+            bitis_tarih = ''
+    
+    # Hareket tipi filtresi
+    if hareket_tipi:
+        islemler = islemler.filter(hareket_tipi=hareket_tipi)
+    
+    # Kasa filtresi
+    if kasa_adi:
+        islemler = islemler.filter(kasa_adi=kasa_adi)
+    
+    # Kategori filtresi (ana kategoriye göre)
+    if kategori_id:
+        # Seçilen ana kategoriye ait alt kategorileri bul
+        alt_kategoriler = TransactionCategory.objects.filter(
+            parent_id=kategori_id,
+            created_by=request.user
+        ).values_list('id', flat=True)
+        
+        # Ana kategori veya alt kategorilerden biri ile eşleşenleri filtrele
+        islemler = islemler.filter(
+            Q(kategori1_id=kategori_id) |  # Doğrudan ana kategori
+            Q(kategori1_id__in=alt_kategoriler)  # Alt kategorilerden biri
+        )
+    
+    # Excel dosyası oluştur
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Gelir Gider Raporu"
+    
+    # Başlık satırı
+    headers = [
+        'TARİH', 'KASA', 'ANA KATEGORİ', 'ALT KATEGORİ', 'NAKİT', 
+        'KREDİ KARTI', 'CARİ', 'SANAL POS', 'M.HAVALE', 'B.HAVALE', 
+        'TOPLAM', 'AÇIKLAMA', 'İŞLEM TİPİ'
+    ]
+    
+    # Başlık stilini ayarla
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+    header_alignment = Alignment(horizontal="center", vertical="center")
+    
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = header_alignment
+    
+    # Veri satırları
+    for row, islem in enumerate(islemler, 2):
+        # Ana kategori
+        ana_kategori = ''
+        if islem.kategori1 and islem.kategori1.parent:
+            ana_kategori = islem.kategori1.parent.name
+        elif islem.kategori1:
+            ana_kategori = islem.kategori1.name
+        
+        # Alt kategori
+        alt_kategori = ''
+        if islem.kategori1 and islem.kategori1.parent:
+            alt_kategori = islem.kategori1.name
+        elif islem.kategori2:
+            alt_kategori = islem.kategori2.name
+        elif islem.kategori3:
+            alt_kategori = islem.kategori3.name
+        
+        # Toplam hesapla
+        toplam = (
+            float(islem.nakit or 0) + 
+            float(islem.kredi_karti or 0) + 
+            float(islem.cari or 0) + 
+            float(islem.sanal_pos or 0) + 
+            float(islem.mehmet_havale or 0) + 
+            float(islem.banka_havale or 0)
+        )
+        
+        ws.cell(row=row, column=1, value=islem.tarih.strftime('%d.%m.%Y'))
+        ws.cell(row=row, column=2, value=islem.get_kasa_adi_display())
+        ws.cell(row=row, column=3, value=ana_kategori)
+        ws.cell(row=row, column=4, value=alt_kategori)
+        ws.cell(row=row, column=5, value=float(islem.nakit or 0))
+        ws.cell(row=row, column=6, value=float(islem.kredi_karti or 0))
+        ws.cell(row=row, column=7, value=float(islem.cari or 0))
+        ws.cell(row=row, column=8, value=float(islem.sanal_pos or 0))
+        ws.cell(row=row, column=9, value=float(islem.mehmet_havale or 0))
+        ws.cell(row=row, column=10, value=float(islem.banka_havale or 0))
+        ws.cell(row=row, column=11, value=toplam)
+        ws.cell(row=row, column=12, value=islem.aciklama or '-')
+        ws.cell(row=row, column=13, value=islem.get_hareket_tipi_display())
+    
+    # Sütun genişliklerini ayarla
+    column_widths = [12, 15, 20, 20, 12, 12, 12, 12, 12, 12, 12, 30, 12]
+    for col, width in enumerate(column_widths, 1):
+        ws.column_dimensions[ws.cell(row=1, column=col).column_letter].width = width
+    
+    # HTTP response oluştur
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    
+    # Dosya adını tarih aralığına göre oluştur
+    if baslangic_tarih and bitis_tarih:
+        filename = f"gelir_gider_raporu_{baslangic_tarih}_{bitis_tarih}.xlsx"
+    elif baslangic_tarih:
+        filename = f"gelir_gider_raporu_{baslangic_tarih}_sonrasi.xlsx"
+    elif bitis_tarih:
+        filename = f"gelir_gider_raporu_{bitis_tarih}_oncesi.xlsx"
+    else:
+        filename = f"gelir_gider_raporu_{today.strftime('%Y-%m-%d')}.xlsx"
+    
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    # Excel dosyasını response'a yaz
+    wb.save(response)
+    return response

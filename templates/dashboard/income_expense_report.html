@@ -11,6 +11,10 @@
         <p class="text-muted mb-0">Gelir ve gider işlemlerinizi detaylı analiz edin.</p>
     </div>
     <div class="d-flex gap-2">
+        <a href="{% url 'dashboard:export_income_expense_excel' %}?{{ request.GET.urlencode }}" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-file-earmark-excel me-1"></i>
+            Excel İndir
+        </a>
         <button type="button" class="btn btn-outline-success btn-sm" onclick="window.print()">
             <i class="bi bi-printer me-1"></i>
             Yazdır

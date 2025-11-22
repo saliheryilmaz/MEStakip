@@ -264,8 +264,8 @@ def products(request):
     
     qs = qs.order_by('-created_at')
     
-    # Özet bilgileri (Kredi Kartı, Sanal Pos ve Banka Havale hariç)
-    toplam_ifade = (F('nakit') + F('cari') + F('mehmet_havale'))
+    # Özet bilgileri (Sanal Pos ve Banka Havale hariç, Kredi Kartı dahil)
+    toplam_ifade = (F('nakit') + F('kredi_karti') + F('cari') + F('mehmet_havale'))
     
     gun_ozeti = qs.aggregate(
         gelir=Sum(Case(When(hareket_tipi='gelir', then=toplam_ifade), default=0, output_field=DecimalField(max_digits=12, decimal_places=2))),
@@ -437,8 +437,12 @@ def products(request):
     excel_odeme_toplamlari = excel_odeme_dict
     
     merkez_ekstra_islemler = qs.filter(kasa_adi='merkez-satis')
-    # Detaylı işlemlerden Merkez Satış, Kredi Kartı, Sanal Pos ve Banka Havale ile yapılan işlemleri hariç tut
-    detayli_islemler = qs.exclude(kasa_adi='merkez-satis').exclude(kredi_karti__gt=0).exclude(sanal_pos__gt=0).exclude(banka_havale__gt=0)
+    # Detaylı işlemlerden Merkez Satış hariç tut
+    # Gider ise: Kredi Kartı, Sanal Pos ve Banka Havale hariç tut
+    # Gelir ise: Sadece Sanal Pos ve Banka Havale hariç tut (Kredi Kartı göster)
+    detayli_islemler = qs.exclude(kasa_adi='merkez-satis').exclude(
+        Q(hareket_tipi='gider') & Q(kredi_karti__gt=0)
+    ).exclude(sanal_pos__gt=0).exclude(banka_havale__gt=0)
     merkez_ekstra_toplam = merkez_ekstra_islemler.aggregate(
         total=Sum(toplam_ifade, default=0)
     )['total'] or 0
@@ -1055,6 +1059,8 @@ def messages_view(request):
 
     def build_entries(queryset, amount_getter):
         entries = []
+        # Kategorileri de yükle
+        queryset = queryset.select_related('kategori1', 'kategori1__parent')
         for tx in queryset.order_by('-tarih', '-id'):
             raw_amount = amount_getter(tx) or 0
             try:
@@ -1068,10 +1074,25 @@ def messages_view(request):
             else:
                 amount = abs(amount)
 
+            # Ana kategori ve alt kategori bilgilerini belirle
+            ana_kategori = ''
+            alt_kategori = ''
+            
+            if tx.kategori1:
+                if tx.kategori1.parent:
+                    # kategori1'in parent'ı varsa, parent ana kategori, kategori1 alt kategori
+                    ana_kategori = tx.kategori1.parent.name
+                    alt_kategori = tx.kategori1.name
+                else:
+                    # kategori1'in parent'ı yoksa, kategori1 ana kategori
+                    ana_kategori = tx.kategori1.name
+
             entries.append({
                 'id': tx.id,
                 'tarih': tx.tarih.strftime('%d.%m.%Y'),
                 'hareket': tx.get_hareket_tipi_display(),
+                'ana_kategori': ana_kategori,
+                'alt_kategori': alt_kategori,
                 'aciklama': tx.aciklama or '-',
                 'amount': amount,
             })

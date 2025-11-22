@@ -264,8 +264,8 @@ def products(request):
     
     qs = qs.order_by('-created_at')
     
-    # Özet bilgileri (Sanal Pos ve Banka Havale hariç)
-    toplam_ifade = (F('nakit') + F('kredi_karti') + F('cari') + F('mehmet_havale'))
+    # Özet bilgileri (Kredi Kartı, Sanal Pos ve Banka Havale hariç)
+    toplam_ifade = (F('nakit') + F('cari') + F('mehmet_havale'))
     
     gun_ozeti = qs.aggregate(
         gelir=Sum(Case(When(hareket_tipi='gelir', then=toplam_ifade), default=0, output_field=DecimalField(max_digits=12, decimal_places=2))),
@@ -437,8 +437,8 @@ def products(request):
     excel_odeme_toplamlari = excel_odeme_dict
     
     merkez_ekstra_islemler = qs.filter(kasa_adi='merkez-satis')
-    # Detaylı işlemlerden Merkez Satış, Sanal Pos ve Banka Havale ile yapılan işlemleri hariç tut
-    detayli_islemler = qs.exclude(kasa_adi='merkez-satis').exclude(sanal_pos__gt=0).exclude(banka_havale__gt=0)
+    # Detaylı işlemlerden Merkez Satış, Kredi Kartı, Sanal Pos ve Banka Havale ile yapılan işlemleri hariç tut
+    detayli_islemler = qs.exclude(kasa_adi='merkez-satis').exclude(kredi_karti__gt=0).exclude(sanal_pos__gt=0).exclude(banka_havale__gt=0)
     merkez_ekstra_toplam = merkez_ekstra_islemler.aggregate(
         total=Sum(toplam_ifade, default=0)
     )['total'] or 0

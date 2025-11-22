@@ -113,7 +113,7 @@
             </div>
             <div class="card-body">
                 <div class="row g-3">
-                    <div class="col-md-3">
+                    <div class="col-md-4">
                         <div class="card {% if gun_ozeti.nakit_toplam >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10">
                             <div class="card-body text-center">
                                 <h6 class="card-title {% if gun_ozeti.nakit_toplam >= 0 %}text-success{% else %}text-danger{% endif %} mb-1">💰 Nakit</h6>
@@ -121,15 +121,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card {% if gun_ozeti.kredi_karti_toplam >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10">
-                            <div class="card-body text-center">
-                                <h6 class="card-title {% if gun_ozeti.kredi_karti_toplam >= 0 %}text-success{% else %}text-danger{% endif %} mb-1">💳 Kredi Kartı</h6>
-                                <h4 class="mb-0 {% if gun_ozeti.kredi_karti_toplam >= 0 %}text-success{% else %}text-danger{% endif %}">₺{{ gun_ozeti.kredi_karti_toplam|turkish_format }}</h4>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
+                    <div class="col-md-4">
                         <div class="card {% if gun_ozeti.cari_toplam >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10">
                             <div class="card-body text-center">
                                 <h6 class="card-title {% if gun_ozeti.cari_toplam >= 0 %}text-success{% else %}text-danger{% endif %} mb-1">🏢 Cari</h6>
@@ -137,7 +129,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-4">
                         <div class="card {% if gun_ozeti.mehmet_havale_toplam >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10">
                             <div class="card-body text-center">
                                 <h6 class="card-title {% if gun_ozeti.mehmet_havale_toplam >= 0 %}text-success{% else %}text-danger{% endif %} mb-1">🏦 M.Havale</h6>
@@ -177,7 +169,6 @@
                                 <th>Tip</th>
                                 <th>Kasa</th>
                                 <th>Nakit</th>
-                                <th>Kredi Kartı</th>
                                 <th>Cari</th>
                                 <th>M.Havale</th>
                                 <th>Kategori</th>
@@ -197,7 +188,6 @@
                                 </td>
                                 <td>{{ tx.kasa_adi }}</td>
                                 <td>{% if tx.nakit > 0 %}₺{{ tx.nakit|floatformat:0 }}{% else %}-{% endif %}</td>
-                                <td>{% if tx.kredi_karti > 0 %}₺{{ tx.kredi_karti|floatformat:0 }}{% else %}-{% endif %}</td>
                                 <td>{% if tx.cari > 0 %}₺{{ tx.cari|floatformat:0 }}{% else %}-{% endif %}</td>
                                 <td>{% if tx.mehmet_havale > 0 %}₺{{ tx.mehmet_havale|floatformat:0 }}{% else %}-{% endif %}</td>
                                 <td>
@@ -470,7 +460,6 @@
                                     <th>Tarih</th>
                                     <th>Hareket</th>
                                     <th>Nakit</th>
-                                    <th>Kredi Kartı</th>
                                     <th>Cari</th>
                                     <th>M.Havale</th>
                                     <th>Açıklama</th>
@@ -486,7 +475,6 @@
                                         </span>
                                     </td>
                                     <td>{% if tx.nakit > 0 %}₺{{ tx.nakit|turkish_format }}{% else %}-{% endif %}</td>
-                                    <td>{% if tx.kredi_karti > 0 %}₺{{ tx.kredi_karti|turkish_format }}{% else %}-{% endif %}</td>
                                     <td>{% if tx.cari > 0 %}₺{{ tx.cari|turkish_format }}{% else %}-{% endif %}</td>
                                     <td>{% if tx.mehmet_havale > 0 %}₺{{ tx.mehmet_havale|turkish_format }}{% else %}-{% endif %}</td>
                                     <td class="d-flex justify-content-between align-items-center">

@@ -469,6 +469,7 @@
                                 <tr>
                                     <th>Tarih</th>
                                     <th>Hareket</th>
+                                    <th>Kasa</th>
                                     <th>Nakit</th>
                                     <th>Kredi Kartı</th>
                                     <th>Cari</th>
@@ -483,6 +484,11 @@
                                     <td>
                                         <span class="badge {% if tx.hareket_tipi == 'gelir' %}bg-success{% else %}bg-danger{% endif %}">
                                             {{ tx.get_hareket_tipi_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if tx.kasa_adi == 'merkez-satis' %}bg-info{% elif tx.kasa_adi == 'virman' %}bg-warning{% else %}bg-secondary{% endif %}">
+                                            {{ tx.get_kasa_adi_display }}
                                         </span>
                                     </td>
                                     <td>{% if tx.nakit > 0 %}₺{{ tx.nakit|turkish_format }}{% else %}-{% endif %}</td>

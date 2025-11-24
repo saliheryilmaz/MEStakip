@@ -414,6 +414,7 @@ class Transaction(models.Model):
     KASA_CHOICES = [
         ('servis', 'Servis'),
         ('merkez-satis', 'Merkez Satış'),
+        ('virman', 'Virman'),
     ]
 
     hareket_tipi = models.CharField(max_length=10, choices=TYPE_CHOICES, default='gelir', verbose_name="Hareket Tipi")

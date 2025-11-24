@@ -127,17 +127,7 @@
             </div>
         </div>
     </div>
-    <div class="col-lg-2 col-md-4 col-sm-6">
-        <div class="card text-white clickable-card" style="background:#8e44ad;" data-bs-toggle="modal" data-bs-target="#modalBankaHavale">
-            <div class="card-body d-flex justify-content-between align-items-center">
-                <div>
-                    <div class="fs-3 fw-bold">{{ banka_havale_toplam|floatformat:0 }}</div>
-                    <div class="text-white-50">BANKA HAVALE</div>
-                </div>
-                <i class="bi bi-bank2 fs-1 opacity-50"></i>
-            </div>
-        </div>
-    </div>
+
     <div class="col-lg-2 col-md-4 col-sm-6">
         <div class="card text-white clickable-card" style="background:#1aa785;" data-bs-toggle="modal" data-bs-target="#modalGenel">
             <div class="card-body d-flex justify-content-between align-items-center">
@@ -184,6 +174,5 @@
 <!-- Modals -->
 {% include 'dashboard/partials/finance-modal.html' with modal_id='modalCanta' title='Çanta İşlemleri (Nakit)' entries=canta_islemleri total=canta_toplam color_class='danger' selected_range=date_range_label %}
 {% include 'dashboard/partials/finance-modal.html' with modal_id='modalMehmetHavale' title='Mehmet Havale İşlemleri' entries=mehmet_havale_islemleri total=mehmet_havale_toplam color_class='secondary' selected_range=date_range_label %}
-{% include 'dashboard/partials/finance-modal.html' with modal_id='modalBankaHavale' title='Banka Havale İşlemleri' entries=banka_havale_islemleri total=banka_havale_toplam color_class='info' selected_range=date_range_label %}
 {% include 'dashboard/partials/finance-modal.html' with modal_id='modalGenel' title='Genel Toplam İşlemleri' entries=genel_islemleri total=genel_toplam color_class='success' selected_range=date_range_label %}
 {% endblock %}

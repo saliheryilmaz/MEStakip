@@ -265,9 +265,10 @@ def products(request):
     qs = qs.order_by('-created_at')
     
     # Özet bilgileri (Sanal Pos ve Banka Havale hariç, Kredi Kartı dahil)
+    # Merkez Satış ve Virman kasalarını hariç tut
     toplam_ifade = (F('nakit') + F('kredi_karti') + F('cari') + F('mehmet_havale'))
     
-    gun_ozeti = qs.aggregate(
+    gun_ozeti = qs.exclude(kasa_adi__in=['merkez-satis', 'virman']).aggregate(
         gelir=Sum(Case(When(hareket_tipi='gelir', then=toplam_ifade), default=0, output_field=DecimalField(max_digits=12, decimal_places=2))),
         gider=Sum(Case(When(hareket_tipi='gider', then=toplam_ifade), default=0, output_field=DecimalField(max_digits=12, decimal_places=2)))
     )
@@ -275,25 +276,25 @@ def products(request):
     gun_ozeti['gelir'] = gun_ozeti['gelir'] or 0
     gun_ozeti['gider'] = gun_ozeti['gider'] or 0
     gun_ozeti['net'] = gun_ozeti['gelir'] - gun_ozeti['gider']
-    gun_ozeti['islem_sayisi'] = qs.count()
+    gun_ozeti['islem_sayisi'] = qs.exclude(kasa_adi__in=['merkez-satis', 'virman']).count()
     
     # Ödeme yöntemlerine göre toplamlar (gelir - gider)
-    # Merkez Satış kasasını hariç tut
+    # Merkez Satış ve Virman kasalarını hariç tut
     # Gelir toplamları
-    gelir_nakit = qs.filter(hareket_tipi='gelir').exclude(kasa_adi='merkez-satis').aggregate(total=Sum('nakit', default=0))['total'] or 0
-    gelir_kredi_karti = qs.filter(hareket_tipi='gelir').exclude(kasa_adi='merkez-satis').aggregate(total=Sum('kredi_karti', default=0))['total'] or 0
-    gelir_cari = qs.filter(hareket_tipi='gelir').exclude(kasa_adi='merkez-satis').aggregate(total=Sum('cari', default=0))['total'] or 0
-    gelir_sanal_pos = qs.filter(hareket_tipi='gelir').exclude(kasa_adi='merkez-satis').aggregate(total=Sum('sanal_pos', default=0))['total'] or 0
-    gelir_mehmet_havale = qs.filter(hareket_tipi='gelir').exclude(kasa_adi='merkez-satis').aggregate(total=Sum('mehmet_havale', default=0))['total'] or 0
-    gelir_banka_havale = qs.filter(hareket_tipi='gelir').exclude(kasa_adi='merkez-satis').aggregate(total=Sum('banka_havale', default=0))['total'] or 0
+    gelir_nakit = qs.filter(hareket_tipi='gelir').exclude(kasa_adi__in=['merkez-satis', 'virman']).aggregate(total=Sum('nakit', default=0))['total'] or 0
+    gelir_kredi_karti = qs.filter(hareket_tipi='gelir').exclude(kasa_adi__in=['merkez-satis', 'virman']).aggregate(total=Sum('kredi_karti', default=0))['total'] or 0
+    gelir_cari = qs.filter(hareket_tipi='gelir').exclude(kasa_adi__in=['merkez-satis', 'virman']).aggregate(total=Sum('cari', default=0))['total'] or 0
+    gelir_sanal_pos = qs.filter(hareket_tipi='gelir').exclude(kasa_adi__in=['merkez-satis', 'virman']).aggregate(total=Sum('sanal_pos', default=0))['total'] or 0
+    gelir_mehmet_havale = qs.filter(hareket_tipi='gelir').exclude(kasa_adi__in=['merkez-satis', 'virman']).aggregate(total=Sum('mehmet_havale', default=0))['total'] or 0
+    gelir_banka_havale = qs.filter(hareket_tipi='gelir').exclude(kasa_adi__in=['merkez-satis', 'virman']).aggregate(total=Sum('banka_havale', default=0))['total'] or 0
     
     # Gider toplamları
-    gider_nakit = qs.filter(hareket_tipi='gider').exclude(kasa_adi='merkez-satis').aggregate(total=Sum('nakit', default=0))['total'] or 0
-    gider_kredi_karti = qs.filter(hareket_tipi='gider').exclude(kasa_adi='merkez-satis').aggregate(total=Sum('kredi_karti', default=0))['total'] or 0
-    gider_cari = qs.filter(hareket_tipi='gider').exclude(kasa_adi='merkez-satis').aggregate(total=Sum('cari', default=0))['total'] or 0
-    gider_sanal_pos = qs.filter(hareket_tipi='gider').exclude(kasa_adi='merkez-satis').aggregate(total=Sum('sanal_pos', default=0))['total'] or 0
-    gider_mehmet_havale = qs.filter(hareket_tipi='gider').exclude(kasa_adi='merkez-satis').aggregate(total=Sum('mehmet_havale', default=0))['total'] or 0
-    gider_banka_havale = qs.filter(hareket_tipi='gider').exclude(kasa_adi='merkez-satis').aggregate(total=Sum('banka_havale', default=0))['total'] or 0
+    gider_nakit = qs.filter(hareket_tipi='gider').exclude(kasa_adi__in=['merkez-satis', 'virman']).aggregate(total=Sum('nakit', default=0))['total'] or 0
+    gider_kredi_karti = qs.filter(hareket_tipi='gider').exclude(kasa_adi__in=['merkez-satis', 'virman']).aggregate(total=Sum('kredi_karti', default=0))['total'] or 0
+    gider_cari = qs.filter(hareket_tipi='gider').exclude(kasa_adi__in=['merkez-satis', 'virman']).aggregate(total=Sum('cari', default=0))['total'] or 0
+    gider_sanal_pos = qs.filter(hareket_tipi='gider').exclude(kasa_adi__in=['merkez-satis', 'virman']).aggregate(total=Sum('sanal_pos', default=0))['total'] or 0
+    gider_mehmet_havale = qs.filter(hareket_tipi='gider').exclude(kasa_adi__in=['merkez-satis', 'virman']).aggregate(total=Sum('mehmet_havale', default=0))['total'] or 0
+    gider_banka_havale = qs.filter(hareket_tipi='gider').exclude(kasa_adi__in=['merkez-satis', 'virman']).aggregate(total=Sum('banka_havale', default=0))['total'] or 0
     
     # Ödeme yöntemi kartlarında yalnızca gelirleri göster
     gun_ozeti['nakit_toplam'] = gelir_nakit
@@ -302,6 +303,16 @@ def products(request):
     gun_ozeti['sanal_pos_toplam'] = gelir_sanal_pos
     gun_ozeti['mehmet_havale_toplam'] = gelir_mehmet_havale
     gun_ozeti['banka_havale_toplam'] = gelir_banka_havale
+    
+    # Merkez Satış kasasındaki gelirleri de Ödeme Yöntemlerine Göre Toplamlar'a ekle
+    merkez_satis_gelirleri = qs.filter(kasa_adi='merkez-satis', hareket_tipi='gelir')
+    for islem in merkez_satis_gelirleri:
+        gun_ozeti['nakit_toplam'] += parse_decimal_value(islem.nakit)
+        gun_ozeti['kredi_karti_toplam'] += parse_decimal_value(islem.kredi_karti)
+        gun_ozeti['cari_toplam'] += parse_decimal_value(islem.cari)
+        gun_ozeti['sanal_pos_toplam'] += parse_decimal_value(islem.sanal_pos)
+        gun_ozeti['mehmet_havale_toplam'] += parse_decimal_value(islem.mehmet_havale)
+        gun_ozeti['banka_havale_toplam'] += parse_decimal_value(islem.banka_havale)
 
     # Excel verileri için tarih filtrelemesi
     hareketler = MalzemeHareketi.objects.filter(kullanici=request.user).order_by('-tarih')
@@ -378,6 +389,7 @@ def products(request):
         'Kredi_Karti': Decimal('0'),
         'Cari': Decimal('0'),
         'Sanal_Pos': Decimal('0'),
+        'Mehmet_Havale': Decimal('0'),
         'Banka_Havale': Decimal('0')
     }
     
@@ -404,12 +416,14 @@ def products(request):
         elif ('sanal' in odeme_sekli_normalized or 
               'pos' in odeme_sekli_normalized or
               'sanalpos' in odeme_sekli_normalized or
-              'sanal pos' in odeme_sekli_original.lower() or
-              'havale' in odeme_sekli_normalized or 
+              'sanal pos' in odeme_sekli_original.lower()):
+            excel_odeme_dict['Sanal_Pos'] += amount
+        # Mehmet Havale kontrolü
+        elif ('havale' in odeme_sekli_normalized or 
               'mehmet' in odeme_sekli_normalized or
               'mhavale' in odeme_sekli_normalized or
-              odeme_sekli_original.lower() in ['sanal pos', 'sanalpos', 'pos', 'm.havale', 'm havale', 'mhavale', 'mehmet havale']):
-            excel_odeme_dict['Sanal_Pos'] += amount
+              odeme_sekli_original.lower() in ['m.havale', 'm havale', 'mhavale', 'mehmet havale']):
+            excel_odeme_dict['Mehmet_Havale'] += amount
         # Cari kontrolü
         elif ('cari' in odeme_sekli_normalized or 
               odeme_sekli_original.lower() == 'cari' or
@@ -430,17 +444,19 @@ def products(request):
             excel_odeme_dict['Nakit'] += parse_decimal_value(islem.nakit)
             excel_odeme_dict['Kredi_Karti'] += parse_decimal_value(islem.kredi_karti)
             excel_odeme_dict['Cari'] += parse_decimal_value(islem.cari)
-            excel_odeme_dict['Sanal_Pos'] += parse_decimal_value(islem.sanal_pos) + parse_decimal_value(islem.mehmet_havale)
+            excel_odeme_dict['Sanal_Pos'] += parse_decimal_value(islem.sanal_pos)
+            excel_odeme_dict['Mehmet_Havale'] += parse_decimal_value(islem.mehmet_havale)
             excel_odeme_dict['Banka_Havale'] += parse_decimal_value(islem.banka_havale)
     
     # Dictionary'yi context'e gönder
     excel_odeme_toplamlari = excel_odeme_dict
     
-    merkez_ekstra_islemler = qs.filter(kasa_adi='merkez-satis')
-    # Detaylı işlemlerden Merkez Satış hariç tut
+    # Merkez Ekstra İşlemler - Merkez Satış ve Virman kasalarını dahil et
+    merkez_ekstra_islemler = qs.filter(kasa_adi__in=['merkez-satis', 'virman'])
+    # Detaylı işlemlerden Merkez Satış ve Virman kasalarını hariç tut
     # Gider ise: Kredi Kartı, Sanal Pos ve Banka Havale hariç tut
     # Gelir ise: Sadece Sanal Pos ve Banka Havale hariç tut (Kredi Kartı göster)
-    detayli_islemler = qs.exclude(kasa_adi='merkez-satis').exclude(
+    detayli_islemler = qs.exclude(kasa_adi__in=['merkez-satis', 'virman']).exclude(
         Q(hareket_tipi='gider') & Q(kredi_karti__gt=0)
     ).exclude(sanal_pos__gt=0).exclude(banka_havale__gt=0)
     merkez_ekstra_toplam = merkez_ekstra_islemler.aggregate(
@@ -1090,6 +1106,7 @@ def messages_view(request):
             entries.append({
                 'id': tx.id,
                 'tarih': tx.tarih.strftime('%d.%m.%Y'),
+                'kasa_adi': tx.get_kasa_adi_display() if tx.kasa_adi else '-',
                 'hareket': tx.get_hareket_tipi_display(),
                 'ana_kategori': ana_kategori,
                 'alt_kategori': alt_kategori,
@@ -1121,8 +1138,10 @@ def messages_view(request):
     for row in kasa_ozet:
         kasa = row['kasa_adi']
         net = float(row['net'] or 0)
-        rows.append({'kasa_adi': kasa, 'bakiye': net})
-        genel_toplam += net
+        # Virman kasasını listeden hariç tut
+        if kasa != 'virman':
+            rows.append({'kasa_adi': kasa, 'bakiye': net})
+            genel_toplam += net
         if kasa == 'canta':
             canta_toplam = net
         elif kasa == 'mehmet-havale':
@@ -2646,10 +2665,12 @@ def income_expense_report(request):
     kategori_id = request.GET.get('kategori', '')
     
     # İşlemleri filtrele (kategorileri ve parent kategorileri de yükle)
-    # Merkez Satış kasasından sadece giderleri çek
+    # Merkez Satış kasasından sadece giderleri çek, Virman kasasını tamamen hariç tut
     from django.db.models import Q
     islemler = Transaction.objects.filter(created_by=request.user).exclude(
         Q(kasa_adi='merkez-satis') & Q(hareket_tipi='gelir')
+    ).exclude(
+        kasa_adi='virman'
     ).select_related(
         'kategori1', 'kategori1__parent', 'kategori2', 'kategori2__parent', 'kategori3', 'kategori3__parent'
     ).order_by('-tarih', '-created_at')
@@ -2691,7 +2712,7 @@ def income_expense_report(request):
             Q(kategori1_id__in=alt_kategoriler)  # Alt kategorilerden biri
         )
     
-    # Özet hesaplamaları
+    # Özet hesaplamaları ve detaylı işlem listeleri
     summary = {
         'nakit': 0,
         'kredi_karti': 0,
@@ -2702,14 +2723,130 @@ def income_expense_report(request):
         'toplam': 0
     }
     
+    # Her ödeme yöntemi için detaylı işlem listeleri
+    odeme_detaylari = {
+        'nakit': [],
+        'kredi_karti': [],
+        'cari': [],
+        'sanal_pos': [],
+        'mehmet_havale': [],
+        'banka_havale': [],
+        'toplam': []
+    }
+    
+    def get_kategori_bilgisi(islem):
+        """İşlemden ana ve alt kategori bilgilerini çıkar"""
+        ana_kategori = ''
+        alt_kategori = ''
+        
+        if islem.kategori1:
+            if islem.kategori1.parent:
+                ana_kategori = islem.kategori1.parent.name
+                alt_kategori = islem.kategori1.name
+            else:
+                ana_kategori = islem.kategori1.name
+        
+        return ana_kategori, alt_kategori
+    
     for islem in islemler:
         multiplier = 1 if islem.hareket_tipi == 'gelir' else -1
-        summary['nakit'] += float(islem.nakit or 0) * multiplier
-        summary['kredi_karti'] += float(islem.kredi_karti or 0) * multiplier
-        summary['cari'] += float(islem.cari or 0) * multiplier
-        summary['sanal_pos'] += float(islem.sanal_pos or 0) * multiplier
-        summary['mehmet_havale'] += float(islem.mehmet_havale or 0) * multiplier
-        summary['banka_havale'] += float(islem.banka_havale or 0) * multiplier
+        ana_kategori, alt_kategori = get_kategori_bilgisi(islem)
+        
+        # Nakit işlemleri
+        if islem.nakit and float(islem.nakit) > 0:
+            amount = float(islem.nakit) * multiplier
+            summary['nakit'] += amount
+            odeme_detaylari['nakit'].append({
+                'tarih': islem.tarih.strftime('%d.%m.%Y'),
+                'kasa_adi': islem.get_kasa_adi_display() if islem.kasa_adi else '-',
+                'hareket': islem.get_hareket_tipi_display(),
+                'ana_kategori': ana_kategori,
+                'alt_kategori': alt_kategori,
+                'aciklama': islem.aciklama or '-',
+                'amount': amount,
+            })
+        
+        # Kredi Kartı işlemleri
+        if islem.kredi_karti and float(islem.kredi_karti) > 0:
+            amount = float(islem.kredi_karti) * multiplier
+            summary['kredi_karti'] += amount
+            odeme_detaylari['kredi_karti'].append({
+                'tarih': islem.tarih.strftime('%d.%m.%Y'),
+                'kasa_adi': islem.get_kasa_adi_display() if islem.kasa_adi else '-',
+                'hareket': islem.get_hareket_tipi_display(),
+                'ana_kategori': ana_kategori,
+                'alt_kategori': alt_kategori,
+                'aciklama': islem.aciklama or '-',
+                'amount': amount,
+            })
+        
+        # Cari işlemleri
+        if islem.cari and float(islem.cari) > 0:
+            amount = float(islem.cari) * multiplier
+            summary['cari'] += amount
+            odeme_detaylari['cari'].append({
+                'tarih': islem.tarih.strftime('%d.%m.%Y'),
+                'kasa_adi': islem.get_kasa_adi_display() if islem.kasa_adi else '-',
+                'hareket': islem.get_hareket_tipi_display(),
+                'ana_kategori': ana_kategori,
+                'alt_kategori': alt_kategori,
+                'aciklama': islem.aciklama or '-',
+                'amount': amount,
+            })
+        
+        # Sanal Pos işlemleri
+        if islem.sanal_pos and float(islem.sanal_pos) > 0:
+            amount = float(islem.sanal_pos) * multiplier
+            summary['sanal_pos'] += amount
+            odeme_detaylari['sanal_pos'].append({
+                'tarih': islem.tarih.strftime('%d.%m.%Y'),
+                'kasa_adi': islem.get_kasa_adi_display() if islem.kasa_adi else '-',
+                'hareket': islem.get_hareket_tipi_display(),
+                'ana_kategori': ana_kategori,
+                'alt_kategori': alt_kategori,
+                'aciklama': islem.aciklama or '-',
+                'amount': amount,
+            })
+        
+        # Mehmet Havale işlemleri
+        if islem.mehmet_havale and float(islem.mehmet_havale) > 0:
+            amount = float(islem.mehmet_havale) * multiplier
+            summary['mehmet_havale'] += amount
+            odeme_detaylari['mehmet_havale'].append({
+                'tarih': islem.tarih.strftime('%d.%m.%Y'),
+                'kasa_adi': islem.get_kasa_adi_display() if islem.kasa_adi else '-',
+                'hareket': islem.get_hareket_tipi_display(),
+                'ana_kategori': ana_kategori,
+                'alt_kategori': alt_kategori,
+                'aciklama': islem.aciklama or '-',
+                'amount': amount,
+            })
+        
+        # Banka Havale işlemleri
+        if islem.banka_havale and float(islem.banka_havale) > 0:
+            amount = float(islem.banka_havale) * multiplier
+            summary['banka_havale'] += amount
+            odeme_detaylari['banka_havale'].append({
+                'tarih': islem.tarih.strftime('%d.%m.%Y'),
+                'kasa_adi': islem.get_kasa_adi_display() if islem.kasa_adi else '-',
+                'hareket': islem.get_hareket_tipi_display(),
+                'ana_kategori': ana_kategori,
+                'alt_kategori': alt_kategori,
+                'aciklama': islem.aciklama or '-',
+                'amount': amount,
+            })
+        
+        # Toplam için tüm işlemleri ekle
+        total_amount = float(islem.toplam or 0) * multiplier
+        odeme_detaylari['toplam'].append({
+            'tarih': islem.tarih.strftime('%d.%m.%Y'),
+            'kasa_adi': islem.get_kasa_adi_display() if islem.kasa_adi else '-',
+            'hareket': islem.get_hareket_tipi_display(),
+            'ana_kategori': ana_kategori,
+            'alt_kategori': alt_kategori,
+            'aciklama': islem.aciklama or '-',
+            'amount': total_amount,
+        })
     
     summary['toplam'] = (
         summary['nakit'] + 
@@ -2729,6 +2866,29 @@ def income_expense_report(request):
     # Kasa seçeneklerini al
     kasa_choices = Transaction.KASA_CHOICES
     
+    # Tarih aralığı etiketi
+    if baslangic_tarih and bitis_tarih:
+        try:
+            baslangic_obj = datetime.strptime(baslangic_tarih, '%Y-%m-%d').date()
+            bitis_obj = datetime.strptime(bitis_tarih, '%Y-%m-%d').date()
+            date_range_label = f"{baslangic_obj.strftime('%d.%m.%Y')} - {bitis_obj.strftime('%d.%m.%Y')}"
+        except:
+            date_range_label = "Tüm zamanlar"
+    elif baslangic_tarih:
+        try:
+            baslangic_obj = datetime.strptime(baslangic_tarih, '%Y-%m-%d').date()
+            date_range_label = f"{baslangic_obj.strftime('%d.%m.%Y')} sonrası"
+        except:
+            date_range_label = "Tüm zamanlar"
+    elif bitis_tarih:
+        try:
+            bitis_obj = datetime.strptime(bitis_tarih, '%Y-%m-%d').date()
+            date_range_label = f"{bitis_obj.strftime('%d.%m.%Y')} öncesi"
+        except:
+            date_range_label = "Tüm zamanlar"
+    else:
+        date_range_label = "Tüm zamanlar"
+    
     context = {
         'page_title': 'Gelir/Gider Raporu',
         'islemler': islemler,
@@ -2741,7 +2901,9 @@ def income_expense_report(request):
             'hareket_tipi': hareket_tipi,
             'kasa_adi': kasa_adi,
             'kategori': kategori_id,
-        }
+        },
+        'odeme_detaylari': odeme_detaylari,
+        'date_range_label': date_range_label,
     }
     
     return render(request, 'dashboard/income_expense_report.html', context)
@@ -2764,10 +2926,12 @@ def export_income_expense_excel(request):
     kategori_id = request.GET.get('kategori', '')
     
     # İşlemleri filtrele (kategorileri ve parent kategorileri de yükle)
-    # Merkez Satış kasasından sadece giderleri çek
+    # Merkez Satış kasasından sadece giderleri çek, Virman kasasını tamamen hariç tut
     from django.db.models import Q
     islemler = Transaction.objects.filter(created_by=request.user).exclude(
         Q(kasa_adi='merkez-satis') & Q(hareket_tipi='gelir')
+    ).exclude(
+        kasa_adi='virman'
     ).select_related(
         'kategori1', 'kategori1__parent', 'kategori2', 'kategori2__parent', 'kategori3', 'kategori3__parent'
     ).order_by('-tarih', '-created_at')

@@ -29,18 +29,22 @@ Expecting variables:
                     <table class="table align-middle mb-0">
                         <thead>
                             <tr>
-                                <th style="width: 12%;">Tarih</th>
-                                <th style="width: 12%;">Hareket</th>
-                                <th style="width: 18%;">Ana Kategori</th>
-                                <th style="width: 18%;">Alt Kategori</th>
+                                <th style="width: 10%;">Tarih</th>
+                                <th style="width: 12%;">Kasa Adı</th>
+                                <th style="width: 10%;">Hareket</th>
+                                <th style="width: 16%;">Ana Kategori</th>
+                                <th style="width: 16%;">Alt Kategori</th>
                                 <th>Açıklama</th>
-                                <th class="text-end" style="width: 15%;">Tutar</th>
+                                <th class="text-end" style="width: 12%;">Tutar</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for entry in entries %}
                             <tr>
                                 <td>{{ entry.tarih }}</td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ entry.kasa_adi }}</span>
+                                </td>
                                 <td>
                                     <span class="badge {% if entry.amount >= 0 %}bg-success{% else %}bg-danger{% endif %}">
                                         {{ entry.hareket }}

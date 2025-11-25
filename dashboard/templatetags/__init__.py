@@ -1,2 +1,1 @@
-# Django templatetags package
-
+# Template tags package

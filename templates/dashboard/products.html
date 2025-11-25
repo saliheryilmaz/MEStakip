@@ -73,7 +73,7 @@
                         <div class="card bg-success bg-opacity-10">
                             <div class="card-body text-center">
                                 <h6 class="card-title text-success mb-1">Toplam Gelir</h6>
-                                <h4 class="mb-0 text-success">₺{{ gun_ozeti.gelir|floatformat:2 }}</h4>
+                                <h4 class="mb-0 text-success">{{ gun_ozeti.gelir|turkish_lira }}</h4>
                             </div>
                         </div>
                     </div>
@@ -81,7 +81,7 @@
                         <div class="card bg-danger bg-opacity-10">
                             <div class="card-body text-center">
                                 <h6 class="card-title text-danger mb-1">Toplam Gider</h6>
-                                <h4 class="mb-0 text-danger">₺{{ gun_ozeti.gider|floatformat:2 }}</h4>
+                                <h4 class="mb-0 text-danger">{{ gun_ozeti.gider|turkish_lira }}</h4>
                             </div>
                         </div>
                     </div>
@@ -94,7 +94,7 @@
                                     Net</h6>
                                 <h4
                                     class="mb-0 {% if gun_ozeti.net >= 0 %}text-success{% else %}text-danger{% endif %}">
-                                    ₺{{ gun_ozeti.net|floatformat:2 }}</h4>
+                                    {{ gun_ozeti.net|turkish_lira }}</h4>
                             </div>
                         </div>
                     </div>
@@ -117,7 +117,7 @@
                         <div class="card {% if gun_ozeti.nakit_toplam >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10">
                             <div class="card-body text-center">
                                 <h6 class="card-title {% if gun_ozeti.nakit_toplam >= 0 %}text-success{% else %}text-danger{% endif %} mb-1">💰 Nakit</h6>
-                                <h4 class="mb-0 {% if gun_ozeti.nakit_toplam >= 0 %}text-success{% else %}text-danger{% endif %}">₺{{ gun_ozeti.nakit_toplam|turkish_format }}</h4>
+                                <h4 class="mb-0 {% if gun_ozeti.nakit_toplam >= 0 %}text-success{% else %}text-danger{% endif %}">{{ gun_ozeti.nakit_toplam|turkish_lira }}</h4>
                             </div>
                         </div>
                     </div>
@@ -125,7 +125,7 @@
                         <div class="card {% if gun_ozeti.kredi_karti_toplam >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10">
                             <div class="card-body text-center">
                                 <h6 class="card-title {% if gun_ozeti.kredi_karti_toplam >= 0 %}text-success{% else %}text-danger{% endif %} mb-1">💳 Kredi Kartı</h6>
-                                <h4 class="mb-0 {% if gun_ozeti.kredi_karti_toplam >= 0 %}text-success{% else %}text-danger{% endif %}">₺{{ gun_ozeti.kredi_karti_toplam|turkish_format }}</h4>
+                                <h4 class="mb-0 {% if gun_ozeti.kredi_karti_toplam >= 0 %}text-success{% else %}text-danger{% endif %}">{{ gun_ozeti.kredi_karti_toplam|turkish_lira }}</h4>
                             </div>
                         </div>
                     </div>
@@ -133,7 +133,7 @@
                         <div class="card {% if gun_ozeti.cari_toplam >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10">
                             <div class="card-body text-center">
                                 <h6 class="card-title {% if gun_ozeti.cari_toplam >= 0 %}text-success{% else %}text-danger{% endif %} mb-1">🏢 Cari</h6>
-                                <h4 class="mb-0 {% if gun_ozeti.cari_toplam >= 0 %}text-success{% else %}text-danger{% endif %}">₺{{ gun_ozeti.cari_toplam|turkish_format }}</h4>
+                                <h4 class="mb-0 {% if gun_ozeti.cari_toplam >= 0 %}text-success{% else %}text-danger{% endif %}">{{ gun_ozeti.cari_toplam|turkish_lira }}</h4>
                             </div>
                         </div>
                     </div>
@@ -141,7 +141,7 @@
                         <div class="card {% if gun_ozeti.mehmet_havale_toplam >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10">
                             <div class="card-body text-center">
                                 <h6 class="card-title {% if gun_ozeti.mehmet_havale_toplam >= 0 %}text-success{% else %}text-danger{% endif %} mb-1">🏦 M.Havale</h6>
-                                <h4 class="mb-0 {% if gun_ozeti.mehmet_havale_toplam >= 0 %}text-success{% else %}text-danger{% endif %}">₺{{ gun_ozeti.mehmet_havale_toplam|turkish_format }}</h4>
+                                <h4 class="mb-0 {% if gun_ozeti.mehmet_havale_toplam >= 0 %}text-success{% else %}text-danger{% endif %}">{{ gun_ozeti.mehmet_havale_toplam|turkish_lira }}</h4>
                             </div>
                         </div>
                     </div>
@@ -196,10 +196,10 @@
                                     </span>
                                 </td>
                                 <td>{{ tx.kasa_adi }}</td>
-                                <td>{% if tx.nakit > 0 %}₺{{ tx.nakit|floatformat:0 }}{% else %}-{% endif %}</td>
-                                <td>{% if tx.kredi_karti > 0 %}₺{{ tx.kredi_karti|floatformat:0 }}{% else %}-{% endif %}</td>
-                                <td>{% if tx.cari > 0 %}₺{{ tx.cari|floatformat:0 }}{% else %}-{% endif %}</td>
-                                <td>{% if tx.mehmet_havale > 0 %}₺{{ tx.mehmet_havale|floatformat:0 }}{% else %}-{% endif %}</td>
+                                <td>{% if tx.nakit > 0 %}{{ tx.nakit|turkish_lira }}{% else %}-{% endif %}</td>
+                                <td>{% if tx.kredi_karti > 0 %}{{ tx.kredi_karti|turkish_lira }}{% else %}-{% endif %}</td>
+                                <td>{% if tx.cari > 0 %}{{ tx.cari|turkish_lira }}{% else %}-{% endif %}</td>
+                                <td>{% if tx.mehmet_havale > 0 %}{{ tx.mehmet_havale|turkish_lira }}{% else %}-{% endif %}</td>
                                 <td>
                                     {% if tx.kategori1.parent %}
                                         {{ tx.kategori1.parent.name }} / {{ tx.kategori1.name }}
@@ -263,7 +263,7 @@
                         <div class="card {% if nakit_tutar >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10">
                             <div class="card-body text-center">
                                 <h6 class="card-title {% if nakit_tutar >= 0 %}text-success{% else %}text-danger{% endif %} mb-1">💰 Nakit</h6>
-                                <h4 class="mb-0 {% if nakit_tutar >= 0 %}text-success{% else %}text-danger{% endif %}">₺{{ nakit_tutar|turkish_format }}</h4>
+                                <h4 class="mb-0 {% if nakit_tutar >= 0 %}text-success{% else %}text-danger{% endif %}">{{ nakit_tutar|turkish_lira }}</h4>
                             </div>
                         </div>
                         {% endwith %}
@@ -273,7 +273,7 @@
                         <div class="card {% if kredi_karti_tutar >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10">
                             <div class="card-body text-center">
                                 <h6 class="card-title {% if kredi_karti_tutar >= 0 %}text-success{% else %}text-danger{% endif %} mb-1">💳 Kredi Kartı</h6>
-                                <h4 class="mb-0 {% if kredi_karti_tutar >= 0 %}text-success{% else %}text-danger{% endif %}">₺{{ kredi_karti_tutar|turkish_format }}</h4>
+                                <h4 class="mb-0 {% if kredi_karti_tutar >= 0 %}text-success{% else %}text-danger{% endif %}">{{ kredi_karti_tutar|turkish_lira }}</h4>
                             </div>
                         </div>
                         {% endwith %}
@@ -283,7 +283,7 @@
                         <div class="card {% if cari_tutar >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10">
                             <div class="card-body text-center">
                                 <h6 class="card-title {% if cari_tutar >= 0 %}text-success{% else %}text-danger{% endif %} mb-1">🏢 Cari</h6>
-                                <h4 class="mb-0 {% if cari_tutar >= 0 %}text-success{% else %}text-danger{% endif %}">₺{{ cari_tutar|turkish_format }}</h4>
+                                <h4 class="mb-0 {% if cari_tutar >= 0 %}text-success{% else %}text-danger{% endif %}">{{ cari_tutar|turkish_lira }}</h4>
                             </div>
                         </div>
                         {% endwith %}
@@ -293,7 +293,7 @@
                         <div class="card {% if sanal_pos_tutar >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10">
                             <div class="card-body text-center">
                                 <h6 class="card-title {% if sanal_pos_tutar >= 0 %}text-success{% else %}text-danger{% endif %} mb-1">💳 Sanal Pos</h6>
-                                <h4 class="mb-0 {% if sanal_pos_tutar >= 0 %}text-success{% else %}text-danger{% endif %}">₺{{ sanal_pos_tutar|turkish_format }}</h4>
+                                <h4 class="mb-0 {% if sanal_pos_tutar >= 0 %}text-success{% else %}text-danger{% endif %}">{{ sanal_pos_tutar|turkish_lira }}</h4>
                             </div>
                         </div>
                         {% endwith %}
@@ -303,7 +303,7 @@
                         <div class="card {% if banka_havale_tutar >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10">
                             <div class="card-body text-center">
                                 <h6 class="card-title {% if banka_havale_tutar >= 0 %}text-success{% else %}text-danger{% endif %} mb-1">🏦 Banka Havale</h6>
-                                <h4 class="mb-0 {% if banka_havale_tutar >= 0 %}text-success{% else %}text-danger{% endif %}">₺{{ banka_havale_tutar|turkish_format }}</h4>
+                                <h4 class="mb-0 {% if banka_havale_tutar >= 0 %}text-success{% else %}text-danger{% endif %}">{{ banka_havale_tutar|turkish_lira }}</h4>
                             </div>
                         </div>
                         {% endwith %}
@@ -390,7 +390,7 @@
                                                 </td>
                                                 <td>{{ satir.urun|truncatechars:30 }}</td>
                                                 <td>
-                                                    <span class="text-warning fw-bold">₺{{ satir.tutar|turkish_format }}</span>
+                                                    <span class="text-warning fw-bold">{{ satir.tutar|turkish_lira }}</span>
                                                 </td>
                                                 <td>
                                                     {% if satir.odeme_sekli %}
@@ -458,7 +458,7 @@
                     </h5>
                     <div class="d-flex align-items-center gap-3">
                         <span class="badge bg-primary">{{ merkez_ekstra_islemler|length }} kayıt</span>
-                        <span class="fw-semibold text-success">Toplam: ₺{{ merkez_ekstra_toplam|turkish_format }}</span>
+                        <span class="fw-semibold text-success">Toplam: {{ merkez_ekstra_toplam|turkish_lira }}</span>
                     </div>
                 </div>
                 <div class="card-body p-0">
@@ -491,10 +491,10 @@
                                             {{ tx.get_kasa_adi_display }}
                                         </span>
                                     </td>
-                                    <td>{% if tx.nakit > 0 %}₺{{ tx.nakit|turkish_format }}{% else %}-{% endif %}</td>
-                                    <td>{% if tx.kredi_karti > 0 %}₺{{ tx.kredi_karti|turkish_format }}{% else %}-{% endif %}</td>
-                                    <td>{% if tx.cari > 0 %}₺{{ tx.cari|turkish_format }}{% else %}-{% endif %}</td>
-                                    <td>{% if tx.mehmet_havale > 0 %}₺{{ tx.mehmet_havale|turkish_format }}{% else %}-{% endif %}</td>
+                                    <td>{% if tx.nakit > 0 %}{{ tx.nakit|turkish_lira }}{% else %}-{% endif %}</td>
+                                    <td>{% if tx.kredi_karti > 0 %}{{ tx.kredi_karti|turkish_lira }}{% else %}-{% endif %}</td>
+                                    <td>{% if tx.cari > 0 %}{{ tx.cari|turkish_lira }}{% else %}-{% endif %}</td>
+                                    <td>{% if tx.mehmet_havale > 0 %}{{ tx.mehmet_havale|turkish_lira }}{% else %}-{% endif %}</td>
                                     <td class="d-flex justify-content-between align-items-center">
                                         <span>{{ tx.aciklama|default:"-" }}</span>
                                         <form method="post" action="{% url 'dashboard:transaction_sil' tx.id %}" class="ms-2">

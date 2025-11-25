@@ -1,3 +1,4 @@
+{% load turkish_format %}
 {% comment %}
 Reusable modal component for displaying finance transactions in Gelir/Gider Toplamları page.
 Expecting variables:
@@ -66,7 +67,7 @@ Expecting variables:
                                 </td>
                                 <td>{{ entry.aciklama }}</td>
                                 <td class="text-end fw-semibold {% if entry.amount >= 0 %}text-success{% else %}text-danger{% endif %}">
-                                    {{ entry.amount|floatformat:2 }}
+                                    {{ entry.amount|turkish_lira }}
                                 </td>
                             </tr>
                             {% endfor %}
@@ -81,7 +82,7 @@ Expecting variables:
                 <span class="fw-semibold">
                     Toplam:
                     <span class="{% if total >= 0 %}text-success{% else %}text-danger{% endif %}">
-                        {{ total|floatformat:2 }}
+                        {{ total|turkish_lira }}
                     </span>
                 </span>
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Kapat</button>

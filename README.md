@@ -1,53 +1,84 @@
 # Mestakip CRM
 
-Modern ve kullanıcı dostu bir işletme yönetim sistemi. Lastik satış ve servis işletmeleri için özel olarak tasarlanmış kapsamlı bir CRM çözümü.
+[![Django](https://img.shields.io/badge/Django-092E20?style=for-the-badge&logo=django&logoColor=white)](https://www.djangoproject.com/)
+[![Bootstrap](https://img.shields.io/badge/Bootstrap-563D7C?style=for-the-badge&logo=bootstrap&logoColor=white)](https://getbootstrap.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 
-## 🚀 Özellikler
+Mestakip CRM, lastik satış ve servis işletmeleri için özel olarak tasarlanmış, kapsamlı bir işletme yönetim sistemidir. Finansal yönetim, stok takibi, müşteri ilişkileri ve raporlama gibi temel iş süreçlerinizi tek bir platformda birleştirir.
 
-### 📊 Dashboard & Analitik
-- Gerçek zamanlı iş takibi ve raporlama
-- Gelir/gider analizi ve grafikler
-- Marka bazlı satış dağılımı
-- Özelleştirilebilir metrikler
+## 🚀 Öne Çıkan Özellikler
 
-### 💰 Finansal Yönetim
-- Detaylı gelir/gider takibi
-- Çoklu kasa yönetimi (Servis, Merkez Satış)
-- Ödeme yöntemleri: Nakit, Kredi Kartı, Cari, Sanal Pos, Havale
-- Kategori bazlı harcama takibi
-- Excel entegrasyonu ile toplu veri yükleme
-- Gelir/Gider raporlama sistemi
+### 📊 Kapsamlı Dashboard
+- Gerçek zamanlı iş takibi ve özelleştirilebilir metrikler
+- Görsel veri analizleri ve detaylı raporlama
+- Marka ve ürün bazlı satış analizleri
 
-### 📦 Envanter Yönetimi
-- Sipariş takip sistemi
-- Stok ve satış durumu kontrolü
-- Marka ve ürün bazlı filtreleme
-- Toplu Excel export/import
-- İptal edilen siparişler raporu
+### 💰 Finansal Çözümler
+- Çoklu kasa ve şube yönetimi
+- Kapsamlı gelir/gider takip sistemi
+- Excel entegrasyonu ile veri yönetimi
 
-### 📅 Takvim & Etkinlikler
-- Randevu ve hatırlatma sistemi
-- Görsel takvim arayüzü
-- Etkinlik kategorileri
+### 📦 Stok ve Envanter
+- Detaylı ürün ve stok takibi
+- Otomatik stok uyarıları
+- Toplu ürün giriş/çıkış işlemleri
 
-### 👥 Kullanıcı Yönetimi
-- Rol bazlı yetkilendirme (Admin, Yönetici, Kullanıcı)
-- Çoklu kullanıcı desteği
-- Bildirim sistemi
+## 🛠️ Teknik Özellikler
 
-## 🛠️ Teknolojiler
+| Bileşen | Teknoloji |
+|---------|-----------|
+| Backend | Django 5.1.3 |
+| Frontend | Bootstrap 5, JavaScript |
+| Veritabanı | PostgreSQL / SQLite |
+| Deployment | Railway, Docker |
+| API | Django REST Framework |
 
-- **Backend:** Django 5.1.3
-- **Frontend:** Bootstrap 5, JavaScript
-- **Veritabanı:** PostgreSQL (Production), SQLite (Development)
-- **Deployment:** Railway
-- **Excel İşleme:** openpyxl
+## 🚀 Hızlı Başlangıç
 
-## 📋 Gereksinimler
-
+### Gereksinimler
 - Python 3.11+
-- PostgreSQL (Production için)
-- Node.js (Frontend build için - opsiyonel)
+- PostgreSQL 13+
+- Node.js 16+ (Frontend build için)
+
+### Kurulum
+
+1. Depoyu klonlayın:
+   ```bash
+   git clone https://github.com/username/mestakip-crm.git
+   cd mestakip-crm
+   ```
+
+2. Sanal ortam oluşturup etkinleştirin:
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # Linux/Mac
+   .\venv\Scripts\activate  # Windows
+   ```
+
+3. Gerekli paketleri yükleyin:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. Veritabanı ayarlarını yapılandırın ve migrate işlemlerini çalıştırın:
+   ```bash
+   python manage.py migrate
+   ```
+
+5. Geliştirme sunucusunu başlatın:
+   ```bash
+   python manage.py runserver
+   ```
+
+6. Tarayıcınızda `http://127.0.0.1:8000` adresini ziyaret edin.
+
+## 📝 Lisans
+
+Bu proje [MIT Lisansı](LICENSE.md) altında lisanslanmıştır.
+
+## 📞 İletişim
+
+Proje hakkında sorularınız için [e-posta gönderebilirsiniz](mailto:your.email@example.com).
 
 ## 🔧 Kurulum
 

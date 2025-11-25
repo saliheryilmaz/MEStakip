@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load turkish_format %}
 
 {% block title %}Dashboard - Mestakip{% endblock %}
 
@@ -64,7 +65,7 @@
                     </div>
                     <div class="flex-grow-1 ms-3">
                         <h6 class="mb-0 text-muted">Toplam Ciro</h6>
-                        <h3 class="mb-0">₺{{ stats.revenue|floatformat:0 }}</h3>
+                        <h3 class="mb-0">{{ stats.revenue|turkish_lira }}</h3>
                         <small class="text-success">
                             <i class="bi bi-arrow-up"></i> Toplam
                         </small>

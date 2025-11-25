@@ -453,16 +453,35 @@ def products(request):
     excel_odeme_toplamlari = excel_odeme_dict
     
     # Merkez Ekstra İşlemler - Merkez Satış ve Virman kasalarını dahil et
-    merkez_ekstra_islemler = qs.filter(kasa_adi__in=['merkez-satis', 'virman'])
+    # Merkez Satış kasasında Gider işlemlerinde Kredi Kartı ve Banka Havale hariç
+    merkez_ekstra_islemler = qs.filter(kasa_adi__in=['merkez-satis', 'virman']).exclude(
+        Q(kasa_adi='merkez-satis') & Q(hareket_tipi='gider') & (Q(kredi_karti__gt=0) | Q(banka_havale__gt=0))
+    )
     # Detaylı işlemlerden Merkez Satış ve Virman kasalarını hariç tut
     # Gider ise: Kredi Kartı, Sanal Pos ve Banka Havale hariç tut
     # Gelir ise: Sadece Sanal Pos ve Banka Havale hariç tut (Kredi Kartı göster)
     detayli_islemler = qs.exclude(kasa_adi__in=['merkez-satis', 'virman']).exclude(
         Q(hareket_tipi='gider') & Q(kredi_karti__gt=0)
     ).exclude(sanal_pos__gt=0).exclude(banka_havale__gt=0)
-    merkez_ekstra_toplam = merkez_ekstra_islemler.aggregate(
-        total=Sum(toplam_ifade, default=0)
-    )['total'] or 0
+    # Merkez Ekstra İşlemler toplamını hesapla
+    # Merkez Satış Gider işlemlerinde Kredi Kartı ve Banka Havale hariç
+    merkez_ekstra_toplam = Decimal('0')
+    for islem in merkez_ekstra_islemler:
+        if islem.kasa_adi == 'merkez-satis' and islem.hareket_tipi == 'gider':
+            # Merkez Satış Gider: Sadece Nakit, Cari ve Mehmet Havale
+            merkez_ekstra_toplam += (
+                parse_decimal_value(islem.nakit) + 
+                parse_decimal_value(islem.cari) + 
+                parse_decimal_value(islem.mehmet_havale)
+            )
+        else:
+            # Diğer işlemler: Tüm ödeme yöntemleri (Sanal Pos ve Banka Havale hariç)
+            merkez_ekstra_toplam += (
+                parse_decimal_value(islem.nakit) + 
+                parse_decimal_value(islem.kredi_karti) + 
+                parse_decimal_value(islem.cari) + 
+                parse_decimal_value(islem.mehmet_havale)
+            )
 
     context = {
         'page_title': 'Products',
@@ -2665,10 +2684,6 @@ def get_filtered_transactions(user, **filters):
         Q(kasa_adi='merkez-satis') & Q(hareket_tipi='gelir')
     ).exclude(
         kasa_adi='virman'
-    ).exclude(
-        Q(kasa_adi='merkez-satis') & Q(hareket_tipi='gider') & (
-            Q(kredi_karti__gt=0) | Q(banka_havale__gt=0)
-        )
     )
     
     # Tarih filtreleri
@@ -2827,21 +2842,18 @@ def income_expense_report(request):
             })
         
         # Kredi Kartı işlemleri
-        # Merkez Satış kasasında yapılan Gider işlemlerinde Kredi Kartı gösterilmez
         if islem.kredi_karti and float(islem.kredi_karti) > 0:
-            # Merkez Satış + Gider kombinasyonunu hariç tut
-            if not (islem.kasa_adi == 'merkez-satis' and islem.hareket_tipi == 'gider'):
-                amount = float(islem.kredi_karti) * multiplier
-                summary['kredi_karti'] += amount
-                odeme_detaylari['kredi_karti'].append({
-                    'tarih': islem.tarih.strftime('%d.%m.%Y'),
-                    'kasa_adi': islem.get_kasa_adi_display() if islem.kasa_adi else '-',
-                    'hareket': islem.get_hareket_tipi_display(),
-                    'ana_kategori': ana_kategori,
-                    'alt_kategori': alt_kategori,
-                    'aciklama': islem.aciklama or '-',
-                    'amount': amount,
-                })
+            amount = float(islem.kredi_karti) * multiplier
+            summary['kredi_karti'] += amount
+            odeme_detaylari['kredi_karti'].append({
+                'tarih': islem.tarih.strftime('%d.%m.%Y'),
+                'kasa_adi': islem.get_kasa_adi_display() if islem.kasa_adi else '-',
+                'hareket': islem.get_hareket_tipi_display(),
+                'ana_kategori': ana_kategori,
+                'alt_kategori': alt_kategori,
+                'aciklama': islem.aciklama or '-',
+                'amount': amount,
+            })
         
         # Cari işlemleri
         if islem.cari and float(islem.cari) > 0:
@@ -2886,32 +2898,21 @@ def income_expense_report(request):
             })
         
         # Banka Havale işlemleri
-        # Merkez Satış kasasında yapılan Gider işlemlerinde Banka Havale gösterilmez
         if islem.banka_havale and float(islem.banka_havale) > 0:
-            # Merkez Satış + Gider kombinasyonunu hariç tut
-            if not (islem.kasa_adi == 'merkez-satis' and islem.hareket_tipi == 'gider'):
-                amount = float(islem.banka_havale) * multiplier
-                summary['banka_havale'] += amount
-                odeme_detaylari['banka_havale'].append({
-                    'tarih': islem.tarih.strftime('%d.%m.%Y'),
-                    'kasa_adi': islem.get_kasa_adi_display() if islem.kasa_adi else '-',
-                    'hareket': islem.get_hareket_tipi_display(),
-                    'ana_kategori': ana_kategori,
-                    'alt_kategori': alt_kategori,
-                    'aciklama': islem.aciklama or '-',
-                    'amount': amount,
-                })
+            amount = float(islem.banka_havale) * multiplier
+            summary['banka_havale'] += amount
+            odeme_detaylari['banka_havale'].append({
+                'tarih': islem.tarih.strftime('%d.%m.%Y'),
+                'kasa_adi': islem.get_kasa_adi_display() if islem.kasa_adi else '-',
+                'hareket': islem.get_hareket_tipi_display(),
+                'ana_kategori': ana_kategori,
+                'alt_kategori': alt_kategori,
+                'aciklama': islem.aciklama or '-',
+                'amount': amount,
+            })
         
         # Toplam için tüm işlemleri ekle
-        # Gider işlemlerinde Kredi Kartı ve Banka Havale'yi toplam hesaplamasından çıkar
         total_amount = float(islem.toplam or 0) * multiplier
-        
-        # Gider işlemlerinde Kredi Kartı ve Banka Havale'yi toplam tutardan çıkar
-        if islem.hareket_tipi == 'gider':
-            if islem.kredi_karti:
-                total_amount -= float(islem.kredi_karti) * multiplier
-            if islem.banka_havale:
-                total_amount -= float(islem.banka_havale) * multiplier
         
         odeme_detaylari['toplam'].append({
             'tarih': islem.tarih.strftime('%d.%m.%Y'),
@@ -3090,13 +3091,8 @@ def export_income_expense_excel(request):
             alt_kategori = islem.kategori3.name
         
         # Kredi Kartı ve Banka Havale değerlerini belirle
-        # Merkez Satış + Gider kombinasyonunda Kredi Kartı ve Banka Havale gösterilmez
         kredi_karti_value = float(islem.kredi_karti or 0)
         banka_havale_value = float(islem.banka_havale or 0)
-        
-        if islem.kasa_adi == 'merkez-satis' and islem.hareket_tipi == 'gider':
-            kredi_karti_value = 0
-            banka_havale_value = 0
         
         # Toplam hesapla
         toplam = (

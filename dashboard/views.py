@@ -474,8 +474,17 @@ def products(request):
                 parse_decimal_value(islem.cari) + 
                 parse_decimal_value(islem.mehmet_havale)
             )
+        elif islem.kasa_adi == 'merkez-satis' and islem.hareket_tipi == 'gelir':
+            # Merkez Satış Gelir: Tüm ödeme yöntemleri (Sanal Pos hariç, Banka Havale dahil)
+            merkez_ekstra_toplam += (
+                parse_decimal_value(islem.nakit) + 
+                parse_decimal_value(islem.kredi_karti) + 
+                parse_decimal_value(islem.cari) + 
+                parse_decimal_value(islem.mehmet_havale) + 
+                parse_decimal_value(islem.banka_havale)
+            )
         else:
-            # Diğer işlemler: Tüm ödeme yöntemleri (Sanal Pos ve Banka Havale hariç)
+            # Diğer işlemler (Virman): Tüm ödeme yöntemleri (Sanal Pos ve Banka Havale hariç)
             merkez_ekstra_toplam += (
                 parse_decimal_value(islem.nakit) + 
                 parse_decimal_value(islem.kredi_karti) + 

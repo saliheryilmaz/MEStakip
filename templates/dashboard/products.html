@@ -474,6 +474,8 @@
                                     <th>Kredi Kartı</th>
                                     <th>Cari</th>
                                     <th>M.Havale</th>
+                                    <th>B.Havale</th>
+                                    <th>Kategori</th>
                                     <th>Açıklama</th>
                                 </tr>
                             </thead>
@@ -495,6 +497,20 @@
                                     <td>{% if tx.kredi_karti > 0 %}{{ tx.kredi_karti|turkish_lira }}{% else %}-{% endif %}</td>
                                     <td>{% if tx.cari > 0 %}{{ tx.cari|turkish_lira }}{% else %}-{% endif %}</td>
                                     <td>{% if tx.mehmet_havale > 0 %}{{ tx.mehmet_havale|turkish_lira }}{% else %}-{% endif %}</td>
+                                    <td>{% if tx.banka_havale > 0 %}{{ tx.banka_havale|turkish_lira }}{% else %}-{% endif %}</td>
+                                    <td>
+                                        {% if tx.kategori1 %}
+                                            <span class="badge bg-secondary">
+                                                {% if tx.kategori1.parent %}
+                                                    {{ tx.kategori1.parent.name }} / {{ tx.kategori1.name }}
+                                                {% else %}
+                                                    {{ tx.kategori1.name }}
+                                                {% endif %}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
                                     <td class="d-flex justify-content-between align-items-center">
                                         <span>{{ tx.aciklama|default:"-" }}</span>
                                         <form method="post" action="{% url 'dashboard:transaction_sil' tx.id %}" class="ms-2">

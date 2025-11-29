@@ -46,6 +46,9 @@ Expecting variables:
                                 <th style="width: 16%;">Alt Kategori</th>
                                 <th>Açıklama</th>
                                 <th class="text-end" style="width: 12%;">Tutar</th>
+                                {% if modal_id == 'modalKrediKarti' or modal_id == 'modalCari' or modal_id == 'modalSanalPos' or modal_id == 'modalBankaHavale' %}
+                                <th class="text-end" style="width: 12%;">Komisyon (%20)</th>
+                                {% endif %}
                             </tr>
                         </thead>
                         <tbody>
@@ -78,6 +81,15 @@ Expecting variables:
                                 <td class="text-end fw-semibold {% if entry.amount >= 0 %}text-success{% else %}text-danger{% endif %}">
                                     {{ entry.amount|turkish_lira }}
                                 </td>
+                                {% if modal_id == 'modalKrediKarti' or modal_id == 'modalCari' or modal_id == 'modalSanalPos' or modal_id == 'modalBankaHavale' %}
+                                <td class="text-end fw-semibold text-danger">
+                                    {% if entry.komisyon %}
+                                        -{{ entry.komisyon|turkish_lira }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                {% endif %}
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -88,12 +100,24 @@ Expecting variables:
                 {% endif %}
             </div>
             <div class="modal-footer justify-content-between">
-                <span class="fw-semibold">
-                    Toplam:
-                    <span class="{% if total >= 0 %}text-success{% else %}text-danger{% endif %}">
-                        {{ total|turkish_lira }}
+                <div class="d-flex flex-column gap-1">
+                    <span class="fw-semibold">
+                        Toplam:
+                        <span class="{% if total >= 0 %}text-success{% else %}text-danger{% endif %}">
+                            {{ total|turkish_lira }}
+                        </span>
                     </span>
-                </span>
+                    {% if modal_id == 'modalKrediKarti' or modal_id == 'modalCari' or modal_id == 'modalSanalPos' or modal_id == 'modalBankaHavale' %}
+                    {% if komisyon_toplam %}
+                    <span class="fw-semibold small">
+                        Komisyon Toplamı (%20):
+                        <span class="text-danger">
+                            -{{ komisyon_toplam|turkish_lira }}
+                        </span>
+                    </span>
+                    {% endif %}
+                    {% endif %}
+                </div>
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Kapat</button>
             </div>
         </div>

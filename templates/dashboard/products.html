@@ -110,10 +110,6 @@
                         </div>
                     </div>
                 </div>
-                <div class="alert alert-info d-flex align-items-center mb-4" role="alert">
-                    <i class="bi bi-info-circle me-2"></i>
-                    <small>Servis & Merkez Satış kasaları için Nakit, Kredi Kartı ve M.Havale toplamları</small>
-                </div>
             </div>
         </div>
     </div>
@@ -236,13 +232,34 @@
                                 <td>{% if tx.mehmet_havale > 0 %}{{ tx.mehmet_havale|turkish_lira }}{% else %}-{% endif %}</td>
                                 <td>{% if tx.banka_havale > 0 %}{{ tx.banka_havale|turkish_lira }}{% else %}-{% endif %}</td>
                                 <td>
-                                    {% if tx.kategori1.parent %}
-                                        {{ tx.kategori1.parent.name }} / {{ tx.kategori1.name }}
-                                    {% elif tx.kategori1 %}
-                                        {{ tx.kategori1.name }}
-                                        {% if tx.kategori2 %} / {{ tx.kategori2.name }}{% elif tx.kategori3 %} / {{ tx.kategori3.name }}{% endif %}
+                                    {% if tx.kategori1 %}
+                                        <span class="badge bg-primary">
+                                            {% if tx.kategori1.parent %}
+                                                {{ tx.kategori1.parent.name }} / {{ tx.kategori1.name }}
+                                            {% else %}
+                                                {{ tx.kategori1.name }}
+                                            {% endif %}
+                                        </span>
+                                    {% elif tx.kategori2 %}
+                                        <span class="badge bg-info">
+                                            {% if tx.kategori2.parent %}
+                                                {{ tx.kategori2.parent.name }} / {{ tx.kategori2.name }}
+                                            {% else %}
+                                                {{ tx.kategori2.name }}
+                                            {% endif %}
+                                        </span>
+                                    {% elif tx.kategori3 %}
+                                        <span class="badge bg-success">
+                                            {% if tx.kategori3.parent %}
+                                                {{ tx.kategori3.parent.name }} / {{ tx.kategori3.name }}
+                                            {% else %}
+                                                {{ tx.kategori3.name }}
+                                            {% endif %}
+                                        </span>
                                     {% else %}
-                                        -
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="bi bi-exclamation-triangle me-1"></i>Kategori Yok
+                                        </span>
                                     {% endif %}
                                 </td>
                                 <td>{{ tx.aciklama|truncatechars:50 }}</td>
@@ -496,7 +513,7 @@
                         <span class="fw-semibold text-success">Toplam: {{ merkez_ekstra_toplam|turkish_lira }}</span>
                     </div>
                 </div>
-                <div class="card-body p-0">
+                <div class="card-body">
                     {% if merkez_ekstra_islemler %}
                     <div class="table-responsive">
                         <table class="table table-sm table-hover mb-0">
@@ -537,15 +554,33 @@
                                     <td>{% if tx.banka_havale > 0 %}{{ tx.banka_havale|turkish_lira }}{% else %}-{% endif %}</td>
                                     <td>
                                         {% if tx.kategori1 %}
-                                            <span class="badge bg-secondary">
+                                            <span class="badge bg-primary">
                                                 {% if tx.kategori1.parent %}
                                                     {{ tx.kategori1.parent.name }} / {{ tx.kategori1.name }}
                                                 {% else %}
                                                     {{ tx.kategori1.name }}
                                                 {% endif %}
                                             </span>
+                                        {% elif tx.kategori2 %}
+                                            <span class="badge bg-info">
+                                                {% if tx.kategori2.parent %}
+                                                    {{ tx.kategori2.parent.name }} / {{ tx.kategori2.name }}
+                                                {% else %}
+                                                    {{ tx.kategori2.name }}
+                                                {% endif %}
+                                            </span>
+                                        {% elif tx.kategori3 %}
+                                            <span class="badge bg-success">
+                                                {% if tx.kategori3.parent %}
+                                                    {{ tx.kategori3.parent.name }} / {{ tx.kategori3.name }}
+                                                {% else %}
+                                                    {{ tx.kategori3.name }}
+                                                {% endif %}
+                                            </span>
                                         {% else %}
-                                            <span class="text-muted">-</span>
+                                            <span class="badge bg-warning text-dark">
+                                                <i class="bi bi-exclamation-triangle me-1"></i>Kategori Yok
+                                            </span>
                                         {% endif %}
                                     </td>
                                     <td class="d-flex justify-content-between align-items-center">

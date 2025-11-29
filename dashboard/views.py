@@ -481,7 +481,7 @@ def products(request):
     # Merkez Satış kasasında Gider işlemlerinde Kredi Kartı ve Banka Havale hariç
     merkez_ekstra_islemler = qs.filter(kasa_adi__in=['merkez-satis', 'virman']).exclude(
         Q(kasa_adi='merkez-satis') & Q(hareket_tipi='gider') & (Q(kredi_karti__gt=0) | Q(banka_havale__gt=0))
-    )
+    ).select_related('kategori1', 'kategori1__parent', 'kategori2', 'kategori2__parent', 'kategori3', 'kategori3__parent')
     # Detaylı işlemlerden Merkez Satış ve Virman kasalarını hariç tut
     # Gider ise: Kredi Kartı, Sanal Pos ve Banka Havale hariç tut
     # Gelir ise: Sadece Sanal Pos ve Banka Havale hariç tut (Kredi Kartı göster)
@@ -2826,12 +2826,17 @@ def income_expense_report(request):
     # Özet hesaplamaları ve detaylı işlem listeleri
     summary = {
         'nakit': 0,
-        'kredi_karti': 0,
-        'cari': 0,
-        'sanal_pos': 0,
+        'kredi_karti': 0,  # Net tutar (toplam için)
+        'kredi_karti_brut': 0,  # Brüt tutar (kart için)
+        'cari': 0,  # Net tutar (toplam için)
+        'cari_brut': 0,  # Brüt tutar (kart için)
+        'sanal_pos': 0,  # Net tutar (toplam için)
+        'sanal_pos_brut': 0,  # Brüt tutar (kart için)
         'mehmet_havale': 0,
-        'banka_havale': 0,
-        'toplam': 0
+        'banka_havale': 0,  # Net tutar (toplam için)
+        'banka_havale_brut': 0,  # Brüt tutar (kart için)
+        'toplam': 0,
+        'komisyon': 0  # %20 Devlet Payı/Gideri
     }
     
     # Her ödeme yöntemi için detaylı işlem listeleri
@@ -2877,10 +2882,23 @@ def income_expense_report(request):
                 'amount': amount,
             })
         
-        # Kredi Kartı işlemleri
+        # Kredi Kartı işlemleri - Gelir ise 1.20'ye böl (120 TL → 100 TL net, 20 TL komisyon)
         if islem.kredi_karti and float(islem.kredi_karti) > 0:
-            amount = float(islem.kredi_karti) * multiplier
-            summary['kredi_karti'] += amount
+            brut_amount = float(islem.kredi_karti)
+            komisyon = 0
+            
+            # Sadece gelir işlemlerinde komisyon hesapla
+            if islem.hareket_tipi == 'gelir':
+                net_amount = brut_amount / 1.20  # 120 ÷ 1.20 = 100
+                komisyon = brut_amount - net_amount  # 120 - 100 = 20
+                amount = net_amount * multiplier
+                summary['komisyon'] += komisyon
+                summary['kredi_karti_brut'] += brut_amount * multiplier  # Brüt tutar (kart için)
+            else:
+                amount = brut_amount * multiplier
+                summary['kredi_karti_brut'] += brut_amount * multiplier
+            
+            summary['kredi_karti'] += amount  # Net tutar (toplam için)
             odeme_detaylari['kredi_karti'].append({
                 'tarih': islem.tarih.strftime('%d.%m.%Y'),
                 'kasa_adi': islem.get_kasa_adi_display() if islem.kasa_adi else '-',
@@ -2888,13 +2906,27 @@ def income_expense_report(request):
                 'ana_kategori': ana_kategori,
                 'alt_kategori': alt_kategori,
                 'aciklama': islem.aciklama or '-',
-                'amount': amount,
+                'amount': brut_amount * multiplier,  # Modalda brüt göster
+                'komisyon': komisyon,
             })
         
-        # Cari işlemleri
+        # Cari işlemleri - Gelir ise 1.20'ye böl (120 TL → 100 TL net, 20 TL komisyon)
         if islem.cari and float(islem.cari) > 0:
-            amount = float(islem.cari) * multiplier
-            summary['cari'] += amount
+            brut_amount = float(islem.cari)
+            komisyon = 0
+            
+            # Sadece gelir işlemlerinde komisyon hesapla
+            if islem.hareket_tipi == 'gelir':
+                net_amount = brut_amount / 1.20  # 120 ÷ 1.20 = 100
+                komisyon = brut_amount - net_amount  # 120 - 100 = 20
+                amount = net_amount * multiplier
+                summary['komisyon'] += komisyon
+                summary['cari_brut'] += brut_amount * multiplier  # Brüt tutar (kart için)
+            else:
+                amount = brut_amount * multiplier
+                summary['cari_brut'] += brut_amount * multiplier
+            
+            summary['cari'] += amount  # Net tutar (toplam için)
             odeme_detaylari['cari'].append({
                 'tarih': islem.tarih.strftime('%d.%m.%Y'),
                 'kasa_adi': islem.get_kasa_adi_display() if islem.kasa_adi else '-',
@@ -2902,13 +2934,27 @@ def income_expense_report(request):
                 'ana_kategori': ana_kategori,
                 'alt_kategori': alt_kategori,
                 'aciklama': islem.aciklama or '-',
-                'amount': amount,
+                'amount': brut_amount * multiplier,  # Modalda brüt göster
+                'komisyon': komisyon,
             })
         
-        # Sanal Pos işlemleri
+        # Sanal Pos işlemleri - Gelir ise 1.20'ye böl (120 TL → 100 TL net, 20 TL komisyon)
         if islem.sanal_pos and float(islem.sanal_pos) > 0:
-            amount = float(islem.sanal_pos) * multiplier
-            summary['sanal_pos'] += amount
+            brut_amount = float(islem.sanal_pos)
+            komisyon = 0
+            
+            # Sadece gelir işlemlerinde komisyon hesapla
+            if islem.hareket_tipi == 'gelir':
+                net_amount = brut_amount / 1.20  # 120 ÷ 1.20 = 100
+                komisyon = brut_amount - net_amount  # 120 - 100 = 20
+                amount = net_amount * multiplier
+                summary['komisyon'] += komisyon
+                summary['sanal_pos_brut'] += brut_amount * multiplier  # Brüt tutar (kart için)
+            else:
+                amount = brut_amount * multiplier
+                summary['sanal_pos_brut'] += brut_amount * multiplier
+            
+            summary['sanal_pos'] += amount  # Net tutar (toplam için)
             odeme_detaylari['sanal_pos'].append({
                 'tarih': islem.tarih.strftime('%d.%m.%Y'),
                 'kasa_adi': islem.get_kasa_adi_display() if islem.kasa_adi else '-',
@@ -2916,7 +2962,8 @@ def income_expense_report(request):
                 'ana_kategori': ana_kategori,
                 'alt_kategori': alt_kategori,
                 'aciklama': islem.aciklama or '-',
-                'amount': amount,
+                'amount': brut_amount * multiplier,  # Modalda brüt göster
+                'komisyon': komisyon,
             })
         
         # Mehmet Havale işlemleri
@@ -2933,10 +2980,23 @@ def income_expense_report(request):
                 'amount': amount,
             })
         
-        # Banka Havale işlemleri
+        # Banka Havale işlemleri - Gelir ise 1.20'ye böl (120 TL → 100 TL net, 20 TL komisyon)
         if islem.banka_havale and float(islem.banka_havale) > 0:
-            amount = float(islem.banka_havale) * multiplier
-            summary['banka_havale'] += amount
+            brut_amount = float(islem.banka_havale)
+            komisyon = 0
+            
+            # Sadece gelir işlemlerinde komisyon hesapla
+            if islem.hareket_tipi == 'gelir':
+                net_amount = brut_amount / 1.20  # 120 ÷ 1.20 = 100
+                komisyon = brut_amount - net_amount  # 120 - 100 = 20
+                amount = net_amount * multiplier
+                summary['komisyon'] += komisyon
+                summary['banka_havale_brut'] += brut_amount * multiplier  # Brüt tutar (kart için)
+            else:
+                amount = brut_amount * multiplier
+                summary['banka_havale_brut'] += brut_amount * multiplier
+            
+            summary['banka_havale'] += amount  # Net tutar (toplam için)
             odeme_detaylari['banka_havale'].append({
                 'tarih': islem.tarih.strftime('%d.%m.%Y'),
                 'kasa_adi': islem.get_kasa_adi_display() if islem.kasa_adi else '-',
@@ -2944,7 +3004,8 @@ def income_expense_report(request):
                 'ana_kategori': ana_kategori,
                 'alt_kategori': alt_kategori,
                 'aciklama': islem.aciklama or '-',
-                'amount': amount,
+                'amount': brut_amount * multiplier,  # Modalda brüt göster
+                'komisyon': komisyon,
             })
         
         # Toplam için tüm işlemleri ekle
@@ -2960,6 +3021,7 @@ def income_expense_report(request):
             'amount': total_amount,
         })
     
+    # Toplam hesapla (komisyon düşülmeden, sadece bilgi amaçlı gösterilir)
     summary['toplam'] = (
         summary['nakit'] + 
         summary['kredi_karti'] + 
@@ -2968,6 +3030,12 @@ def income_expense_report(request):
         summary['mehmet_havale'] + 
         summary['banka_havale']
     )
+    
+    # Her ödeme yöntemi için komisyon toplamlarını hesapla
+    komisyon_kredi_karti = sum(entry.get('komisyon', 0) for entry in odeme_detaylari['kredi_karti'])
+    komisyon_cari = sum(entry.get('komisyon', 0) for entry in odeme_detaylari['cari'])
+    komisyon_sanal_pos = sum(entry.get('komisyon', 0) for entry in odeme_detaylari['sanal_pos'])
+    komisyon_banka_havale = sum(entry.get('komisyon', 0) for entry in odeme_detaylari['banka_havale'])
     
     # Ana kategorileri al (parent'ı olmayan)
     kategoriler = TransactionCategory.objects.filter(
@@ -3016,6 +3084,10 @@ def income_expense_report(request):
         },
         'odeme_detaylari': odeme_detaylari,
         'date_range_label': date_range_label,
+        'komisyon_kredi_karti': komisyon_kredi_karti,
+        'komisyon_cari': komisyon_cari,
+        'komisyon_sanal_pos': komisyon_sanal_pos,
+        'komisyon_banka_havale': komisyon_banka_havale,
     }
     
     return render(request, 'dashboard/income_expense_report.html', context)
@@ -3094,7 +3166,7 @@ def export_income_expense_excel(request):
     headers = [
         'TARİH', 'KASA', 'ANA KATEGORİ', 'ALT KATEGORİ', 'NAKİT', 
         'KREDİ KARTI', 'CARİ', 'SANAL POS', 'M.HAVALE', 'B.HAVALE', 
-        'TOPLAM', 'AÇIKLAMA', 'İŞLEM TİPİ'
+        'KOMİSYON (%20)', 'TOPLAM', 'AÇIKLAMA', 'İŞLEM TİPİ'
     ]
     
     # Başlık stilini ayarla
@@ -3126,16 +3198,45 @@ def export_income_expense_excel(request):
         elif islem.kategori3:
             alt_kategori = islem.kategori3.name
         
-        # Kredi Kartı ve Banka Havale değerlerini belirle
-        kredi_karti_value = float(islem.kredi_karti or 0)
-        banka_havale_value = float(islem.banka_havale or 0)
+        # Tüm ödeme yöntemlerinin brüt değerlerini al
+        kredi_karti_brut = float(islem.kredi_karti or 0)
+        cari_brut = float(islem.cari or 0)
+        sanal_pos_brut = float(islem.sanal_pos or 0)
+        banka_havale_brut = float(islem.banka_havale or 0)
+        
+        # Komisyon hesapla - Sadece Gelir işlemlerinde 1.20'ye böl
+        komisyon = 0
+        if islem.hareket_tipi == 'gelir':
+            # Her ödeme yöntemi için net değer hesapla
+            kredi_karti_net = kredi_karti_brut / 1.20 if kredi_karti_brut > 0 else 0
+            cari_net = cari_brut / 1.20 if cari_brut > 0 else 0
+            sanal_pos_net = sanal_pos_brut / 1.20 if sanal_pos_brut > 0 else 0
+            banka_havale_net = banka_havale_brut / 1.20 if banka_havale_brut > 0 else 0
+            
+            # Toplam komisyon
+            komisyon = (
+                (kredi_karti_brut - kredi_karti_net) + 
+                (cari_brut - cari_net) + 
+                (sanal_pos_brut - sanal_pos_net) + 
+                (banka_havale_brut - banka_havale_net)
+            )
+            
+            kredi_karti_value = kredi_karti_net
+            cari_value = cari_net
+            sanal_pos_value = sanal_pos_net
+            banka_havale_value = banka_havale_net
+        else:
+            kredi_karti_value = kredi_karti_brut
+            cari_value = cari_brut
+            sanal_pos_value = sanal_pos_brut
+            banka_havale_value = banka_havale_brut
         
         # Toplam hesapla
         toplam = (
             float(islem.nakit or 0) + 
             kredi_karti_value + 
-            float(islem.cari or 0) + 
-            float(islem.sanal_pos or 0) + 
+            cari_value + 
+            sanal_pos_value + 
             float(islem.mehmet_havale or 0) + 
             banka_havale_value
         )
@@ -3146,16 +3247,17 @@ def export_income_expense_excel(request):
         ws.cell(row=row, column=4, value=alt_kategori)
         ws.cell(row=row, column=5, value=float(islem.nakit or 0))
         ws.cell(row=row, column=6, value=kredi_karti_value)
-        ws.cell(row=row, column=7, value=float(islem.cari or 0))
-        ws.cell(row=row, column=8, value=float(islem.sanal_pos or 0))
+        ws.cell(row=row, column=7, value=cari_value)
+        ws.cell(row=row, column=8, value=sanal_pos_value)
         ws.cell(row=row, column=9, value=float(islem.mehmet_havale or 0))
         ws.cell(row=row, column=10, value=banka_havale_value)
-        ws.cell(row=row, column=11, value=toplam)
-        ws.cell(row=row, column=12, value=islem.aciklama or '-')
-        ws.cell(row=row, column=13, value=islem.get_hareket_tipi_display())
+        ws.cell(row=row, column=11, value=komisyon)
+        ws.cell(row=row, column=12, value=toplam)
+        ws.cell(row=row, column=13, value=islem.aciklama or '-')
+        ws.cell(row=row, column=14, value=islem.get_hareket_tipi_display())
     
     # Sütun genişliklerini ayarla
-    column_widths = [12, 15, 20, 20, 12, 12, 12, 12, 12, 12, 12, 30, 12]
+    column_widths = [12, 15, 20, 20, 12, 12, 12, 12, 12, 12, 15, 12, 30, 12]
     for col, width in enumerate(column_widths, 1):
         ws.column_dimensions[ws.cell(row=1, column=col).column_letter].width = width
     

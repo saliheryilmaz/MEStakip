@@ -108,20 +108,29 @@
     </div>
 
     <div class="col-12">
-        <div class="card">
-            <div class="card-header">
+        <div class="card border-primary">
+            <div class="card-header bg-primary bg-opacity-10">
                 <h5 class="card-title mb-0">
-                    Kategori
+                    <i class="bi bi-tags me-2"></i>Kategori Seçimi
                     <a href="{% url 'dashboard:kategoriler' %}" class="btn btn-sm btn-outline-primary ms-2" title="Kategori Yönetimi">
                         <i class="bi bi-gear me-1"></i>Kategori Yönet
                     </a>
                 </h5>
             </div>
             <div class="card-body">
+                <div class="alert alert-info d-flex align-items-center mb-3" role="alert">
+                    <i class="bi bi-info-circle-fill me-2"></i>
+                    <div>
+                        <strong>Önemli:</strong> İşlemlerinizi kategorilere ayırarak daha iyi takip edebilirsiniz. 
+                        Kategori seçmezseniz işlemler "Kategori Yok" olarak görünecektir.
+                    </div>
+                </div>
 
                 <div class="row g-3">
                     <div class="col-md-6">
-                        <label class="form-label">Ana Kategori Seçin (Opsiyonel)</label>
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-folder me-1"></i>Ana Kategori Seçin (Opsiyonel)
+                        </label>
                         <select class="form-select" name="ana_kategori_temp" id="ana-kategori-select">
                             <option value="">Ana Kategori Seçiniz</option>
                             {% for kategori in ana_kategoriler %}
@@ -134,7 +143,9 @@
                         </small>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label">Alt Kategori Seçin (Opsiyonel)</label>
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-folder2-open me-1"></i>Alt Kategori Seçin (Opsiyonel)
+                        </label>
                         <select class="form-select" name="kategori1" id="alt-kategori-select" disabled>
                             <option value="">Önce ana kategori seçin</option>
                         </select>
@@ -260,6 +271,28 @@
                         console.error('AJAX hatası:', error);
                     });
             });
+            
+            // Form submit edilmeden önce kontrol et
+            const financeForm = document.getElementById('financeForm');
+            if (financeForm) {
+                financeForm.addEventListener('submit', function(e) {
+                    const anaKategoriId = anaKategoriSelect.value;
+                    const altKategoriId = altKategoriSelect.value;
+                    
+                    // Eğer ana kategori seçilmiş ama alt kategori seçilmemişse
+                    // Ana kategoriyi kategori1 alanına ata
+                    if (anaKategoriId && !altKategoriId) {
+                        // Alt kategori dropdown'ına ana kategoriyi ekle ve seç
+                        const anaKategoriText = anaKategoriSelect.options[anaKategoriSelect.selectedIndex].text;
+                        const tempOption = document.createElement('option');
+                        tempOption.value = anaKategoriId;
+                        tempOption.textContent = anaKategoriText;
+                        tempOption.selected = true;
+                        altKategoriSelect.appendChild(tempOption);
+                        console.log('Ana kategori kategori1 alanına atandı:', anaKategoriId);
+                    }
+                });
+            }
         }
 
         // Ödeme alanları yönetimi - Sadece bir ödeme türü seçilebilsin

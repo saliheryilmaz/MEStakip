@@ -472,7 +472,7 @@
 
         <!-- Header -->
         <header class="admin-header">
-            <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom">
+            <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom" style="overflow: visible !important;">
                 <div class="container-fluid">
                     <!-- Mobile Sidebar Toggle (sadece mobilde görünür) -->
                     <button class="btn btn-outline-primary d-lg-none me-2" type="button" onclick="toggleMobileSidebar()"
@@ -512,59 +512,23 @@
 
                         <!-- Notifications -->
                         <div class="dropdown me-2">
-                            <button class="btn btn-outline-secondary position-relative" type="button"
-                                data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false"
-                                id="notificationButton">
+                            <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="notificationButton" data-bs-toggle="dropdown">
                                 <i class="bi bi-bell"></i>
-                                <span
-                                    class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
-                                    id="notificationBadge" style="display: none;">
-                                    0
-                                </span>
                             </button>
-                            <ul class="dropdown-menu dropdown-menu-end" id="notificationDropdownMenu"
-                                aria-labelledby="notificationButton"
-                                style="width: 350px; max-height: 400px; overflow-y: auto;">
-                                <li class="dropdown-header d-flex justify-content-between align-items-center">
-                                    <span>Bildirimler</span>
-                                    <button class="btn btn-sm btn-link text-primary p-0" id="markAllReadBtn"
-                                        style="font-size: 0.75rem;" type="button">
-                                        Tümünü Okundu İşaretle
-                                    </button>
-                                </li>
-                                <li>
-                                    <hr class="dropdown-divider">
-                                </li>
-                                <div id="notificationList">
-                                    <li class="dropdown-item text-center text-muted py-3">
-                                        <i class="bi bi-bell-slash fs-4 d-block mb-2"></i>
-                                        Henüz bildirim yok
-                                    </li>
-                                </div>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><h6 class="dropdown-header">Bildirimler</h6></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="#">Henüz bildirim yok</a></li>
                             </ul>
                         </div>
 
                         <!-- User Menu -->
                         {% if user.is_authenticated %}
                         <div class="dropdown">
-                            <button class="btn btn-outline-secondary d-flex align-items-center" type="button"
-                                data-bs-toggle="dropdown" data-bs-auto-close="true" aria-expanded="false"
-                                id="userMenuButton">
-                                <img src="{% load static %}{% static 'images/avatar-placeholder.svg' %}"
-                                    alt="User Avatar" width="24" height="24" class="rounded-circle me-2">
-                                <span class="d-none d-md-inline">
-                                    {% if user.first_name and user.last_name %}
-                                    {{ user.first_name }} {{ user.last_name }}
-                                    {% elif user.first_name %}
-                                    {{ user.first_name }}
-                                    {% else %}
-                                    {{ user.username }}
-                                    {% endif %}
-                                </span>
-                                <i class="bi bi-chevron-down ms-1"></i>
+                            <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="userMenuButton" data-bs-toggle="dropdown">
+                                {{ user.username }}
                             </button>
-                            <ul class="dropdown-menu dropdown-menu-end" id="userMenuDropdown"
-                                aria-labelledby="userMenuButton">
+                            <ul class="dropdown-menu dropdown-menu-end">
                                 <li>
                                     <h6 class="dropdown-header">
                                         {% if user.first_name and user.last_name %}
@@ -747,8 +711,18 @@
         <div id="toast-container"></div>
     </div>
 
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Bootstrap JS (bundle includes Popper) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
+    
+    <!-- Bootstrap Test -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Bootstrap loaded:', typeof bootstrap !== 'undefined');
+            if (typeof bootstrap !== 'undefined') {
+                console.log('Bootstrap version:', bootstrap.Dropdown ? 'Dropdown available' : 'Dropdown NOT available');
+            }
+        });
+    </script>
 
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -1913,70 +1887,37 @@
 
         // Sayfa yüklendiğinde bildirim sistemini başlat
         document.addEventListener('DOMContentLoaded', function () {
-            // Bootstrap'in yüklenmesini bekle
-            function initializeDropdowns() {
-                // Bootstrap kontrolü
-                if (typeof bootstrap === 'undefined') {
-                    setTimeout(initializeDropdowns, 100);
-                    return;
-                }
+            console.log('DOM loaded, initializing...');
+            
+            // Bootstrap kontrolü
+            if (typeof bootstrap === 'undefined') {
+                console.error('Bootstrap is not loaded!');
+                return;
+            }
+            
+            console.log('Bootstrap is loaded, version check:', bootstrap.Dropdown);
 
-                // Bildirim sistemini başlat
+            // Bildirim sistemini başlat
+            try {
                 window.notificationSystem = new NotificationSystem();
                 window.notificationSystem.requestNotificationPermission();
-
-                // Dropdown'ı manuel olarak başlat
-                const notificationButton = document.getElementById('notificationButton');
-                const notificationDropdown = document.getElementById('notificationDropdownMenu');
-
-                if (notificationButton && notificationDropdown) {
-
-                    // Bootstrap Dropdown instance oluştur
-                    try {
-                        // Önce mevcut instance'ı kontrol et
-                        let dropdownInstance = bootstrap.Dropdown.getInstance(notificationButton);
-
-                        if (!dropdownInstance) {
-                            // Yeni instance oluştur
-                            dropdownInstance = new bootstrap.Dropdown(notificationButton, {
-                                autoClose: 'outside',
-                                boundary: 'viewport'
-                            });
-                        }
-
-                        // Dropdown açıldığında
-                        notificationButton.addEventListener('shown.bs.dropdown', function () {
-                            window.notificationSystem.loadNotifications();
-                        });
-                    } catch (error) {
-                        // Dropdown oluşturma hatası
-                    }
-                }
-
-                // Kullanıcı menüsü dropdown'ını başlat
-                const userMenuButton = document.getElementById('userMenuButton');
-                const userMenuDropdown = document.getElementById('userMenuDropdown');
-
-                if (userMenuButton && userMenuDropdown) {
-                    try {
-                        // Önce mevcut instance'ı kontrol et
-                        let userDropdownInstance = bootstrap.Dropdown.getInstance(userMenuButton);
-
-                        if (!userDropdownInstance) {
-                            // Yeni instance oluştur
-                            userDropdownInstance = new bootstrap.Dropdown(userMenuButton, {
-                                autoClose: true,
-                                boundary: 'viewport'
-                            });
-                        }
-                    } catch (error) {
-                        // Kullanıcı menüsü dropdown oluşturma hatası
-                    }
-                }
+                console.log('Notification system initialized');
+            } catch (error) {
+                console.error('Notification system error:', error);
             }
 
-            // İlk çağrı
-            initializeDropdowns();
+            // Dropdown açıldığında bildirimleri yükle
+            const notificationButton = document.getElementById('notificationButton');
+            if (notificationButton) {
+                notificationButton.addEventListener('shown.bs.dropdown', function () {
+                    console.log('Notification dropdown opened');
+                    if (window.notificationSystem) {
+                        window.notificationSystem.loadNotifications();
+                    }
+                });
+            }
+            
+            console.log('Dropdowns should work now with data-bs-toggle');
         });
     </script>
 </body>

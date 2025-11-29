@@ -102,7 +102,7 @@
         <div class="card text-white clickable-card" style="background: #5cb85c; cursor: pointer;" data-bs-toggle="modal" data-bs-target="#modalKrediKarti">
             <div class="card-body text-center">
                 <h6 class="card-title mb-1">💳 Kredi Kartı</h6>
-                <h4 class="mb-0">{{ summary.kredi_karti|default:0|floatformat:0 }}</h4>
+                <h4 class="mb-0">{{ summary.kredi_karti_brut|default:0|floatformat:0 }}</h4>
             </div>
         </div>
     </div>
@@ -110,7 +110,7 @@
         <div class="card text-white clickable-card" style="background: #d9534f; cursor: pointer;" data-bs-toggle="modal" data-bs-target="#modalCari">
             <div class="card-body text-center">
                 <h6 class="card-title mb-1">🏢 Cari</h6>
-                <h4 class="mb-0">{{ summary.cari|default:0|floatformat:0 }}</h4>
+                <h4 class="mb-0">{{ summary.cari_brut|default:0|floatformat:0 }}</h4>
             </div>
         </div>
     </div>
@@ -118,7 +118,7 @@
         <div class="card text-white clickable-card" style="background: #f0ad4e; cursor: pointer;" data-bs-toggle="modal" data-bs-target="#modalSanalPos">
             <div class="card-body text-center">
                 <h6 class="card-title mb-1">💳 Sanal Pos</h6>
-                <h4 class="mb-0">{{ summary.sanal_pos|default:0|floatformat:0 }}</h4>
+                <h4 class="mb-0">{{ summary.sanal_pos_brut|default:0|floatformat:0 }}</h4>
             </div>
         </div>
     </div>
@@ -134,14 +134,24 @@
         <div class="card text-white clickable-card" style="background: #8e44ad; cursor: pointer;" data-bs-toggle="modal" data-bs-target="#modalBankaHavale">
             <div class="card-body text-center">
                 <h6 class="card-title mb-1">🏦 Banka Havale</h6>
-                <h4 class="mb-0">{{ summary.banka_havale|default:0|floatformat:0 }}</h4>
+                <h4 class="mb-0">{{ summary.banka_havale_brut|default:0|floatformat:0 }}</h4>
             </div>
         </div>
     </div>
 </div>
 
+<!-- Komisyon ve Toplam Kartları -->
 <div class="row g-3 mb-4">
-    <div class="col-md-12">
+    <div class="col-md-6">
+        <div class="card text-white" style="background: #e74c3c;">
+            <div class="card-body text-center">
+                <h6 class="card-title mb-1">⚠️ Komisyon</h6>
+                <h3 class="mb-0">-{{ summary.komisyon|default:0|floatformat:0 }}</h3>
+                <small class="text-white-50">Kredi Kartı, Cari, Sanal Pos & Banka Havale Gelirlerinden</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
         <div class="card text-white clickable-card" style="background: #34495e; cursor: pointer;" data-bs-toggle="modal" data-bs-target="#modalToplam">
             <div class="card-body text-center">
                 <h6 class="card-title mb-1">💵 Toplam</h6>
@@ -271,11 +281,11 @@
 
 <!-- Modals -->
 {% include 'dashboard/partials/finance-modal.html' with modal_id='modalNakit' title='Nakit İşlemleri' entries=odeme_detaylari.nakit total=summary.nakit color_class='info' selected_range=date_range_label %}
-{% include 'dashboard/partials/finance-modal.html' with modal_id='modalKrediKarti' title='Kredi Kartı İşlemleri' entries=odeme_detaylari.kredi_karti total=summary.kredi_karti color_class='success' selected_range=date_range_label %}
-{% include 'dashboard/partials/finance-modal.html' with modal_id='modalCari' title='Cari İşlemleri' entries=odeme_detaylari.cari total=summary.cari color_class='danger' selected_range=date_range_label %}
-{% include 'dashboard/partials/finance-modal.html' with modal_id='modalSanalPos' title='Sanal Pos İşlemleri' entries=odeme_detaylari.sanal_pos total=summary.sanal_pos color_class='warning' selected_range=date_range_label %}
+{% include 'dashboard/partials/finance-modal.html' with modal_id='modalKrediKarti' title='Kredi Kartı İşlemleri' entries=odeme_detaylari.kredi_karti total=summary.kredi_karti_brut color_class='success' selected_range=date_range_label komisyon_toplam=komisyon_kredi_karti %}
+{% include 'dashboard/partials/finance-modal.html' with modal_id='modalCari' title='Cari İşlemleri' entries=odeme_detaylari.cari total=summary.cari_brut color_class='danger' selected_range=date_range_label komisyon_toplam=komisyon_cari %}
+{% include 'dashboard/partials/finance-modal.html' with modal_id='modalSanalPos' title='Sanal Pos İşlemleri' entries=odeme_detaylari.sanal_pos total=summary.sanal_pos_brut color_class='warning' selected_range=date_range_label komisyon_toplam=komisyon_sanal_pos %}
 {% include 'dashboard/partials/finance-modal.html' with modal_id='modalMehmetHavale' title='Mehmet Havale İşlemleri' entries=odeme_detaylari.mehmet_havale total=summary.mehmet_havale color_class='secondary' selected_range=date_range_label %}
-{% include 'dashboard/partials/finance-modal.html' with modal_id='modalBankaHavale' title='Banka Havale İşlemleri' entries=odeme_detaylari.banka_havale total=summary.banka_havale color_class='dark' selected_range=date_range_label %}
+{% include 'dashboard/partials/finance-modal.html' with modal_id='modalBankaHavale' title='Banka Havale İşlemleri' entries=odeme_detaylari.banka_havale total=summary.banka_havale_brut color_class='dark' selected_range=date_range_label komisyon_toplam=komisyon_banka_havale %}
 {% include 'dashboard/partials/finance-modal.html' with modal_id='modalToplam' title='Tüm İşlemler' entries=odeme_detaylari.toplam total=summary.toplam color_class='primary' selected_range=date_range_label %}
 
 {% endblock %}

@@ -25,6 +25,15 @@ Expecting variables:
                     </div>
                 </div>
                 {% endif %}
+                
+                <!-- Kategori Filtresi -->
+                <div class="mb-3">
+                    <label class="form-label small text-muted">Kategori Filtrele</label>
+                    <select class="form-select form-select-sm kategori-filter" data-modal-id="{{ modal_id }}">
+                        <option value="">Tüm Kategoriler</option>
+                    </select>
+                </div>
+                
                 {% if entries %}
                 <div class="table-responsive">
                     <table class="table align-middle mb-0">
@@ -92,3 +101,63 @@ Expecting variables:
 </div>
 
 
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('{{ modal_id }}');
+    if (!modal) return;
+    
+    const filterSelect = modal.querySelector('.kategori-filter');
+    const tableBody = modal.querySelector('tbody');
+    
+    if (!filterSelect || !tableBody) return;
+    
+    // Modal açıldığında kategorileri topla
+    modal.addEventListener('shown.bs.modal', function() {
+        const rows = tableBody.querySelectorAll('tr');
+        const categories = new Set();
+        
+        rows.forEach(row => {
+            const categoryCell = row.cells[3]; // Ana Kategori sütunu
+            if (categoryCell) {
+                const badge = categoryCell.querySelector('.badge');
+                if (badge) {
+                    categories.add(badge.textContent.trim());
+                }
+            }
+        });
+        
+        // Dropdown'ı doldur
+        filterSelect.innerHTML = '<option value="">Tüm Kategoriler</option>';
+        Array.from(categories).sort().forEach(cat => {
+            const option = document.createElement('option');
+            option.value = cat;
+            option.textContent = cat;
+            filterSelect.appendChild(option);
+        });
+    });
+    
+    // Filtreleme
+    filterSelect.addEventListener('change', function() {
+        const selectedCategory = this.value;
+        const rows = tableBody.querySelectorAll('tr');
+        
+        rows.forEach(row => {
+            if (!selectedCategory) {
+                row.style.display = '';
+                return;
+            }
+            
+            const categoryCell = row.cells[3];
+            const badge = categoryCell ? categoryCell.querySelector('.badge') : null;
+            const categoryText = badge ? badge.textContent.trim() : '';
+            
+            if (categoryText === selectedCategory) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    });
+});
+</script>

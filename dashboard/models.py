@@ -60,6 +60,8 @@ class Siparis(models.Model):
         ('kredi-karti', 'Kredi Kartı'),
         ('havale', 'Havale'),
         ('cari-hesap', 'Cari Hesap'),
+        ('banka-havale', 'Banka Havale'),
+        ('sanal-pos', 'Sanal POS'),
     ]
     
     SMS_CHOICES = [

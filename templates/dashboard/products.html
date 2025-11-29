@@ -35,17 +35,20 @@
     <div class="col-12">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0">
-                    {% if baslangic_tarih and bitis_tarih %}
-                    {{ baslangic_tarih|date:'d.m.Y' }} - {{ bitis_tarih|date:'d.m.Y' }} Arası İşlemler
-                    {% elif baslangic_tarih %}
-                    {{ baslangic_tarih|date:'d.m.Y' }} Sonrası İşlemler
-                    {% elif bitis_tarih %}
-                    {{ bitis_tarih|date:'d.m.Y' }} Öncesi İşlemler
-                    {% else %}
-                    Günlük İşlemler ({{ secilen_tarih|date:'d.m.Y' }})
-                    {% endif %}
-                </h5>
+                <div>
+                    <h5 class="card-title mb-0">
+                        {% if baslangic_tarih and bitis_tarih %}
+                        {{ baslangic_tarih|date:'d.m.Y' }} - {{ bitis_tarih|date:'d.m.Y' }} Arası İşlemler
+                        {% elif baslangic_tarih %}
+                        {{ baslangic_tarih|date:'d.m.Y' }} Sonrası İşlemler
+                        {% elif bitis_tarih %}
+                        {{ bitis_tarih|date:'d.m.Y' }} Öncesi İşlemler
+                        {% else %}
+                        Günlük İşlemler ({{ secilen_tarih|date:'d.m.Y' }})
+                        {% endif %}
+                    </h5>
+
+                </div>
                 <form class="d-flex gap-2" method="get">
                     <input type="date" class="form-control form-control-sm" name="baslangic_tarih"
                         value="{{ baslangic_tarih }}">
@@ -61,43 +64,55 @@
             </div>
             <div class="card-body">
                 <div class="row g-3 mb-4">
-                    <div class="col-md-3">
-                        <div class="card bg-light">
-                            <div class="card-body text-center">
-                                <h6 class="card-title text-muted mb-1">İşlem Sayısı</h6>
-                                <h4 class="mb-0">{{ gun_ozeti.islem_sayisi }}</h4>
+                    <div class="col-md-4">
+                        <div class="card border-start border-success border-4 shadow-sm">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <p class="text-muted mb-1 small">Toplam Gelir</p>
+                                        <h3 class="mb-0 text-success">{{ gun_ozeti.servis_merkez_toplam.gelir|turkish_lira }}</h3>
+                                    </div>
+                                    <div class="text-success opacity-50">
+                                        <i class="bi bi-arrow-up-circle fs-1"></i>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card bg-success bg-opacity-10">
-                            <div class="card-body text-center">
-                                <h6 class="card-title text-success mb-1">Toplam Gelir</h6>
-                                <h4 class="mb-0 text-success">{{ gun_ozeti.gelir|turkish_lira }}</h4>
+                    <div class="col-md-4">
+                        <div class="card border-start border-danger border-4 shadow-sm">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <p class="text-muted mb-1 small">Toplam Gider</p>
+                                        <h3 class="mb-0 text-danger">{{ gun_ozeti.servis_merkez_toplam.gider|turkish_lira }}</h3>
+                                    </div>
+                                    <div class="text-danger opacity-50">
+                                        <i class="bi bi-arrow-down-circle fs-1"></i>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card bg-danger bg-opacity-10">
-                            <div class="card-body text-center">
-                                <h6 class="card-title text-danger mb-1">Toplam Gider</h6>
-                                <h4 class="mb-0 text-danger">{{ gun_ozeti.gider|turkish_lira }}</h4>
+                    <div class="col-md-4">
+                        <div class="card border-start border-{% if gun_ozeti.servis_merkez_toplam.net >= 0 %}primary{% else %}warning{% endif %} border-4 shadow-sm">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <p class="text-muted mb-1 small">Net Bakiye</p>
+                                        <h3 class="mb-0 text-{% if gun_ozeti.servis_merkez_toplam.net >= 0 %}primary{% else %}warning{% endif %}">{{ gun_ozeti.servis_merkez_toplam.net|turkish_lira }}</h3>
+                                    </div>
+                                    <div class="text-{% if gun_ozeti.servis_merkez_toplam.net >= 0 %}primary{% else %}warning{% endif %} opacity-50">
+                                        <i class="bi bi-wallet2 fs-1"></i>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div
-                            class="card {% if gun_ozeti.net >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10">
-                            <div class="card-body text-center">
-                                <h6
-                                    class="card-title {% if gun_ozeti.net >= 0 %}text-success{% else %}text-danger{% endif %} mb-1">
-                                    Net</h6>
-                                <h4
-                                    class="mb-0 {% if gun_ozeti.net >= 0 %}text-success{% else %}text-danger{% endif %}">
-                                    {{ gun_ozeti.net|turkish_lira }}</h4>
-                            </div>
-                        </div>
-                    </div>
+                </div>
+                <div class="alert alert-info d-flex align-items-center mb-4" role="alert">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <small>Servis & Merkez Satış kasaları için Nakit, Kredi Kartı ve M.Havale toplamları</small>
                 </div>
             </div>
         </div>
@@ -113,7 +128,7 @@
             </div>
             <div class="card-body">
                 <div class="row g-3">
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <div class="card {% if gun_ozeti.nakit_toplam >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10">
                             <div class="card-body text-center">
                                 <h6 class="card-title {% if gun_ozeti.nakit_toplam >= 0 %}text-success{% else %}text-danger{% endif %} mb-1">💰 Nakit</h6>
@@ -121,7 +136,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <div class="card {% if gun_ozeti.kredi_karti_toplam >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10">
                             <div class="card-body text-center">
                                 <h6 class="card-title {% if gun_ozeti.kredi_karti_toplam >= 0 %}text-success{% else %}text-danger{% endif %} mb-1">💳 Kredi Kartı</h6>
@@ -129,7 +144,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <div class="card {% if gun_ozeti.cari_toplam >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10">
                             <div class="card-body text-center">
                                 <h6 class="card-title {% if gun_ozeti.cari_toplam >= 0 %}text-success{% else %}text-danger{% endif %} mb-1">🏢 Cari</h6>
@@ -137,11 +152,27 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
+                        <div class="card {% if gun_ozeti.sanal_pos_toplam >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10">
+                            <div class="card-body text-center">
+                                <h6 class="card-title {% if gun_ozeti.sanal_pos_toplam >= 0 %}text-success{% else %}text-danger{% endif %} mb-1">💳 Sanal Pos</h6>
+                                <h4 class="mb-0 {% if gun_ozeti.sanal_pos_toplam >= 0 %}text-success{% else %}text-danger{% endif %}">{{ gun_ozeti.sanal_pos_toplam|turkish_lira }}</h4>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
                         <div class="card {% if gun_ozeti.mehmet_havale_toplam >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10">
                             <div class="card-body text-center">
                                 <h6 class="card-title {% if gun_ozeti.mehmet_havale_toplam >= 0 %}text-success{% else %}text-danger{% endif %} mb-1">🏦 M.Havale</h6>
                                 <h4 class="mb-0 {% if gun_ozeti.mehmet_havale_toplam >= 0 %}text-success{% else %}text-danger{% endif %}">{{ gun_ozeti.mehmet_havale_toplam|turkish_lira }}</h4>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="card {% if gun_ozeti.banka_havale_toplam >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10">
+                            <div class="card-body text-center">
+                                <h6 class="card-title {% if gun_ozeti.banka_havale_toplam >= 0 %}text-success{% else %}text-danger{% endif %} mb-1">🏦 B.Havale</h6>
+                                <h4 class="mb-0 {% if gun_ozeti.banka_havale_toplam >= 0 %}text-success{% else %}text-danger{% endif %}">{{ gun_ozeti.banka_havale_toplam|turkish_lira }}</h4>
                             </div>
                         </div>
                     </div>
@@ -179,7 +210,9 @@
                                 <th>Nakit</th>
                                 <th>Kredi Kartı</th>
                                 <th>Cari</th>
+                                <th>Sanal Pos</th>
                                 <th>M.Havale</th>
+                                <th>B.Havale</th>
                                 <th>Kategori</th>
                                 <th>Açıklama</th>
                                 <th class="text-end">İşlem</th>
@@ -199,7 +232,9 @@
                                 <td>{% if tx.nakit > 0 %}{{ tx.nakit|turkish_lira }}{% else %}-{% endif %}</td>
                                 <td>{% if tx.kredi_karti > 0 %}{{ tx.kredi_karti|turkish_lira }}{% else %}-{% endif %}</td>
                                 <td>{% if tx.cari > 0 %}{{ tx.cari|turkish_lira }}{% else %}-{% endif %}</td>
+                                <td>{% if tx.sanal_pos > 0 %}{{ tx.sanal_pos|turkish_lira }}{% else %}-{% endif %}</td>
                                 <td>{% if tx.mehmet_havale > 0 %}{{ tx.mehmet_havale|turkish_lira }}{% else %}-{% endif %}</td>
+                                <td>{% if tx.banka_havale > 0 %}{{ tx.banka_havale|turkish_lira }}{% else %}-{% endif %}</td>
                                 <td>
                                     {% if tx.kategori1.parent %}
                                         {{ tx.kategori1.parent.name }} / {{ tx.kategori1.name }}
@@ -473,6 +508,7 @@
                                     <th>Nakit</th>
                                     <th>Kredi Kartı</th>
                                     <th>Cari</th>
+                                    <th>Sanal Pos</th>
                                     <th>M.Havale</th>
                                     <th>B.Havale</th>
                                     <th>Kategori</th>
@@ -496,6 +532,7 @@
                                     <td>{% if tx.nakit > 0 %}{{ tx.nakit|turkish_lira }}{% else %}-{% endif %}</td>
                                     <td>{% if tx.kredi_karti > 0 %}{{ tx.kredi_karti|turkish_lira }}{% else %}-{% endif %}</td>
                                     <td>{% if tx.cari > 0 %}{{ tx.cari|turkish_lira }}{% else %}-{% endif %}</td>
+                                    <td>{% if tx.sanal_pos > 0 %}{{ tx.sanal_pos|turkish_lira }}{% else %}-{% endif %}</td>
                                     <td>{% if tx.mehmet_havale > 0 %}{{ tx.mehmet_havale|turkish_lira }}{% else %}-{% endif %}</td>
                                     <td>{% if tx.banka_havale > 0 %}{{ tx.banka_havale|turkish_lira }}{% else %}-{% endif %}</td>
                                     <td>

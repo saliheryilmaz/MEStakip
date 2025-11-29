@@ -297,7 +297,7 @@ def products(request):
     gider_mehmet_havale = qs.filter(hareket_tipi='gider').exclude(kasa_adi__in=['merkez-satis', 'virman']).aggregate(total=Sum('mehmet_havale', default=0))['total'] or 0
     gider_banka_havale = qs.filter(hareket_tipi='gider').exclude(kasa_adi__in=['merkez-satis', 'virman']).aggregate(total=Sum('banka_havale', default=0))['total'] or 0
     
-    # Ödeme yöntemi kartlarında yalnızca gelirleri göster
+    # Ödeme yöntemi kartlarında yalnızca gelirleri göster (sadece Detaylı İşlemler'den)
     gun_ozeti['nakit_toplam'] = gelir_nakit
     gun_ozeti['kredi_karti_toplam'] = gelir_kredi_karti
     gun_ozeti['cari_toplam'] = gelir_cari
@@ -305,15 +305,34 @@ def products(request):
     gun_ozeti['mehmet_havale_toplam'] = gelir_mehmet_havale
     gun_ozeti['banka_havale_toplam'] = gelir_banka_havale
     
-    # Merkez Satış kasasındaki gelirleri de Ödeme Yöntemlerine Göre Toplamlar'a ekle
-    merkez_satis_gelirleri = qs.filter(Q(kasa_adi='merkez-satis') & Q(hareket_tipi='gelir'), hareket_tipi='gelir')
-    for islem in merkez_satis_gelirleri:
-        gun_ozeti['nakit_toplam'] += parse_decimal_value(islem.nakit)
-        gun_ozeti['kredi_karti_toplam'] += parse_decimal_value(islem.kredi_karti)
-        gun_ozeti['cari_toplam'] += parse_decimal_value(islem.cari)
-        gun_ozeti['sanal_pos_toplam'] += parse_decimal_value(islem.sanal_pos)
-        gun_ozeti['mehmet_havale_toplam'] += parse_decimal_value(islem.mehmet_havale)
-        gun_ozeti['banka_havale_toplam'] += parse_decimal_value(islem.banka_havale)
+    # Servis ve Merkez Satış kasaları için Nakit, Kredi Kartı ve M.Havale toplamları
+    servis_merkez_qs = qs.filter(kasa_adi__in=['servis', 'merkez-satis'])
+    
+    # Nakit toplamları
+    servis_merkez_nakit_gelir = servis_merkez_qs.filter(hareket_tipi='gelir').aggregate(total=Sum('nakit', default=0))['total'] or 0
+    servis_merkez_nakit_gider = servis_merkez_qs.filter(hareket_tipi='gider').aggregate(total=Sum('nakit', default=0))['total'] or 0
+    servis_merkez_nakit_net = servis_merkez_nakit_gelir - servis_merkez_nakit_gider
+    
+    # Kredi Kartı toplamları
+    servis_merkez_kredi_gelir = servis_merkez_qs.filter(hareket_tipi='gelir').aggregate(total=Sum('kredi_karti', default=0))['total'] or 0
+    servis_merkez_kredi_gider = servis_merkez_qs.filter(hareket_tipi='gider').aggregate(total=Sum('kredi_karti', default=0))['total'] or 0
+    servis_merkez_kredi_net = servis_merkez_kredi_gelir - servis_merkez_kredi_gider
+    
+    # M.Havale toplamları
+    servis_merkez_mhavale_gelir = servis_merkez_qs.filter(hareket_tipi='gelir').aggregate(total=Sum('mehmet_havale', default=0))['total'] or 0
+    servis_merkez_mhavale_gider = servis_merkez_qs.filter(hareket_tipi='gider').aggregate(total=Sum('mehmet_havale', default=0))['total'] or 0
+    servis_merkez_mhavale_net = servis_merkez_mhavale_gelir - servis_merkez_mhavale_gider
+    
+    # Toplam (Nakit + Kredi Kartı + M.Havale)
+    servis_merkez_toplam_gelir = servis_merkez_nakit_gelir + servis_merkez_kredi_gelir + servis_merkez_mhavale_gelir
+    servis_merkez_toplam_gider = servis_merkez_nakit_gider + servis_merkez_kredi_gider + servis_merkez_mhavale_gider
+    servis_merkez_toplam_net = servis_merkez_toplam_gelir - servis_merkez_toplam_gider
+    
+    gun_ozeti['servis_merkez_toplam'] = {
+        'gelir': servis_merkez_toplam_gelir,
+        'gider': servis_merkez_toplam_gider,
+        'net': servis_merkez_toplam_net
+    }
 
     # Excel verileri için tarih filtrelemesi
     hareketler = MalzemeHareketi.objects.filter(kullanici=request.user).order_by('-tarih')
@@ -396,14 +415,14 @@ def products(request):
     
     for satir in excel_satirlar:
         odeme_sekli = satir.odeme_sekli or 'Belirtilmemiş'
-        # Ödeme şeklini normalize et (küçük harfe çevir, boşlukları temizle)
-        odeme_sekli_normalized = odeme_sekli.lower().strip().replace(' ', '').replace('.', '').replace('-', '')
+        # Ödeme şeklini normalize et (Türkçe karakterleri dönüştür, küçük harfe çevir, boşlukları temizle)
+        odeme_sekli_normalized = odeme_sekli.replace('İ', 'i').replace('I', 'ı').lower().strip().replace(' ', '').replace('.', '').replace('-', '')
         odeme_sekli_original = odeme_sekli.strip()
         
         # Ana ödeme şekillerini belirle (tam eşleşme ve içerme kontrolü)
         # Nakit kontrolü
         amount = parse_decimal_value(satir.tutar)
-        if (odeme_sekli_original.lower() == 'nakit' or 
+        if (odeme_sekli_original.replace('İ', 'i').replace('I', 'ı').lower() == 'nakit' or 
             'nakit' in odeme_sekli_normalized or 
             odeme_sekli_normalized == 'nakit'):
             excel_odeme_dict['Nakit'] += amount
@@ -419,11 +438,17 @@ def products(request):
               'sanalpos' in odeme_sekli_normalized or
               'sanal pos' in odeme_sekli_original.lower()):
             excel_odeme_dict['Sanal_Pos'] += amount
+        # Banka Havale kontrolü (Mehmet Havale'den önce kontrol edilmeli)
+        elif ('banka' in odeme_sekli_normalized or 
+              'bankahavale' in odeme_sekli_normalized or
+              'bhavale' in odeme_sekli_normalized or
+              odeme_sekli_original.lower() in ['b.havale', 'b havale', 'bhavale', 'banka havale', 'banka havalesi']):
+            excel_odeme_dict['Banka_Havale'] += amount
         # Mehmet Havale kontrolü
-        elif ('havale' in odeme_sekli_normalized or 
-              'mehmet' in odeme_sekli_normalized or
+        elif ('mehmet' in odeme_sekli_normalized or 
               'mhavale' in odeme_sekli_normalized or
-              odeme_sekli_original.lower() in ['m.havale', 'm havale', 'mhavale', 'mehmet havale']):
+              odeme_sekli_original.lower() in ['m.havale', 'm havale', 'mhavale', 'mehmet havale'] or
+              ('havale' in odeme_sekli_normalized and 'banka' not in odeme_sekli_normalized)):
             excel_odeme_dict['Mehmet_Havale'] += amount
         # Cari kontrolü
         elif ('cari' in odeme_sekli_normalized or 
@@ -1161,7 +1186,6 @@ def messages_view(request):
     # Kartlar için belirli kasalar
     canta_toplam = 0
     mehmet_havale_toplam = 0
-    genel_toplam = 0
     rows = []
     
     for row in kasa_ozet:
@@ -1170,7 +1194,6 @@ def messages_view(request):
         # Virman kasasını listeden hariç tut
         if kasa != 'virman':
             rows.append({'kasa_adi': kasa, 'bakiye': net})
-            genel_toplam += net
         if kasa == 'canta':
             canta_toplam = net
         elif kasa == 'mehmet-havale':
@@ -1218,11 +1241,15 @@ def messages_view(request):
     # Nakit → Çanta'ya ekle
     canta_toplam += nakit_net
     
+    # Genel Toplam: Çanta + Mehmet Havale
+    genel_toplam = canta_toplam + mehmet_havale_toplam
+    
     # Kart modal verileri
     canta_entries = build_entries(qs.filter(Q(kasa_adi='canta') | ~Q(nakit=0)), lambda tx: tx.nakit)
     mehmet_havale_entries = build_entries(qs.filter(~Q(mehmet_havale=0)), lambda tx: tx.mehmet_havale)
     banka_havale_entries = build_entries(qs.filter(~Q(banka_havale=0)), lambda tx: tx.banka_havale)
-    genel_entries = build_entries(qs, lambda tx: tx.toplam)
+    # Genel entries: Sadece Nakit ve Mehmet Havale olan işlemler (Çanta + Mehmet Havale)
+    genel_entries = build_entries(qs.filter(Q(nakit__gt=0) | Q(mehmet_havale__gt=0)), lambda tx: (tx.nakit or 0) + (tx.mehmet_havale or 0))
 
     if start_date and end_date:
         date_range_label = f"{start_date.strftime('%d.%m.%Y')} - {end_date.strftime('%d.%m.%Y')}"

@@ -20,11 +20,19 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = False  # Production için False
+
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-8gy15^z036tfb9a%#36tgy6ssb==3+@c1)1nh6@!fdowo$%e!n')
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'  # Geçici olarak True
+# Production'da SECRET_KEY kontrolü
+if not DEBUG and SECRET_KEY == 'django-insecure-8gy15^z036tfb9a%#36tgy6ssb==3+@c1)1nh6@!fdowo$%e!n':
+    raise ValueError(
+        "⚠️  GÜVENLIK UYARISI: Production ortamında varsayılan SECRET_KEY kullanılamaz!\n"
+        "Lütfen environment variable olarak güvenli bir SECRET_KEY tanımlayın.\n"
+        "Örnek: export SECRET_KEY='your-random-secret-key-here'"
+    )
 
 # Railway deployment için host ayarları
 RAILWAY_STATIC_URL = os.environ.get('RAILWAY_STATIC_URL', '')
@@ -36,8 +44,8 @@ ALLOWED_HOSTS = [
     '.railway.app',
     '.up.railway.app',
     'mestakip2.up.railway.app',
-    '0.0.0.0',
-    '*',  # Production'da güvenlik için kaldırılmalı
+    'wadmory.pythonanywhere.com',  # PythonAnywhere domain
+    'takip.meslas.com',  # Custom domain
 ]
 
 # Railway domain varsa ekle
@@ -56,6 +64,10 @@ port = os.environ.get('PORT', '')
 CSRF_TRUSTED_ORIGINS = [
     'https://*.railway.app',
     'https://*.up.railway.app',
+    'https://wadmory.pythonanywhere.com',
+    'http://wadmory.pythonanywhere.com',
+    'https://takip.meslas.com',  # Custom domain
+    'http://takip.meslas.com',
 ]
 
 # Eğer Railway domain varsa ekle
@@ -70,17 +82,24 @@ if railway_domain:
 # Production için güvenlik ayarları
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-    # Railway HTTPS otomatik olduğu için SSL redirect'i kapatıyoruz
-    SECURE_SSL_REDIRECT = False
+    SECURE_SSL_REDIRECT = False  # PythonAnywhere kendi SSL yönetimini yapar
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
-    SECURE_HSTS_SECONDS = 31536000  # 1 yıl
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    SECURE_HSTS_PRELOAD = True
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
+    # HSTS ayarlarını PythonAnywhere için devre dışı bırak (kendi yönetir)
+    # SECURE_HSTS_SECONDS = 31536000
+    # SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    # SECURE_HSTS_PRELOAD = True
+    SESSION_COOKIE_SECURE = False  # PythonAnywhere HTTP/HTTPS karışık kullanabilir
+    CSRF_COOKIE_SECURE = False  # PythonAnywhere HTTP/HTTPS karışık kullanabilir
     SESSION_COOKIE_HTTPONLY = True
-    CSRF_COOKIE_HTTPONLY = True
+    CSRF_COOKIE_HTTPONLY = False  # CSRF token'ın JavaScript tarafından okunabilmesi için
+
+# CSRF cookie ayarları - PythonAnywhere için
+CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_DOMAIN = None  # Subdomain sorunlarını önlemek için
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_USE_SESSIONS = False  # Cookie bazlı CSRF kullan
+CSRF_COOKIE_NAME = 'csrftoken'  # Standart isim
 
 
 # Application definition

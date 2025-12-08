@@ -148,15 +148,26 @@ WSGI_APPLICATION = 'metis_admin.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'wadmory$default',
-        'USER': 'wadmory',
-        'PASSWORD': 'S346020r',
-        'HOST': 'wadmory.mysql.pythonanywhere-services.com',
+# Geliştirme ortamında SQLite, production'da MySQL kullan
+if DEBUG:
+    # Development - SQLite
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
     }
-}
+else:
+    # Production - MySQL (PythonAnywhere)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': 'wadmory$default',
+            'USER': 'wadmory',
+            'PASSWORD': 'S346020r',
+            'HOST': 'wadmory.mysql.pythonanywhere-services.com',
+        }
+    }
 
 
 # Password validation

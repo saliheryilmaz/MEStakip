@@ -44,7 +44,7 @@
                         {% elif bitis_tarih %}
                         {{ bitis_tarih|date:'d.m.Y' }} Öncesi İşlemler
                         {% else %}
-                        Günlük İşlemler ({{ secilen_tarih|date:'d.m.Y' }})
+                        Günlük Toplam İşlemler {{ secilen_tarih|date:'d.m.Y' }}
                         {% endif %}
                     </h5>
 
@@ -120,7 +120,7 @@
     <div class="col-12">
         <div class="card">
             <div class="card-header">
-                <h5 class="card-title mb-0">Ödeme Yöntemlerine Göre Toplamlar</h5>
+                <h5 class="card-title mb-0">Servis Toplamları</h5>
             </div>
             <div class="card-body">
                 <div class="row g-3">
@@ -190,7 +190,7 @@
                     {% elif bitis_tarih %}
                     {{ bitis_tarih|date:'d.m.Y' }} Öncesi Detaylı İşlemler
                     {% else %}
-                    {{ secilen_tarih|date:'d F Y l' }} - Detaylı İşlemler
+                    {{ secilen_tarih|date:'d F Y l' }} Servis İş Akışı
                     {% endif %}
                 </h5>
             </div>
@@ -306,7 +306,7 @@
     <div class="col-12">
         <div class="card">
             <div class="card-header">
-                <h5 class="card-title mb-0">Excel Verileri - Ödeme Şekillerine Göre Toplamlar</h5>
+                <h5 class="card-title mb-0">Merkez Satış Toplamları</h5>
             </div>
             <div class="card-body">
                 <div class="row g-3">
@@ -372,7 +372,7 @@
             <div class="card">
                 <div class="card-header">
                     <h5 class="card-title mb-0">
-                        <i class="bi bi-file-earmark-excel me-2"></i>Excel Verileri
+                        <i class="bi bi-file-earmark-excel me-2"></i>Merkez Satış İş Akışı - (Excel)
                         {% if baslangic_tarih and bitis_tarih %}
                         - {{ baslangic_tarih|date:'d.m.Y' }} / {{ bitis_tarih|date:'d.m.Y' }}
                         {% elif baslangic_tarih %}
@@ -506,7 +506,7 @@
             <div class="card border-primary">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="card-title mb-0">
-                        <i class="bi bi-building-gear me-2"></i>Merkez Ekstra İşlemleri
+                        <i class="bi bi-building-gear me-2"></i>Merkez Ekstra İşlemler
                     </h5>
                     <div class="d-flex align-items-center gap-3">
                         <span class="badge bg-primary">{{ merkez_ekstra_islemler|length }} kayıt</span>

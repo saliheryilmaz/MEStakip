@@ -148,66 +148,15 @@ WSGI_APPLICATION = 'metis_admin.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-# Database configuration
-import dj_database_url
-
-# Railway PostgreSQL veya SQLite fallback
-DATABASE_URL = os.environ.get('DATABASE_URL')
-
-# Database ayarları - Railway için güçlendirilmiş
-if DATABASE_URL:
-    # Eğer PostgreSQL URL'i varsa kullan
-    if DATABASE_URL.startswith('postgresql://') or DATABASE_URL.startswith('postgres://'):
-        try:
-            DATABASES = {
-                'default': dj_database_url.parse(DATABASE_URL)
-            }
-            print("✅ Using PostgreSQL database")
-        except Exception as e:
-            print(f"❌ DATABASE_URL parsing error: {e}")
-            print(f"DATABASE_URL value: {DATABASE_URL[:50]}...")
-            print("⚠️  Falling back to SQLite")
-            DATABASES = {
-                'default': {
-                    'ENGINE': 'django.db.backends.sqlite3',
-                    'NAME': BASE_DIR / 'db.sqlite3',
-                }
-            }
-    else:
-        print(f"⚠️  DATABASE_URL doesn't look like PostgreSQL: {DATABASE_URL[:50]}...")
-        DATABASES = {
-            'default': {
-                'ENGINE': 'django.db.backends.sqlite3',
-                'NAME': BASE_DIR / 'db.sqlite3',
-            }
-        }
-else:
-    # DATABASE_URL yoksa SQLite kullan
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'wadmory$default',
+        'USER': 'wadmory',
+        'PASSWORD': 'S346020r',
+        'HOST': 'wadmory.mysql.pythonanywhere-services.com',
     }
-    if os.environ.get('RAILWAY_ENVIRONMENT'):
-        print("⚠️  WARNING: Running on Railway but no DATABASE_URL found!")
-        print("⚠️  Please add a PostgreSQL database in Railway dashboard")
-        print("⚠️  Using SQLite as fallback (data will be lost on each deploy)")
-
-# Railway deployment için PostgreSQL ayarları ve logging
-RAILWAY_ENV = os.environ.get('RAILWAY_ENVIRONMENT')
-if RAILWAY_ENV:
-    print("🚂 Railway environment detected!")
-    print(f"📊 DATABASE_URL: {'Set' if DATABASE_URL else 'Not set'}")
-    print(f"🔑 SECRET_KEY: {'Set' if SECRET_KEY != 'django-insecure-8gy15^z036tfb9a%#36tgy6ssb==3+@c1)1nh6@!fdowo$%e!n' else 'Using default (change in production!)'}")
-    print(f"🐛 DEBUG: {DEBUG}")
-    
-    if not DATABASE_URL or not DATABASE_URL.startswith('postgresql://'):
-        print("⚠️  WARNING: No valid PostgreSQL DATABASE_URL found")
-        print("⚠️  Please add a PostgreSQL database in Railway dashboard")
-        print("⚠️  Currently using SQLite - data will be lost on each deploy!")
-    else:
-        print("✅ PostgreSQL configuration looks good!")
+}
 
 
 # Password validation

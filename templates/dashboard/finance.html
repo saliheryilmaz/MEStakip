@@ -111,26 +111,17 @@
         <div class="card border-primary">
             <div class="card-header bg-primary bg-opacity-10">
                 <h5 class="card-title mb-0">
-                    <i class="bi bi-tags me-2"></i>Kategori Seçimi
+                    <i class="bi bi-tags me-2"></i>Kategoriler
                     <a href="{% url 'dashboard:kategoriler' %}" class="btn btn-sm btn-outline-primary ms-2" title="Kategori Yönetimi">
-                        <i class="bi bi-gear me-1"></i>Kategori Yönet
+                        <i class="bi bi-plus"></i>Kategori Tanımla
                     </a>
                 </h5>
             </div>
-            <div class="card-body">
-                <div class="alert alert-info d-flex align-items-center mb-3" role="alert">
-                    <i class="bi bi-info-circle-fill me-2"></i>
-                    <div>
-                        <strong>Önemli:</strong> İşlemlerinizi kategorilere ayırarak daha iyi takip edebilirsiniz. 
-                        Kategori seçmezseniz işlemler "Kategori Yok" olarak görünecektir.
-                    </div>
-                </div>
+            
 
                 <div class="row g-3">
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold">
-                            <i class="bi bi-folder me-1"></i>Ana Kategori Seçin (Opsiyonel)
-                        </label>
+                        
                         <select class="form-select" name="ana_kategori_temp" id="ana-kategori-select">
                             <option value="">Ana Kategori Seçiniz</option>
                             {% for kategori in ana_kategoriler %}
@@ -143,9 +134,7 @@
                         </small>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold">
-                            <i class="bi bi-folder2-open me-1"></i>Alt Kategori Seçin (Opsiyonel)
-                        </label>
+                       
                         <select class="form-select" name="kategori1" id="alt-kategori-select" disabled>
                             <option value="">Önce ana kategori seçin</option>
                         </select>

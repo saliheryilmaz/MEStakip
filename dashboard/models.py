@@ -117,6 +117,12 @@ class Siparis(models.Model):
     one_cikar = models.BooleanField(default=False, verbose_name="ÖNE ÇIKAR")
     iptal_sebebi = models.TextField(blank=True, null=True, verbose_name="İPTAL SEBEBİ")
     
+    # Müşteri Bilgileri
+    musteri_adi = models.CharField(max_length=200, blank=True, null=True, verbose_name="MÜŞTERİ ADI")
+    musteri_telefon = models.CharField(max_length=20, blank=True, null=True, verbose_name="MÜŞTERİ TELEFON")
+    musteri_odeme_tutari = models.CharField(max_length=100, blank=True, null=True, verbose_name="MÜŞTERİ ÖDEME TUTARI")
+    musteri_aciklama = models.TextField(blank=True, null=True, verbose_name="MÜŞTERİ AÇIKLAMA")
+    
     # Zaman Damgaları
     olusturma_tarihi = models.DateTimeField(auto_now_add=True, verbose_name="Oluşturma Tarihi")
     guncelleme_tarihi = models.DateTimeField(auto_now=True, verbose_name="Güncelleme Tarihi")
@@ -171,6 +177,18 @@ class Siparis(models.Model):
             'gonderilmedi': 'danger',
         }
         return colors.get(self.sms_durum, 'secondary')
+    
+    def get_ambar_display_color(self):
+        """Ambar için renk döndür"""
+        colors = {
+            'stok': 'primary',
+            'satis': 'success',
+        }
+        return colors.get(self.ambar, 'secondary')
+    
+    def get_musteri_odeme_tutari_display(self):
+        """Müşteri ödeme tutarı için display değeri döndür"""
+        return self.musteri_odeme_tutari if self.musteri_odeme_tutari else None
 
 class Event(models.Model):
     """Takvim etkinlikleri modeli"""

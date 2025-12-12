@@ -96,7 +96,8 @@ class SiparisForm(forms.ModelForm):
         fields = [
             'cari_firma', 'marka', 'urun', 'grup', 'mevsim',
             'adet', 'birim_fiyat', 'toplam_fiyat', 'durum', 'ambar', 
-            'odeme', 'sms_durum', 'aciklama', 'one_cikar', 'iptal_sebebi'
+            'odeme', 'sms_durum', 'aciklama', 'one_cikar', 'iptal_sebebi',
+            'musteri_adi', 'musteri_telefon', 'musteri_odeme_tutari', 'musteri_aciklama'
         ]
         widgets = {
             'cari_firma': forms.TextInput(attrs={
@@ -131,8 +132,7 @@ class SiparisForm(forms.ModelForm):
             'toplam_fiyat': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'min': '0',
-                'step': '0.01',
-                'readonly': True
+                'step': '0.01'
             }),
             'durum': forms.Select(attrs={
                 'class': 'form-select'
@@ -159,6 +159,22 @@ class SiparisForm(forms.ModelForm):
                 'rows': '3',
                 'placeholder': 'İptal sebebini girin',
                 'id': 'iptal-sebebi-field'
+            }),
+            'musteri_adi': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Müşteri adını giriniz'
+            }),
+            'musteri_telefon': forms.TextInput(attrs={
+                'class': 'form-control',
+                
+            }),
+            'musteri_odeme_tutari': forms.TextInput(attrs={
+                'class': 'form-control'
+            }),
+            'musteri_aciklama': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': '3',
+                'placeholder': 'Müşteri ile ilgili ek bilgiler...'
             })
         }
         labels = {
@@ -176,7 +192,11 @@ class SiparisForm(forms.ModelForm):
             'sms_durum': 'SMS DURUMU',
             'aciklama': 'AÇIKLAMA',
             'one_cikar': 'ÖNE ÇIKAR',
-            'iptal_sebebi': 'İPTAL SEBEBİ'
+            'iptal_sebebi': 'İPTAL SEBEBİ',
+            'musteri_adi': 'MÜŞTERİ ADI',
+            'musteri_telefon': 'TELEFON NUMARASI',
+            'musteri_odeme_tutari': 'ÖDEME TUTARI',
+            'musteri_aciklama': 'AÇIKLAMA'
         }
     
     def __init__(self, *args, **kwargs):
@@ -188,6 +208,7 @@ class SiparisForm(forms.ModelForm):
         self.fields['ambar'].empty_label = "--------"
         self.fields['odeme'].empty_label = "--------"
         self.fields['sms_durum'].empty_label = "--------"
+
         
         # Zorunlu alanları işaretle
         self.fields['cari_firma'].required = True

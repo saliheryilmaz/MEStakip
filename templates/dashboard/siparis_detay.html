@@ -24,117 +24,171 @@
         </div>
     </div>
 
-    <!-- Sipariş Detay Kartı -->
+    <!-- Sipariş Detay -->
     <div class="row">
         <div class="col-lg-8">
             <div class="card">
                 <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="bi bi-info-circle me-2"></i>
-                        Sipariş Bilgileri
-                    </h5>
+                    <h5 class="card-title mb-0">Sipariş Detayları</h5>
                 </div>
                 <div class="card-body">
-                    <div class="row">
+                    <!-- Temel Bilgiler -->
+                    <div class="row mb-4">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label fw-bold">Sipariş No</label>
-                                <p class="form-control-plaintext">#{{ siparis.id }}</p>
+                                <strong>Sipariş No:</strong> #{{ siparis.id }}
                             </div>
                             <div class="mb-3">
-                                <label class="form-label fw-bold">Cari (Firma)</label>
-                                <p class="form-control-plaintext">{{ siparis.cari_firma }}</p>
+                                <strong>Cari (Firma):</strong> {{ siparis.cari_firma }}
                             </div>
                             <div class="mb-3">
-                                <label class="form-label fw-bold">Marka</label>
-                                <p class="form-control-plaintext">{{ siparis.marka }}</p>
+                                <strong>Marka:</strong> {{ siparis.marka }}
                             </div>
                             <div class="mb-3">
-                                <label class="form-label fw-bold">Ürün (Lastik Marka Model)</label>
-                                <p class="form-control-plaintext">{{ siparis.urun }}</p>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label fw-bold">Grup</label>
-                                <p class="form-control-plaintext">
-                                    <span class="badge bg-{{ siparis.get_grup_display_color }}">{{ siparis.get_grup_display }}</span>
-                                </p>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label fw-bold">Mevsim</label>
-                                <p class="form-control-plaintext">
-                                    <span class="badge bg-{{ siparis.get_mevsim_display_color }}">{{ siparis.get_mevsim_display }}</span>
-                                </p>
+                                <strong>Grup:</strong> 
+                                <span class="badge bg-{{ siparis.get_grup_display_color }}">{{ siparis.get_grup_display }}</span>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label fw-bold">Adet</label>
-                                <p class="form-control-plaintext">{{ siparis.adet }}</p>
+                                <strong>Mevsim:</strong> 
+                                <span class="badge bg-{{ siparis.get_mevsim_display_color }}">{{ siparis.get_mevsim_display }}</span>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label fw-bold">Birim Fiyat</label>
-                                <p class="form-control-plaintext">₺{{ siparis.birim_fiyat|floatformat:2 }}</p>
+                                <strong>Durum:</strong> 
+                                <span class="badge bg-{{ siparis.get_durum_display_color }}">{{ siparis.get_durum_display }}</span>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label fw-bold">Toplam Fiyat</label>
-                                <p class="form-control-plaintext">
-                                    <strong class="text-success">₺{{ siparis.toplam_fiyat|floatformat:2 }}</strong>
-                                </p>
+                                <strong>Ambar:</strong> 
+                                <span class="badge bg-primary">{{ siparis.get_ambar_display }}</span>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label fw-bold">Ödeme</label>
-                                <p class="form-control-plaintext">{{ siparis.get_odeme_display }}</p>
+                                <strong>SMS:</strong> 
+                                <span class="badge bg-{{ siparis.get_sms_display_color }}">{{ siparis.get_sms_durum_display }}</span>
                             </div>
+                        </div>
+                        <div class="col-12">
                             <div class="mb-3">
-                                <label class="form-label fw-bold">Ambar</label>
-                                <p class="form-control-plaintext">
-                                    <span class="badge bg-primary">{{ siparis.get_ambar_display }}</span>
-                                </p>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label fw-bold">Durum</label>
-                                <p class="form-control-plaintext">
-                                    <span class="badge bg-{{ siparis.get_durum_display_color }}">{{ siparis.get_durum_display }}</span>
-                                </p>
+                                <strong>Ürün:</strong> {{ siparis.urun }}
                             </div>
                         </div>
                     </div>
-                    <div class="row">
+
+                    <hr>
+
+                    <!-- Fiyat Bilgileri -->
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <div class="h4 text-primary">{{ siparis.adet }}</div>
+                                <small class="text-muted">Adet</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <div class="h4 text-info">₺{{ siparis.birim_fiyat|floatformat:2 }}</div>
+                                <small class="text-muted">Birim Fiyat</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <div class="h4 text-success">₺{{ siparis.toplam_fiyat|floatformat:2 }}</div>
+                                <small class="text-muted">Toplam Fiyat</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if siparis.musteri_adi or siparis.musteri_telefon or siparis.musteri_aciklama %}
+                    <hr>
+
+                    <!-- Müşteri Bilgileri -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary mb-3">
+                                <i class="bi bi-person me-2"></i>Müşteri Bilgileri
+                            </h6>
+                        </div>
+                        {% if siparis.musteri_adi %}
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <strong>Müşteri Adı:</strong> {{ siparis.musteri_adi }}
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if siparis.musteri_telefon %}
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <strong>Telefon:</strong> 
+                                <a href="tel:{{ siparis.musteri_telefon }}" class="text-decoration-none">
+                                    <i class="bi bi-telephone me-1"></i>{{ siparis.musteri_telefon }}
+                                </a>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if siparis.musteri_odeme_tutari %}
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <strong>Müşteri Ödeme Tutarı:</strong> 
+                                <span class="badge bg-success">{{ siparis.musteri_odeme_tutari }}</span>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if siparis.musteri_aciklama %}
                         <div class="col-12">
                             <div class="mb-3">
-                                <label class="form-label fw-bold">SMS Durumu</label>
-                                <p class="form-control-plaintext">
-                                    <span class="badge bg-{{ siparis.get_sms_display_color }}">{{ siparis.get_sms_durum_display }}</span>
-                                </p>
+                                <strong>Müşteri Açıklaması:</strong>
+                                <div class="bg-light p-3 rounded mt-2 border">
+                                    <div class="text-dark">{{ siparis.musteri_aciklama|linebreaks }}</div>
+                                </div>
                             </div>
-                            <div class="mb-3">
-                                <label class="form-label fw-bold">Öne Çıkar</label>
-                                <p class="form-control-plaintext">
-                                    {% if siparis.one_cikar %}
-                                        <span class="badge bg-warning">
-                                            <i class="bi bi-star-fill me-1"></i>Evet
-                                        </span>
-                                    {% else %}
-                                        <span class="badge bg-secondary">Hayır</span>
-                                    {% endif %}
-                                </p>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label fw-bold">Açıklama</label>
-                                <p class="form-control-plaintext">{{ siparis.aciklama|default:"Açıklama yok" }}</p>
-                            </div>
-                            {% if siparis.durum == 'iptal' and siparis.iptal_sebebi %}
-                            <div class="mb-3">
-                                <label class="form-label fw-bold text-danger">
-                                    <i class="bi bi-exclamation-triangle me-1"></i>
-                                    İptal Sebebi
-                                </label>
-                                <p class="form-control-plaintext text-danger bg-light p-3 border border-danger rounded">
-                                    {{ siparis.iptal_sebebi }}
-                                </p>
-                            </div>
-                            {% endif %}
                         </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    <hr>
+
+                    <!-- Diğer Bilgiler -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <strong>Ödeme Yöntemi:</strong> {{ siparis.get_odeme_display }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <strong>Öne Çıkar:</strong> 
+                                {% if siparis.one_cikar %}
+                                    <span class="badge bg-warning">
+                                        <i class="bi bi-star-fill me-1"></i>Evet
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Hayır</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% if siparis.aciklama %}
+                        <div class="col-12">
+                            <div class="mb-3">
+                                <strong>Açıklama:</strong>
+                                <div class="bg-light p-3 rounded mt-2 border">
+                                    <div class="text-dark">{{ siparis.aciklama|linebreaks }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if siparis.durum == 'iptal' and siparis.iptal_sebebi %}
+                        <div class="col-12">
+                            <div class="mb-3">
+                                <strong class="text-danger">
+                                    <i class="bi bi-exclamation-triangle me-1"></i>İptal Sebebi:
+                                </strong>
+                                <div class="bg-danger bg-opacity-10 p-3 rounded mt-2 border border-danger">
+                                    <div class="text-danger">{{ siparis.iptal_sebebi|linebreaks }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -203,4 +257,36 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Basit ve sade stil */
+hr {
+    border-top: 2px solid #dee2e6;
+    margin: 2rem 0;
+}
+
+.card {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Telefon linki */
+a[href^="tel:"] {
+    color: #0d6efd;
+    font-weight: 500;
+}
+
+a[href^="tel:"]:hover {
+    color: #0b5ed7;
+    text-decoration: underline !important;
+}
+
+/* Responsive düzenlemeler */
+@media (max-width: 768px) {
+    .text-center {
+        margin-bottom: 1rem;
+    }
+}
+</style>
 {% endblock %}

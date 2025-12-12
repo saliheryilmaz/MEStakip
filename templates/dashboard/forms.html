@@ -273,9 +273,25 @@
                                 <a href="{% url 'dashboard:siparis_duzenle' siparis.id %}" class="btn btn-warning btn-sm" title="Düzenle">
                                     <i class="bi bi-pencil"></i>
                                 </a>
+                                {% if siparis.musteri_adi or siparis.musteri_telefon or siparis.musteri_aciklama %}
+                                <button type="button" class="btn btn-info btn-sm" title="Müşteri Bilgileri" 
+                                        data-bs-toggle="modal" data-bs-target="#musteriModal{{ siparis.id }}">
+                                    <i class="bi bi-person"></i>
+                                </button>
+                                {% endif %}
+                                {% if siparis.musteri_telefon %}
+                                <button type="button" class="btn btn-success btn-sm" title="WhatsApp" 
+                                        data-telefon="{{ siparis.musteri_telefon|slice:'1:' }}" 
+                                        data-musteri="{{ siparis.musteri_adi|default:'' }}" 
+                                        data-urun="{{ siparis.urun }}" 
+                                        onclick="whatsappGonderData(this)">
+                                    <i class="bi bi-whatsapp"></i>
+                                </button>
+                                {% else %}
                                 <a href="{% url 'dashboard:siparis_whatsapp' siparis.id %}" class="btn btn-success btn-sm" title="WhatsApp" target="_blank">
                                     <i class="bi bi-whatsapp"></i>
                                 </a>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>
@@ -337,6 +353,80 @@
         </div>
     </div>
 </div>
+
+<!-- Müşteri Bilgileri Modalları -->
+{% for siparis in siparisler %}
+{% if siparis.musteri_adi or siparis.musteri_telefon or siparis.musteri_aciklama %}
+<div class="modal fade" id="musteriModal{{ siparis.id }}" tabindex="-1" aria-labelledby="musteriModalLabel{{ siparis.id }}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title" id="musteriModalLabel{{ siparis.id }}">
+                    <i class="bi bi-person me-2"></i>
+                    Müşteri Bilgileri
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <h6 class="text-muted mb-3">Sipariş: {{ siparis.cari_firma }} - {{ siparis.urun|truncatechars:50 }}</h6>
+                    </div>
+                    {% if siparis.musteri_adi %}
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Müşteri Adı:</label>
+                        <p class="mb-0">{{ siparis.musteri_adi }}</p>
+                    </div>
+                    {% endif %}
+                    {% if siparis.musteri_telefon %}
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Telefon Numarası:</label>
+                        <p class="mb-0">
+                            <a href="tel:{{ siparis.musteri_telefon }}" class="text-decoration-none">
+                                <i class="bi bi-telephone me-1"></i>
+                                {{ siparis.musteri_telefon }}
+                            </a>
+                        </p>
+                    </div>
+                    {% endif %}
+                    {% if siparis.musteri_odeme_tutari %}
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Ödeme Tutarı:</label>
+                        <p class="mb-0">
+                            <span class="badge bg-success">{{ siparis.musteri_odeme_tutari }}</span>
+                        </p>
+                    </div>
+                    {% endif %}
+                    {% if siparis.musteri_aciklama %}
+                    <div class="col-12">
+                        <label class="form-label fw-bold">Açıklama:</label>
+                        <div class="bg-light p-3 rounded border">
+                            <div class="text-dark fw-normal">
+                                {{ siparis.musteri_aciklama|linebreaks }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="modal-footer">
+                {% if siparis.musteri_telefon %}
+                <button type="button" class="btn btn-success btn-sm" 
+                        data-telefon="{{ siparis.musteri_telefon|slice:'1:' }}" 
+                        data-musteri="{{ siparis.musteri_adi|default:'' }}" 
+                        data-urun="{{ siparis.urun }}" 
+                        onclick="whatsappGonderData(this)">
+                    <i class="bi bi-whatsapp me-1"></i>
+                    WhatsApp Gönder
+                </button>
+                {% endif %}
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endfor %}
 
 {% endblock %}
 
@@ -449,6 +539,59 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// WhatsApp mesaj gönderme fonksiyonu (data attribute'lardan)
+function whatsappGonderData(button) {
+    const telefon = button.getAttribute('data-telefon');
+    const musteriAdi = button.getAttribute('data-musteri');
+    const urun = button.getAttribute('data-urun');
+    whatsappGonder(telefon, musteriAdi, urun);
+}
+
+// WhatsApp mesaj gönderme fonksiyonu
+function whatsappGonder(telefon, musteriAdi, urun) {
+    // Telefon numarasını temizle ve formatla
+    let cleanTelefon = telefon.toString().replace(/\D/g, ''); // Sadece rakamları al
+    
+    // Türkiye telefon numarası formatı kontrolü
+    if (cleanTelefon.startsWith('0')) {
+        cleanTelefon = '90' + cleanTelefon.substring(1); // 0555... -> 90555...
+    } else if (!cleanTelefon.startsWith('90')) {
+        cleanTelefon = '90' + cleanTelefon; // 555... -> 90555...
+    }
+    
+    console.log('Temizlenmiş telefon:', cleanTelefon);
+    
+    // Lastik ebatını ürün adından çıkar (205/55R16 formatında)
+    const ebatPattern = /(\d{3}\/\d{2}R\d{2})/;
+    const ebatMatch = urun ? urun.match(ebatPattern) : null;
+    const ebat = ebatMatch ? ebatMatch[1] : '';
+    
+    // Müşteri adını düzenle
+    let musteriIsim = musteriAdi ? musteriAdi.trim() : '';
+    
+    // Mesaj şablonu oluştur
+    let mesaj = '';
+    if (musteriIsim && ebat) {
+        mesaj = `Merhaba ${musteriIsim} Bey, ${ebat} lastiğiniz gelmiştir.`;
+    } else if (musteriIsim) {
+        mesaj = `Merhaba ${musteriIsim} Bey, lastiğiniz gelmiştir.`;
+    } else if (ebat) {
+        mesaj = `Merhaba, ${ebat} lastiğiniz gelmiştir.`;
+    } else {
+        mesaj = `Merhaba, lastiğiniz gelmiştir.`;
+    }
+    
+    console.log('Gönderilecek mesaj:', mesaj);
+    
+    // WhatsApp URL'si oluştur
+    const whatsappUrl = `https://wa.me/${cleanTelefon}?text=${encodeURIComponent(mesaj)}`;
+    
+    console.log('WhatsApp URL:', whatsappUrl);
+    
+    // Yeni sekmede aç
+    window.open(whatsappUrl, '_blank');
+}
 
 // Excel export fonksiyonu
 function exportCheckedToExcel() {

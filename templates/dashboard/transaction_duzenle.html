@@ -1,0 +1,320 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}İşlem Düzenle - Mestakip{% endblock %}
+{% block page_name %}transaction_duzenle{% endblock %}
+
+{% block extra_css %}
+<style>
+    [data-bs-theme=dark] .table th {
+        background-color: #182f46 !important;
+        border-color: #495057 !important;
+        color: #ffffff !important;
+    }
+
+    [data-bs-theme=dark] .table-secondary th {
+        background-color: #182f46 !important;
+    }
+    
+    /* Toast bildirimi için özel stil */
+    .toast {
+        min-width: 350px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">İşlem Düzenle</h1>
+        <p class="text-muted mb-0">Gelir/Gider işlemini düzenleyin</p>
+    </div>
+    <div>
+        <a href="{{ request.GET.next|default:'/dashboard/products/' }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>
+            Geri Dön
+        </a>
+    </div>
+</div>
+
+{% if form.errors %}
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <h5 class="alert-heading"><i class="bi bi-exclamation-triangle me-2"></i>Form Hataları</h5>
+    {% for field, errors in form.errors.items %}
+    {% for error in errors %}
+    <p class="mb-1"><strong>{{ field }}:</strong> {{ error }}</p>
+    {% endfor %}
+    {% endfor %}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+{% if form.non_field_errors %}
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <h5 class="alert-heading"><i class="bi bi-exclamation-triangle me-2"></i>Hata</h5>
+    {% for error in form.non_field_errors %}
+    <p class="mb-1">{{ error }}</p>
+    {% endfor %}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+<form method="post" class="row g-4" id="financeForm">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ request.GET.next|default:'/dashboard/products/' }}">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">İşlem Bilgileri</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Hareket Tipi</label>
+                        {{ form.hareket_tipi }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Tarih</label>
+                        {{ form.tarih }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Kasa Adı</label>
+                        {{ form.kasa_adi }}
+                    </div>
+
+                    <div class="col-12 mb-3">
+                        <div id="payment-info" class="alert alert-info d-none">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <span id="payment-info-text">Ödeme türü seçildi</span>
+                        </div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">💰 Nakit</label>
+                        {{ form.nakit }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">💳 Kredi Kartı</label>
+                        {{ form.kredi_karti }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">🏢 Cari</label>
+                        {{ form.cari }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">💳 Sanal Pos</label>
+                        {{ form.sanal_pos }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">🏦 Mehmet Havale</label>
+                        {{ form.mehmet_havale }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">🏦 Banka Havale</label>
+                        {{ form.banka_havale }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">🏦 Pafgo</label>
+                        {{ form.pafgo }}
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label">Açıklama</label>
+                        {{ form.aciklama }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12">
+        <div class="card border-primary">
+            <div class="card-header bg-primary bg-opacity-10">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-tags me-2"></i>Kategoriler
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <select class="form-select" name="ana_kategori_temp" id="ana-kategori-select">
+                            <option value="">Ana Kategori Seçiniz</option>
+                            {% for kategori in ana_kategoriler %}
+                            <option value="{{ kategori.id }}" 
+                                {% if transaction.kategori1 %}
+                                    {% if transaction.kategori1.parent and transaction.kategori1.parent.id == kategori.id %}selected{% endif %}
+                                    {% if not transaction.kategori1.parent and transaction.kategori1.id == kategori.id %}selected{% endif %}
+                                {% endif %}>
+                                {{ kategori.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <small class="form-text text-muted d-block mt-1">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Önce ana kategori seçin
+                        </small>
+                    </div>
+                    <div class="col-md-6">
+                        <select class="form-select" name="kategori1" id="alt-kategori-select">
+                            <option value="">Alt Kategori Seçiniz (Opsiyonel)</option>
+                        </select>
+                        <small class="form-text text-muted d-block mt-1">
+                            <i class="bi bi-lightbulb me-1"></i>
+                            Ana kategoriye göre alt kategoriler yüklenir
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 d-flex justify-content-between">
+        <a href="{{ request.GET.next|default:'/dashboard/products/' }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>
+            İptal
+        </a>
+        <button type="submit" class="btn btn-primary" id="saveButton">
+            <i class="bi bi-check-lg me-1"></i>
+            Güncelle
+        </button>
+    </div>
+</form>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Kategori yönetimi - Ana kategori seçildiğinde alt kategorileri yükle
+        const anaKategoriSelect = document.getElementById('ana-kategori-select');
+        const altKategoriSelect = document.getElementById('alt-kategori-select');
+        
+        if (anaKategoriSelect && altKategoriSelect) {
+            // Sayfa yüklendiğinde mevcut kategoriyi kontrol et
+            if (anaKategoriSelect.value) {
+                loadAltKategoriler(anaKategoriSelect.value);
+            }
+            
+            anaKategoriSelect.addEventListener('change', function() {
+                const anaKategoriId = this.value;
+                loadAltKategoriler(anaKategoriId);
+            });
+            
+            function loadAltKategoriler(anaKategoriId, selectedId = null) {
+                // Alt kategori dropdown'ını temizle
+                altKategoriSelect.innerHTML = '<option value="">Yükleniyor...</option>';
+                altKategoriSelect.disabled = true;
+                
+                if (!anaKategoriId) {
+                    altKategoriSelect.innerHTML = '<option value="">Önce ana kategori seçin</option>';
+                    altKategoriSelect.disabled = true;
+                    return;
+                }
+                
+                // AJAX ile alt kategorileri yükle
+                fetch(`/dashboard/api/alt-kategoriler/${anaKategoriId}/`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            altKategoriSelect.innerHTML = '<option value="">Alt Kategori Seçiniz (Opsiyonel)</option>';
+                            
+                            if (data.alt_kategoriler.length === 0) {
+                                altKategoriSelect.innerHTML += '<option value="" disabled>Bu kategorinin alt kategorisi yok</option>';
+                            } else {
+                                data.alt_kategoriler.forEach(kategori => {
+                                    const option = document.createElement('option');
+                                    option.value = kategori.id;
+                                    option.textContent = kategori.name;
+                                    if (selectedId && kategori.id == selectedId) {
+                                        option.selected = true;
+                                    }
+                                    altKategoriSelect.appendChild(option);
+                                });
+                            }
+                            
+                            altKategoriSelect.disabled = false;
+                        } else {
+                            altKategoriSelect.innerHTML = '<option value="">Hata: Alt kategoriler yüklenemedi</option>';
+                        }
+                    })
+                    .catch(error => {
+                        altKategoriSelect.innerHTML = '<option value="">Hata: Bağlantı hatası</option>';
+                    });
+            }
+            
+            // Form submit edilmeden önce kontrol et
+            const financeForm = document.getElementById('financeForm');
+            if (financeForm) {
+                financeForm.addEventListener('submit', function(e) {
+                    const anaKategoriId = anaKategoriSelect.value;
+                    const altKategoriId = altKategoriSelect.value;
+                    
+                    if (anaKategoriId && !altKategoriId) {
+                        const anaKategoriText = anaKategoriSelect.options[anaKategoriSelect.selectedIndex].text;
+                        const tempOption = document.createElement('option');
+                        tempOption.value = anaKategoriId;
+                        tempOption.textContent = anaKategoriText;
+                        tempOption.selected = true;
+                        altKategoriSelect.appendChild(tempOption);
+                    }
+                });
+            }
+        }
+
+        // Ödeme alanları yönetimi - Sadece bir ödeme türü seçilebilsin
+        const paymentFields = ['nakit', 'kredi_karti', 'cari', 'sanal_pos', 'mehmet_havale', 'banka_havale', 'pafgo'];
+        const paymentInputs = {};
+        const paymentInfo = document.getElementById('payment-info');
+        const paymentInfoText = document.getElementById('payment-info-text');
+        
+        // Tüm ödeme input'larını al
+        paymentFields.forEach(field => {
+            const input = document.querySelector(`input[name="${field}"]`);
+            if (input) {
+                paymentInputs[field] = input;
+            }
+        });
+        
+        // Her input için change event'i ekle
+        Object.keys(paymentInputs).forEach(fieldName => {
+            const input = paymentInputs[fieldName];
+            
+            input.addEventListener('input', function() {
+                const value = parseFloat(this.value) || 0;
+                
+                if (value > 0) {
+                    // Bu alan dolduruldu, diğerlerini temizle
+                    Object.keys(paymentInputs).forEach(otherField => {
+                        if (otherField !== fieldName) {
+                            paymentInputs[otherField].value = '0';
+                        }
+                    });
+                    
+                    // Bilgi mesajını göster
+                    const fieldLabels = {
+                        'nakit': '💰 Nakit',
+                        'kredi_karti': '💳 Kredi Kartı',
+                        'cari': '🏢 Cari',
+                        'sanal_pos': '💳 Sanal Pos',
+                        'mehmet_havale': '🏦 Mehmet Havale',
+                        'banka_havale': '🏦 Banka Havale',
+                        'pafgo': '🏦 Pafgo'
+                    };
+                    
+                    paymentInfoText.textContent = `${fieldLabels[fieldName]} seçildi: ${value.toFixed(2)} ₺`;
+                    paymentInfo.classList.remove('d-none');
+                } else {
+                    // Değer 0 ise bilgi mesajını gizle
+                    const anyFilled = Object.keys(paymentInputs).some(f => {
+                        return parseFloat(paymentInputs[f].value) > 0;
+                    });
+                    
+                    if (!anyFilled) {
+                        paymentInfo.classList.add('d-none');
+                    }
+                }
+            });
+        });
+    });
+</script>
+
+{% endblock %}

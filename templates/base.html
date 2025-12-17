@@ -107,6 +107,15 @@
             transition: opacity 0.3s ease;
         }
 
+        /* Collapse icon rotation */
+        .admin-sidebar .collapse-icon {
+            transition: transform 0.3s ease;
+        }
+
+        .admin-sidebar .nav-link[aria-expanded="true"] .collapse-icon {
+            transform: rotate(180deg);
+        }
+
         .admin-main {
             margin-left: 250px;
             min-height: 100vh;
@@ -574,11 +583,12 @@
                             <a class="nav-link" data-bs-toggle="collapse" data-bs-target="#sidebarOrders" href="#" role="button" aria-expanded="false" aria-controls="sidebarOrders">
                                 <i class="bi bi-box-seam"></i>
                                 <span>Sipariş Yönetimi</span>
-                                <i class="bi bi-chevron-down ms-auto"></i>
+                                <i class="bi bi-chevron-down ms-auto collapse-icon"></i>
                             </a>
                             <div class="collapse" id="sidebarOrders">
                                 <ul class="nav flex-column ms-3 my-2">
                                     <li class="nav-item"><a class="nav-link" href="{% url 'dashboard:analytics' %}"><span>Analist</span></a></li>
+                                    <li class="nav-item"><a class="nav-link" href="{% url 'dashboard:yeni_lastik' %}"><span>Yeni Sipariş Ekle</span></a></li>
                                     <li class="nav-item"><a class="nav-link" href="{% url 'dashboard:elements' %}"><span>Sipariş Hareketleri</span></a></li>
                                     <li class="nav-item"><a class="nav-link" href="{% url 'dashboard:forms' %}"><span>Kontrol Edilen</span></a></li>
                                     <li class="nav-item"><a class="nav-link" href="{% url 'dashboard:reports' %}"><span>İptal Siparişler</span></a></li>
@@ -594,7 +604,7 @@
                             <a class="nav-link" data-bs-toggle="collapse" data-bs-target="#sidebarFinance" href="#" role="button" aria-expanded="false" aria-controls="sidebarFinance">
                                 <i class="bi bi-cash-coin"></i>
                                 <span>Finans Takip Yönetimi</span>
-                                <i class="bi bi-chevron-down ms-auto"></i>
+                                <i class="bi bi-chevron-down ms-auto collapse-icon"></i>
                             </a>
                             <div class="collapse" id="sidebarFinance">
                                 <ul class="nav flex-column ms-3 my-2">
@@ -906,6 +916,64 @@
                     });
                 }
             }
+
+            // Collapse event listeners for sidebar navigation - Manual toggle implementation
+            const collapseElements = document.querySelectorAll('.admin-sidebar .collapse');
+            collapseElements.forEach(function(collapseElement) {
+                const collapseId = collapseElement.getAttribute('id');
+                const toggleLink = document.querySelector(`[data-bs-target="#${collapseId}"]`);
+                
+                if (toggleLink && typeof bootstrap !== 'undefined') {
+                    // Remove data-bs-toggle to prevent Bootstrap's automatic handling
+                    toggleLink.removeAttribute('data-bs-toggle');
+                    
+                    // Manual toggle implementation
+                    toggleLink.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        
+                        // Get or create Bootstrap Collapse instance
+                        let bsCollapse = bootstrap.Collapse.getInstance(collapseElement);
+                        if (!bsCollapse) {
+                            bsCollapse = new bootstrap.Collapse(collapseElement, {
+                                toggle: false
+                            });
+                        }
+                        
+                        // Check current state and toggle
+                        const isExpanded = collapseElement.classList.contains('show');
+                        if (isExpanded) {
+                            bsCollapse.hide();
+                        } else {
+                            bsCollapse.show();
+                        }
+                    });
+                    
+                    // Bootstrap collapse event listeners for aria-expanded and icon rotation
+                    collapseElement.addEventListener('show.bs.collapse', function() {
+                        toggleLink.setAttribute('aria-expanded', 'true');
+                    });
+                    
+                    collapseElement.addEventListener('hide.bs.collapse', function() {
+                        toggleLink.setAttribute('aria-expanded', 'false');
+                    });
+                    
+                    collapseElement.addEventListener('shown.bs.collapse', function() {
+                        toggleLink.setAttribute('aria-expanded', 'true');
+                    });
+                    
+                    collapseElement.addEventListener('hidden.bs.collapse', function() {
+                        toggleLink.setAttribute('aria-expanded', 'false');
+                    });
+                    
+                    // Set initial state based on collapse element
+                    if (collapseElement.classList.contains('show')) {
+                        toggleLink.setAttribute('aria-expanded', 'true');
+                    } else {
+                        toggleLink.setAttribute('aria-expanded', 'false');
+                    }
+                }
+            });
         });
     </script>
 

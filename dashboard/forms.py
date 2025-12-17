@@ -9,8 +9,10 @@ class TransactionForm(forms.ModelForm):
     class Meta:
         model = Transaction
         fields = [
-            'hareket_tipi', 'tarih', 'kasa_adi', 'nakit', 'kredi_karti', 'cari', 'sanal_pos',
-            'mehmet_havale', 'banka_havale', 'aciklama', 'kategori1'
+            'hareket_tipi', 'tarih', 'kasa_adi',
+            'nakit', 'kredi_karti', 'cari', 'sanal_pos',
+            'mehmet_havale', 'banka_havale', 'pafgo',
+            'aciklama', 'kategori1'
         ]
         widgets = {
             'tarih': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
@@ -22,6 +24,7 @@ class TransactionForm(forms.ModelForm):
             'sanal_pos': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'value': '0'}),
             'mehmet_havale': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'value': '0'}),
             'banka_havale': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'value': '0'}),
+            'pafgo': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'value': '0'}),
             'aciklama': forms.TextInput(attrs={'class': 'form-control'}),
             'kategori1': forms.Select(attrs={'class': 'form-select'}),
         }
@@ -63,10 +66,13 @@ class TransactionForm(forms.ModelForm):
         sanal = cleaned.get('sanal_pos') or 0
         mehmet = cleaned.get('mehmet_havale') or 0
         banka = cleaned.get('banka_havale') or 0
+        pafgo = cleaned.get('pafgo') or 0
         
         # En az bir ödeme alanı dolu olmalı
-        if nakit + kredi + cari + sanal + mehmet + banka <= 0:
-            raise forms.ValidationError('En az bir ödeme alanı (Nakit, Kredi Kartı, Sanal Pos, Cari, Mehmet Havale veya Banka Havale) doldurulmalıdır.')
+        if nakit + kredi + cari + sanal + mehmet + banka + pafgo <= 0:
+            raise forms.ValidationError(
+                'En az bir ödeme alanı (Nakit, Kredi Kartı, Sanal Pos, Cari, Mehmet Havale, Banka Havale veya Pafgo) doldurulmalıdır.'
+            )
         
         # Sadece bir ödeme türü seçilmeli
         filled_fields = []
@@ -82,6 +88,8 @@ class TransactionForm(forms.ModelForm):
             filled_fields.append('Mehmet Havale')
         if banka > 0:
             filled_fields.append('Banka Havale')
+        if pafgo > 0:
+            filled_fields.append('Pafgo')
             
         if len(filled_fields) > 1:
             raise forms.ValidationError(f'Sadece bir ödeme türü seçilmelidir. Şu anda seçili: {", ".join(filled_fields)}')

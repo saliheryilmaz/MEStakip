@@ -15,6 +15,13 @@
     [data-bs-theme=dark] .table-secondary th {
         background-color: #182f46 !important;
     }
+    
+
+    
+    /* Toast bildirimi için özel stil */
+    .toast {
+        min-width: 350px;
+    }
 </style>
 {% endblock %}
 
@@ -49,7 +56,7 @@
     <div class="col-12">
         <div class="card">
             <div class="card-header">
-                <h5 class="card-title mb-0">İşlem Bilgileri</h5>
+                <h5 class="card-title mb-0">İşlem Ekle</h5>
             </div>
             <div class="card-body">
                 <div class="row g-3">
@@ -96,6 +103,10 @@
                     <div class="col-md-3">
                         <label class="form-label">🏦 Banka Havale</label>
                         {{ form.banka_havale }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">🏦 Pafgo</label>
+                        {{ form.pafgo }}
                     </div>
 
                     <div class="col-12">
@@ -149,7 +160,7 @@
     </div>
 
     <div class="col-12 d-flex justify-content-end">
-        <button type="submit" class="btn btn-primary">Kaydet</button>
+        <button type="submit" class="btn btn-primary" id="saveButton">Kaydet</button>
     </div>
 </form>
 
@@ -280,15 +291,60 @@
                         altKategoriSelect.appendChild(tempOption);
                         console.log('Ana kategori kategori1 alanına atandı:', anaKategoriId);
                     }
+                    
+                    // Pafgo değeri kontrol et
+                    const pafgoInput = paymentInputs['pafgo'];
+                    if (pafgoInput) {
+                        const pafgoValue = parseFloat(pafgoInput.value) || 0;
+                        if (pafgoValue > 0) {
+                            // Form submit edildikten sonra bildirim göster
+                            setTimeout(() => {
+                                showPafgoNotification(pafgoValue.toFixed(2));
+                            }, 1000);
+                        }
+                    }
                 });
             }
         }
 
         // Ödeme alanları yönetimi - Sadece bir ödeme türü seçilebilsin
-        const paymentFields = ['nakit', 'kredi_karti', 'cari', 'sanal_pos', 'mehmet_havale', 'banka_havale'];
+        const paymentFields = ['nakit', 'kredi_karti', 'cari', 'sanal_pos', 'mehmet_havale', 'banka_havale', 'pafgo'];
         const paymentInputs = {};
         const paymentInfo = document.getElementById('payment-info');
         const paymentInfoText = document.getElementById('payment-info-text');
+        
+        // Pafgo işlemi için özel bildirim fonksiyonu
+        function showPafgoNotification(amount) {
+            // Toast bildirimi oluştur
+            const toastHtml = `
+                <div class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true" style="position: fixed; top: 20px; right: 20px; z-index: 9999;">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <i class="bi bi-check-circle-fill me-2"></i>
+                            <strong>Pafgo İşlemi Kaydedildi!</strong><br>
+                            <small>Tutar: ${amount} TL - Gelir/Gider Raporunda görüntüleyebilirsiniz.</small>
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            `;
+            
+            // Toast'ı sayfaya ekle
+            document.body.insertAdjacentHTML('beforeend', toastHtml);
+            
+            // Toast'ı göster
+            const toastElement = document.querySelector('.toast:last-child');
+            const toast = new bootstrap.Toast(toastElement, {
+                autohide: true,
+                delay: 5000
+            });
+            toast.show();
+            
+            // Toast kapandıktan sonra DOM'dan kaldır
+            toastElement.addEventListener('hidden.bs.toast', function() {
+                toastElement.remove();
+            });
+        }
         
         // Tüm ödeme input'larını al
         paymentFields.forEach(field => {
@@ -320,7 +376,8 @@
                         'cari': '🏢 Cari',
                         'sanal_pos': '💳 Sanal Pos',
                         'mehmet_havale': '🏦 Mehmet Havale',
-                        'banka_havale': '🏦 Banka Havale'
+                        'banka_havale': '🏦 Banka Havale',
+                        'pafgo': '🏦 Pafgo'
                     };
                     
                     paymentInfoText.textContent = `${fieldLabels[fieldName]} seçildi: ${value.toFixed(2)} ₺`;

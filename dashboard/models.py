@@ -153,7 +153,7 @@ class Siparis(models.Model):
     def get_durum_display_color(self):
         """Durum için renk döndür"""
         colors = {
-            'yolda': 'info',
+            'yolda': 'danger',
             'islemde': 'primary',
             'teslim': 'success',
             'kontrol': 'warning',
@@ -447,6 +447,7 @@ class Transaction(models.Model):
     sanal_pos = models.DecimalField(max_digits=12, decimal_places=2, default=0, validators=[MinValueValidator(0)], verbose_name="Sanal Pos")
     mehmet_havale = models.DecimalField(max_digits=12, decimal_places=2, default=0, validators=[MinValueValidator(0)], verbose_name="Mehmet Havale")
     banka_havale = models.DecimalField(max_digits=12, decimal_places=2, default=0, validators=[MinValueValidator(0)], verbose_name="Banka Havale")
+    pafgo = models.DecimalField(max_digits=12, decimal_places=2, default=0, validators=[MinValueValidator(0)], verbose_name="Pafgo")
     aciklama = models.CharField(max_length=255, blank=True, null=True, verbose_name="Açıklama")
 
     kategori1 = models.ForeignKey(TransactionCategory, on_delete=models.SET_NULL, null=True, blank=True, related_name='level1_transactions', verbose_name="1. Kategori")
@@ -474,6 +475,7 @@ class Transaction(models.Model):
             + (self.cari or 0)
             + (self.mehmet_havale or 0)
             + (self.banka_havale or 0)
+            + (self.pafgo or 0)
         )
 
 class MalzemeDosya(models.Model):

@@ -118,7 +118,17 @@ Expecting variables:
                     {% endif %}
                     {% endif %}
                 </div>
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Kapat</button>
+                <div class="d-flex flex-column align-items-end gap-1">
+                    <span class="fw-semibold small">
+                        Filtrelenen Toplam:
+                        <span class="{% if total >= 0 %}text-success{% else %}text-danger{% endif %}"
+                              data-filtered-total
+                              data-initial-total="{{ total|turkish_lira }}">
+                            {{ total|turkish_lira }}
+                        </span>
+                    </span>
+                    <button type="button" class="btn btn-outline-secondary btn-sm mt-1" data-bs-dismiss="modal">Kapat</button>
+                </div>
             </div>
         </div>
     </div>
@@ -133,8 +143,53 @@ document.addEventListener('DOMContentLoaded', function() {
     
     const filterSelect = modal.querySelector('.kategori-filter');
     const tableBody = modal.querySelector('tbody');
+    const filteredTotalEl = modal.querySelector('[data-filtered-total]');
     
-    if (!filterSelect || !tableBody) return;
+    if (!filterSelect || !tableBody || !filteredTotalEl) return;
+
+    function parseTurkishMoney(text) {
+        if (!text) return 0;
+        let value = text.toString().trim();
+        let negative = false;
+
+        if (value.startsWith('-')) {
+            negative = true;
+            value = value.slice(1);
+        }
+
+        // TL ve ₺ ifadelerini kaldır
+        value = value.replace(/TL/gi, '').replace(/₺/g, '').trim();
+        // Binlik ayraçları kaldır, ondalık için virgülü noktaya çevir
+        value = value.replace(/\./g, '').replace(',', '.');
+
+        const num = parseFloat(value || '0');
+        return negative ? -num : num;
+    }
+
+    function formatTurkishMoney(value) {
+        const negative = value < 0;
+        let intPart = Math.round(Math.abs(value)).toString();
+        intPart = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        return (negative ? '-' : '') + intPart + ' TL';
+    }
+
+    function updateFilteredTotal() {
+        const rows = tableBody.querySelectorAll('tr');
+        let sum = 0;
+
+        rows.forEach(row => {
+            if (row.style.display === 'none') return;
+            // Tutar sütunu her zaman 6. indexte (0-based)
+            const amountCell = row.cells[6];
+            if (!amountCell) return;
+            const amountText = amountCell.textContent || '';
+            sum += parseTurkishMoney(amountText);
+        });
+
+        filteredTotalEl.textContent = formatTurkishMoney(sum);
+        filteredTotalEl.classList.toggle('text-success', sum >= 0);
+        filteredTotalEl.classList.toggle('text-danger', sum < 0);
+    }
     
     // Modal açıldığında kategorileri topla
     modal.addEventListener('shown.bs.modal', function() {
@@ -159,6 +214,9 @@ document.addEventListener('DOMContentLoaded', function() {
             option.textContent = cat;
             filterSelect.appendChild(option);
         });
+
+        // Modal açıldığında mevcut satırlara göre filtre toplamını hesapla
+        updateFilteredTotal();
     });
     
     // Filtreleme
@@ -169,19 +227,21 @@ document.addEventListener('DOMContentLoaded', function() {
         rows.forEach(row => {
             if (!selectedCategory) {
                 row.style.display = '';
-                return;
-            }
-            
-            const categoryCell = row.cells[3];
-            const badge = categoryCell ? categoryCell.querySelector('.badge') : null;
-            const categoryText = badge ? badge.textContent.trim() : '';
-            
-            if (categoryText === selectedCategory) {
-                row.style.display = '';
             } else {
-                row.style.display = 'none';
+                const categoryCell = row.cells[3];
+                const badge = categoryCell ? categoryCell.querySelector('.badge') : null;
+                const categoryText = badge ? badge.textContent.trim() : '';
+                
+                if (categoryText === selectedCategory) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
             }
         });
+
+        // Filtre değiştiğinde toplamı güncelle
+        updateFilteredTotal();
     });
 });
 </script>

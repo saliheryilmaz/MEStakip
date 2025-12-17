@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load turkish_format %}
 
 {% block title %}Sipariş Envanteri Listesi - Mestakip{% endblock %}
 
@@ -179,11 +180,11 @@
                         <td><span class="badge bg-{{ siparis.get_grup_display_color }}">{{ siparis.get_grup_display }}</span></td>
                         <td><span class="badge bg-{{ siparis.get_mevsim_display_color }}">{{ siparis.get_mevsim_display }}</span></td>
                         <td><strong>{{ siparis.adet }}</strong></td>
-                        <td>₺{{ siparis.birim_fiyat|floatformat:2 }}</td>
+                        <td>{{ siparis.birim_fiyat|turkish_format }} ₺</td>
                         <td><span class="badge bg-{{ siparis.get_durum_display_color }}">{{ siparis.get_durum_display }}</span></td>
                         <td><span class="badge bg-{{ siparis.get_ambar_display_color }}">{{ siparis.get_ambar_display }}</span></td>
                         <td>{{ siparis.aciklama|default:"-" }}</td>
-                        <td><strong>₺{{ siparis.toplam_fiyat|floatformat:2 }}</strong></td>
+                        <td><strong>{{ siparis.toplam_fiyat|turkish_lira_symbol }}</strong></td>
                         <td>{{ siparis.get_odeme_display }}</td>
                         <td><span class="badge bg-{{ siparis.get_sms_display_color }}">{{ siparis.get_sms_durum_display }}</span></td>
                         <td>
@@ -338,7 +339,11 @@
                         data-telefon="{{ siparis.musteri_telefon|slice:'1:' }}" 
                         data-musteri="{{ siparis.musteri_adi|default:'' }}" 
                         data-urun="{{ siparis.urun }}" 
-                        onclick="whatsappGonderData(this)">
+                        data-marka="{{ siparis.marka }}"
+                        data-adet="{{ siparis.adet }}"
+                        data-durum="{{ siparis.get_durum_display }}"
+                        data-tarih="{{ siparis.guncelleme_tarihi|date:'d.m.Y H:i' }}"
+                        onclick="whatsappGonderDetayli(this)">
                     <i class="bi bi-whatsapp me-1"></i>
                     WhatsApp Gönder
                 </button>
@@ -498,6 +503,44 @@ function whatsappGonderData(button) {
     whatsappGonder(telefon, musteriAdi, urun);
 }
 
+// Müşteri Bilgileri pop-up'ı için detaylı WhatsApp mesajı
+function whatsappGonderDetayli(button) {
+    const telefon = button.getAttribute('data-telefon');
+    const musteriAdi = button.getAttribute('data-musteri');
+    const urun = button.getAttribute('data-urun');
+    const marka = button.getAttribute('data-marka');
+    const adet = button.getAttribute('data-adet');
+    const durum = button.getAttribute('data-durum');
+    const tarih = button.getAttribute('data-tarih');
+    
+    // Telefon numarasını temizle ve formatla
+    let cleanTelefon = telefon.toString().replace(/\D/g, '');
+    
+    // Türkiye telefon numarası formatı kontrolü
+    if (cleanTelefon.startsWith('0')) {
+        cleanTelefon = '90' + cleanTelefon.substring(1);
+    } else if (!cleanTelefon.startsWith('90')) {
+        cleanTelefon = '90' + cleanTelefon;
+    }
+    
+    // Detaylı mesaj formatı (MesTakip - LB formatında)
+    const mesaj = `*MesTakip - LB*
+
+*Ürün:* ${urun}
+*Marka:* ${marka}
+*Adet:* ${adet}
+*Durum:* ${durum}
+*Güncellenen Son Tarih:* ${tarih}`;
+    
+    console.log('Detaylı mesaj gönderiliyor:', mesaj);
+    
+    // WhatsApp URL'si oluştur
+    const whatsappUrl = `https://wa.me/${cleanTelefon}?text=${encodeURIComponent(mesaj)}`;
+    
+    // Yeni sekmede aç
+    window.open(whatsappUrl, '_blank');
+}
+
 // WhatsApp mesaj gönderme fonksiyonu
 function whatsappGonder(telefon, musteriAdi, urun) {
     // Telefon numarasını temizle ve formatla
@@ -512,22 +555,13 @@ function whatsappGonder(telefon, musteriAdi, urun) {
     
     console.log('Temizlenmiş telefon:', cleanTelefon);
     
-    // Lastik ebatını ürün adından çıkar (205/55R16 formatında)
-    const ebatPattern = /(\d{3}\/\d{2}R\d{2})/;
-    const ebatMatch = urun ? urun.match(ebatPattern) : null;
-    const ebat = ebatMatch ? ebatMatch[1] : '';
-    
     // Müşteri adını düzenle
     let musteriIsim = musteriAdi ? musteriAdi.trim() : '';
     
-    // Mesaj şablonu oluştur
+    // Mesaj şablonu oluştur (Müşteri Bilgileri pop-up'ı için farklı format)
     let mesaj = '';
-    if (musteriIsim && ebat) {
-        mesaj = `Merhaba ${musteriIsim} Bey, ${ebat} lastiğiniz gelmiştir.`;
-    } else if (musteriIsim) {
+    if (musteriIsim) {
         mesaj = `Merhaba ${musteriIsim} Bey, lastiğiniz gelmiştir.`;
-    } else if (ebat) {
-        mesaj = `Merhaba, ${ebat} lastiğiniz gelmiştir.`;
     } else {
         mesaj = `Merhaba, lastiğiniz gelmiştir.`;
     }

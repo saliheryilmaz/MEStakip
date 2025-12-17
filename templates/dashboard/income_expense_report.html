@@ -140,9 +140,17 @@
     </div>
 </div>
 
-<!-- Komisyon ve Toplam Kartları -->
+<!-- Pafgo, Komisyon ve Toplam Kartları -->
 <div class="row g-3 mb-4">
-    <div class="col-md-6">
+    <div class="col-md-3">
+        <div class="card text-white clickable-card position-relative" style="background: #16a085; cursor: pointer; box-shadow: 0 4px 15px rgba(22, 160, 133, 0.3);" data-bs-toggle="modal" data-bs-target="#modalPafgo">
+            <div class="card-body text-center">
+                <h6 class="card-title mb-1">💰 Pafgo</h6>
+                <h3 class="mb-0">{{ summary.pafgo|default:0|floatformat:0 }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
         <div class="card text-white" style="background: #e74c3c;">
             <div class="card-body text-center">
                 <h6 class="card-title mb-1">⚠️ Komisyon</h6>
@@ -182,6 +190,7 @@
                         <th class="text-end">SANAL POS</th>
                         <th class="text-end">M.HAVALE</th>
                         <th class="text-end">B.HAVALE</th>
+                        <th class="text-end">PAFGO</th>
                         <th class="text-end">TOPLAM</th>
                         <th class="text-end">AÇIKLAMA</th>
                         <th class="text-end">İŞLEM</th>
@@ -255,15 +264,37 @@
                             {% else %}-{% endif %}
                         </td>
                         <td class="text-end">
+                            {% if islem.pafgo > 0 %}
+                                <span class="badge bg-{% if islem.hareket_tipi == 'gelir' %}success{% else %}danger{% endif %}">
+                                    {{ islem.pafgo|floatformat:0 }}
+                                </span>
+                            {% else %}-{% endif %}
+                        </td>
+                        <td class="text-end">
                             <strong class="{% if islem.hareket_tipi == 'gelir' %}text-success{% else %}text-danger{% endif %}">
                                 {{ islem.toplam|floatformat:0 }}
                             </strong>
                         </td>
                         <td>{{ islem.aciklama|default:"-" }}</td>
                         <td class="text-end">
-                            <span class="badge bg-{% if islem.hareket_tipi == 'gelir' %}success{% else %}danger{% endif %}">
-                                {{ islem.get_hareket_tipi_display }}
-                            </span>
+                            <div class="d-flex align-items-center justify-content-end gap-2">
+                                <span class="badge bg-{% if islem.hareket_tipi == 'gelir' %}success{% else %}danger{% endif %}">
+                                    {{ islem.get_hareket_tipi_display }}
+                                </span>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="{% url 'dashboard:transaction_duzenle' islem.id %}?next={{ request.get_full_path|urlencode }}" class="btn btn-outline-primary btn-sm" title="Düzenle">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <form method="post" action="{% url 'dashboard:transaction_sil' islem.id %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                        <button type="submit" class="btn btn-outline-danger btn-sm" title="İşlemi sil"
+                                            onclick="return confirm('Bu işlemi silmek istediğinize emin misiniz?');">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}
@@ -286,6 +317,7 @@
 {% include 'dashboard/partials/finance-modal.html' with modal_id='modalSanalPos' title='Sanal Pos İşlemleri' entries=odeme_detaylari.sanal_pos total=summary.sanal_pos_brut color_class='warning' selected_range=date_range_label komisyon_toplam=komisyon_sanal_pos %}
 {% include 'dashboard/partials/finance-modal.html' with modal_id='modalMehmetHavale' title='Mehmet Havale İşlemleri' entries=odeme_detaylari.mehmet_havale total=summary.mehmet_havale color_class='secondary' selected_range=date_range_label %}
 {% include 'dashboard/partials/finance-modal.html' with modal_id='modalBankaHavale' title='Banka Havale İşlemleri' entries=odeme_detaylari.banka_havale total=summary.banka_havale_brut color_class='dark' selected_range=date_range_label komisyon_toplam=komisyon_banka_havale %}
+{% include 'dashboard/partials/finance-modal.html' with modal_id='modalPafgo' title='💰 Pafgo İşlemleri' entries=odeme_detaylari.pafgo total=summary.pafgo color_class='success' selected_range=date_range_label %}
 {% include 'dashboard/partials/finance-modal.html' with modal_id='modalToplam' title='Tüm İşlemler' entries=odeme_detaylari.toplam total=summary.toplam color_class='primary' selected_range=date_range_label %}
 
 {% endblock %}

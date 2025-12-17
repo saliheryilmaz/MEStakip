@@ -6,7 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
-from django.db.models import Q, Sum, Count, F, Case, When, DecimalField
+from django.db.models import Q, Sum, Count, F, Case, When, DecimalField, IntegerField
 from django.utils import timezone
 from datetime import datetime, timedelta, date
 import json
@@ -479,15 +479,21 @@ def products(request):
     
     # Merkez Ekstra İşlemler - Merkez Satış ve Virman kasalarını dahil et
     # Merkez Satış kasasında Gider işlemlerinde Kredi Kartı ve Banka Havale hariç
+    # Pafgo işlemleri products sayfasında gösterilmeyecek
     merkez_ekstra_islemler = qs.filter(kasa_adi__in=['merkez-satis', 'virman']).exclude(
         Q(kasa_adi='merkez-satis') & Q(hareket_tipi='gider') & (Q(kredi_karti__gt=0) | Q(banka_havale__gt=0))
-    ).select_related('kategori1', 'kategori1__parent', 'kategori2', 'kategori2__parent', 'kategori3', 'kategori3__parent')
+    ).exclude(pafgo__gt=0).select_related('kategori1', 'kategori1__parent', 'kategori2', 'kategori2__parent', 'kategori3', 'kategori3__parent')
     # Detaylı işlemlerden Merkez Satış ve Virman kasalarını hariç tut
     # Gider ise: Kredi Kartı, Sanal Pos ve Banka Havale hariç tut
     # Gelir ise: Sadece Sanal Pos ve Banka Havale hariç tut (Kredi Kartı göster)
-    detayli_islemler = qs.exclude(kasa_adi__in=['merkez-satis', 'virman']).exclude(
-        Q(hareket_tipi='gider') & Q(kredi_karti__gt=0)
-    ).exclude(sanal_pos__gt=0).exclude(banka_havale__gt=0)
+    # Pafgo işlemleri sadece Gelir/Gider raporunda gösterilecek, products sayfasında gösterilmeyecek
+    detayli_islemler = (
+        qs.exclude(kasa_adi__in=['merkez-satis', 'virman'])
+          .exclude(Q(hareket_tipi='gider') & Q(kredi_karti__gt=0))
+          .exclude(sanal_pos__gt=0)
+          .exclude(banka_havale__gt=0)
+          .exclude(pafgo__gt=0)
+    )
     # Merkez Ekstra İşlemler toplamını hesapla
     # Merkez Satış Gider işlemlerinde Kredi Kartı ve Banka Havale hariç
     merkez_ekstra_toplam = Decimal('0')
@@ -500,7 +506,7 @@ def products(request):
                 parse_decimal_value(islem.mehmet_havale)
             )
         elif islem.kasa_adi == 'merkez-satis' and islem.hareket_tipi == 'gelir':
-            # Merkez Satış Gelir: Tüm ödeme yöntemleri (Sanal Pos hariç, Banka Havale dahil)
+            # Merkez Satış Gelir: Tüm ödeme yöntemleri (Sanal Pos ve Pafgo hariç, Banka Havale dahil)
             merkez_ekstra_toplam += (
                 parse_decimal_value(islem.nakit) + 
                 parse_decimal_value(islem.kredi_karti) + 
@@ -804,6 +810,20 @@ def elements(request):
             siparisler = siparisler.filter(olusturma_tarihi__lte=end_date)
         except ValueError:
             pass
+
+    # Duruma göre özel sıralama:
+    # 1) Teslim Edildi (teslim)
+    # 2) İşleme Devam Ediyor (islemde)
+    # 3) Yolda (yolda)
+    # 4) Diğer durumlar
+    durum_sira = Case(
+        When(durum='teslim', then=0),
+        When(durum='islemde', then=1),
+        When(durum='yolda', then=2),
+        default=3,
+        output_field=IntegerField(),
+    )
+    siparisler = siparisler.annotate(durum_sira=durum_sira).order_by('durum_sira', '-olusturma_tarihi')
     
     # Sayfalama
     paginator = Paginator(siparisler, 10)  # Sayfa başına 10 kayıt
@@ -968,7 +988,7 @@ def siparis_whatsapp(request, siparis_id):
     tarih_str = timezone.localtime(guncelleme_tarihi).strftime('%d.%m.%Y %H:%M')
     
     # WhatsApp mesajı oluştur
-    mesaj = f"""*MesTakip - {siparis.cari_firma}*
+    mesaj = f"""*MesTakip - LB*
 
 *Ürün:* {siparis.urun}
 *Marka:* {siparis.marka}
@@ -2259,7 +2279,11 @@ def finance(request):
             transaction.created_by = request.user
             transaction.save()
             
-            messages.success(request, 'İşlem başarıyla kaydedildi!')
+            # Pafgo işlemi varsa özel mesaj
+            if transaction.pafgo and float(transaction.pafgo) > 0:
+                messages.success(request, f'Pafgo işlemi başarıyla kaydedildi! Tutar: {transaction.pafgo} TL - Gelir/Gider Raporunda görüntüleyebilirsiniz.')
+            else:
+                messages.success(request, 'İşlem başarıyla kaydedildi!')
             
             # next parametresi varsa oraya yönlendir
             next_url = request.POST.get('next') or request.GET.get('next')
@@ -2295,6 +2319,41 @@ def finance(request):
         'transactions': last_transactions,
     }
     return render(request, 'dashboard/finance.html', context)
+
+@login_required
+def transaction_duzenle(request, transaction_id):
+    """Transaction düzenleme sayfası"""
+    transaction = get_object_or_404(Transaction, id=transaction_id, created_by=request.user)
+    
+    if request.method == 'POST':
+        form = TransactionForm(request.POST, instance=transaction, user=request.user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'İşlem başarıyla güncellendi!')
+            
+            # next parametresi varsa oraya yönlendir
+            next_url = request.POST.get('next') or request.GET.get('next')
+            if next_url and next_url.startswith('/'):
+                return redirect(next_url)
+            return redirect('dashboard:products')
+        else:
+            messages.error(request, 'Form hatası! Lütfen alanları kontrol edin.')
+    else:
+        form = TransactionForm(instance=transaction, user=request.user)
+    
+    # Ana kategorileri context'e ekle
+    ana_kategoriler = TransactionCategory.objects.filter(
+        parent=None, 
+        created_by=request.user
+    ).order_by('name')
+    
+    context = {
+        'page_title': 'İşlem Düzenle',
+        'form': form,
+        'transaction': transaction,
+        'ana_kategoriler': ana_kategoriler,
+    }
+    return render(request, 'dashboard/transaction_duzenle.html', context)
 
 @login_required
 def kategori_sil(request, kategori_id):
@@ -2716,8 +2775,9 @@ def get_filtered_transactions(user, **filters):
     )
     
     # Temel filtreler
+    # Merkez-satis kasasındaki gelir işlemlerini hariç tut, ANCAK Pafgo işlemleri dahil
     islemler = islemler.exclude(
-        Q(kasa_adi='merkez-satis') & Q(hareket_tipi='gelir')
+        Q(kasa_adi='merkez-satis') & Q(hareket_tipi='gelir') & Q(pafgo=0)
     ).exclude(
         kasa_adi='virman'
     )
@@ -2765,18 +2825,18 @@ def income_expense_report(request):
     from datetime import date, timedelta
     
     # Filtreleme parametreleri
-    # Default: Bugün
+    # Default: Tüm zamanlar (tarih filtresi yok)
     today = date.today()
-    default_start = today.strftime('%Y-%m-%d')
-    default_end = today.strftime('%Y-%m-%d')
+    default_start = ''  # Boş bırak ki tüm veriler gözüksün
+    default_end = ''    # Boş bırak ki tüm veriler gözüksün
     
-    baslangic_tarih = request.GET.get('baslangic_tarih', default_start if not request.GET else '')
-    bitis_tarih = request.GET.get('bitis_tarih', default_end if not request.GET else '')
+    baslangic_tarih = request.GET.get('baslangic_tarih', default_start)
+    bitis_tarih = request.GET.get('bitis_tarih', default_end)
     hareket_tipi = request.GET.get('hareket_tipi', '')
     kasa_adi = request.GET.get('kasa_adi', '')
     kategori_id = request.GET.get('kategori', '')
     
-    # Filtrelenmiş işlemleri al
+    # Filtrelenmiş işlemleri al (tüm filtreler get_filtered_transactions'da uygulanıyor)
     islemler = get_filtered_transactions(
         user=request.user,
         baslangic_tarih=baslangic_tarih,
@@ -2785,43 +2845,6 @@ def income_expense_report(request):
         kasa_adi=kasa_adi,
         kategori_id=kategori_id
     )
-    
-    # Tarih filtreleri
-    if baslangic_tarih:
-        try:
-            baslangic = datetime.strptime(baslangic_tarih, '%Y-%m-%d').date()
-            islemler = islemler.filter(tarih__gte=baslangic)
-        except ValueError:
-            baslangic_tarih = ''
-    
-    if bitis_tarih:
-        try:
-            bitis = datetime.strptime(bitis_tarih, '%Y-%m-%d').date()
-            islemler = islemler.filter(tarih__lte=bitis)
-        except ValueError:
-            bitis_tarih = ''
-    
-    # Hareket tipi filtresi
-    if hareket_tipi:
-        islemler = islemler.filter(hareket_tipi=hareket_tipi)
-    
-    # Kasa filtresi
-    if kasa_adi:
-        islemler = islemler.filter(kasa_adi=kasa_adi)
-    
-    # Kategori filtresi (ana kategoriye göre)
-    if kategori_id:
-        # Seçilen ana kategoriye ait alt kategorileri bul
-        alt_kategoriler = TransactionCategory.objects.filter(
-            parent_id=kategori_id,
-            created_by=request.user
-        ).values_list('id', flat=True)
-        
-        # Ana kategori veya alt kategorilerden biri ile eşleşenleri filtrele
-        islemler = islemler.filter(
-            Q(kategori1_id=kategori_id) |  # Doğrudan ana kategori
-            Q(kategori1_id__in=alt_kategoriler)  # Alt kategorilerden biri
-        )
     
     # Özet hesaplamaları ve detaylı işlem listeleri
     summary = {
@@ -2835,6 +2858,7 @@ def income_expense_report(request):
         'mehmet_havale': 0,
         'banka_havale': 0,  # Net tutar (toplam için)
         'banka_havale_brut': 0,  # Brüt tutar (kart için)
+        'pafgo': 0,
         'toplam': 0,
         'komisyon': 0  # %20 Devlet Payı/Gideri
     }
@@ -2847,6 +2871,7 @@ def income_expense_report(request):
         'sanal_pos': [],
         'mehmet_havale': [],
         'banka_havale': [],
+        'pafgo': [],
         'toplam': []
     }
     
@@ -3008,6 +3033,20 @@ def income_expense_report(request):
                 'komisyon': komisyon,
             })
         
+        # Pafgo işlemleri
+        if islem.pafgo and float(islem.pafgo) > 0:
+            amount = float(islem.pafgo) * multiplier
+            summary['pafgo'] += amount
+            odeme_detaylari['pafgo'].append({
+                'tarih': islem.tarih.strftime('%d.%m.%Y'),
+                'kasa_adi': islem.get_kasa_adi_display() if islem.kasa_adi else '-',
+                'hareket': islem.get_hareket_tipi_display(),
+                'ana_kategori': ana_kategori,
+                'alt_kategori': alt_kategori,
+                'aciklama': islem.aciklama or '-',
+                'amount': amount,
+            })
+        
         # Toplam için tüm işlemleri ekle
         total_amount = float(islem.toplam or 0) * multiplier
         
@@ -3028,14 +3067,36 @@ def income_expense_report(request):
         summary['cari'] + 
         summary['sanal_pos'] + 
         summary['mehmet_havale'] + 
-        summary['banka_havale']
+        summary['banka_havale'] + 
+        summary['pafgo']
     )
+    
+    # Debug: Summary değerlerini yazdır
+    print(f"DEBUG: Summary değerleri:")
+    print(f"  - Nakit: {summary['nakit']}")
+    print(f"  - Kredi Kartı: {summary['kredi_karti']}")
+    print(f"  - Cari: {summary['cari']}")
+    print(f"  - Sanal Pos: {summary['sanal_pos']}")
+    print(f"  - Mehmet Havale: {summary['mehmet_havale']}")
+    print(f"  - Banka Havale: {summary['banka_havale']}")
+    print(f"  - Pafgo: {summary['pafgo']}")
+    print(f"  - Toplam: {summary['toplam']}")
+    print(f"DEBUG: Pafgo işlem sayısı: {len(odeme_detaylari['pafgo'])}")
     
     # Her ödeme yöntemi için komisyon toplamlarını hesapla
     komisyon_kredi_karti = sum(entry.get('komisyon', 0) for entry in odeme_detaylari['kredi_karti'])
     komisyon_cari = sum(entry.get('komisyon', 0) for entry in odeme_detaylari['cari'])
     komisyon_sanal_pos = sum(entry.get('komisyon', 0) for entry in odeme_detaylari['sanal_pos'])
     komisyon_banka_havale = sum(entry.get('komisyon', 0) for entry in odeme_detaylari['banka_havale'])
+    
+    # Debug: Pafgo işlemlerini kontrol et
+    pafgo_islemler = Transaction.objects.filter(
+        created_by=request.user,
+        pafgo__gt=0
+    ).values('id', 'tarih', 'pafgo', 'hareket_tipi')
+    print(f"DEBUG: Toplam Pafgo işlem sayısı: {pafgo_islemler.count()}")
+    for islem in pafgo_islemler:
+        print(f"  - ID: {islem['id']}, Tarih: {islem['tarih']}, Pafgo: {islem['pafgo']}, Tip: {islem['hareket_tipi']}")
     
     # Ana kategorileri al (parent'ı olmayan)
     kategoriler = TransactionCategory.objects.filter(

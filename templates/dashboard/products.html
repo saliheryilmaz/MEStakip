@@ -264,14 +264,19 @@
                                 </td>
                                 <td>{{ tx.aciklama|truncatechars:50 }}</td>
                                 <td class="text-end">
-                                    <form method="post" action="{% url 'dashboard:transaction_sil' tx.id %}" class="d-inline">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                                        <button type="submit" class="btn btn-outline-danger btn-sm" title="İşlemi sil"
-                                            onclick="return confirm('Bu işlemi silmek istediğinize emin misiniz?');">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    </form>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <a href="{% url 'dashboard:transaction_duzenle' tx.id %}" class="btn btn-outline-primary btn-sm" title="Düzenle">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <form method="post" action="{% url 'dashboard:transaction_sil' tx.id %}" class="d-inline">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                            <button type="submit" class="btn btn-outline-danger btn-sm" title="İşlemi sil"
+                                                onclick="return confirm('Bu işlemi silmek istediğinize emin misiniz?');">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -530,6 +535,7 @@
                                     <th>B.Havale</th>
                                     <th>Kategori</th>
                                     <th>Açıklama</th>
+                                    <th class="text-end">İşlem</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -583,17 +589,22 @@
                                             </span>
                                         {% endif %}
                                     </td>
-                                    <td class="d-flex justify-content-between align-items-center">
-                                        <span>{{ tx.aciklama|default:"-" }}</span>
-                                        <form method="post" action="{% url 'dashboard:transaction_sil' tx.id %}" class="ms-2">
-                                            {% csrf_token %}
-                                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                                            <button type="submit" class="btn btn-outline-danger btn-sm"
-                                                onclick="return confirm('Bu işlemi silmek istediğinize emin misiniz?');"
-                                                title="İşlemi sil">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </form>
+                                    <td>{{ tx.aciklama|default:"-" }}</td>
+                                    <td class="text-end">
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <a href="{% url 'dashboard:transaction_duzenle' tx.id %}" class="btn btn-outline-primary btn-sm" title="Düzenle">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            <form method="post" action="{% url 'dashboard:transaction_sil' tx.id %}" class="d-inline">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                                <button type="submit" class="btn btn-outline-danger btn-sm"
+                                                    onclick="return confirm('Bu işlemi silmek istediğinize emin misiniz?');"
+                                                    title="İşlemi sil">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
                                     </td>
                                 </tr>
                                 {% endfor %}

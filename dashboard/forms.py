@@ -204,7 +204,7 @@ class SiparisForm(forms.ModelForm):
             'musteri_adi': 'MÜŞTERİ ADI',
             'musteri_telefon': 'TELEFON NUMARASI',
             'musteri_odeme_tutari': 'ÖDEME TUTARI',
-            'musteri_aciklama': 'AÇIKLAMA'
+            'musteri_aciklama': 'MÜŞTERİ AÇIKLAMA'
         }
     
     def __init__(self, *args, **kwargs):

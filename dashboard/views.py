@@ -619,6 +619,7 @@ def forms(request):
     # Filtreleme parametreleri
     firma = request.GET.get('firma', '')
     marka = request.GET.get('marka', '')
+    urun_arama = request.GET.get('urun_arama', '')
     grup = request.GET.get('grup', '')
     mevsim = request.GET.get('mevsim', '')
     ambar = request.GET.get('ambar', '')
@@ -634,6 +635,10 @@ def forms(request):
         siparisler = siparisler.filter(cari_firma__icontains=firma)
     if marka:
         siparisler = siparisler.filter(marka__icontains=marka)
+    if urun_arama:
+        siparisler = siparisler.filter(
+            Q(urun__icontains=urun_arama) | Q(marka__icontains=urun_arama)
+        )
     if grup:
         siparisler = siparisler.filter(grup=grup)
     if mevsim:
@@ -713,6 +718,7 @@ def forms(request):
         'filters': {
             'firma': firma,
             'marka': marka,
+            'urun_arama': urun_arama,
             'grup': grup,
             'mevsim': mevsim,
             'ambar': ambar,
@@ -735,6 +741,7 @@ def elements(request):
     # Filtreleme parametreleri
     firma = request.GET.get('firma', '')
     marka = request.GET.get('marka', '')
+    urun_arama = request.GET.get('urun_arama', '')
     grup = request.GET.get('grup', '')
     durum = request.GET.get('durum', '')
     mevsim = request.GET.get('mevsim', '')
@@ -751,6 +758,10 @@ def elements(request):
         siparisler = siparisler.filter(cari_firma__icontains=firma)
     if marka:
         siparisler = siparisler.filter(marka__icontains=marka)
+    if urun_arama:
+        siparisler = siparisler.filter(
+            Q(urun__icontains=urun_arama) | Q(marka__icontains=urun_arama)
+        )
     if grup:
         siparisler = siparisler.filter(grup=grup)
     if durum:
@@ -812,15 +823,19 @@ def elements(request):
             pass
 
     # Duruma göre özel sıralama:
-    # 1) Teslim Edildi (teslim)
-    # 2) İşleme Devam Ediyor (islemde)
-    # 3) Yolda (yolda)
-    # 4) Diğer durumlar
+    # 1) Teslim Edildi (teslim) - her zaman en üstte
+    # 2) Takılacak/Faturası İşlendi (takilacak-faturasi-islendi)
+    # 3) Yolda/Fatura İşlendi (yolda-fatura-islendi)
+    # 4) İşleme Devam Ediyor (islemde)
+    # 5) Yolda (yolda)
+    # 6) Diğer durumlar
     durum_sira = Case(
         When(durum='teslim', then=0),
-        When(durum='islemde', then=1),
-        When(durum='yolda', then=2),
-        default=3,
+        When(durum='takilacak-faturasi-islendi', then=1),
+        When(durum='yolda-fatura-islendi', then=2),
+        When(durum='islemde', then=3),
+        When(durum='yolda', then=4),
+        default=5,
         output_field=IntegerField(),
     )
     siparisler = siparisler.annotate(durum_sira=durum_sira).order_by('durum_sira', '-olusturma_tarihi')
@@ -836,6 +851,7 @@ def elements(request):
         'filters': {
             'firma': firma,
             'marka': marka,
+            'urun_arama': urun_arama,
             'grup': grup,
             'durum': durum,
             'mevsim': mevsim,

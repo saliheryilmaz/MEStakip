@@ -54,14 +54,14 @@ class Siparis(models.Model):
         ('teslim', 'Teslim Edildi'),
         ('kontrol', 'Kontrol Edildi'),
         ('iptal', 'İptal Edildi'),
+        ('yolda-fatura-islendi', 'Yolda/Fatura İşlendi'),
+        ('takilacak-faturasi-islendi', 'Takılacak/Faturası İşlendi'),
     ]
     
     ODEME_CHOICES = [
         ('kredi-karti', 'Kredi Kartı'),
         ('havale', 'Havale'),
-        ('cari-hesap', 'Cari Hesap'),
-        ('banka-havale', 'Banka Havale'),
-        ('sanal-pos', 'Sanal POS'),
+        ('cari', 'Cari'),
     ]
     
     SMS_CHOICES = [
@@ -105,11 +105,11 @@ class Siparis(models.Model):
     )
     
     # Durum Bilgileri
-    durum = models.CharField(max_length=20, choices=DURUM_CHOICES, default='yolda', verbose_name="DURUM")
+    durum = models.CharField(max_length=30, choices=DURUM_CHOICES, default='yolda', verbose_name="DURUM")
     ambar = models.CharField(max_length=20, choices=AMBAR_CHOICES, default='stok', verbose_name="AMBAR")
     
     # Ödeme ve İletişim
-    odeme = models.CharField(max_length=20, choices=ODEME_CHOICES, verbose_name="ÖDEME")
+    odeme = models.CharField(max_length=20, choices=ODEME_CHOICES, default='cari', verbose_name="ÖDEME")
     sms_durum = models.CharField(max_length=20, choices=SMS_CHOICES, default='gonderilmedi', verbose_name="SMS")
     
     # Ek Bilgiler
@@ -158,6 +158,8 @@ class Siparis(models.Model):
             'teslim': 'success',
             'kontrol': 'warning',
             'iptal': 'danger',
+            'yolda-fatura-islendi': 'danger',
+            'takilacak-faturasi-islendi': 'warning',
         }
         return colors.get(self.durum, 'secondary')
     

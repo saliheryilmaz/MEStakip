@@ -118,13 +118,24 @@
     <div class="card-body">
         <form method="get">
             <div class="row g-3">
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label for="firma" class="form-label">CARI (FIRMA)</label>
                     <input type="text" class="form-control" id="firma" name="firma" value="{{ filters.firma }}" placeholder="Firma adı...">
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label for="marka" class="form-label">MARKA</label>
                     <input type="text" class="form-control" id="marka" name="marka" value="{{ filters.marka }}" placeholder="Marka adı...">
+                </div>
+                <div class="col-md-3">
+                    <label for="urun_arama" class="form-label">ÜRÜN ARAMA</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="urun_arama" name="urun_arama" value="{{ filters.urun_arama }}" placeholder="Ürün adı, marka veya kodu...">
+                        {% if filters.urun_arama %}
+                        <button class="btn btn-outline-secondary" type="button" id="clear-search" title="Aramayı Temizle">
+                            <i class="bi bi-x"></i>
+                        </button>
+                        {% endif %}
+                    </div>
                 </div>
                 <div class="col-md-2">
                     <label for="grup" class="form-label">GRUP</label>
@@ -145,7 +156,7 @@
                         <option value="dort-mevsim" {% if filters.mevsim == 'dort-mevsim' %}selected{% endif %}>4 Mevsim</option>
                     </select>
                 </div>
-                <div class="col-md-2">
+                <div class="col-md-1">
                     <label for="ambar" class="form-label">AMBAR</label>
                     <select class="form-select" id="ambar" name="ambar">
                         <option value="">Tümü</option>
@@ -236,6 +247,7 @@
                         <th>BİRİM FİYAT</th>
                         <th>AMBAR</th>
                         <th>TOPLAM FİYAT</th>
+                        <th>AÇIKLAMA</th>
                         <th>ÖDEME</th>
                         <th>KONTROL TARİHİ</th>
                         <th>İŞLEMLER</th>
@@ -259,6 +271,7 @@
                         <td>₺{{ siparis.birim_fiyat|floatformat:2 }}</td>
                         <td><span class="badge bg-primary">{{ siparis.get_ambar_display }}</span></td>
                         <td><strong class="text-success">₺{{ siparis.toplam_fiyat|floatformat:2 }}</strong></td>
+                        <td>{{ siparis.aciklama|default:"-" }}</td>
                         <td>{{ siparis.get_odeme_display }}</td>
                         <td>
                             <small class="text-muted">
@@ -297,7 +310,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="12" class="text-center text-muted py-4">
+                        <td colspan="13" class="text-center text-muted py-4">
                             <i class="bi bi-check-circle fs-1 d-block mb-2 text-warning"></i>
                             <h5>Henüz kontrol edilen sipariş bulunmuyor.</h5>
                             <p class="mb-0">Kontrol edilen siparişler burada görünecek.</p>
@@ -456,6 +469,27 @@ document.addEventListener('DOMContentLoaded', function() {
     // Sayfa yüklendiğinde ebat vurgulamasını uygula
     highlightEbatInTable();
     
+    // Ürün arama sonuçlarını vurgula
+    highlightSearchResults();
+    
+    function highlightSearchResults() {
+        const searchTerm = document.getElementById('urun_arama')?.value;
+        if (searchTerm && searchTerm.length >= 2) {
+            // Ürün sütunu (2. sütun) ve Marka sütunu (3. sütun)
+            const urunCells = document.querySelectorAll('tbody tr td:nth-child(2)');
+            const markaCells = document.querySelectorAll('tbody tr td:nth-child(3)');
+            
+            [...urunCells, ...markaCells].forEach(cell => {
+                const content = cell.textContent;
+                if (content.toLowerCase().includes(searchTerm.toLowerCase())) {
+                    const regex = new RegExp(`(${searchTerm})`, 'gi');
+                    const highlightedContent = content.replace(regex, '<span class="search-highlight">$1</span>');
+                    cell.innerHTML = highlightedContent;
+                }
+            });
+        }
+    }
+    
     
     // Tarih filtreleme fonksiyonları
     const tarihSelect = document.getElementById('tarih');
@@ -514,6 +548,42 @@ document.addEventListener('DOMContentLoaded', function() {
             
             baslangicTarihi.value = startOfMonth.toISOString().split('T')[0];
             bitisTarihi.value = endOfMonth.toISOString().split('T')[0];
+        });
+    }
+    
+    // Ürün arama fonksiyonları
+    const urunAramaInput = document.getElementById('urun_arama');
+    let searchTimeout;
+    
+    if (urunAramaInput) {
+        urunAramaInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                // Eğer 3 karakterden fazla girildiyse otomatik arama yap
+                if (this.value.length >= 3 || this.value.length === 0) {
+                    console.log('Ürün arama:', this.value);
+                    // Form otomatik submit edilebilir (isteğe bağlı)
+                    // document.querySelector('form').submit();
+                }
+            }, 500); // 500ms bekle
+        });
+        
+        // Enter tuşuna basıldığında arama yap
+        urunAramaInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                document.querySelector('form').submit();
+            }
+        });
+    }
+    
+    // Arama temizleme butonu
+    const clearSearchBtn = document.getElementById('clear-search');
+    if (clearSearchBtn) {
+        clearSearchBtn.addEventListener('click', function() {
+            urunAramaInput.value = '';
+            // Formu otomatik submit et
+            document.querySelector('form').submit();
         });
     }
     
@@ -659,6 +729,30 @@ function exportCheckedToExcel() {
 /* Öne çıkar ürün satırı */
 .urun-with-ebat-highlight {
     font-weight: 500;
+}
+
+/* Ürün arama alanı stilleri */
+#urun_arama {
+    border-left: 3px solid #0d6efd;
+}
+
+#urun_arama:focus {
+    border-left: 3px solid #0a58ca;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+.input-group-text {
+    background-color: #f8f9fa;
+    border-color: #dee2e6;
+    color: #6c757d;
+}
+
+/* Arama sonuçları vurgulama */
+.search-highlight {
+    background-color: #fff3cd;
+    font-weight: bold;
+    padding: 1px 3px;
+    border-radius: 2px;
 }
 
 /* Kontrol edilen sipariş satırı */

@@ -16,8 +16,7 @@
     <meta property="og:type" content="website">
 
     <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="{% load static %}{% static 'icons/favicon.svg' %}">
-    <link rel="icon" type="image/png" href="{% load static %}{% static 'icons/favicon.png' %}">
+    <link rel="icon" type="image/png" href="{% load static %}{% static 'icons/favicon.png' %}?v={{ timestamp }}">
 
     <!-- Preconnect to external domains -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -68,6 +67,24 @@
 
         .payment-field.focused {
             background-color: #f8f9fa !important;
+        }
+        
+        /* Logo Styles */
+        .navbar-logo, .sidebar-logo {
+            object-fit: contain;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 4px;
+            transition: all 0.3s ease;
+        }
+        
+        .navbar-logo:hover, .sidebar-logo:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+        }
+        
+        .sidebar-logo {
+            background: rgba(255, 255, 255, 0.15);
         }
     </style>
 
@@ -491,8 +508,8 @@
 
                     <!-- Logo/Brand - Now first on the left -->
                     <a class="navbar-brand d-flex align-items-center" href="{% url 'dashboard:index' %}">
-                        <img src="{% load static %}{% static 'images/logo.svg' %}" alt="Logo" height="32"
-                            class="d-inline-block align-text-top me-2">
+                        <img src="{% load static %}{% static 'images/mestakiplogo.png' %}" alt="Logo" height="40"
+                            class="d-inline-block align-text-top me-2 navbar-logo">
                        
                     </a>
 
@@ -553,8 +570,8 @@
                 <!-- Sidebar Header -->
                 <div class="sidebar-header d-flex align-items-center justify-content-between p-3">
                     <a class="navbar-brand d-flex align-items-center" href="{% url 'dashboard:index' %}">
-                        <img src="{% load static %}{% static 'images/logo.svg' %}" alt="Logo" height="32"
-                            class="d-inline-block align-text-top me-2">
+                        <img src="{% load static %}{% static 'images/mestakiplogo.png' %}" alt="Logo" height="40"
+                            class="d-inline-block align-text-top me-2 sidebar-logo">
                         <h1 class="h4 mb-0 fw-bold text-white">MesTakip</h1>
                     </a>
                     <button class="sidebar-toggle-btn" type="button" data-sidebar-toggle aria-label="Toggle sidebar"
@@ -1703,8 +1720,8 @@
                                     try {
                                         const browserNotification = new Notification(notification.title, {
                                             body: notification.message,
-                                            icon: '/static/images/logo.svg',
-                                            badge: '/static/images/logo.svg',
+                                            icon: '/static/images/mestakiplogo.png',
+                                            badge: '/static/images/mestakiplogo.png',
                                             tag: `notification-${notification.id}`,
                                             requireInteraction: notification.type === 'event_start',
                                             silent: false
@@ -1935,7 +1952,7 @@
                 if (Notification.permission === 'granted') {
                     new Notification(notification.title, {
                         body: notification.message,
-                        icon: '/static/images/logo.svg'
+                        icon: '/static/images/mestakiplogo.png'
                     });
                 }
             }

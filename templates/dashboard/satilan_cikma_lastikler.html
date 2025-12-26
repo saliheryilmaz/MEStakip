@@ -1,0 +1,442 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load turkish_format %}
+
+{% block title %}Satılan Çıkma Lastikler - Mestakip{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">Satılan Çıkma Lastikler</h1>
+        <p class="text-muted mb-0">Satış işlemi tamamlanan çıkma lastiklerin takibi</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'dashboard:cikma_lastikler' %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left me-1"></i>
+            Çıkma Lastikler
+        </a>
+    </div>
+</div>
+
+<!-- Filtering Section -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Filtreleme</h5>
+    </div>
+    <div class="card-body">
+        <form method="get">
+            <div class="row g-3">
+                <div class="col-md-2">
+                    <label for="marka" class="form-label">MARKA</label>
+                    <input type="text" class="form-control" id="marka" name="marka" value="{{ filters.marka }}" placeholder="Marka adı...">
+                </div>
+                <div class="col-md-2">
+                    <label for="ebat" class="form-label">EBAT</label>
+                    <input type="text" class="form-control" id="ebat" name="ebat" value="{{ filters.ebat }}" placeholder="205/55R16...">
+                </div>
+                <div class="col-md-2">
+                    <label for="mevsim" class="form-label">MEVSİM</label>
+                    <select class="form-select" id="mevsim" name="mevsim">
+                        <option value="">Tümü</option>
+                        {% for value, label in mevsim_choices %}
+                        <option value="{{ value }}" {% if filters.mevsim == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="tarih" class="form-label">TARİH FİLTRESİ</label>
+                    <select class="form-select" id="tarih" name="tarih">
+                        <option value="">Tümü</option>
+                        <option value="bugun" {% if filters.tarih == 'bugun' %}selected{% endif %}>Bugün</option>
+                        <option value="bu-hafta" {% if filters.tarih == 'bu-hafta' %}selected{% endif %}>Bu Hafta</option>
+                        <option value="bu-ay" {% if filters.tarih == 'bu-ay' %}selected{% endif %}>Bu Ay</option>
+                        <option value="son-1-ay" {% if filters.tarih == 'son-1-ay' %}selected{% endif %}>Son 1 Ay</option>
+                        <option value="son-3-ay" {% if filters.tarih == 'son-3-ay' %}selected{% endif %}>Son 3 Ay</option>
+                        <option value="son-6-ay" {% if filters.tarih == 'son-6-ay' %}selected{% endif %}>Son 6 Ay</option>
+                        <option value="ozel-tarih" {% if filters.tarih == 'ozel-tarih' %}selected{% endif %}>Özel Tarih Aralığı</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-funnel me-2"></i>
+                            Filtrele
+                        </button>
+                        <a href="{% url 'dashboard:satilan_cikma_lastikler' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-clockwise me-2"></i>
+                            Temizle
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Özel Tarih Aralığı Bölümü -->
+            <div class="row g-3 mt-2" id="ozel-tarih-section" style="display: none;">
+                <div class="col-md-4">
+                    <label for="baslangic_tarihi" class="form-label">BAŞLANGIÇ TARİHİ</label>
+                    <input type="date" class="form-control" id="baslangic_tarihi" name="baslangic_tarihi" value="{{ filters.baslangic_tarihi }}">
+                </div>
+                <div class="col-md-4">
+                    <label for="bitis_tarihi" class="form-label">BİTİŞ TARİHİ</label>
+                    <input type="date" class="form-control" id="bitis_tarihi" name="bitis_tarihi" value="{{ filters.bitis_tarihi }}">
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Main Table Section -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">Satılan Çıkma Lastik Listesi</h5>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-success btn-sm">
+                <i class="bi bi-file-earmark-excel me-1"></i>
+                Excel'e Aktar
+            </button>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive" style="overflow-x: auto;">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="min-width: 80px;">KALİTE</th>
+                        <th style="min-width: 100px;">EBAT</th>
+                        <th style="min-width: 150px;">MARKA/MODEL</th>
+                        <th style="min-width: 60px;" class="text-center">MEVSİM</th>
+                        <th style="min-width: 60px;">ADET</th>
+                        <th style="min-width: 120px;">AMBAR (DEPO)</th>
+                        <th style="min-width: 100px;">SATIŞ FİYATI</th>
+                        <th style="min-width: 100px;">SATIŞ TARİHİ</th>
+                        <th style="min-width: 150px;">AÇIKLAMA</th>
+                        <th style="min-width: 120px;">İŞLEMLER</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- DEBUG: Toplam kayıt sayısı: {{ satilan_lastikler.paginator.count }} -->
+                    {% for lastik in satilan_lastikler %}
+                    <tr>
+                        <td>{{ lastik.get_kalite_display }}</td>
+                        <td><code style="font-size: 1.1em; font-weight: 600;">{{ lastik.ebat }}</code></td>
+                        <td>
+                            <strong>{{ lastik.marka }}</strong>
+                            {% if lastik.model %}
+                                <br><small class="text-muted">{{ lastik.model }}</small>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if lastik.mevsim == 'yaz' %}
+                                <img src="{% static 'images/yaz.png' %}" alt="Yaz" title="Yaz Lastiği" 
+                                     style="width: 24px; height: 24px; object-fit: contain; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+                            {% elif lastik.mevsim == 'kis' %}
+                                <img src="{% static 'images/kis.png' %}" alt="Kış" title="Kış Lastiği" 
+                                     style="width: 24px; height: 24px; object-fit: contain; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+                            {% elif lastik.mevsim == 'dort-mevsim' %}
+                                <img src="{% static 'images/dörtmevsim.png' %}" alt="4 Mevsim" title="4 Mevsim Lastiği" 
+                                     style="width: 24px; height: 24px; object-fit: contain; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td><strong>{{ lastik.adet }}</strong></td>
+                        <td>
+                            {% if lastik.depo_konumu %}
+                                <span class="badge bg-info">{{ lastik.depo_konumu }}</span>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if lastik.satis_fiyati %}
+                                <strong class="text-success">{{ lastik.satis_fiyati|turkish_format }} ₺</strong>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if lastik.satis_tarihi %}
+                                <strong class="text-success">{{ lastik.satis_tarihi|date:"d.m.Y" }}</strong>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if lastik.aciklama %}
+                                <span class="text-truncate d-inline-block" style="max-width: 150px;" title="{{ lastik.aciklama }}">
+                                    {{ lastik.aciklama }}
+                                </span>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button" class="btn btn-primary btn-sm" title="Detay" 
+                                        data-bs-toggle="modal" data-bs-target="#detayModal{{ lastik.id }}">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                                <button type="button" class="btn btn-warning btn-sm" title="Düzenle"
+                                        data-edit-url="{% url 'dashboard:cikma_lastik_duzenle' lastik.id %}">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button type="button" class="btn btn-danger btn-sm" title="Sil" 
+                                        data-delete-url="{% url 'dashboard:cikma_lastik_sil' lastik.id %}?next=dashboard:satilan_cikma_lastikler"
+                                        data-confirm-message="Bu satış kaydını silmek istediğinizden emin misiniz?">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="10" class="text-center text-muted py-4">
+                            <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                            Henüz satılan çıkma lastik kaydı bulunmuyor.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card-footer">
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="text-muted">
+                {% if satilan_lastikler.has_other_pages %}
+                    Sayfa {{ satilan_lastikler.number }} / {{ satilan_lastikler.paginator.num_pages }} - 
+                    {{ satilan_lastikler.start_index }}-{{ satilan_lastikler.end_index }} arası kayıtlar (Toplam: {{ satilan_lastikler.paginator.count }})
+                {% else %}
+                    Toplam <strong>{{ satilan_lastikler.paginator.count }}</strong> satış kaydı gösteriliyor
+                {% endif %}
+            </div>
+            {% if satilan_lastikler.has_other_pages %}
+            <nav aria-label="Page navigation">
+                <ul class="pagination pagination-sm mb-0">
+                    {% if satilan_lastikler.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ satilan_lastikler.previous_page_number }}{% if filter_query_string %}&{{ filter_query_string }}{% endif %}">Önceki</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#" tabindex="-1">Önceki</a>
+                        </li>
+                    {% endif %}
+                    
+                    {% for num in satilan_lastikler.paginator.page_range %}
+                        {% if satilan_lastikler.number == num %}
+                            <li class="page-item active">
+                                <a class="page-link" href="#">{{ num }}</a>
+                            </li>
+                        {% else %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}{% if filter_query_string %}&{{ filter_query_string }}{% endif %}">{{ num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if satilan_lastikler.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ satilan_lastikler.next_page_number }}{% if filter_query_string %}&{{ filter_query_string }}{% endif %}">Sonraki</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#" tabindex="-1">Sonraki</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Detay Modalları -->
+{% for lastik in satilan_lastikler %}
+<!-- Çıkma Lastik Detay Modal -->
+<div class="modal fade" id="detayModal{{ lastik.id }}" tabindex="-1" aria-labelledby="detayModalLabel{{ lastik.id }}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="detayModalLabel{{ lastik.id }}">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Lastik Detayları
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Ürün Bilgisi Kartı -->
+                <div class="card mb-3">
+                    <div class="card-header bg-light">
+                        <h6 class="card-title mb-0">
+                            <i class="bi bi-tire me-2"></i>
+                            Ürün Bilgileri
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>Marka/Model:</strong><br>
+                                {{ lastik.marka }}
+                                {% if lastik.model %}
+                                    <small class="text-muted">{{ lastik.model }}</small>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Ebat:</strong><br>
+                                <code style="font-size: 1.1em; font-weight: 600;">{{ lastik.ebat }}</code>
+                            </div>
+                            <div class="col-md-4 mt-2">
+                                <strong>Mevsim:</strong><br>
+                                {% if lastik.mevsim == 'yaz' %}
+                                    <img src="{% static 'images/yaz.png' %}" alt="Yaz" title="Yaz Lastiği" 
+                                         style="width: 20px; height: 20px; object-fit: contain;">
+                                    Yaz
+                                {% elif lastik.mevsim == 'kis' %}
+                                    <img src="{% static 'images/kis.png' %}" alt="Kış" title="Kış Lastiği" 
+                                         style="width: 20px; height: 20px; object-fit: contain;">
+                                    Kış
+                                {% elif lastik.mevsim == 'dort-mevsim' %}
+                                    <img src="{% static 'images/dörtmevsim.png' %}" alt="4 Mevsim" title="4 Mevsim Lastiği" 
+                                         style="width: 20px; height: 20px; object-fit: contain;">
+                                    4 Mevsim
+                                {% endif %}
+                            </div>
+                            <div class="col-md-4 mt-2">
+                                <strong>Adet:</strong><br>
+                                <span class="badge bg-primary fs-6">{{ lastik.adet }}</span>
+                            </div>
+                            <div class="col-md-4 mt-2">
+                                <strong>Kalite:</strong><br>
+                                {{ lastik.get_kalite_display }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Satış Bilgileri Kartı -->
+                <div class="card mb-3">
+                    <div class="card-header bg-success bg-opacity-10">
+                        <h6 class="card-title mb-0 text-success">
+                            <i class="bi bi-currency-dollar me-2"></i>
+                            Satış Bilgileri
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>Satış Fiyatı:</strong><br>
+                                {% if lastik.satis_fiyati %}
+                                    <span class="text-success fs-5 fw-bold">{{ lastik.satis_fiyati|turkish_format }} ₺</span>
+                                {% else %}
+                                    <span class="text-muted">Belirtilmemiş</span>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Satış Tarihi:</strong><br>
+                                {% if lastik.satis_tarihi %}
+                                    <span class="text-success fw-bold">{{ lastik.satis_tarihi|date:"d.m.Y" }}</span>
+                                {% else %}
+                                    <span class="text-muted">Belirtilmemiş</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Ek Bilgiler -->
+                {% if lastik.depo_konumu or lastik.aciklama %}
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h6 class="card-title mb-0">
+                            <i class="bi bi-info-square me-2"></i>
+                            Ek Bilgiler
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        {% if lastik.depo_konumu %}
+                        <div class="mb-2">
+                            <strong>Depo Konumu:</strong><br>
+                            <span class="badge bg-info">{{ lastik.depo_konumu }}</span>
+                        </div>
+                        {% endif %}
+                        {% if lastik.aciklama %}
+                        <div>
+                            <strong>Açıklama:</strong><br>
+                            <div class="bg-light p-2 rounded border">
+                                {{ lastik.aciklama|linebreaks }}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endfor %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Tarih filtreleme fonksiyonları
+    const tarihSelect = document.getElementById('tarih');
+    const ozelTarihSection = document.getElementById('ozel-tarih-section');
+    
+    if (tarihSelect) {
+        tarihSelect.addEventListener('change', function() {
+            if (this.value === 'ozel-tarih') {
+                ozelTarihSection.style.display = 'block';
+            } else {
+                ozelTarihSection.style.display = 'none';
+            }
+        });
+        
+        // Sayfa yüklendiğinde özel tarih seçiliyse bölümü göster
+        if (tarihSelect.value === 'ozel-tarih') {
+            ozelTarihSection.style.display = 'block';
+        }
+    }
+    
+    // Düzenle butonları
+    document.querySelectorAll('[data-edit-url]').forEach(function(button) {
+        button.addEventListener('click', function() {
+            window.location.href = this.getAttribute('data-edit-url');
+        });
+    });
+    
+    // Sil butonları - Form ile POST request gönder
+    document.querySelectorAll('[data-delete-url]').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const message = this.getAttribute('data-confirm-message');
+            if (confirm(message)) {
+                const deleteUrl = this.getAttribute('data-delete-url');
+                
+                // Form oluştur ve gönder
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = deleteUrl;
+                
+                // CSRF token ekle
+                const csrfInput = document.createElement('input');
+                csrfInput.type = 'hidden';
+                csrfInput.name = 'csrfmiddlewaretoken';
+                csrfInput.value = document.querySelector('[name=csrfmiddlewaretoken]').value;
+                form.appendChild(csrfInput);
+                
+                document.body.appendChild(form);
+                form.submit();
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

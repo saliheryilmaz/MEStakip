@@ -9,7 +9,7 @@
     <meta name="author" content="MesTakip">
     
     <!-- Favicon -->
-    <link rel="icon" type="image/png" href="{% load static %}{% static 'icons/favicon.png' %}">
+    <link rel="icon" type="image/x-icon" href="{% load static %}{% static 'images/favicon.ico' %}">
     
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -26,23 +26,99 @@
     
     <style>
         body {
-            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
-            background-image: url("{% load static %}{% static 'images/mestakiplogin.png' %}");
-            background-size: cover;
-            background-position: center center;
-            background-repeat: no-repeat;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
             min-height: 100vh;
             font-family: 'Inter', sans-serif;
             position: relative;
+            overflow: hidden;
         }
         
+        /* Yıldızlı arka plan animasyonu - küçük yıldızlar */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(2px 2px at 20px 30px, #ffffff, transparent),
+                radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.8), transparent),
+                radial-gradient(1px 1px at 90px 40px, #ffffff, transparent),
+                radial-gradient(1px 1px at 130px 80px, rgba(255,255,255,0.6), transparent),
+                radial-gradient(2px 2px at 160px 30px, #ffffff, transparent),
+                radial-gradient(1px 1px at 200px 90px, rgba(255,255,255,0.8), transparent),
+                radial-gradient(2px 2px at 240px 50px, #ffffff, transparent),
+                radial-gradient(1px 1px at 280px 10px, rgba(255,255,255,0.6), transparent),
+                radial-gradient(1px 1px at 320px 70px, #ffffff, transparent),
+                radial-gradient(2px 2px at 360px 40px, rgba(255,255,255,0.8), transparent),
+                radial-gradient(1px 1px at 400px 20px, #ffffff, transparent),
+                radial-gradient(1px 1px at 440px 80px, rgba(255,255,255,0.6), transparent),
+                radial-gradient(2px 2px at 480px 60px, #ffffff, transparent),
+                radial-gradient(1px 1px at 520px 30px, rgba(255,255,255,0.8), transparent),
+                radial-gradient(1px 1px at 560px 90px, #ffffff, transparent);
+            background-repeat: repeat;
+            background-size: 600px 100px;
+            animation: sparkle 20s linear infinite;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        /* Büyük yıldızlar için ek katman */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(3px 3px at 100px 150px, rgba(255,255,255,0.9), transparent),
+                radial-gradient(4px 4px at 300px 100px, rgba(255,255,255,0.7), transparent),
+                radial-gradient(3px 3px at 500px 200px, rgba(255,255,255,0.8), transparent),
+                radial-gradient(2px 2px at 700px 50px, rgba(255,255,255,0.9), transparent),
+                radial-gradient(3px 3px at 150px 300px, rgba(255,255,255,0.6), transparent),
+                radial-gradient(4px 4px at 450px 350px, rgba(255,255,255,0.8), transparent);
+            background-repeat: repeat;
+            background-size: 800px 400px;
+            animation: twinkle 15s ease-in-out infinite alternate;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        /* Animasyon tanımları */
+        @keyframes sparkle {
+            0% { transform: translateX(0); opacity: 1; }
+            50% { opacity: 0.3; }
+            100% { transform: translateX(-600px); opacity: 1; }
+        }
+        
+        @keyframes twinkle {
+            0% { opacity: 0.3; }
+            100% { opacity: 1; }
+        }
+        
+        @keyframes cardGlow {
+            0% { 
+                box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2), 
+                           0 0 0 1px rgba(255, 255, 255, 0.2), 
+                           0 0 30px rgba(255, 255, 255, 0.1); 
+            }
+            100% { 
+                box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2), 
+                           0 0 0 1px rgba(255, 255, 255, 0.2), 
+                           0 0 40px rgba(255, 255, 255, 0.2); 
+            }
+        }
+        
+        /* Login container'ı yıldızların üstünde göster */
         .login-container {
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
             position: relative;
-            z-index: 1;
+            z-index: 10;
         }
         
         .login-card {
@@ -50,13 +126,16 @@
             backdrop-filter: blur(20px);
             border-radius: 24px;
             box-shadow: 
-                0 25px 50px rgba(0, 0, 0, 0.15),
-                0 0 0 1px rgba(255, 255, 255, 0.2);
+                0 25px 50px rgba(0, 0, 0, 0.2),
+                0 0 0 1px rgba(255, 255, 255, 0.2),
+                0 0 30px rgba(255, 255, 255, 0.1);
             border: none;
             overflow: hidden;
             max-width: 400px;
             width: 100%;
             position: relative;
+            color: #2d3748;
+            animation: cardGlow 4s ease-in-out infinite alternate;
         }
         
         .login-card::before {
@@ -70,7 +149,7 @@
         }
         
         .login-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
             color: white;
             padding: 2rem;
             text-align: center;
@@ -81,20 +160,24 @@
         }
         
         .form-control {
+            background: #ffffff;
+            color: #2d3748;
             border-radius: 10px;
-            border: 2px solid #e9ecef;
+            border: 2px solid #e2e8f0;
             padding: 12px 16px;
             font-size: 16px;
             transition: all 0.3s ease;
         }
         
         .form-control:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+            background: #ffffff;
+            color: #2d3748;
+            border-color: #334155;
+            box-shadow: 0 0 0 0.2rem rgba(51, 65, 85, 0.25);
         }
         
         .btn-login {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
             border: none;
             border-radius: 10px;
             padding: 12px 24px;
@@ -109,13 +192,16 @@
         }
         
         .input-group-text {
-            background: #f8f9fa;
-            border: 2px solid #e9ecef;
+            background: #f7fafc;
+            color: #4a5568;
+            border: 2px solid #e2e8f0;
             border-right: none;
             border-radius: 10px 0 0 10px;
         }
         
         .input-group .form-control {
+            background: #ffffff;
+            color: #2d3748;
             border-left: none;
             border-radius: 0 10px 10px 0;
         }
@@ -140,7 +226,7 @@
             <!-- Login Header -->
             <div class="login-header">
                 <div class="logo-container">
-                    <img src="{% load static %}{% static 'images/mestakiplogo.png' %}" alt="MesTakip Logo">
+                    <img src="{% load static %}{% static 'images/mestakip1.png' %}" alt="MesTakip Logo">
                 </div>
                 <h1 class="h3 mb-0 fw-bold">MesTakip</h1>
                 <p class="mb-0 opacity-75">Sipariş Takip Sistemi</p>

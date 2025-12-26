@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Siparis, UserProfile, Notification, Transaction, TransactionCategory, Event, MalzemeHareketi, MalzemeDosya
+from .models import Siparis, UserProfile, Notification, Transaction, TransactionCategory, Event, MalzemeHareketi, MalzemeDosya, CikmaLastik
 
 @admin.register(Siparis)
 class SiparisAdmin(admin.ModelAdmin):
@@ -229,6 +229,68 @@ class TransactionAdmin(admin.ModelAdmin):
     search_fields = ['aciklama', 'kasa_adi']
     readonly_fields = ['created_at', 'updated_at']
     ordering = ['-tarih', '-id']
+
+@admin.register(CikmaLastik)
+class CikmaLastikAdmin(admin.ModelAdmin):
+    """Çıkma Lastik admin paneli"""
+    
+    list_display = [
+        'id', 'marka', 'model', 'ebat', 
+        'mevsim', 'arac_tipi', 'adet', 'durum', 
+        'kalite_notu', 'tahmini_deger', 'cikis_tarihi', 
+        'user', 'olusturma_tarihi'
+    ]
+    
+    list_filter = [
+        'durum', 'mevsim', 'arac_tipi', 'cikis_tarihi', 
+        'olusturma_tarihi', 'user'
+    ]
+    
+    search_fields = [
+        'marka', 'model', 'ebat', 'aciklama'
+    ]
+    
+    list_editable = [
+        'durum', 'kalite_notu', 'tahmini_deger'
+    ]
+    
+    readonly_fields = [
+        'olusturma_tarihi', 'guncelleme_tarihi'
+    ]
+    
+    fieldsets = (
+        ('Lastik Bilgileri', {
+            'fields': ('marka', 'model', 'ebat', 'mevsim', 'arac_tipi', 'adet')
+        }),
+        ('Durum ve Kalite', {
+            'fields': ('durum', 'diş_derinligi', 'kalite_notu', 'hasar_durumu')
+        }),
+        ('Fiyat ve Konum', {
+            'fields': ('tahmini_deger', 'satis_fiyati', 'depo_konumu')
+        }),
+        ('Tarihler', {
+            'fields': ('cikis_tarihi', 'satis_tarihi')
+        }),
+        ('Ek Bilgiler', {
+            'fields': ('aciklama',),
+            'classes': ('collapse',)
+        }),
+        ('Sistem Bilgileri', {
+            'fields': ('user', 'olusturma_tarihi', 'guncelleme_tarihi'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    ordering = ['-cikis_tarihi', '-olusturma_tarihi']
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('user')
+    
+    def save_model(self, request, obj, form, change):
+        if not change:  # Yeni kayıt ise
+            obj.user = request.user
+        super().save_model(request, obj, form, change)
+
 
 admin.site.register(MalzemeHareketi)
 admin.site.register(MalzemeDosya)

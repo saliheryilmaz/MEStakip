@@ -480,6 +480,120 @@ class Transaction(models.Model):
             + (self.pafgo or 0)
         )
 
+class CikmaLastik(models.Model):
+    """Müşterilerden çıkan lastiklerin kaydı"""
+    
+    DURUM_CHOICES = [
+        ('cikti', 'Çıktı'),
+        ('depolandi', 'Depolandı'),
+        ('satildi', 'Satıldı'),
+        ('imha', 'İmha Edildi'),
+    ]
+    
+    MEVSIM_CHOICES = [
+        ('kis', 'Kış'),
+        ('yaz', 'Yaz'),
+        ('dort-mevsim', '4 Mevsim'),
+    ]
+    
+    ARAC_TIPI_CHOICES = [
+        ('binek', 'Binek'),
+        ('ticari', 'Ticari'),
+        ('motosiklet', 'Motosiklet'),
+    ]
+    
+    # Kullanıcı bilgisi
+    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Kullanıcı", related_name='cikma_lastikler')
+    
+    # Müşteri Bilgileri
+    musteri_adi = models.CharField(max_length=200, verbose_name="Müşteri Adı")
+    musteri_telefon = models.CharField(max_length=20, blank=True, null=True, verbose_name="Telefon")
+    musteri_plaka = models.CharField(max_length=20, blank=True, null=True, verbose_name="Araç Plakası")
+    
+    # Lastik Bilgileri
+    marka = models.CharField(max_length=100, verbose_name="Marka")
+    model = models.CharField(max_length=100, blank=True, null=True, verbose_name="Model")
+    ebat = models.CharField(max_length=50, verbose_name="Ebat (örn: 205/55R16)")
+    mevsim = models.CharField(max_length=20, choices=MEVSIM_CHOICES, verbose_name="Mevsim")
+    arac_tipi = models.CharField(max_length=20, choices=ARAC_TIPI_CHOICES, default='binek', verbose_name="Araç Tipi")
+    
+    # Miktar ve Durum
+    adet = models.PositiveIntegerField(validators=[MinValueValidator(1)], verbose_name="Adet")
+    durum = models.CharField(max_length=20, choices=DURUM_CHOICES, default='cikti', verbose_name="Durum")
+    
+    # Kalite ve Değerlendirme
+    diş_derinligi = models.CharField(max_length=50, blank=True, null=True, verbose_name="Diş Derinliği (mm)")
+    kalite_notu = models.CharField(max_length=20, blank=True, null=True, verbose_name="Kalite (1-5)")
+    hasar_durumu = models.TextField(blank=True, null=True, verbose_name="Hasar Durumu")
+    
+    # Fiyat Bilgileri
+    tahmini_deger = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, verbose_name="Tahmini Değer")
+    satis_fiyati = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, verbose_name="Satış Fiyatı")
+    
+    # Ek Bilgiler
+    aciklama = models.TextField(blank=True, null=True, verbose_name="Açıklama")
+    depo_konumu = models.CharField(max_length=100, blank=True, null=True, verbose_name="Depo Konumu")
+    
+    # Zaman Damgaları
+    cikis_tarihi = models.DateField(default=timezone.now, verbose_name="Çıkış Tarihi")
+    satis_tarihi = models.DateField(blank=True, null=True, verbose_name="Satış Tarihi")
+    olusturma_tarihi = models.DateTimeField(auto_now_add=True, verbose_name="Kayıt Tarihi")
+    guncelleme_tarihi = models.DateTimeField(auto_now=True, verbose_name="Güncelleme Tarihi")
+    
+    class Meta:
+        verbose_name = "Çıkma Lastik"
+        verbose_name_plural = "Çıkma Lastikler"
+        ordering = ['-cikis_tarihi', '-olusturma_tarihi']
+    
+    def __str__(self):
+        return f"{self.musteri_adi} - {self.marka} {self.ebat} ({self.adet} adet)"
+    
+    def get_durum_display_color(self):
+        """Durum için renk döndür"""
+        colors = {
+            'cikti': 'warning',
+            'depolandi': 'info',
+            'satildi': 'success',
+            'imha': 'danger',
+        }
+        return colors.get(self.durum, 'secondary')
+    
+    def get_mevsim_display_color(self):
+        """Mevsim için renk döndür"""
+        colors = {
+            'kis': 'info',
+            'yaz': 'warning',
+            'dort-mevsim': 'primary',
+        }
+        return colors.get(self.mevsim, 'secondary')
+    
+    def get_arac_tipi_display_color(self):
+        """Araç tipi için renk döndür"""
+        colors = {
+            'binek': 'success',
+            'ticari': 'warning',
+            'motosiklet': 'info',
+        }
+        return colors.get(self.arac_tipi, 'secondary')
+    
+    def get_kalite_display(self):
+        """Kalite notunu görsel olarak döndür"""
+        if self.kalite_notu:
+            try:
+                kalite = int(self.kalite_notu)
+                if kalite >= 4:
+                    return f"⭐⭐⭐ ({kalite}/5)"
+                elif kalite >= 3:
+                    return f"⭐⭐ ({kalite}/5)"
+                elif kalite >= 2:
+                    return f"⭐ ({kalite}/5)"
+                else:
+                    return f"❌ ({kalite}/5)"
+            except ValueError:
+                return self.kalite_notu
+        return "-"
+
+
 class MalzemeDosya(models.Model):
     dosya_adi = models.CharField(max_length=200)
     yukleme_tarihi = models.DateTimeField(auto_now_add=True)

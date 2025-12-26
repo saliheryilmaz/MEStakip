@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse, HttpResponseRedirect
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
@@ -15,7 +15,7 @@ from openpyxl.styles import Font, PatternFill, Alignment
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 from decimal import Decimal
-from .models import Siparis, UserProfile, Notification, Transaction, TransactionCategory, Event, MalzemeHareketi, MalzemeDosya
+from .models import Siparis, UserProfile, Notification, Transaction, TransactionCategory, Event, MalzemeHareketi, MalzemeDosya, CikmaLastik
 from .forms import SiparisForm, TransactionForm, MalzemeExcelUploadForm
 # pandas removed - using openpyxl instead
 from collections import defaultdict
@@ -708,7 +708,7 @@ def forms(request):
     
     
     # Sayfalama
-    paginator = Paginator(siparisler, 15)  # Sayfa başına 15 kayıt
+    paginator = Paginator(siparisler, 50)  # Sayfa başına 50 kayıt
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
@@ -841,7 +841,7 @@ def elements(request):
     siparisler = siparisler.annotate(durum_sira=durum_sira).order_by('durum_sira', '-olusturma_tarihi')
     
     # Sayfalama
-    paginator = Paginator(siparisler, 10)  # Sayfa başına 10 kayıt
+    paginator = Paginator(siparisler, 50)  # Sayfa başına 50 kayıt
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
@@ -1111,7 +1111,7 @@ def reports(request):
     ).order_by('-total_adet')
     
     # Sayfalama
-    paginator = Paginator(siparisler, 15)  # Sayfa başına 15 kayıt
+    paginator = Paginator(siparisler, 50)  # Sayfa başına 50 kayıt
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
@@ -2776,6 +2776,568 @@ def malzeme_excel_kaydet(request):
 def health_check(request):
     """Railway health check endpoint"""
     return JsonResponse({'status': 'healthy', 'timestamp': datetime.now().isoformat()})
+
+@login_required
+def cikma_lastikler(request):
+    """Çıkma Lastikler sayfası"""
+    from .models import CikmaLastik
+    from django.core.paginator import Paginator
+    
+    # Yeni kayıt ekleme - POST işlemi önce kontrol edilir
+    if request.method == 'POST':
+        print(f"DEBUG: POST request geldi, kullanıcı: {request.user.username}")
+        print(f"DEBUG: POST verileri: {dict(request.POST)}")
+        try:
+            # Form verilerini al
+            marka = request.POST.get('marka')
+            model = request.POST.get('model', '')
+            ebat = request.POST.get('ebat')
+            mevsim = request.POST.get('mevsim')
+            adet = int(request.POST.get('adet', 1))
+            durum = request.POST.get('durum', 'cikti')
+            kalite_notu = request.POST.get('kalite_notu', '')
+            depo_konumu = request.POST.get('depo_konumu', '')
+            aciklama = request.POST.get('aciklama', '')
+            
+            # Satış bilgileri - sadece durum "satildi" ise
+            satis_fiyati = None
+            satis_tarihi = None
+            if durum == 'satildi':
+                satis_fiyati_str = request.POST.get('satis_fiyati', '')
+                if satis_fiyati_str:
+                    try:
+                        satis_fiyati = Decimal(satis_fiyati_str.replace(',', '.'))
+                    except:
+                        pass
+                
+                satis_tarihi_str = request.POST.get('satis_tarihi', '')
+                if satis_tarihi_str:
+                    try:
+                        from datetime import datetime
+                        satis_tarihi = datetime.strptime(satis_tarihi_str, '%Y-%m-%d').date()
+                    except:
+                        satis_tarihi = timezone.now().date()
+                else:
+                    satis_tarihi = timezone.now().date()
+            
+            # Yeni kayıt oluştur
+            yeni_kayit = CikmaLastik.objects.create(
+                user=request.user,
+                musteri_adi="Çıkma Lastik",  # Sabit müşteri adı
+                musteri_telefon="",  # Boş
+                musteri_plaka="",    # Boş
+                marka=marka,
+                model=model,
+                ebat=ebat,
+                mevsim=mevsim,
+                arac_tipi='binek',   # Sabit araç tipi
+                adet=adet,
+                durum=durum,
+                kalite_notu=kalite_notu,
+                satis_fiyati=satis_fiyati,
+                satis_tarihi=satis_tarihi,
+                depo_konumu=depo_konumu,
+                aciklama=aciklama
+            )
+            
+            print(f"DEBUG: Yeni kayıt oluşturuldu - ID: {yeni_kayit.id}, Kullanıcı: {request.user.username}")
+            
+            messages.success(request, 'Çıkma lastik kaydı başarıyla eklendi!')
+            # Filtreleri temizlemek için HttpResponseRedirect kullan
+            return HttpResponseRedirect(reverse('dashboard:cikma_lastikler'))
+            
+        except Exception as e:
+            messages.error(request, f'Kayıt eklenirken hata oluştu: {str(e)}')
+    
+    # Filtreleme parametreleri - sadece GET request'te
+    marka = request.GET.get('marka', '')
+    ebat = request.GET.get('ebat', '')
+    durum = request.GET.get('durum', '')
+    mevsim = request.GET.get('mevsim', '')
+    arac_tipi = request.GET.get('arac_tipi', '')
+    tarih_filtre = request.GET.get('tarih', '')
+    baslangic_tarihi = request.GET.get('baslangic_tarihi', '')
+    bitis_tarihi = request.GET.get('bitis_tarihi', '')
+    
+    # Çıkma lastikleri getir (sadece kullanıcının kayıtları ve satılmayanlar)
+    cikma_lastikler = CikmaLastik.objects.filter(user=request.user).exclude(durum='satildi')
+    
+    print(f"DEBUG: Kullanıcı {request.user.username} için toplam kayıt sayısı: {cikma_lastikler.count()}")
+    if cikma_lastikler.exists():
+        print(f"DEBUG: İlk 3 kayıt: {list(cikma_lastikler.values('id', 'marka', 'ebat', 'user__username')[:3])}")
+    else:
+        print("DEBUG: Hiç kayıt bulunamadı")
+    
+    # Filtreleme uygula
+    if marka:
+        cikma_lastikler = cikma_lastikler.filter(marka__icontains=marka)
+    if ebat:
+        cikma_lastikler = cikma_lastikler.filter(ebat__icontains=ebat)
+    if durum:
+        cikma_lastikler = cikma_lastikler.filter(durum=durum)
+    if mevsim:
+        cikma_lastikler = cikma_lastikler.filter(mevsim=mevsim)
+    if arac_tipi:
+        cikma_lastikler = cikma_lastikler.filter(arac_tipi=arac_tipi)
+    
+    # Tarih filtreleme uygula
+    now = timezone.now()
+    if tarih_filtre:
+        if tarih_filtre == 'son-1-ay':
+            start_date = now - timedelta(days=30)
+            cikma_lastikler = cikma_lastikler.filter(olusturma_tarihi__gte=start_date)
+        elif tarih_filtre == 'son-3-ay':
+            start_date = now - timedelta(days=90)
+            cikma_lastikler = cikma_lastikler.filter(olusturma_tarihi__gte=start_date)
+        elif tarih_filtre == 'son-6-ay':
+            start_date = now - timedelta(days=180)
+            cikma_lastikler = cikma_lastikler.filter(olusturma_tarihi__gte=start_date)
+        elif tarih_filtre == 'bugun':
+            cikma_lastikler = cikma_lastikler.filter(olusturma_tarihi__date=now.date())
+        elif tarih_filtre == 'bu-hafta':
+            start_date = now - timedelta(days=now.weekday())
+            cikma_lastikler = cikma_lastikler.filter(olusturma_tarihi__gte=start_date)
+        elif tarih_filtre == 'bu-ay':
+            start_date = now.replace(day=1)
+            cikma_lastikler = cikma_lastikler.filter(olusturma_tarihi__gte=start_date)
+    
+    # Özel tarih aralığı filtreleme
+    if baslangic_tarihi and bitis_tarihi:
+        try:
+            start_date = datetime.strptime(baslangic_tarihi, '%Y-%m-%d').date()
+            end_date = datetime.strptime(bitis_tarihi, '%Y-%m-%d').date()
+            cikma_lastikler = cikma_lastikler.filter(olusturma_tarihi__date__range=[start_date, end_date])
+        except ValueError:
+            pass
+    elif baslangic_tarihi:
+        try:
+            start_date = datetime.strptime(baslangic_tarihi, '%Y-%m-%d').date()
+            cikma_lastikler = cikma_lastikler.filter(olusturma_tarihi__date__gte=start_date)
+        except ValueError:
+            pass
+    elif bitis_tarihi:
+        try:
+            end_date = datetime.strptime(bitis_tarihi, '%Y-%m-%d').date()
+            cikma_lastikler = cikma_lastikler.filter(olusturma_tarihi__date__lte=end_date)
+        except ValueError:
+            pass
+    
+    # Sıralama - en yeni kayıtlar üstte
+    cikma_lastikler = cikma_lastikler.order_by('-olusturma_tarihi')
+    
+    # Sayfalama
+    paginator = Paginator(cikma_lastikler, 50)  # Sayfa başına 50 kayıt
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # İstatistikler (satılanlar hariç)
+    toplam_kayit = cikma_lastikler.count()
+    toplam_adet = cikma_lastikler.aggregate(total=Sum('adet'))['total'] or 0
+    depolanan_adet = cikma_lastikler.filter(durum='depolandi').aggregate(total=Sum('adet'))['total'] or 0
+    cikti_adet = cikma_lastikler.filter(durum='cikti').aggregate(total=Sum('adet'))['total'] or 0
+    
+    # Durum dağılımı
+    durum_dagilimi = cikma_lastikler.values('durum').annotate(
+        kayit_sayisi=Count('id'),
+        adet_toplam=Sum('adet')
+    ).order_by('durum')
+    
+    # Filtreleme parametrelerini URL query string olarak hazırla
+    filter_params = []
+    if marka:
+        filter_params.append(f'marka={marka}')
+    if ebat:
+        filter_params.append(f'ebat={ebat}')
+    if durum:
+        filter_params.append(f'durum={durum}')
+    if mevsim:
+        filter_params.append(f'mevsim={mevsim}')
+    if arac_tipi:
+        filter_params.append(f'arac_tipi={arac_tipi}')
+    if tarih_filtre:
+        filter_params.append(f'tarih={tarih_filtre}')
+    if baslangic_tarihi:
+        filter_params.append(f'baslangic_tarihi={baslangic_tarihi}')
+    if bitis_tarihi:
+        filter_params.append(f'bitis_tarihi={bitis_tarihi}')
+    
+    filter_query_string = '&'.join(filter_params)
+    
+    context = {
+        'page_title': 'Çıkma Lastikler',
+        'cikma_lastikler': page_obj,
+        'filters': {
+            'marka': marka,
+            'ebat': ebat,
+            'durum': durum,
+            'mevsim': mevsim,
+            'arac_tipi': arac_tipi,
+            'tarih': tarih_filtre,
+            'baslangic_tarihi': baslangic_tarihi,
+            'bitis_tarihi': bitis_tarihi,
+        },
+        'filter_query_string': filter_query_string,
+        'stats': {
+            'toplam_kayit': toplam_kayit,
+            'toplam_adet': toplam_adet,
+            'depolanan_adet': depolanan_adet,
+            'cikti_adet': cikti_adet,
+        },
+        'durum_dagilimi': durum_dagilimi,
+        'durum_choices': CikmaLastik.DURUM_CHOICES,
+        'mevsim_choices': CikmaLastik.MEVSIM_CHOICES,
+        'arac_tipi_choices': CikmaLastik.ARAC_TIPI_CHOICES,
+    }
+    return render(request, 'dashboard/cikma_lastikler.html', context)
+
+
+@login_required
+def cikma_lastik_duzenle(request, lastik_id):
+    """Çıkma lastik düzenleme sayfası"""
+    from .models import CikmaLastik
+    
+    # Kaydı getir (sadece kullanıcının kayıtları)
+    lastik = get_object_or_404(CikmaLastik, id=lastik_id, user=request.user)
+    
+    # Eğer durum "cikti" ise otomatik olarak "depolandi" yap
+    if lastik.durum == 'cikti':
+        lastik.durum = 'depolandi'
+    
+    if request.method == 'POST':
+        try:
+            # Form verilerini al ve güncelle
+            lastik.marka = request.POST.get('marka', lastik.marka)
+            lastik.model = request.POST.get('model', lastik.model)
+            lastik.ebat = request.POST.get('ebat', lastik.ebat)
+            lastik.mevsim = request.POST.get('mevsim', lastik.mevsim)
+            lastik.adet = int(request.POST.get('adet', lastik.adet))
+            
+            # Durum sadece depolandi veya satildi olabilir
+            durum = request.POST.get('durum', 'depolandi')
+            if durum in ['depolandi', 'satildi']:
+                lastik.durum = durum
+            else:
+                lastik.durum = 'depolandi'  # Varsayılan
+            
+            lastik.diş_derinligi = request.POST.get('dis_derinligi', lastik.diş_derinligi)
+            lastik.kalite_notu = request.POST.get('kalite_notu', lastik.kalite_notu)
+            lastik.hasar_durumu = request.POST.get('hasar_durumu', lastik.hasar_durumu)
+            lastik.depo_konumu = request.POST.get('depo_konumu', lastik.depo_konumu)
+            lastik.aciklama = request.POST.get('aciklama', lastik.aciklama)
+            
+            # Tahmini değeri güncelle
+            tahmini_deger = request.POST.get('tahmini_deger', '')
+            if tahmini_deger:
+                try:
+                    lastik.tahmini_deger = Decimal(tahmini_deger.replace(',', '.'))
+                except:
+                    pass
+            
+            # Satış fiyatı ve tarihi - sadece durum "satildi" ise
+            if lastik.durum == 'satildi':
+                satis_fiyati = request.POST.get('satis_fiyati', '')
+                if satis_fiyati:
+                    try:
+                        lastik.satis_fiyati = Decimal(satis_fiyati.replace(',', '.'))
+                    except:
+                        pass
+                
+                satis_tarihi = request.POST.get('satis_tarihi', '')
+                if satis_tarihi:
+                    try:
+                        from datetime import datetime
+                        lastik.satis_tarihi = datetime.strptime(satis_tarihi, '%Y-%m-%d').date()
+                    except:
+                        lastik.satis_tarihi = timezone.now().date()
+                else:
+                    lastik.satis_tarihi = timezone.now().date()
+            else:
+                # Depolandı durumunda satış bilgilerini temizle
+                lastik.satis_fiyati = None
+                lastik.satis_tarihi = None
+            
+            # Çıkış tarihini güncelle
+            cikis_tarihi = request.POST.get('cikis_tarihi', '')
+            if cikis_tarihi:
+                try:
+                    lastik.cikis_tarihi = datetime.strptime(cikis_tarihi, '%Y-%m-%d').date()
+                except:
+                    pass
+            
+            lastik.save()
+            
+            messages.success(request, 'Çıkma lastik kaydı başarıyla güncellendi!')
+            return HttpResponseRedirect(reverse('dashboard:cikma_lastikler'))
+            
+        except Exception as e:
+            messages.error(request, f'Kayıt güncellenirken hata oluştu: {str(e)}')
+    
+    context = {
+        'page_title': 'Çıkma Lastik Düzenle',
+        'lastik': lastik,
+        'mevsim_choices': CikmaLastik.MEVSIM_CHOICES,
+    }
+    return render(request, 'dashboard/cikma_lastik_duzenle.html', context)
+
+
+@login_required
+def cikma_lastik_sil(request, lastik_id):
+    """Çıkma lastik silme"""
+    from .models import CikmaLastik
+    
+    # Kaydı getir (sadece kullanıcının kayıtları)
+    lastik = get_object_or_404(CikmaLastik, id=lastik_id, user=request.user)
+    
+    if request.method == 'POST':
+        try:
+            lastik_info = f"{lastik.marka} {lastik.ebat} ({lastik.adet} adet)"
+            lastik.delete()
+            messages.success(request, f'Çıkma lastik kaydı silindi: {lastik_info}')
+        except Exception as e:
+            messages.error(request, f'Kayıt silinirken hata oluştu: {str(e)}')
+    
+    # Silme işleminden sonra hangi sayfaya dönüleceğini belirle
+    next_url = request.GET.get('next', 'dashboard:cikma_lastikler')
+    if 'satilan' in request.META.get('HTTP_REFERER', ''):
+        next_url = 'dashboard:satilan_cikma_lastikler'
+    
+    return redirect(next_url)
+
+
+@login_required
+def cikma_lastik_sat(request, lastik_id):
+    """Çıkma lastik satış işlemi"""
+    from .models import CikmaLastik
+    from datetime import datetime
+    
+    # Kaydı getir (sadece kullanıcının kayıtları)
+    lastik = get_object_or_404(CikmaLastik, id=lastik_id, user=request.user)
+    
+    if request.method == 'POST':
+        try:
+            # Form verilerini al
+            satis_adet = int(request.POST.get('satis_adet', lastik.adet))
+            satis_fiyati = request.POST.get('satis_fiyati', '')
+            satis_tarihi = request.POST.get('satis_tarihi', '')
+            satis_aciklama = request.POST.get('satis_aciklama', '')
+            
+            # Satış fiyatını decimal'e çevir
+            if satis_fiyati:
+                try:
+                    satis_fiyati = Decimal(satis_fiyati.replace(',', '.'))
+                except:
+                    messages.error(request, 'Geçersiz satış fiyatı!')
+                    return redirect('dashboard:cikma_lastikler')
+            else:
+                messages.error(request, 'Satış fiyatı gereklidir!')
+                return redirect('dashboard:cikma_lastikler')
+            
+            # Satış tarihini date'e çevir
+            if satis_tarihi:
+                try:
+                    satis_tarihi = datetime.strptime(satis_tarihi, '%Y-%m-%d').date()
+                except:
+                    satis_tarihi = timezone.now().date()
+            else:
+                satis_tarihi = timezone.now().date()
+            
+            # Adet kontrolü
+            if satis_adet > lastik.adet:
+                messages.error(request, f'Satılacak adet ({satis_adet}) mevcut adetten ({lastik.adet}) fazla olamaz!')
+                return redirect('dashboard:cikma_lastikler')
+            
+            # Eğer tüm adet satılıyorsa, mevcut kaydı güncelle
+            if satis_adet == lastik.adet:
+                lastik.durum = 'satildi'
+                lastik.satis_fiyati = satis_fiyati
+                lastik.satis_tarihi = satis_tarihi
+                if satis_aciklama:
+                    lastik.aciklama = f"{lastik.aciklama or ''}\n\nSatış: {satis_aciklama}".strip()
+                lastik.save()
+                
+                messages.success(request, f'{lastik.marka} {lastik.ebat} ({satis_adet} adet) başarıyla satıldı!')
+            
+            # Eğer kısmi satış yapılıyorsa, yeni kayıt oluştur ve mevcut kaydın adetini azalt
+            else:
+                # Satılan kısım için yeni kayıt oluştur
+                CikmaLastik.objects.create(
+                    user=request.user,
+                    musteri_adi=lastik.musteri_adi,
+                    musteri_telefon=lastik.musteri_telefon,
+                    musteri_plaka=lastik.musteri_plaka,
+                    marka=lastik.marka,
+                    model=lastik.model,
+                    ebat=lastik.ebat,
+                    mevsim=lastik.mevsim,
+                    arac_tipi=lastik.arac_tipi,
+                    adet=satis_adet,
+                    durum='satildi',
+                    kalite_notu=lastik.kalite_notu,
+                    satis_fiyati=satis_fiyati,
+                    satis_tarihi=satis_tarihi,
+                    depo_konumu=lastik.depo_konumu,
+                    aciklama=f"{lastik.aciklama or ''}\n\nSatış: {satis_aciklama}".strip() if satis_aciklama else lastik.aciklama
+                )
+                
+                # Mevcut kayıttan satılan adedi çıkar
+                lastik.adet -= satis_adet
+                lastik.save()
+                
+                messages.success(request, f'{lastik.marka} {lastik.ebat} ({satis_adet} adet) başarıyla satıldı! Kalan: {lastik.adet} adet')
+            
+            return redirect('dashboard:cikma_lastikler')
+            
+        except Exception as e:
+            messages.error(request, f'Satış işlemi sırasında hata oluştu: {str(e)}')
+    
+    return redirect('dashboard:cikma_lastikler')
+
+
+@login_required
+def satilan_cikma_lastikler(request):
+    """Satılan Çıkma Lastikler sayfası"""
+    from .models import CikmaLastik
+    from django.core.paginator import Paginator
+    
+    # Filtreleme parametreleri
+    marka = request.GET.get('marka', '')
+    ebat = request.GET.get('ebat', '')
+    mevsim = request.GET.get('mevsim', '')
+    tarih_filtre = request.GET.get('tarih', '')
+    baslangic_tarihi = request.GET.get('baslangic_tarihi', '')
+    bitis_tarihi = request.GET.get('bitis_tarihi', '')
+    
+    # Sadece satılan çıkma lastikleri getir (kullanıcının kayıtları)
+    satilan_lastikler = CikmaLastik.objects.filter(user=request.user, durum='satildi')
+    
+    # Filtreleme uygula
+    if marka:
+        satilan_lastikler = satilan_lastikler.filter(marka__icontains=marka)
+    if ebat:
+        satilan_lastikler = satilan_lastikler.filter(ebat__icontains=ebat)
+    if mevsim:
+        satilan_lastikler = satilan_lastikler.filter(mevsim=mevsim)
+    
+    # Tarih filtreleme uygula (satış tarihine göre)
+    now = timezone.now()
+    if tarih_filtre:
+        if tarih_filtre == 'son-1-ay':
+            start_date = now - timedelta(days=30)
+            satilan_lastikler = satilan_lastikler.filter(satis_tarihi__gte=start_date.date())
+        elif tarih_filtre == 'son-3-ay':
+            start_date = now - timedelta(days=90)
+            satilan_lastikler = satilan_lastikler.filter(satis_tarihi__gte=start_date.date())
+        elif tarih_filtre == 'son-6-ay':
+            start_date = now - timedelta(days=180)
+            satilan_lastikler = satilan_lastikler.filter(satis_tarihi__gte=start_date.date())
+        elif tarih_filtre == 'bugun':
+            satilan_lastikler = satilan_lastikler.filter(satis_tarihi=now.date())
+        elif tarih_filtre == 'bu-hafta':
+            start_date = now - timedelta(days=now.weekday())
+            satilan_lastikler = satilan_lastikler.filter(satis_tarihi__gte=start_date.date())
+        elif tarih_filtre == 'bu-ay':
+            start_date = now.replace(day=1)
+            satilan_lastikler = satilan_lastikler.filter(satis_tarihi__gte=start_date.date())
+    
+    # Özel tarih aralığı filtreleme (satış tarihine göre)
+    if baslangic_tarihi and bitis_tarihi:
+        try:
+            start_date = datetime.strptime(baslangic_tarihi, '%Y-%m-%d').date()
+            end_date = datetime.strptime(bitis_tarihi, '%Y-%m-%d').date()
+            satilan_lastikler = satilan_lastikler.filter(satis_tarihi__range=[start_date, end_date])
+        except ValueError:
+            pass
+    elif baslangic_tarihi:
+        try:
+            start_date = datetime.strptime(baslangic_tarihi, '%Y-%m-%d').date()
+            satilan_lastikler = satilan_lastikler.filter(satis_tarihi__gte=start_date)
+        except ValueError:
+            pass
+    elif bitis_tarihi:
+        try:
+            end_date = datetime.strptime(bitis_tarihi, '%Y-%m-%d').date()
+            satilan_lastikler = satilan_lastikler.filter(satis_tarihi__lte=end_date)
+        except ValueError:
+            pass
+    
+    # Sıralama - en yeni satışlar üstte
+    satilan_lastikler = satilan_lastikler.order_by('-satis_tarihi', '-guncelleme_tarihi')
+    
+    # Sayfalama
+    paginator = Paginator(satilan_lastikler, 50)  # Sayfa başına 50 kayıt
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # İstatistikler
+    toplam_kayit = satilan_lastikler.count()
+    toplam_adet = satilan_lastikler.aggregate(total=Sum('adet'))['total'] or 0
+    
+    # Sadece satış fiyatı olan kayıtlardan gelir hesapla
+    toplam_gelir = satilan_lastikler.filter(satis_fiyati__isnull=False).aggregate(total=Sum('satis_fiyati'))['total'] or 0
+    
+    # Aylık satış verileri (son 6 ay) - Sadece satış tarihi olan kayıtlardan hesapla
+    tum_satilan_lastikler = CikmaLastik.objects.filter(user=request.user, durum='satildi')
+    aylik_satis = []
+    aylik_labels = []
+    for i in range(5, -1, -1):
+        start_date = now - timedelta(days=30*i)
+        end_date = start_date + timedelta(days=30)
+        
+        # Sadece satış tarihi olan kayıtlardan hesapla
+        ay_satis = tum_satilan_lastikler.filter(
+            satis_tarihi__isnull=False,
+            satis_tarihi__gte=start_date.date(),
+            satis_tarihi__lt=end_date.date()
+        ).aggregate(total=Sum('adet'))['total'] or 0
+        
+        aylik_satis.append(ay_satis)
+        aylik_labels.append(start_date.strftime('%b'))
+    
+    # Bu ay satış verisi (hızlı istatistikler için)
+    bu_ay_baslangic = now.replace(day=1).date()
+    bu_ay_satis = tum_satilan_lastikler.filter(
+        satis_tarihi__gte=bu_ay_baslangic
+    ).aggregate(total=Sum('adet'))['total'] or 0
+    
+    # Filtreleme parametrelerini URL query string olarak hazırla
+    filter_params = []
+    if marka:
+        filter_params.append(f'marka={marka}')
+    if ebat:
+        filter_params.append(f'ebat={ebat}')
+    if mevsim:
+        filter_params.append(f'mevsim={mevsim}')
+    if tarih_filtre:
+        filter_params.append(f'tarih={tarih_filtre}')
+    if baslangic_tarihi:
+        filter_params.append(f'baslangic_tarihi={baslangic_tarihi}')
+    if bitis_tarihi:
+        filter_params.append(f'bitis_tarihi={bitis_tarihi}')
+    
+    filter_query_string = '&'.join(filter_params)
+    
+    context = {
+        'page_title': 'Satılan Çıkma Lastikler',
+        'satilan_lastikler': page_obj,
+        'filters': {
+            'marka': marka,
+            'ebat': ebat,
+            'mevsim': mevsim,
+            'tarih': tarih_filtre,
+            'baslangic_tarihi': baslangic_tarihi,
+            'bitis_tarihi': bitis_tarihi,
+        },
+        'filter_query_string': filter_query_string,
+        'stats': {
+            'toplam_kayit': toplam_kayit,
+            'toplam_adet': toplam_adet,
+            'toplam_gelir': toplam_gelir,
+        },
+        'mevsim_choices': CikmaLastik.MEVSIM_CHOICES,
+        'aylik_satis': json.dumps(aylik_satis),
+        'aylik_labels': json.dumps(aylik_labels),
+    }
+    return render(request, 'dashboard/satilan_cikma_lastikler.html', context)
 
 
 def get_filtered_transactions(user, **filters):

@@ -16,7 +16,7 @@
     <meta property="og:type" content="website">
 
     <!-- Favicon -->
-    <link rel="icon" type="image/png" href="{% load static %}{% static 'icons/favicon.png' %}?v={{ timestamp }}">
+    <link rel="icon" type="image/x-icon" href="{% load static %}{% static 'images/favicon.ico' %}?v={{ timestamp }}">
 
     <!-- Preconnect to external domains -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -508,7 +508,7 @@
 
                     <!-- Logo/Brand - Now first on the left -->
                     <a class="navbar-brand d-flex align-items-center" href="{% url 'dashboard:index' %}">
-                        <img src="{% load static %}{% static 'images/mestakiplogo.png' %}" alt="Logo" height="40"
+                        <img src="{% load static %}{% static 'images/mestakip1.png' %}" alt="Logo" height="40"
                             class="d-inline-block align-text-top me-2 navbar-logo">
                        
                     </a>
@@ -570,7 +570,7 @@
                 <!-- Sidebar Header -->
                 <div class="sidebar-header d-flex align-items-center justify-content-between p-3">
                     <a class="navbar-brand d-flex align-items-center" href="{% url 'dashboard:index' %}">
-                        <img src="{% load static %}{% static 'images/mestakiplogo.png' %}" alt="Logo" height="40"
+                        <img src="{% load static %}{% static 'images/mestakip1.png' %}" alt="Logo" height="40"
                             class="d-inline-block align-text-top me-2 sidebar-logo">
                         <h1 class="h4 mb-0 fw-bold text-white">MesTakip</h1>
                     </a>
@@ -642,6 +642,12 @@
                             <a class="nav-link" href="{% url 'dashboard:calendar' %}">
                                 <i class="bi bi-calendar-event"></i>
                                 <span>Takvim</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'dashboard:cikma_lastikler' %}">
+                                <i class="bi bi-arrow-down-circle"></i>
+                                <span>Çıkma Lastikler</span>
                             </a>
                         </li>
                         <li class="nav-item">
@@ -1720,8 +1726,8 @@
                                     try {
                                         const browserNotification = new Notification(notification.title, {
                                             body: notification.message,
-                                            icon: '/static/images/mestakiplogo.png',
-                                            badge: '/static/images/mestakiplogo.png',
+                                            icon: '/static/images/mestakip1.png',
+                                            badge: '/static/images/mestakip1.png',
                                             tag: `notification-${notification.id}`,
                                             requireInteraction: notification.type === 'event_start',
                                             silent: false
@@ -1952,7 +1958,7 @@
                 if (Notification.permission === 'granted') {
                     new Notification(notification.title, {
                         body: notification.message,
-                        icon: '/static/images/mestakiplogo.png'
+                        icon: '/static/images/mestakip1.png'
                     });
                 }
             }

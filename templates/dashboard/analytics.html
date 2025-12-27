@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Analytics - Mestakip{% endblock %}
+{% block page_name %}analytics{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">Analytics</h1>
+        <p class="text-muted mb-0">Detailed analytics and insights for your business.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button type="button" class="btn btn-primary">
+            <i class="bi bi-download me-2"></i>
+            Export Report
+        </button>
+        <button type="button" class="btn btn-outline-secondary" 
+                data-bs-toggle="tooltip" 
+                title="Refresh data">
+            <i class="bi bi-arrow-clockwise icon-hover"></i>
+        </button>
+    </div>
+</div>
+
+<!-- Analytics Content -->
+<div class="row g-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Analytics Dashboard</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Analytics content will be implemented here.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

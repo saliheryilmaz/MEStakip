@@ -1,0 +1,795 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Gelir/Gider İşlemleri - Mestakip{% endblock %}
+{% block page_name %}finance{% endblock %}
+
+{% block extra_css %}
+<style>
+    [data-bs-theme=dark] .table th {
+        background-color: #182f46 !important;
+        border-color: #495057 !important;
+        color: #ffffff !important;
+    }
+
+    [data-bs-theme=dark] .table-secondary th {
+        background-color: #182f46 !important;
+    }
+    
+
+    
+    /* Toast bildirimi için özel stil */
+    .toast {
+        min-width: 350px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+
+{% if form.errors %}
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <h5 class="alert-heading"><i class="bi bi-exclamation-triangle me-2"></i>Form Hataları</h5>
+    {% for field, errors in form.errors.items %}
+    {% for error in errors %}
+    <p class="mb-1"><strong>{{ field }}:</strong> {{ error }}</p>
+    {% endfor %}
+    {% endfor %}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+{% if form.non_field_errors %}
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <h5 class="alert-heading"><i class="bi bi-exclamation-triangle me-2"></i>Hata</h5>
+    {% for error in form.non_field_errors %}
+    <p class="mb-1">{{ error }}</p>
+    {% endfor %}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+<form method="post" class="row g-4" id="financeForm">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{% url 'dashboard:products' %}">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">İşlem Ekle</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Hareket Tipi</label>
+                        {{ form.hareket_tipi }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Tarih</label>
+                        {{ form.tarih }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Kasa Adı</label>
+                        {{ form.kasa_adi }}
+                    </div>
+
+                    <div class="col-12 mb-3">
+                        <div id="payment-info" class="alert alert-info d-none">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <span id="payment-info-text">Ödeme türü seçildi</span>
+                        </div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">💰 Nakit</label>
+                        {{ form.nakit }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">💳 Kredi Kartı</label>
+                        {{ form.kredi_karti }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">🏢 Cari</label>
+                        {{ form.cari }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">💳 Sanal Pos</label>
+                        {{ form.sanal_pos }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">🏦 Mehmet Havale</label>
+                        {{ form.mehmet_havale }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">🏦 Banka Havale</label>
+                        {{ form.banka_havale }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">🏦 Pafgo</label>
+                        {{ form.pafgo }}
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label">Açıklama</label>
+                        {{ form.aciklama }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12">
+        <div class="card border-primary">
+            <div class="card-header bg-primary bg-opacity-10">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-tags me-2"></i>Kategoriler
+                    <a href="{% url 'dashboard:kategoriler' %}" class="btn btn-sm btn-outline-primary ms-2" title="Kategori Yönetimi">
+                        <i class="bi bi-plus"></i>Kategori Tanımla
+                    </a>
+                </h5>
+            </div>
+            
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        
+                        <select class="form-select" name="ana_kategori_temp" id="ana-kategori-select">
+                            <option value="">Ana Kategori Seçiniz</option>
+                            {% for kategori in ana_kategoriler %}
+                            <option value="{{ kategori.id }}">{{ kategori.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <small class="form-text text-muted d-block mt-1">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Önce ana kategori seçin
+                        </small>
+                    </div>
+                    <div class="col-md-6">
+                       
+                        <select class="form-select" name="kategori1" id="alt-kategori-select" disabled>
+                            <option value="">Önce ana kategori seçin</option>
+                        </select>
+                        <small class="form-text text-muted d-block mt-1">
+                            <i class="bi bi-lightbulb me-1"></i>
+                            Ana kategoriye göre alt kategoriler yüklenir
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 d-flex justify-content-end">
+        <button type="submit" class="btn btn-primary" id="saveButton">Kaydet</button>
+    </div>
+</form>
+
+<!-- Excel Gömme Alanı Başlangıç -->
+<div class="card mt-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">
+            <i class="bi bi-file-earmark-excel me-2"></i>Excel Dosyası Yükle ve Görüntüle
+        </h5>
+        <div class="d-flex gap-2">
+            <input type="date" id="start-date" class="form-control form-control-sm" placeholder="Başlangıç">
+            <input type="date" id="end-date" class="form-control form-control-sm" placeholder="Bitiş">
+            <button type="button" id="btn-date-filter" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-funnel"></i> Filtrele
+            </button>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="mb-3">
+            <label for="excelFileInput" class="form-label">
+                <i class="bi bi-upload me-1"></i>Excel Dosyası Seçin (.xls, .xlsx)
+            </label>
+            <input type="file" id="excelFileInput" accept=".xls,.xlsx" class="form-control" />
+            <div class="form-text">
+                Beklenen sütunlar: TARİH, FATURANO, MÜŞTERİ, ÜRÜN, TUTAR, ÖDEME PLANI
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div id="file-info" class="text-muted small"></div>
+            <button type="button" id="btn-excel-save" class="btn btn-success" disabled>
+                <i class="bi bi-save me-1"></i>Verileri Kaydet
+            </button>
+        </div>
+
+        <div id="excel-table-container" class="table-responsive">
+            <div class="text-center text-muted py-4">
+                <i class="bi bi-file-earmark-excel display-4 d-block mb-2"></i>
+                <p>Excel dosyası seçin ve verilerinizi görüntüleyin</p>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Excel Gömme Alanı Sonu -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Tarih alanını otomatik olarak bugünün tarihi ile doldur
+        const tarihInput = document.querySelector('input[name="tarih"]');
+        if (tarihInput) {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            const todayStr = `${year}-${month}-${day}`;
+            // Eğer tarih boşsa veya değer yoksa bugünün tarihini ayarla
+            if (!tarihInput.value || tarihInput.value === '') {
+                tarihInput.value = todayStr;
+            }
+        }
+
+        // Kategori yönetimi - Ana kategori seçildiğinde alt kategorileri yükle
+        const anaKategoriSelect = document.getElementById('ana-kategori-select');
+        const altKategoriSelect = document.getElementById('alt-kategori-select');
+        
+        if (anaKategoriSelect && altKategoriSelect) {
+            anaKategoriSelect.addEventListener('change', function() {
+                const anaKategoriId = this.value;
+                
+                // Alt kategori dropdown'ını temizle
+                altKategoriSelect.innerHTML = '<option value="">Yükleniyor...</option>';
+                altKategoriSelect.disabled = true;
+                
+                if (!anaKategoriId) {
+                    // Ana kategori seçilmemişse
+                    altKategoriSelect.innerHTML = '<option value="">Önce ana kategori seçin</option>';
+                    altKategoriSelect.disabled = true;
+                    return;
+                }
+                
+                // AJAX ile alt kategorileri yükle
+                fetch(`/dashboard/api/alt-kategoriler/${anaKategoriId}/`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Alt kategorileri dropdown'a ekle
+                            altKategoriSelect.innerHTML = '<option value="">Alt Kategori Seçiniz (Opsiyonel)</option>';
+                            
+                            if (data.alt_kategoriler.length === 0) {
+                                altKategoriSelect.innerHTML += '<option value="" disabled>Bu kategorinin alt kategorisi yok</option>';
+                            } else {
+                                data.alt_kategoriler.forEach(kategori => {
+                                    const option = document.createElement('option');
+                                    option.value = kategori.id;
+                                    option.textContent = kategori.name;
+                                    altKategoriSelect.appendChild(option);
+                                });
+                            }
+                            
+                            altKategoriSelect.disabled = false;
+                        } else {
+                            altKategoriSelect.innerHTML = '<option value="">Hata: Alt kategoriler yüklenemedi</option>';
+                            console.error('Alt kategoriler yüklenemedi:', data.error);
+                        }
+                    })
+                    .catch(error => {
+                        altKategoriSelect.innerHTML = '<option value="">Hata: Bağlantı hatası</option>';
+                        console.error('AJAX hatası:', error);
+                    });
+            });
+            
+            // Form submit edilmeden önce kontrol et
+            const financeForm = document.getElementById('financeForm');
+            if (financeForm) {
+                financeForm.addEventListener('submit', function(e) {
+                    const anaKategoriId = anaKategoriSelect.value;
+                    const altKategoriId = altKategoriSelect.value;
+                    
+                    // Eğer ana kategori seçilmiş ama alt kategori seçilmemişse
+                    // Ana kategoriyi kategori1 alanına ata
+                    if (anaKategoriId && !altKategoriId) {
+                        // Alt kategori dropdown'ına ana kategoriyi ekle ve seç
+                        const anaKategoriText = anaKategoriSelect.options[anaKategoriSelect.selectedIndex].text;
+                        const tempOption = document.createElement('option');
+                        tempOption.value = anaKategoriId;
+                        tempOption.textContent = anaKategoriText;
+                        tempOption.selected = true;
+                        altKategoriSelect.appendChild(tempOption);
+                        console.log('Ana kategori kategori1 alanına atandı:', anaKategoriId);
+                    }
+                    
+                    // Pafgo değeri kontrol et
+                    const pafgoInput = paymentInputs['pafgo'];
+                    if (pafgoInput) {
+                        const pafgoValue = parseFloat(pafgoInput.value) || 0;
+                        if (pafgoValue > 0) {
+                            // Form submit edildikten sonra bildirim göster
+                            setTimeout(() => {
+                                showPafgoNotification(pafgoValue.toFixed(2));
+                            }, 1000);
+                        }
+                    }
+                });
+            }
+        }
+
+        // Ödeme alanları yönetimi - Sadece bir ödeme türü seçilebilsin
+        const paymentFields = ['nakit', 'kredi_karti', 'cari', 'sanal_pos', 'mehmet_havale', 'banka_havale', 'pafgo'];
+        const paymentInputs = {};
+        const paymentInfo = document.getElementById('payment-info');
+        const paymentInfoText = document.getElementById('payment-info-text');
+        
+        // Pafgo işlemi için özel bildirim fonksiyonu
+        function showPafgoNotification(amount) {
+            // Toast bildirimi oluştur
+            const toastHtml = `
+                <div class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true" style="position: fixed; top: 20px; right: 20px; z-index: 9999;">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <i class="bi bi-check-circle-fill me-2"></i>
+                            <strong>Pafgo İşlemi Kaydedildi!</strong><br>
+                            <small>Tutar: ${amount} TL - Gelir/Gider Raporunda görüntüleyebilirsiniz.</small>
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            `;
+            
+            // Toast'ı sayfaya ekle
+            document.body.insertAdjacentHTML('beforeend', toastHtml);
+            
+            // Toast'ı göster
+            const toastElement = document.querySelector('.toast:last-child');
+            const toast = new bootstrap.Toast(toastElement, {
+                autohide: true,
+                delay: 5000
+            });
+            toast.show();
+            
+            // Toast kapandıktan sonra DOM'dan kaldır
+            toastElement.addEventListener('hidden.bs.toast', function() {
+                toastElement.remove();
+            });
+        }
+        
+        // Tüm ödeme input'larını al
+        paymentFields.forEach(field => {
+            const input = document.querySelector(`input[name="${field}"]`);
+            if (input) {
+                paymentInputs[field] = input;
+            }
+        });
+        
+        // Her input için change event'i ekle
+        Object.keys(paymentInputs).forEach(fieldName => {
+            const input = paymentInputs[fieldName];
+            
+            input.addEventListener('input', function() {
+                const value = parseFloat(this.value) || 0;
+                
+                if (value > 0) {
+                    // Bu alan dolduruldu, diğerlerini temizle
+                    Object.keys(paymentInputs).forEach(otherField => {
+                        if (otherField !== fieldName) {
+                            paymentInputs[otherField].value = '0';
+                        }
+                    });
+                    
+                    // Bilgi mesajını göster
+                    const fieldLabels = {
+                        'nakit': '💰 Nakit',
+                        'kredi_karti': '💳 Kredi Kartı',
+                        'cari': '🏢 Cari',
+                        'sanal_pos': '💳 Sanal Pos',
+                        'mehmet_havale': '🏦 Mehmet Havale',
+                        'banka_havale': '🏦 Banka Havale',
+                        'pafgo': '🏦 Pafgo'
+                    };
+                    
+                    paymentInfoText.textContent = `${fieldLabels[fieldName]} seçildi: ${value.toFixed(2)} ₺`;
+                    paymentInfo.classList.remove('d-none');
+                } else {
+                    // Değer 0 ise bilgi mesajını gizle
+                    const anyFilled = Object.keys(paymentInputs).some(f => {
+                        return parseFloat(paymentInputs[f].value) > 0;
+                    });
+                    
+                    if (!anyFilled) {
+                        paymentInfo.classList.add('d-none');
+                    }
+                }
+            });
+        });
+
+        const tableContainer = document.getElementById('excel-table-container');
+        const fileInput = document.getElementById('excelFileInput');
+        const saveBtn = document.getElementById('btn-excel-save');
+        let excelData = [];
+        let currentExcelFileName = '';
+        const startDateInput = document.getElementById('start-date');
+        const endDateInput = document.getElementById('end-date');
+        const dateFilterBtn = document.getElementById('btn-date-filter');
+        let allRows = [];
+
+        // Excel başlığı => Gösterilecek başlık eşleşmesi
+        const columns = [
+            { source: "TARİH", label: "TARİH" },
+            { source: "FATURANO", label: "FATURANO" },
+            { source: "MÜŞTERİ", label: "MÜŞTERİ" },
+            { source: "ÜRÜN", label: "ÜRÜN" },
+            { source: "TUTAR", label: "TUTAR" },
+            { source: "ÖDEME PLANI", label: "ÖDEME PLANI" }
+        ];
+
+        function excelDateToString(serial) {
+            if (!serial) return "";
+            if (typeof serial === "string" && serial.includes(".")) return serial;
+            var utc_days = Math.floor(serial - 25569);
+            var utc_value = utc_days * 86400;
+            var date_info = new Date(utc_value * 1000);
+            var d = date_info.getUTCDate();
+            var m = date_info.getUTCMonth() + 1;
+            var y = date_info.getUTCFullYear();
+            return `${(d < 10 ? '0' : '') + d}.${(m < 10 ? '0' : '') + m}.${y}`;
+        }
+
+        function isRowInDateRange(row, start, end) {
+            let val = row['TARİH'];
+            if (typeof val === 'number') val = excelDateToString(val);
+            if (!/\d{2}\.\d{2}\.\d{4}/.test(val)) return true; // filtreye dahil, tarihi yok veya formatı yanlışsa
+            const [gun, ay, yil] = val.split('.');
+            const rowDate = new Date(`${yil}-${ay}-${gun}`);
+            if (start && rowDate < start) return false;
+            if (end && rowDate > end) return false;
+            return true;
+        }
+
+        function renderTable(data) {
+            excelData = data; // save for backend
+            if (!data.length) {
+                tableContainer.innerHTML = `
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-exclamation-circle display-4 d-block mb-2"></i>
+                        <p>Tablo verisi bulunamadı.</p>
+                    </div>`;
+                return;
+            }
+
+            // Dosya bilgisini güncelle
+            document.getElementById('file-info').innerHTML = `
+                <i class="bi bi-file-earmark-excel me-1"></i>
+                <strong>${currentExcelFileName}</strong> - ${data.length} kayıt
+            `;
+
+            let table = `
+                <table class="table table-bordered table-striped table-hover table-dark">
+                    <thead class="table-secondary">
+                        <tr>`;
+
+            // Sadece mevcut sütunları göster - her label için sadece bir tane al
+            const availableColumns = [];
+            const usedLabels = new Set();
+
+            for (const col of columns) {
+                if (!usedLabels.has(col.label) && data.some(row => row.hasOwnProperty(col.source))) {
+                    availableColumns.push(col);
+                    usedLabels.add(col.label);
+                }
+            }
+
+            availableColumns.forEach(col => table += `<th class="text-center">${col.label}</th>`);
+            table += `</tr></thead><tbody>`;
+
+            data.forEach((row, index) => {
+                table += `<tr>`;
+                availableColumns.forEach(col => {
+                    let cell = row[col.source] ?? '';
+
+                    // Tarihi düzelt
+                    if (col.label === "TARİH") {
+                        cell = (typeof cell === "number")
+                            ? excelDateToString(cell)
+                            : cell;
+                        cell = `<span class="badge bg-primary">${cell}</span>`;
+                    }
+
+                    // TUTAR için: Orijinal değeri koru, sadece stil ekle
+                    if (col.label === "TUTAR") {
+                        // Orijinal değeri olduğu gibi göster, sadece stil ekle
+                        cell = `<span class="text-warning fw-bold">${cell}</span>`;
+                    }
+
+                    // FATURANO için: Orijinal değeri koru
+                    if (col.label === "FATURANO") {
+                        cell = `<code class="text-info">${cell}</code>`;
+                    }
+
+                    // MÜŞTERİ için
+                    if (col.label === "MÜŞTERİ") {
+                        cell = `<span class="fw-semibold text-light">${cell}</span>`;
+                    }
+
+                    // ÖDEME PLANI için
+                    if (col.label === "ÖDEME PLANI") {
+                        const badgeClass = cell.toLowerCase().includes('nakit') ? 'bg-success' :
+                            cell.toLowerCase().includes('kart') ? 'bg-primary' :
+                                cell.toLowerCase().includes('havale') ? 'bg-warning' : 'bg-secondary';
+                        cell = `<span class="badge ${badgeClass}">${cell}</span>`;
+                    }
+
+                    table += `<td class="text-center">${cell}</td>`;
+                });
+                table += `</tr>`;
+            });
+            table += '</tbody></table>';
+            tableContainer.innerHTML = table;
+        }
+
+        function filterAndRender() {
+            let start = startDateInput.value ? new Date(startDateInput.value) : null;
+            let end = endDateInput.value ? new Date(endDateInput.value) : null;
+            if (end) { end.setHours(23, 59, 59, 999); } // tam gün kapsasın
+            if (!start && !end) return renderTable(allRows);
+            renderTable(allRows.filter(r => isRowInDateRange(r, start, end)));
+        }
+
+        fileInput.addEventListener('change', function (e) {
+            const file = e.target.files[0];
+            if (!file) {
+                document.getElementById('btn-excel-save').disabled = true;
+                document.getElementById('file-info').innerHTML = '';
+                return;
+            }
+
+            currentExcelFileName = file.name;
+            document.getElementById('file-info').innerHTML = `
+                <i class="bi bi-hourglass-split me-1"></i>
+                <span class="text-warning">Dosya yükleniyor...</span>
+            `;
+
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                try {
+                    const data = new Uint8Array(event.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    // Excel'i ham veri olarak oku, formatı koru
+                    const range = XLSX.utils.decode_range(worksheet['!ref']);
+                    const headers = [];
+
+                    // Başlıkları al
+                    for (let col = range.s.c; col <= range.e.c; col++) {
+                        const cellAddress = XLSX.utils.encode_cell({ r: range.s.r, c: col });
+                        const cell = worksheet[cellAddress];
+                        if (cell && cell.v) {
+                            headers.push(cell.v.toString().trim());
+                        }
+                    }
+
+                    // Verileri ham hücre değerleriyle oluştur
+                    let json = [];
+                    for (let row = range.s.r + 1; row <= range.e.r; row++) {
+                        const rowData = {};
+                        for (let col = range.s.c; col <= range.e.c; col++) {
+                            const cellAddress = XLSX.utils.encode_cell({ r: row, c: col });
+                            const cell = worksheet[cellAddress];
+                            const header = headers[col - range.s.c];
+
+                            if (cell) {
+                                // Formatlanmış değeri kullan (w: formatlanmış metin, v: ham değer)
+                                rowData[header] = cell.w || cell.v || '';
+                            } else {
+                                rowData[header] = '';
+                            }
+                        }
+                        if (Object.keys(rowData).some(key => rowData[key] !== '')) {
+                            json.push(rowData);
+                        }
+                    }
+
+                    // Başlıkları normalize et - SADECE başlık adlarını düzelt, değerleri olduğu gibi koru
+                    json = json.map(row => {
+                        let fixed = {};
+                        Object.keys(row).forEach(key => {
+                            let normalizedKey = key.trim().toUpperCase().replace(/\s+/g, ' ');
+
+                            // Başlık eşleşmeleri - sadece başlık adını değiştir, değeri koru
+                            if (normalizedKey === 'FATURA NO' || normalizedKey === 'FATURANO') {
+                                normalizedKey = 'FATURANO';
+                            } else if (normalizedKey.includes('MÜŞTERI') || normalizedKey.includes('MÜŞTERİ')) {
+                                normalizedKey = 'MÜŞTERİ';
+                            } else if (normalizedKey.includes('ÜRÜN') || normalizedKey.includes('URUN')) {
+                                normalizedKey = 'ÜRÜN';
+                            } else if (normalizedKey === 'TUTAR' || normalizedKey === 'MIKTAR') {
+                                normalizedKey = 'TUTAR';
+                            } else if (normalizedKey.includes('ÖDEME') || normalizedKey.includes('ODEME')) {
+                                normalizedKey = 'ÖDEME PLANI';
+                            } else if (normalizedKey.includes('TARİH') || normalizedKey.includes('TARIH')) {
+                                normalizedKey = 'TARİH';
+                            }
+
+                            // Orijinal değeri koru
+                            fixed[normalizedKey] = row[key];
+                        });
+                        return fixed;
+                    });
+
+                    allRows = json;
+                    document.getElementById('btn-excel-save').disabled = false;
+                    filterAndRender();
+
+                    // Başarı mesajı
+                    const successAlert = document.createElement('div');
+                    successAlert.className = 'alert alert-success alert-dismissible fade show';
+                    successAlert.innerHTML = `
+                        <i class="bi bi-check-circle me-2"></i>
+                        Excel dosyası başarıyla yüklendi! ${json.length} kayıt bulundu.
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    `;
+                    tableContainer.parentNode.insertBefore(successAlert, tableContainer);
+
+                } catch (error) {
+                    console.error('Excel okuma hatası:', error);
+                    document.getElementById('file-info').innerHTML = `
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        <span class="text-danger">Dosya okunamadı</span>
+                    `;
+
+                    const errorAlert = document.createElement('div');
+                    errorAlert.className = 'alert alert-danger alert-dismissible fade show';
+                    errorAlert.innerHTML = `
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        Excel dosyası okunamadı. Lütfen geçerli bir .xls veya .xlsx dosyası seçin.
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    `;
+                    tableContainer.parentNode.insertBefore(errorAlert, tableContainer);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        });
+        dateFilterBtn.addEventListener('click', filterAndRender);
+
+        document.getElementById('btn-excel-save').addEventListener('click', function () {
+            if (!excelData.length) {
+                alert('Önce bir Excel dosyası yükleyin!');
+                return;
+            }
+
+            const saveBtn = this;
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Kaydediliyor...';
+
+            // Debug: Gönderilecek veriyi kontrol et
+            console.log('Gönderilecek dosya adı:', currentExcelFileName);
+            console.log('Gönderilecek veri sayısı:', excelData.length);
+            console.log('İlk 3 kayıt:', excelData.slice(0, 3));
+
+            // Veri boyutunu kontrol et
+            const dataSize = JSON.stringify({ filename: currentExcelFileName, rows: excelData }).length;
+            console.log('Gönderilecek veri boyutu:', dataSize, 'bytes');
+
+            if (dataSize > 10 * 1024 * 1024) { // 10MB
+                alert('Excel dosyası çok büyük. Lütfen daha küçük bir dosya seçin.');
+                saveBtn.innerHTML = '<i class="bi bi-save me-1"></i>Verileri Kaydet';
+                saveBtn.disabled = false;
+                return;
+            }
+
+            // İlk kayıttaki sütunları kontrol et
+            if (excelData.length > 0) {
+                console.log('İlk kayıt sütunları:', Object.keys(excelData[0]));
+                console.log('İlk kayıt değerleri:', Object.values(excelData[0]));
+                console.log('İlk kayıt tam veri:', excelData[0]);
+
+                // Beklenen sütunları kontrol et
+                const expectedColumns = ['TARİH', 'FATURANO', 'MÜŞTERİ', 'ÜRÜN', 'TUTAR', 'ÖDEME PLANI'];
+                const actualColumns = Object.keys(excelData[0]);
+                console.log('Beklenen sütunlar:', expectedColumns);
+                console.log('Mevcut sütunlar:', actualColumns);
+
+                const missingColumns = expectedColumns.filter(col => !actualColumns.includes(col));
+                if (missingColumns.length > 0) {
+                    console.warn('Eksik sütunlar:', missingColumns);
+                }
+            }
+
+            const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            fetch('/dashboard/malzeme-excel-kaydet/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({
+                    filename: currentExcelFileName,
+                    rows: excelData
+                })
+            })
+                .then(resp => {
+                    console.log('Response status:', resp.status);
+                    return resp.json().then(data => {
+                        console.log('Response data:', data);
+                        if (!resp.ok) {
+                            throw new Error(`HTTP ${resp.status}: ${data.error || resp.statusText}`);
+                        }
+                        return data;
+                    });
+                })
+                .then(data => {
+                    if (data.success) {
+                        saveBtn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Başarıyla Kaydedildi';
+                        saveBtn.className = 'btn btn-success';
+
+                        // Başarı mesajı göster
+                        let successMessage = `<strong>Başarılı!</strong> ${data.count || excelData.length} kayıt veritabanına eklendi.`;
+                        if (data.warnings) {
+                            successMessage += `<br><small class="text-warning">${data.warnings}</small>`;
+                        }
+
+                        const successAlert = document.createElement('div');
+                        successAlert.className = 'alert alert-success alert-dismissible fade show';
+                        successAlert.innerHTML = `
+                            <i class="bi bi-check-circle me-2"></i>
+                            ${successMessage}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        `;
+                        tableContainer.parentNode.insertBefore(successAlert, tableContainer);
+
+                        // Uyarılar varsa göster
+                        if (data.errors && data.errors.length > 0) {
+                            const warningAlert = document.createElement('div');
+                            warningAlert.className = 'alert alert-warning alert-dismissible fade show mt-2';
+                            warningAlert.innerHTML = `
+                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                <strong>Bazı satırlarda sorun:</strong>
+                                <ul class="mb-0 mt-2">
+                                    ${data.errors.map(err => `<li><small>${err}</small></li>`).join('')}
+                                </ul>
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            `;
+                            tableContainer.parentNode.insertBefore(warningAlert, tableContainer);
+                        }
+
+                        // 3 saniye sonra products sayfasına yönlendir
+                        setTimeout(() => {
+                            window.location.href = '/dashboard/products/';
+                        }, 3000);
+                    } else {
+                        const errorAlert = document.createElement('div');
+                        errorAlert.className = 'alert alert-danger alert-dismissible fade show';
+                        errorAlert.innerHTML = `
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            <strong>Hata!</strong> ${data.error || 'Kayıt sırasında bir hata oluştu.'}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        `;
+                        tableContainer.parentNode.insertBefore(errorAlert, tableContainer);
+
+                        saveBtn.innerHTML = '<i class="bi bi-save me-1"></i>Verileri Kaydet';
+                        saveBtn.className = 'btn btn-success';
+                        saveBtn.disabled = false;
+                    }
+                })
+                .catch(error => {
+                    console.error('Kayıt hatası:', error);
+
+                    // Detaylı hata mesajı
+                    let errorMessage = 'Sunucuya bağlanılamadı. Lütfen tekrar deneyin.';
+                    if (error.message.includes('HTTP 400')) {
+                        errorMessage = 'Excel verilerinde hata var. Lütfen dosya formatını kontrol edin.';
+                    } else if (error.message.includes('HTTP 500')) {
+                        errorMessage = 'Sunucu hatası. Lütfen daha sonra tekrar deneyin.';
+                    }
+
+                    const errorAlert = document.createElement('div');
+                    errorAlert.className = 'alert alert-danger alert-dismissible fade show';
+                    errorAlert.innerHTML = `
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <strong>Hata!</strong> ${errorMessage}
+                        <br><small>Detay: ${error.message}</small>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    `;
+                    tableContainer.parentNode.insertBefore(errorAlert, tableContainer);
+
+                    saveBtn.innerHTML = '<i class="bi bi-save me-1"></i>Verileri Kaydet';
+                    saveBtn.className = 'btn btn-success';
+                    saveBtn.disabled = false;
+                });
+        });
+    });
+</script>
+{% endblock %}

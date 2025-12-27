@@ -1,0 +1,780 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Kontrol Edilen Siparişler - Mestakip{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">Kontrol Edilen Siparişler</h1>
+        <p class="text-muted mb-0">Kontrol edilen siparişleri analiz edin ve takip edin.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button type="button" class="btn btn-outline-warning btn-sm" onclick="exportCheckedToExcel()">
+            <i class="bi bi-file-earmark-excel me-1"></i>
+            Excel'e Aktar
+        </button>
+    </div>
+</div>
+
+<!-- İstatistik Kartları -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title">{{ stats.toplam_kontrol }}</h4>
+                        <p class="card-text">Toplam Kontrol</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="bi bi-check-circle fs-1"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title">₺{{ stats.toplam_tutar|floatformat:2 }}</h4>
+                        <p class="card-text">Kontrol Tutarı</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="bi bi-currency-dollar fs-1"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title">{{ stats.toplam_adet }}</h4>
+                        <p class="card-text">Toplam Adet</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="bi bi-box fs-1"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-secondary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title">{{ grup_istatistikleri|length }}</h4>
+                        <p class="card-text">Etkilenen Grup</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="bi bi-tags fs-1"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Grup Bazında İstatistikler -->
+{% if grup_istatistikleri %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Grup Bazında Kontrol İstatistikleri</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for grup in grup_istatistikleri %}
+                    <div class="col-md-3 mb-3">
+                        <div class="card border-{{ grup.grup|default:'secondary' }}">
+                            <div class="card-body text-center">
+                                <h6 class="card-title text-uppercase">{{ grup.grup|default:'Bilinmeyen' }}</h6>
+                                <h4 class="text-warning">{{ grup.total_adet }}</h4>
+                                <small class="text-muted">₺{{ grup.total_amount|floatformat:2 }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Filtering Section -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Filtreleme</h5>
+    </div>
+    <div class="card-body">
+        <form method="get">
+            <div class="row g-3">
+                <div class="col-md-2">
+                    <label for="firma" class="form-label">CARI (FIRMA)</label>
+                    <input type="text" class="form-control" id="firma" name="firma" value="{{ filters.firma }}" placeholder="Firma adı...">
+                </div>
+                <div class="col-md-2">
+                    <label for="marka" class="form-label">MARKA</label>
+                    <input type="text" class="form-control" id="marka" name="marka" value="{{ filters.marka }}" placeholder="Marka adı...">
+                </div>
+                <div class="col-md-3">
+                    <label for="urun_arama" class="form-label">ÜRÜN ARAMA</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="urun_arama" name="urun_arama" value="{{ filters.urun_arama }}" placeholder="Ürün adı, marka veya kodu...">
+                        {% if filters.urun_arama %}
+                        <button class="btn btn-outline-secondary" type="button" id="clear-search" title="Aramayı Temizle">
+                            <i class="bi bi-x"></i>
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <label for="grup" class="form-label">GRUP</label>
+                    <select class="form-select" id="grup" name="grup">
+                        <option value="">Tümü</option>
+                        <option value="ticari" {% if filters.grup == 'ticari' %}selected{% endif %}>Ticari</option>
+                        <option value="binek" {% if filters.grup == 'binek' %}selected{% endif %}>Binek</option>
+                        <option value="aku" {% if filters.grup == 'aku' %}selected{% endif %}>Akü</option>
+                        <option value="jant" {% if filters.grup == 'jant' %}selected{% endif %}>Jant</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="mevsim" class="form-label">MEVSİM</label>
+                    <select class="form-select" id="mevsim" name="mevsim">
+                        <option value="">Tümü</option>
+                        <option value="kis" {% if filters.mevsim == 'kis' %}selected{% endif %}>Kış</option>
+                        <option value="yaz" {% if filters.mevsim == 'yaz' %}selected{% endif %}>Yaz</option>
+                        <option value="dort-mevsim" {% if filters.mevsim == 'dort-mevsim' %}selected{% endif %}>4 Mevsim</option>
+                    </select>
+                </div>
+                <div class="col-md-1">
+                    <label for="ambar" class="form-label">AMBAR</label>
+                    <select class="form-select" id="ambar" name="ambar">
+                        <option value="">Tümü</option>
+                        <option value="stok" {% if filters.ambar == 'stok' %}selected{% endif %}>Stok</option>
+                        <option value="satis" {% if filters.ambar == 'satis' %}selected{% endif %}>Satış</option>
+                    </select>
+                </div>
+            </div>
+            <div class="row g-3 mt-2">
+                <div class="col-md-3">
+                    <label for="tarih" class="form-label">TARİH FİLTRESİ</label>
+                    <select class="form-select" id="tarih" name="tarih">
+                        <option value="">Tümü</option>
+                        <option value="bugun" {% if filters.tarih == 'bugun' %}selected{% endif %}>Bugün</option>
+                        <option value="bu-hafta" {% if filters.tarih == 'bu-hafta' %}selected{% endif %}>Bu Hafta</option>
+                        <option value="bu-ay" {% if filters.tarih == 'bu-ay' %}selected{% endif %}>Bu Ay</option>
+                        <option value="son-1-ay" {% if filters.tarih == 'son-1-ay' %}selected{% endif %}>Son 1 Ay</option>
+                        <option value="son-3-ay" {% if filters.tarih == 'son-3-ay' %}selected{% endif %}>Son 3 Ay</option>
+                        <option value="son-6-ay" {% if filters.tarih == 'son-6-ay' %}selected{% endif %}>Son 6 Ay</option>
+                        <option value="ozel-tarih" {% if filters.tarih == 'ozel-tarih' %}selected{% endif %}>Özel Tarih Aralığı</option>
+                    </select>
+                </div>
+                <div class="col-md-6 d-flex align-items-end">
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-funnel me-2"></i>
+                            Filtrele
+                        </button>
+                        <a href="{% url 'dashboard:forms' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-clockwise me-2"></i>
+                            Temizle
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Özel Tarih Aralığı Bölümü -->
+            <div class="row g-3 mt-2" id="ozel-tarih-section" style="display: none;">
+                <div class="col-md-4">
+                    <label for="baslangic_tarihi" class="form-label">BAŞLANGIÇ TARİHİ</label>
+                    <input type="date" class="form-control" id="baslangic_tarihi" name="baslangic_tarihi" value="{{ filters.baslangic_tarihi }}">
+                </div>
+                <div class="col-md-4">
+                    <label for="bitis_tarihi" class="form-label">BİTİŞ TARİHİ</label>
+                    <input type="date" class="form-control" id="bitis_tarihi" name="bitis_tarihi" value="{{ filters.bitis_tarihi }}">
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-outline-info btn-sm" id="bugun-btn">
+                            <i class="bi bi-calendar-day me-1"></i>
+                            Bugün
+                        </button>
+                        <button type="button" class="btn btn-outline-info btn-sm" id="bu-hafta-btn">
+                            <i class="bi bi-calendar-week me-1"></i>
+                            Bu Hafta
+                        </button>
+                        <button type="button" class="btn btn-outline-info btn-sm" id="bu-ay-btn">
+                            <i class="bi bi-calendar-month me-1"></i>
+                            Bu Ay
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Kontrol Edilen Siparişler Tablosu -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">Kontrol Edilen Siparişler</h5>
+        <div class="text-muted">
+            <i class="bi bi-info-circle me-1"></i>
+            Toplam <strong>{{ siparisler.paginator.count }}</strong> kontrol edilen sipariş
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>CARI (FIRMA)</th>
+                        <th>ÜRÜN (LASTIK MARKA MODEL)</th>
+                        <th>MARKA</th>
+                        <th>GRUP</th>
+                        <th>MEVSİM</th>
+                        <th>ADET</th>
+                        <th>BİRİM FİYAT</th>
+                        <th>AMBAR</th>
+                        <th>TOPLAM FİYAT</th>
+                        <th>AÇIKLAMA</th>
+                        <th>ÖDEME</th>
+                        <th>KONTROL TARİHİ</th>
+                        <th>İŞLEMLER</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for siparis in siparisler %}
+                    <tr class="table-warning">
+                        <td><strong>{{ siparis.cari_firma }}</strong></td>
+                        <td>
+                            {% if siparis.one_cikar %}
+                                <span class="urun-with-ebat-highlight">{{ siparis.urun }}</span>
+                            {% else %}
+                                {{ siparis.urun }}
+                            {% endif %}
+                        </td>
+                        <td>{{ siparis.marka }}</td>
+                        <td><span class="badge bg-{{ siparis.get_grup_display_color }}">{{ siparis.get_grup_display }}</span></td>
+                        <td>
+                            {% if siparis.mevsim == 'yaz' %}
+                                <img src="{% static 'images/yaz.png' %}" alt="Yaz" title="Yaz Lastiği" 
+                                     style="width: 24px; height: 24px; object-fit: contain; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+                            {% elif siparis.mevsim == 'kis' %}
+                                <img src="{% static 'images/kis.png' %}" alt="Kış" title="Kış Lastiği" 
+                                     style="width: 24px; height: 24px; object-fit: contain; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+                            {% elif siparis.mevsim == 'dort-mevsim' %}
+                                <img src="{% static 'images/dörtmevsim.png' %}" alt="4 Mevsim" title="4 Mevsim Lastiği" 
+                                     style="width: 24px; height: 24px; object-fit: contain; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td><strong>{{ siparis.adet }}</strong></td>
+                        <td>₺{{ siparis.birim_fiyat|floatformat:2 }}</td>
+                        <td><span class="badge bg-primary">{{ siparis.get_ambar_display }}</span></td>
+                        <td><strong class="text-success">₺{{ siparis.toplam_fiyat|floatformat:2 }}</strong></td>
+                        <td>{{ siparis.aciklama|default:"-" }}</td>
+                        <td>{{ siparis.get_odeme_display }}</td>
+                        <td>
+                            <small class="text-muted">
+                                {{ siparis.guncelleme_tarihi|date:"d.m.Y H:i" }}
+                            </small>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <a href="{% url 'dashboard:siparis_detay' siparis.id %}" class="btn btn-primary btn-sm" title="Detay">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{% url 'dashboard:siparis_duzenle' siparis.id %}" class="btn btn-warning btn-sm" title="Düzenle">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                {% if siparis.musteri_adi or siparis.musteri_telefon or siparis.musteri_aciklama %}
+                                <button type="button" class="btn btn-info btn-sm" title="Müşteri Bilgileri" 
+                                        data-bs-toggle="modal" data-bs-target="#musteriModal{{ siparis.id }}">
+                                    <i class="bi bi-person"></i>
+                                </button>
+                                {% endif %}
+                                {% if siparis.musteri_telefon %}
+                                <button type="button" class="btn btn-success btn-sm" title="WhatsApp" 
+                                        data-telefon="{{ siparis.musteri_telefon|slice:'1:' }}" 
+                                        data-musteri="{{ siparis.musteri_adi|default:'' }}" 
+                                        data-urun="{{ siparis.urun }}" 
+                                        onclick="whatsappGonderData(this)">
+                                    <i class="bi bi-whatsapp"></i>
+                                </button>
+                                {% else %}
+                                <a href="{% url 'dashboard:siparis_whatsapp' siparis.id %}" class="btn btn-success btn-sm" title="WhatsApp" target="_blank">
+                                    <i class="bi bi-whatsapp"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="13" class="text-center text-muted py-4">
+                            <i class="bi bi-check-circle fs-1 d-block mb-2 text-warning"></i>
+                            <h5>Henüz kontrol edilen sipariş bulunmuyor.</h5>
+                            <p class="mb-0">Kontrol edilen siparişler burada görünecek.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card-footer">
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="text-muted">
+                Toplam <strong>{{ siparisler.paginator.count }}</strong> kontrol edilen sipariş gösteriliyor
+            </div>
+            {% if siparisler.has_other_pages %}
+            <nav aria-label="Page navigation">
+                <ul class="pagination pagination-sm mb-0">
+                    {% if siparisler.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ siparisler.previous_page_number }}">Önceki</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#" tabindex="-1">Önceki</a>
+                        </li>
+                    {% endif %}
+                    
+                    {% for num in siparisler.paginator.page_range %}
+                        {% if siparisler.number == num %}
+                            <li class="page-item active">
+                                <a class="page-link" href="#">{{ num }}</a>
+                            </li>
+                        {% else %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if siparisler.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ siparisler.next_page_number }}">Sonraki</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#" tabindex="-1">Sonraki</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Müşteri Bilgileri Modalları -->
+{% for siparis in siparisler %}
+{% if siparis.musteri_adi or siparis.musteri_telefon or siparis.musteri_aciklama %}
+<div class="modal fade" id="musteriModal{{ siparis.id }}" tabindex="-1" aria-labelledby="musteriModalLabel{{ siparis.id }}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title" id="musteriModalLabel{{ siparis.id }}">
+                    <i class="bi bi-person me-2"></i>
+                    Müşteri Bilgileri
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <h6 class="text-muted mb-3">Sipariş: {{ siparis.cari_firma }} - {{ siparis.urun|truncatechars:50 }}</h6>
+                    </div>
+                    {% if siparis.musteri_adi %}
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Müşteri Adı:</label>
+                        <p class="mb-0">{{ siparis.musteri_adi }}</p>
+                    </div>
+                    {% endif %}
+                    {% if siparis.musteri_telefon %}
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Telefon Numarası:</label>
+                        <p class="mb-0">
+                            <a href="tel:{{ siparis.musteri_telefon }}" class="text-decoration-none">
+                                <i class="bi bi-telephone me-1"></i>
+                                {{ siparis.musteri_telefon }}
+                            </a>
+                        </p>
+                    </div>
+                    {% endif %}
+                    {% if siparis.musteri_odeme_tutari %}
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Ödeme Tutarı:</label>
+                        <p class="mb-0">
+                            <span class="badge bg-success">{{ siparis.musteri_odeme_tutari }}</span>
+                        </p>
+                    </div>
+                    {% endif %}
+                    {% if siparis.musteri_aciklama %}
+                    <div class="col-12">
+                        <label class="form-label fw-bold">Açıklama:</label>
+                        <div class="bg-light p-3 rounded border">
+                            <div class="text-dark fw-normal">
+                                {{ siparis.musteri_aciklama|linebreaks }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="modal-footer">
+                {% if siparis.musteri_telefon %}
+                <button type="button" class="btn btn-success btn-sm" 
+                        data-telefon="{{ siparis.musteri_telefon|slice:'1:' }}" 
+                        data-musteri="{{ siparis.musteri_adi|default:'' }}" 
+                        data-urun="{{ siparis.urun }}" 
+                        data-marka="{{ siparis.marka }}"
+                        data-adet="{{ siparis.adet }}"
+                        data-durum="{{ siparis.get_durum_display }}"
+                        data-tarih="{{ siparis.guncelleme_tarihi|date:'d.m.Y H:i' }}"
+                        onclick="whatsappGonderDetayli(this)">
+                    <i class="bi bi-whatsapp me-1"></i>
+                    WhatsApp Gönder
+                </button>
+                {% endif %}
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endfor %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Kontrol Edilen Siparişler sayfası yüklendi');
+    
+    // Ebat vurgulama fonksiyonu
+    function highlightEbatInTable() {
+        const urunElements = document.querySelectorAll('.urun-with-ebat-highlight');
+        urunElements.forEach(function(element) {
+            const content = element.textContent;
+            const ebatPattern = /(\d{3}\/\d{2}R\d{2})/g;
+            
+            if (content.match(ebatPattern)) {
+                const highlightedContent = content.replace(ebatPattern, '<span class="ebat-highlight">$1</span>');
+                element.innerHTML = highlightedContent;
+            }
+        });
+    }
+    
+    // Sayfa yüklendiğinde ebat vurgulamasını uygula
+    highlightEbatInTable();
+    
+    // Ürün arama sonuçlarını vurgula
+    highlightSearchResults();
+    
+    function highlightSearchResults() {
+        const searchTerm = document.getElementById('urun_arama')?.value;
+        if (searchTerm && searchTerm.length >= 2) {
+            // Ürün sütunu (2. sütun) ve Marka sütunu (3. sütun)
+            const urunCells = document.querySelectorAll('tbody tr td:nth-child(2)');
+            const markaCells = document.querySelectorAll('tbody tr td:nth-child(3)');
+            
+            [...urunCells, ...markaCells].forEach(cell => {
+                const content = cell.textContent;
+                if (content.toLowerCase().includes(searchTerm.toLowerCase())) {
+                    const regex = new RegExp(`(${searchTerm})`, 'gi');
+                    const highlightedContent = content.replace(regex, '<span class="search-highlight">$1</span>');
+                    cell.innerHTML = highlightedContent;
+                }
+            });
+        }
+    }
+    
+    
+    // Tarih filtreleme fonksiyonları
+    const tarihSelect = document.getElementById('tarih');
+    const ozelTarihSection = document.getElementById('ozel-tarih-section');
+    const baslangicTarihi = document.getElementById('baslangic_tarihi');
+    const bitisTarihi = document.getElementById('bitis_tarihi');
+    
+    // Tarih seçimi değiştiğinde özel tarih bölümünü göster/gizle
+    if (tarihSelect) {
+        tarihSelect.addEventListener('change', function() {
+            if (this.value === 'ozel-tarih') {
+                ozelTarihSection.style.display = 'block';
+            } else {
+                ozelTarihSection.style.display = 'none';
+                // Özel tarih seçili değilse tarih alanlarını temizle
+                baslangicTarihi.value = '';
+                bitisTarihi.value = '';
+            }
+        });
+        
+        // Sayfa yüklendiğinde özel tarih seçiliyse bölümü göster
+        if (tarihSelect.value === 'ozel-tarih') {
+            ozelTarihSection.style.display = 'block';
+        }
+    }
+    
+    // Hızlı tarih butonları
+    const bugunBtn = document.getElementById('bugun-btn');
+    const buHaftaBtn = document.getElementById('bu-hafta-btn');
+    const buAyBtn = document.getElementById('bu-ay-btn');
+    
+    if (bugunBtn) {
+        bugunBtn.addEventListener('click', function() {
+            const today = new Date().toISOString().split('T')[0];
+            baslangicTarihi.value = today;
+            bitisTarihi.value = today;
+        });
+    }
+    
+    if (buHaftaBtn) {
+        buHaftaBtn.addEventListener('click', function() {
+            const today = new Date();
+            const startOfWeek = new Date(today.setDate(today.getDate() - today.getDay()));
+            const endOfWeek = new Date(today.setDate(today.getDate() - today.getDay() + 6));
+            
+            baslangicTarihi.value = startOfWeek.toISOString().split('T')[0];
+            bitisTarihi.value = endOfWeek.toISOString().split('T')[0];
+        });
+    }
+    
+    if (buAyBtn) {
+        buAyBtn.addEventListener('click', function() {
+            const today = new Date();
+            const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+            const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            
+            baslangicTarihi.value = startOfMonth.toISOString().split('T')[0];
+            bitisTarihi.value = endOfMonth.toISOString().split('T')[0];
+        });
+    }
+    
+    // Ürün arama fonksiyonları
+    const urunAramaInput = document.getElementById('urun_arama');
+    let searchTimeout;
+    
+    if (urunAramaInput) {
+        urunAramaInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                // Eğer 3 karakterden fazla girildiyse otomatik arama yap
+                if (this.value.length >= 3 || this.value.length === 0) {
+                    console.log('Ürün arama:', this.value);
+                    // Form otomatik submit edilebilir (isteğe bağlı)
+                    // document.querySelector('form').submit();
+                }
+            }, 500); // 500ms bekle
+        });
+        
+        // Enter tuşuna basıldığında arama yap
+        urunAramaInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                document.querySelector('form').submit();
+            }
+        });
+    }
+    
+    // Arama temizleme butonu
+    const clearSearchBtn = document.getElementById('clear-search');
+    if (clearSearchBtn) {
+        clearSearchBtn.addEventListener('click', function() {
+            urunAramaInput.value = '';
+            // Formu otomatik submit et
+            document.querySelector('form').submit();
+        });
+    }
+    
+    // Filtreleme fonksiyonları
+    const filterBtn = document.querySelector('.btn-primary');
+    const clearBtn = document.querySelector('.btn-outline-secondary');
+    
+    if (filterBtn) {
+        filterBtn.addEventListener('click', function() {
+            console.log('Kontrol edilen siparişler filtrelendi');
+        });
+    }
+    
+    if (clearBtn) {
+        clearBtn.addEventListener('click', function() {
+            console.log('Filtreler temizlendi');
+            // Form alanlarını temizle
+            document.querySelectorAll('input[type="text"], input[type="date"], select').forEach(input => {
+                if (input.type === 'text' || input.type === 'date') {
+                    input.value = '';
+                } else {
+                    input.selectedIndex = 0;
+                }
+            });
+            // Özel tarih bölümünü gizle
+            ozelTarihSection.style.display = 'none';
+        });
+    }
+});
+
+// WhatsApp mesaj gönderme fonksiyonu (data attribute'lardan)
+function whatsappGonderData(button) {
+    const telefon = button.getAttribute('data-telefon');
+    const musteriAdi = button.getAttribute('data-musteri');
+    const urun = button.getAttribute('data-urun');
+    whatsappGonder(telefon, musteriAdi, urun);
+}
+
+// Müşteri Bilgileri pop-up'ı için detaylı WhatsApp mesajı
+function whatsappGonderDetayli(button) {
+    const telefon = button.getAttribute('data-telefon');
+    const musteriAdi = button.getAttribute('data-musteri');
+    const urun = button.getAttribute('data-urun');
+    const marka = button.getAttribute('data-marka');
+    const adet = button.getAttribute('data-adet');
+    const durum = button.getAttribute('data-durum');
+    const tarih = button.getAttribute('data-tarih');
+    
+    // Telefon numarasını temizle ve formatla
+    let cleanTelefon = telefon.toString().replace(/\D/g, '');
+    
+    // Türkiye telefon numarası formatı kontrolü
+    if (cleanTelefon.startsWith('0')) {
+        cleanTelefon = '90' + cleanTelefon.substring(1);
+    } else if (!cleanTelefon.startsWith('90')) {
+        cleanTelefon = '90' + cleanTelefon;
+    }
+    
+    // Detaylı mesaj formatı (MesTakip - LB formatında)
+    const mesaj = `*MesTakip - LB*
+
+*Ürün:* ${urun}
+*Marka:* ${marka}
+*Adet:* ${adet}
+*Durum:* ${durum}
+*Güncellenen Son Tarih:* ${tarih}`;
+    
+    console.log('Detaylı mesaj gönderiliyor:', mesaj);
+    
+    // WhatsApp URL'si oluştur
+    const whatsappUrl = `https://wa.me/${cleanTelefon}?text=${encodeURIComponent(mesaj)}`;
+    
+    // Yeni sekmede aç
+    window.open(whatsappUrl, '_blank');
+}
+
+// WhatsApp mesaj gönderme fonksiyonu
+function whatsappGonder(telefon, musteriAdi, urun) {
+    // Telefon numarasını temizle ve formatla
+    let cleanTelefon = telefon.toString().replace(/\D/g, ''); // Sadece rakamları al
+    
+    // Türkiye telefon numarası formatı kontrolü
+    if (cleanTelefon.startsWith('0')) {
+        cleanTelefon = '90' + cleanTelefon.substring(1); // 0555... -> 90555...
+    } else if (!cleanTelefon.startsWith('90')) {
+        cleanTelefon = '90' + cleanTelefon; // 555... -> 90555...
+    }
+    
+    console.log('Temizlenmiş telefon:', cleanTelefon);
+    
+    // Müşteri adını düzenle
+    let musteriIsim = musteriAdi ? musteriAdi.trim() : '';
+    
+    // Mesaj şablonu oluştur (Müşteri Bilgileri pop-up'ı için farklı format)
+    let mesaj = '';
+    if (musteriIsim) {
+        mesaj = `Merhaba ${musteriIsim} Bey, lastiğiniz gelmiştir.`;
+    } else {
+        mesaj = `Merhaba, lastiğiniz gelmiştir.`;
+    }
+    
+    console.log('Gönderilecek mesaj:', mesaj);
+    
+    // WhatsApp URL'si oluştur
+    const whatsappUrl = `https://wa.me/${cleanTelefon}?text=${encodeURIComponent(mesaj)}`;
+    
+    console.log('WhatsApp URL:', whatsappUrl);
+    
+    // Yeni sekmede aç
+    window.open(whatsappUrl, '_blank');
+}
+
+// Excel export fonksiyonu
+function exportCheckedToExcel() {
+    // Mevcut filtreleme parametrelerini al
+    const form = document.querySelector('form');
+    const formData = new FormData(form);
+    
+    // URL parametrelerini oluştur
+    const params = new URLSearchParams();
+    for (let [key, value] of formData.entries()) {
+        if (value) {
+            params.append(key, value);
+        }
+    }
+    
+    // Excel export URL'sine yönlendir
+    const exportUrl = '{% url "dashboard:export_checked_excel" %}' + '?' + params.toString();
+    window.location.href = exportUrl;
+}
+</script>
+
+<style>
+/* Ebat vurgulama stilleri */
+.ebat-highlight {
+    color: #dc3545 !important;
+    font-weight: bold !important;
+    background-color: rgba(220, 53, 69, 0.1) !important;
+    padding: 2px 4px;
+    border-radius: 3px;
+}
+
+/* Öne çıkar ürün satırı */
+.urun-with-ebat-highlight {
+    font-weight: 500;
+}
+
+/* Ürün arama alanı stilleri */
+#urun_arama {
+    border-left: 3px solid #0d6efd;
+}
+
+#urun_arama:focus {
+    border-left: 3px solid #0a58ca;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+.input-group-text {
+    background-color: #f8f9fa;
+    border-color: #dee2e6;
+    color: #6c757d;
+}
+
+/* Arama sonuçları vurgulama */
+.search-highlight {
+    background-color: #fff3cd;
+    font-weight: bold;
+    padding: 1px 3px;
+    border-radius: 2px;
+}
+
+/* Kontrol edilen sipariş satırı */
+.table-warning {
+    background-color: rgba(255, 193, 7, 0.05) !important;
+}
+
+.table-warning:hover {
+    background-color: rgba(255, 193, 7, 0.1) !important;
+}
+</style>
+{% endblock %}

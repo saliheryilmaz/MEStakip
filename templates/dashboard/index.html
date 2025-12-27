@@ -1,0 +1,1215 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load turkish_format %}
+
+{% block title %}Dashboard - Mestakip{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">Dashboard</h1>
+        <p class="text-muted mb-0">Welcome back! Here's what's happening.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'dashboard:yeni_lastik' %}" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-2"></i>
+            Yeni Sipariş Ekle
+        </a>
+        <button type="button" class="btn btn-outline-secondary" data-bs-toggle="tooltip" title="Sayfayı Yenile"
+            onclick="location.reload()">
+            <i class="bi bi-arrow-clockwise icon-hover"></i>
+        </button>
+        <a href="{% url 'dashboard:export_excel' %}" class="btn btn-outline-secondary" data-bs-toggle="tooltip"
+            title="Excel'e Aktar">
+            <i class="bi bi-download icon-hover"></i>
+        </a>
+        <button type="button" class="btn btn-outline-secondary" data-fullscreen-toggle data-bs-toggle="tooltip"
+            title="Tam Ekran">
+            <i class="bi bi-arrows-fullscreen icon-hover"></i>
+        </button>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="row g-4 mb-4">
+    <div class="col-xl-3 col-lg-6">
+        <div class="card stats-card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <div class="stats-icon bg-primary bg-opacity-10 text-primary">
+                            <i class="bi bi-people"></i>
+                        </div>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h6 class="mb-0 text-muted">Toplam Sipariş</h6>
+                        <h3 class="mb-0">{{ stats.total_users|floatformat:0 }}</h3>
+                        <small class="text-success">
+                            <i class="bi bi-arrow-up"></i> Aktif
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-lg-6">
+        <div class="card stats-card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <div class="stats-icon bg-success bg-opacity-10 text-success">
+                            <i class="bi bi-graph-up"></i>
+                        </div>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h6 class="mb-0 text-muted">Toplam Ciro</h6>
+                        <h3 class="mb-0">{{ stats.revenue|turkish_lira }}</h3>
+                        <small class="text-success">
+                            <i class="bi bi-arrow-up"></i> Toplam
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-lg-6">
+        <div class="card stats-card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <div class="stats-icon bg-warning bg-opacity-10 text-warning">
+                            <i class="bi bi-bag-check"></i>
+                        </div>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h6 class="mb-0 text-muted">Kontrol Edilen</h6>
+                        <h3 class="mb-0">{{ stats.orders|floatformat:0 }}</h3>
+                        <small class="text-success">
+                            <i class="bi bi-arrow-up"></i> Kontrol
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-lg-6">
+        <div class="card stats-card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <div class="stats-icon bg-info bg-opacity-10 text-info">
+                            <i class="bi bi-clock-history"></i>
+                        </div>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h6 class="mb-0 text-muted">Toplam Adet</h6>
+                        <h3 class="mb-0">{{ stats.avg_response|floatformat:0 }}</h3>
+                        <small class="text-success">
+                            <i class="bi bi-arrow-up"></i> Adet
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Finance Chart Section -->
+<div class="row g-4 mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white border-bottom">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="card-title mb-1">
+                            <i class="bi bi-graph-up-arrow text-primary me-2"></i>
+                            Aylık Gelir & Gider Analizi
+                        </h5>
+                        <small class="text-muted">Son 12 ayın finansal özeti</small>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-success-subtle text-success">
+                            <i class="bi bi-arrow-up-circle me-1"></i>Gelir
+                        </span>
+                        <span class="badge bg-danger-subtle text-danger">
+                            <i class="bi bi-arrow-down-circle me-1"></i>Gider
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-4">
+                <div class="chart-container" style="position: relative; height: 350px;">
+                    <canvas id="financeOverviewChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Additional Charts Row -->
+<div class="row g-4 mb-4">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Lastik Satış Analizi (3D)</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="tireSalesChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Lastik Marka Dağılımı (Toplam Adet)</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="brandDistributionChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- New Widgets Row (removed unnecessary lists) -->
+
+<!-- En Çok Alım Yaptığımız Cariler -->
+<div class="row g-4">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h5 class="card-title mb-1">En Çok Alım Yaptığımız Cariler</h5>
+                        <small class="text-muted">Yeni Sipariş Ekle'den oluşturulan veriler - Fiyat bazında
+                            sıralama</small>
+                    </div>
+                    <span class="badge bg-success">Kontrol Edilmiş</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <canvas id="topCustomersChart" style="min-height: 400px; width: 100%;"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Son Finance İşlemleri bölümü kaldırıldı -->
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Hide any demo charts that might appear */
+    .demo-chart,
+    [data-demo="true"],
+    .order-status-demo {
+        display: none !important;
+    }
+
+    /* Ensure our custom chart is visible */
+    #orderStatusChart {
+        display: block !important;
+    }
+
+    /* Dashboard Mobile Responsive Styles */
+    @media (max-width: 768px) {
+
+        /* Page Header Mobile */
+        .d-flex.justify-content-between.align-items-center.mb-4 {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+
+        .d-flex.gap-2 {
+            width: 100%;
+            flex-wrap: wrap;
+            gap: 0.5rem !important;
+        }
+
+        .d-flex.gap-2 .btn {
+            flex: 1;
+            min-width: 120px;
+            font-size: 0.85rem;
+            padding: 0.6rem 0.8rem;
+        }
+
+        /* Stats Cards Mobile */
+        .row.g-4 {
+            --bs-gutter-x: 1rem;
+            --bs-gutter-y: 1rem;
+        }
+
+        .stats-card {
+            margin-bottom: 1rem;
+        }
+
+        .stats-card .card-body {
+            padding: 1.25rem;
+        }
+
+        .stats-icon {
+            width: 45px;
+            height: 45px;
+            font-size: 1.2rem;
+        }
+
+        .stats-card h3 {
+            font-size: 1.6rem;
+        }
+
+        .stats-card h6 {
+            font-size: 0.9rem;
+        }
+
+        .stats-card small {
+            font-size: 0.8rem;
+        }
+
+        /* Chart Cards Mobile */
+        .card-header {
+            padding: 1rem;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+
+        .card-header .btn-group {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .card-header .btn-group .btn {
+            flex: 1;
+        }
+
+        .card-body {
+            padding: 1rem;
+        }
+
+        /* Table Mobile */
+        .table-responsive {
+            font-size: 0.85rem;
+            border-radius: 8px;
+        }
+
+        .table th,
+        .table td {
+            padding: 0.6rem 0.4rem;
+            vertical-align: middle;
+        }
+
+        .table th {
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .table .btn {
+            font-size: 0.75rem;
+            padding: 0.3rem 0.6rem;
+        }
+
+        .badge {
+            font-size: 0.7rem;
+        }
+
+        /* Chart Container Mobile */
+        canvas {
+            max-height: 250px !important;
+        }
+    }
+
+    @media (max-width: 480px) {
+
+        /* Extra Small Mobile */
+        .d-flex.gap-2 .btn {
+            font-size: 0.8rem;
+            padding: 0.5rem 0.6rem;
+            min-width: 100px;
+        }
+
+        .stats-card .card-body {
+            padding: 1rem;
+        }
+
+        .stats-icon {
+            width: 40px;
+            height: 40px;
+            font-size: 1rem;
+        }
+
+        .stats-card h3 {
+            font-size: 1.4rem;
+        }
+
+        .stats-card h6 {
+            font-size: 0.85rem;
+        }
+
+        .card-header {
+            padding: 0.75rem;
+        }
+
+        .card-body {
+            padding: 0.75rem;
+        }
+
+        .table-responsive {
+            font-size: 0.8rem;
+        }
+
+        .table th,
+        .table td {
+            padding: 0.5rem 0.3rem;
+        }
+
+        .table .btn {
+            font-size: 0.7rem;
+            padding: 0.25rem 0.5rem;
+        }
+
+        canvas {
+            max-height: 200px !important;
+        }
+    }
+
+    /* Landscape Mobile */
+    @media (max-width: 768px) and (orientation: landscape) {
+        .d-flex.justify-content-between.align-items-center.mb-4 {
+            flex-direction: row;
+            align-items: center;
+        }
+
+        .d-flex.gap-2 {
+            width: auto;
+            flex-wrap: nowrap;
+        }
+
+        .stats-card .card-body {
+            padding: 1rem;
+        }
+
+        canvas {
+            max-height: 180px !important;
+        }
+    }
+
+    /* Touch Optimizations */
+    @media (hover: none) and (pointer: coarse) {
+        .btn {
+            min-height: 44px;
+            touch-action: manipulation;
+        }
+
+        .table .btn {
+            min-height: 36px;
+        }
+
+        .card {
+            touch-action: manipulation;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Override problematic demo chart logic from bundled script
+    if (typeof window.M2 !== 'undefined') {
+        // Completely disable all chart initializations that might cause errors
+        const originalInit = window.M2.prototype.init;
+        window.M2.prototype.init = function () {
+            console.log('M2 init called, overriding chart initializations');
+            try {
+                // Only call safe methods, skip chart initializations
+                if (this.loadDashboardData && typeof this.loadDashboardData === 'function') {
+                    this.loadDashboardData();
+                }
+                if (this.populateRecentOrders && typeof this.populateRecentOrders === 'function') {
+                    this.populateRecentOrders();
+                }
+                if (this.initInteractiveElements && typeof this.initInteractiveElements === 'function') {
+                    this.initInteractiveElements();
+                }
+            } catch (e) {
+                console.log('M2 init error caught and ignored:', e);
+            }
+        };
+
+        // Override individual chart methods to prevent errors
+        window.M2.prototype.initStorageChart = function () {
+            const element = document.querySelector("#storageStatusChart");
+            if (!element) {
+                console.log('Storage chart element not found, skipping');
+                return;
+            }
+            try {
+                return originalInit.call(this);
+            } catch (e) {
+                console.log('Storage chart error caught and ignored:', e);
+            }
+        };
+
+        window.M2.prototype.initRevenueChart = function () {
+            console.log('Revenue chart initialization blocked');
+            return;
+        };
+
+        window.M2.prototype.initUserGrowthChart = function () {
+            const element = document.querySelector("#userGrowthChart");
+            if (!element) {
+                console.log('User growth chart element not found, skipping');
+                return;
+            }
+        };
+
+        window.M2.prototype.initOrderStatusChart = function () {
+            console.log('Demo order status chart blocked - using brandDistributionChart instead');
+            return; // Completely block the demo chart
+        };
+
+        window.M2.prototype.initSalesByLocationChart = function () {
+            const element = document.querySelector("#salesByLocationChart");
+            if (!element) {
+                console.log('Sales by location chart element not found, skipping');
+                return;
+            }
+        };
+
+        // Disable random revenue updater from demo script
+        window.M2.prototype.updateChartsWithRealTimeData = function () {
+            console.log('Chart real-time updates disabled');
+        };
+
+        // Override any other problematic methods
+        window.M2.prototype.startRealTimeUpdates = function () {
+            console.log('Real-time updates disabled');
+        };
+
+        // Override demo data generation methods
+        if (window.M2.prototype.generateOrderData) {
+            window.M2.prototype.generateOrderData = function () {
+                console.log('Demo order data generation blocked');
+                return { completed: 0, pending: 0, cancelled: 0, processing: 0 };
+            };
+        }
+
+        // Block any chart that tries to use demo data
+        if (window.M2.prototype.populateOrderStatusChart) {
+            window.M2.prototype.populateOrderStatusChart = function () {
+                console.log('Demo order status chart population blocked');
+                return;
+            };
+        }
+    }
+
+    // AGGRESSIVE CHART.JS OVERRIDE TO BLOCK DEMO CHARTS
+    const originalChartConstructor = window.Chart;
+    if (originalChartConstructor) {
+        window.Chart = function (ctx, config) {
+            // Block demo charts on revenueChart canvas with Revenue/Profit labels
+            if (ctx && (ctx.id === 'revenueChart' || (ctx.canvas && ctx.canvas.id === 'revenueChart'))) {
+                // Check if this is a demo chart (has Revenue/Profit instead of Gelir/Gider)
+                if (config && config.data && config.data.datasets) {
+                    const datasets = config.data.datasets;
+                    const isDemoChart = datasets.some(ds => {
+                        const label = (ds.label || '').toLowerCase();
+                        return (label === 'revenue' || label === 'profit') && 
+                               !label.includes('gelir') && !label.includes('gider');
+                    });
+
+                    if (isDemoChart) {
+                        console.log('🚫 BLOCKED DEMO REVENUE CHART CREATION:', datasets.map(ds => ds.label));
+                        // Clear the canvas immediately
+                        const canvas = ctx.canvas || ctx;
+                        if (canvas && canvas.getContext) {
+                            const context = canvas.getContext('2d');
+                            context.clearRect(0, 0, canvas.width || 800, canvas.height || 400);
+                        }
+                        // Also destroy any existing chart on this canvas
+                        try {
+                            const existing = originalChartConstructor.getChart(ctx.canvas || ctx);
+                            if (existing) {
+                                existing.destroy();
+                            }
+                        } catch (e) {}
+
+                        return {
+                            destroy: function () { },
+                            update: function () { },
+                            data: { labels: [], datasets: [] }
+                        };
+                    }
+                }
+            }
+            
+            // Block demo charts on orderStatusChart canvas
+            if (ctx && (ctx.id === 'orderStatusChart' || (ctx.canvas && ctx.canvas.id === 'orderStatusChart'))) {
+                // Check if this is a demo chart (has demo data)
+                if (config && config.data && config.data.labels) {
+                    const labels = config.data.labels;
+                    const isDemoChart = labels.some(label =>
+                        typeof label === 'string' && (
+                            label.toLowerCase().includes('completed') ||
+                            label.toLowerCase().includes('processing') ||
+                            label.toLowerCase().includes('pending') ||
+                            label.toLowerCase().includes('cancelled')
+                        )
+                    );
+
+                    if (isDemoChart) {
+                        console.log('🚫 BLOCKED DEMO CHART CREATION:', labels);
+                        // Clear the canvas immediately
+                        const canvas = ctx.canvas || ctx;
+                        const context = canvas.getContext('2d');
+                        context.clearRect(0, 0, canvas.width, canvas.height);
+
+                        return {
+                            destroy: function () { },
+                            update: function () { },
+                            data: { labels: [], datasets: [] }
+                        };
+                    }
+                }
+            }
+
+            return new originalChartConstructor(ctx, config);
+        };
+        // Copy static methods
+        Object.setPrototypeOf(window.Chart, originalChartConstructor);
+        Object.assign(window.Chart, originalChartConstructor);
+    }
+
+    // Global error handler for chart-related errors
+    window.addEventListener('error', function (e) {
+        if (e.message && (
+            e.message.includes('Element not found') ||
+            e.message.includes('storageStatusChart') ||
+            e.message.includes('chart') ||
+            e.filename && e.filename.includes('main-f0Mg-34g.js')
+        )) {
+            console.log('Chart-related error caught and suppressed:', e.message);
+            e.preventDefault();
+            return true;
+        }
+    });
+
+    // Global promise rejection handler
+    window.addEventListener('unhandledrejection', function (e) {
+        if (e.reason && (
+            e.reason.message && e.reason.message.includes('Element not found') ||
+            e.reason.toString().includes('chart')
+        )) {
+            console.log('Chart-related promise rejection caught and suppressed:', e.reason);
+            e.preventDefault();
+            return true;
+        }
+    });
+
+    // DEMO CHART COMPLETELY BLOCKED - Override DashboardManager
+    if (window.DashboardManager) {
+        const OriginalDashboardManager = window.DashboardManager;
+        window.DashboardManager = class extends OriginalDashboardManager {
+            initRevenueChart() {
+                console.log('🚫 Demo revenue chart blocked - using real data only');
+                return; // Completely block demo chart
+            }
+        };
+    }
+
+    // Also block if imported as module
+    document.addEventListener('DOMContentLoaded', function () {
+        console.log('Dashboard loaded');
+
+        // Block demo dashboardManager if exists
+        if (window.dashboardManager) {
+            const originalInitRevenueChart = window.dashboardManager.initRevenueChart;
+            window.dashboardManager.initRevenueChart = function() {
+                console.log('🚫 Demo revenue chart blocked');
+                return;
+            };
+            // Destroy any existing demo chart
+            if (window.dashboardManager.charts && window.dashboardManager.charts.has('revenue')) {
+                try {
+                    const demoChart = window.dashboardManager.charts.get('revenue');
+                    if (demoChart && typeof demoChart.destroy === 'function') {
+                        demoChart.destroy();
+                    }
+                    window.dashboardManager.charts.delete('revenue');
+                } catch (e) {
+                    console.log('Demo chart cleanup error (ignored):', e);
+                }
+            }
+        }
+        
+
+        // Modern Finance Overview Chart - Canlı veri çeken güzel chart
+        const financeChartCanvas = document.getElementById('financeOverviewChart');
+        if (financeChartCanvas) {
+            let financeChart = null;
+
+            // Gradient oluşturma fonksiyonu
+            function createGradient(ctx, color1, color2) {
+                const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+                gradient.addColorStop(0, color1);
+                gradient.addColorStop(1, color2);
+                return gradient;
+            }
+
+            async function loadFinanceOverview() {
+                try {
+                    const response = await fetch('/dashboard/api/finance/overview/');
+                    if (!response.ok) throw new Error('API yanıtı alınamadı');
+                    
+                    const data = await response.json();
+                    if (!data.success) {
+                        console.error('API hatası:', data.error || 'Bilinmeyen hata');
+                        showError();
+                        return;
+                    }
+
+                    const { labels, income, expense } = data;
+
+                    // Net kar hesapla (Gelir - Gider)
+                    const netProfit = income.map((val, idx) => val - expense[idx]);
+
+                    // Mevcut chart varsa yok et
+                    if (financeChart) {
+                        financeChart.destroy();
+                    }
+
+                    const ctx = financeChartCanvas.getContext('2d');
+                    
+                    // Gradyanlar oluştur
+                    const incomeGradient = createGradient(ctx, 'rgba(34, 197, 94, 0.3)', 'rgba(34, 197, 94, 0.05)');
+                    const expenseGradient = createGradient(ctx, 'rgba(239, 68, 68, 0.3)', 'rgba(239, 68, 68, 0.05)');
+
+                    // Yeni chart oluştur
+                    financeChart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [
+                                {
+                                    label: 'Gelir',
+                                    data: income,
+                                    borderColor: 'rgb(34, 197, 94)',
+                                    backgroundColor: incomeGradient,
+                                    borderWidth: 3,
+                                    fill: true,
+                                    tension: 0.5,
+                                    pointRadius: 5,
+                                    pointHoverRadius: 8,
+                                    pointBackgroundColor: '#fff',
+                                    pointBorderColor: 'rgb(34, 197, 94)',
+                                    pointBorderWidth: 3,
+                                    pointHoverBackgroundColor: 'rgb(34, 197, 94)',
+                                    pointHoverBorderColor: '#fff',
+                                    pointHoverBorderWidth: 3,
+                                    cubicInterpolationMode: 'monotone'
+                                },
+                                {
+                                    label: 'Gider',
+                                    data: expense,
+                                    borderColor: 'rgb(239, 68, 68)',
+                                    backgroundColor: expenseGradient,
+                                    borderWidth: 3,
+                                    fill: true,
+                                    tension: 0.5,
+                                    pointRadius: 5,
+                                    pointHoverRadius: 8,
+                                    pointBackgroundColor: '#fff',
+                                    pointBorderColor: 'rgb(239, 68, 68)',
+                                    pointBorderWidth: 3,
+                                    pointHoverBackgroundColor: 'rgb(239, 68, 68)',
+                                    pointHoverBorderColor: '#fff',
+                                    pointHoverBorderWidth: 3,
+                                    cubicInterpolationMode: 'monotone'
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            interaction: {
+                                mode: 'index',
+                                intersect: false
+                            },
+                            plugins: {
+                                legend: {
+                                    display: true,
+                                    position: 'top',
+                                    align: 'end',
+                                    labels: {
+                                        usePointStyle: true,
+                                        padding: 20,
+                                        font: {
+                                            size: 13,
+                                            weight: '500',
+                                            family: "'Inter', sans-serif"
+                                        },
+                                        generateLabels: function(chart) {
+                                            const original = Chart.defaults.plugins.legend.labels.generateLabels;
+                                            const labels = original(chart);
+                                            labels.forEach(label => {
+                                                if (label.text === 'Gelir') {
+                                                    label.fillStyle = 'rgb(34, 197, 94)';
+                                                } else if (label.text === 'Gider') {
+                                                    label.fillStyle = 'rgb(239, 68, 68)';
+                                                }
+                                            });
+                                            return labels;
+                                        }
+                                    }
+                                },
+                                tooltip: {
+                                    enabled: true,
+                                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                    padding: 12,
+                                    titleFont: {
+                                        size: 14,
+                                        weight: '600'
+                                    },
+                                    bodyFont: {
+                                        size: 13
+                                    },
+                                    borderColor: 'rgba(255, 255, 255, 0.1)',
+                                    borderWidth: 1,
+                                    cornerRadius: 8,
+                                    displayColors: true,
+                                    callbacks: {
+                                        title: function(context) {
+                                            return context[0].label;
+                                        },
+                                        label: function(context) {
+                                            const value = context.parsed.y;
+                                            const label = context.dataset.label;
+                                            const symbol = label === 'Gelir' ? '↑' : '↓';
+                                            return `${symbol} ${label}: ₺${value.toLocaleString('tr-TR', { 
+                                                minimumFractionDigits: 0, 
+                                                maximumFractionDigits: 0 
+                                            })}`;
+                                        },
+                                        footer: function(tooltipItems) {
+                                            if (tooltipItems.length === 2) {
+                                                const gelir = tooltipItems[0].parsed.y;
+                                                const gider = tooltipItems[1].parsed.y;
+                                                const net = gelir - gider;
+                                                const netColor = net >= 0 ? '#22c55e' : '#ef4444';
+                                                return `────────────────\nNet: ₺${net.toLocaleString('tr-TR', { 
+                                                    minimumFractionDigits: 0, 
+                                                    maximumFractionDigits: 0 
+                                                })}`;
+                                            }
+                                            return '';
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    grid: {
+                                        color: 'rgba(0, 0, 0, 0.05)',
+                                        drawBorder: false
+                                    },
+                                    ticks: {
+                                        callback: function(value) {
+                                            if (value >= 1000000) {
+                                                return '₺' + (value / 1000000).toFixed(1) + 'M';
+                                            } else if (value >= 1000) {
+                                                return '₺' + (value / 1000).toFixed(0) + 'K';
+                                            }
+                                            return '₺' + value.toLocaleString('tr-TR');
+                                        },
+                                        font: {
+                                            size: 11,
+                                            family: "'Inter', sans-serif"
+                                        },
+                                        color: '#6b7280',
+                                        padding: 8
+                                    }
+                                },
+                                x: {
+                                    grid: {
+                                        display: false,
+                                        drawBorder: false
+                                    },
+                                    ticks: {
+                                        font: {
+                                            size: 11,
+                                            family: "'Inter', sans-serif"
+                                        },
+                                        color: '#6b7280',
+                                        padding: 10
+                                    }
+                                }
+                            },
+                            animation: {
+                                duration: 1000,
+                                easing: 'easeInOutQuart'
+                            },
+                            elements: {
+                                point: {
+                                    hoverRadius: 8
+                                }
+                            }
+                        }
+                    });
+
+                } catch (error) {
+                    console.error('Finans verisi yüklenirken hata:', error);
+                    showError();
+                }
+            }
+
+            function showError() {
+                if (financeChartCanvas) {
+                    const ctx = financeChartCanvas.getContext('2d');
+                    ctx.clearRect(0, 0, financeChartCanvas.width, financeChartCanvas.height);
+                    ctx.fillStyle = '#9ca3af';
+                    ctx.font = 'bold 16px Inter, sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('Veri yüklenemedi', financeChartCanvas.width / 2, financeChartCanvas.height / 2 - 10);
+                    ctx.font = '14px Inter, sans-serif';
+                    ctx.fillText('Lütfen sayfayı yenileyin', financeChartCanvas.width / 2, financeChartCanvas.height / 2 + 15);
+                }
+            }
+
+            // İlk yükleme
+            loadFinanceOverview();
+
+            // Her 60 saniyede bir otomatik güncelle
+            setInterval(loadFinanceOverview, 60000);
+        }
+
+        // Lastik Satış Analizi Chart (3D Bar Chart)
+        const tireSalesCtx = document.getElementById('tireSalesChart');
+        if (tireSalesCtx) {
+            const tireSalesData = JSON.parse('{{ tire_sales_data|escapejs }}');
+
+            const tireSalesChart = new Chart(tireSalesCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Yaz', 'Kış', '4 Mevsim'],
+                    datasets: [{
+                        label: 'Binek',
+                        data: [
+                            tireSalesData.yaz.binek,
+                            tireSalesData.kis.binek,
+                            tireSalesData.dort_mevsim.binek
+                        ],
+                        backgroundColor: 'rgba(99, 102, 241, 0.8)',
+                        borderColor: '#6366f1',
+                        borderWidth: 2,
+                        borderRadius: 6,
+                        borderSkipped: false,
+                    }, {
+                        label: 'Ticari',
+                        data: [
+                            tireSalesData.yaz.ticari,
+                            tireSalesData.kis.ticari,
+                            tireSalesData.dort_mevsim.ticari
+                        ],
+                        backgroundColor: 'rgba(236, 72, 153, 0.8)',
+                        borderColor: '#ec4899',
+                        borderWidth: 2,
+                        borderRadius: 6,
+                        borderSkipped: false,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Lastik Satış Analizi - Mevsim ve Araç Tipi',
+                            font: {
+                                size: 14,
+                                weight: 'bold'
+                            }
+                        },
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                usePointStyle: true,
+                                padding: 20,
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    const vehicleType = context.dataset.label;
+                                    const value = context.parsed.y;
+                                    return `${vehicleType}: ${value} adet`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 16,
+                            ticks: {
+                                stepSize: 2,
+                                callback: function (value) {
+                                    return value;
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Satılan Adet',
+                                font: {
+                                    size: 12,
+                                    weight: 'bold'
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(0,0,0,0.1)',
+                                drawBorder: false
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Mevsim',
+                                font: {
+                                    size: 12,
+                                    weight: 'bold'
+                                }
+                            },
+                            grid: {
+                                display: false
+                            }
+                        }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    }
+                }
+            });
+        }
+
+        // Lastik Marka Dağılımı Chart (Doughnut) - Clean Implementation
+        const brandDistributionCtx = document.getElementById('brandDistributionChart');
+        if (brandDistributionCtx) {
+            let brandChart = null;
+
+            // Create brand distribution chart
+            async function createBrandChart() {
+                try {
+                    const response = await fetch('/dashboard/api/brand-distribution/');
+                    const data = await response.json();
+
+                    if (data.success && data.brands && data.brands.length > 0) {
+                        // Create chart with real data
+                        brandChart = new Chart(brandDistributionCtx, {
+                            type: 'doughnut',
+                            data: {
+                                labels: data.brands.map(brand => brand.name),
+                                datasets: [{
+                                    data: data.brands.map(brand => brand.count),
+                                    backgroundColor: data.brands.map(brand => brand.color),
+                                    borderWidth: 2,
+                                    borderColor: '#ffffff'
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        position: 'bottom',
+                                        labels: {
+                                            padding: 20,
+                                            usePointStyle: true,
+                                            font: {
+                                                size: 12
+                                            }
+                                        }
+                                    },
+                                    tooltip: {
+                                        callbacks: {
+                                            label: function (context) {
+                                                const label = context.label || '';
+                                                const value = context.parsed;
+                                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                                const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                                return `${label}: ${value} adet (${percentage}%)`;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        });
+
+                        console.log(`Brand chart created with ${data.brands.length} brands`);
+                    } else {
+                        // No data - show empty state
+                        brandChart = new Chart(brandDistributionCtx, {
+                            type: 'doughnut',
+                            data: {
+                                labels: ['Henüz veri yok'],
+                                datasets: [{
+                                    data: [1],
+                                    backgroundColor: ['#f1f5f9'],
+                                    borderWidth: 0
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        display: false
+                                    },
+                                    tooltip: {
+                                        enabled: false
+                                    }
+                                }
+                            }
+                        });
+
+                        console.log('No brand data available');
+                    }
+                } catch (error) {
+                    console.error('Brand chart creation error:', error);
+                    // Show error state
+                    brandChart = new Chart(brandDistributionCtx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Veri yüklenemedi'],
+                            datasets: [{
+                                data: [1],
+                                backgroundColor: ['#ef4444'],
+                                borderWidth: 0
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    display: false
+                                },
+                                tooltip: {
+                                    enabled: false
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+
+            // Create chart
+            createBrandChart();
+
+            // Refresh every 5 minutes
+            setInterval(createBrandChart, 300000);
+        }
+
+
+        // En Çok Alım Yaptığımız Cariler Chart (Bar Chart)
+        const topCustomersCtx = document.getElementById('topCustomersChart');
+        if (topCustomersCtx) {
+            const topCustomersData = JSON.parse('{{ top_customers_data|escapejs }}');
+
+            // Renkli bar chart için farklı renkler
+            const colors = [
+                'rgba(239, 68, 68, 0.8)',   // Kırmızı
+                'rgba(59, 130, 246, 0.8)',  // Mavi
+                'rgba(245, 158, 11, 0.8)',  // Sarı
+                'rgba(16, 185, 129, 0.8)',  // Yeşil
+                'rgba(139, 92, 246, 0.8)',  // Mor
+                'rgba(236, 72, 153, 0.8)',  // Pembe
+                'rgba(6, 182, 212, 0.8)',   // Cyan
+                'rgba(132, 204, 22, 0.8)'   // Lime
+            ];
+
+            const topCustomersChart = new Chart(topCustomersCtx, {
+                type: 'bar',
+                data: {
+                    labels: topCustomersData.labels,
+                    datasets: [{
+                        label: 'Toplam Alım (₺)',
+                        data: topCustomersData.data,
+                        backgroundColor: colors.slice(0, topCustomersData.labels.length),
+                        borderColor: colors.slice(0, topCustomersData.labels.length).map(color => color.replace('0.8', '1')),
+                        borderWidth: 2,
+                        borderRadius: 4,
+                        borderSkipped: false,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                usePointStyle: true,
+                                padding: 20
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                title: function (context) {
+                                    const details = topCustomersData.details[context[0].dataIndex];
+                                    return details.name;
+                                },
+                                label: function (context) {
+                                    const details = topCustomersData.details[context.dataIndex];
+                                    return [
+                                        'Toplam Alım: ₺' + context.parsed.y.toLocaleString('tr-TR'),
+                                        'Sipariş Sayısı: ' + details.count + ' adet'
+                                    ];
+                                }
+                            },
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: '#fff',
+                            bodyColor: '#fff',
+                            borderColor: 'rgba(255, 255, 255, 0.1)',
+                            borderWidth: 1
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(0,0,0,0.1)'
+                            },
+                            ticks: {
+                                callback: function (value) {
+                                    return '₺' + value.toLocaleString('tr-TR');
+                                }
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                maxRotation: 45,
+                                minRotation: 0
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+    });
+</script>
+{% endblock %}

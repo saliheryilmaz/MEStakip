@@ -1,0 +1,219 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Sipariş Envanteri Dashboard - Mestakip{% endblock %}
+{% block page_name %}orders{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-1">Sipariş Envanteri Dashboard</h1>
+        <p class="text-muted mb-0">Hızlı arama ve anlık sipariş özetleri</p>
+    </div>
+</div>
+
+<!-- Hızlı Arama: Cari ile Arama -->
+<form method="get" class="mb-4">
+    <div class="card">
+        <div class="card-body">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-6">
+                    <label class="form-label mb-1">Hızlı Arama</label>
+                    <input type="text" class="form-control" name="q" value="{{ q }}" placeholder="Firma adı yazın...">
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-primary w-100" type="submit">
+                        <i class="bi bi-search me-1"></i> Ara
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    </form>
+
+<!-- Özet Kartları -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted small">Toplam Adet</div>
+                        <div class="fs-4 fw-semibold">{{ stats.toplam_adet|default:0 }}</div>
+                    </div>
+                    <i class="bi bi-collection fs-2 text-primary"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted small">Stoktaki Adet</div>
+                        <div class="fs-4 fw-semibold">{{ stats.stoktaki_adet|default:0 }}</div>
+                    </div>
+                    <i class="bi bi-box-seam fs-2 text-success"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted small">Satıştaki Adet</div>
+                        <div class="fs-4 fw-semibold">{{ stats.satistaki_adet|default:0 }}</div>
+                    </div>
+                    <i class="bi bi-bag-check fs-2 text-info"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted small">Toplam Ciro</div>
+                        <div class="fs-4 fw-semibold">₺{{ stats.toplam_ciro|floatformat:2 }}</div>
+                    </div>
+                    <i class="bi bi-cash-coin fs-2 text-warning"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted small">Yolda Siparişler</div>
+                        <div class="fs-4 fw-semibold">{{ stats.yolda|default:0 }}</div>
+                    </div>
+                    <span class="badge bg-info">Yolda</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted small">İşlem Devam Ediyor Siparişler</div>
+                        <div class="fs-4 fw-semibold">{{ stats.islemde|default:0 }}</div>
+                    </div>
+                    <span class="badge bg-primary">İşlemde</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Son Eklenen İşlemler -->
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">Son Eklenen İşlemler</h5>
+        <div class="d-flex gap-2">
+            <a class="btn btn-sm btn-outline-secondary" href="{% url 'dashboard:elements' %}">Tümünü Gör</a>
+            <a class="btn btn-sm btn-success" href="{% url 'dashboard:yeni_lastik' %}">Yeni Ekle</a>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Cari</th>
+                    <th>Ürün</th>
+                    <th>Marka</th>
+                    <th>Grup</th>
+                    <th>Mevsim</th>
+                    <th class="text-end">Adet</th>
+                    <th class="text-end">Birim Fiyat</th>
+                    <th class="text-end">Toplam</th>
+                    <th>Durum</th>
+                    <th>Ambar</th>
+                    <th class="text-end">İşlemler</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in son_islemler %}
+                <tr>
+                    <td>{{ s.cari_firma }}</td>
+                    <td class="text-truncate" style="max-width:240px">{{ s.urun }}</td>
+                    <td>{{ s.marka }}</td>
+                    <td>{{ s.get_grup_display }}</td>
+                    <td>
+                        {% if s.mevsim == 'yaz' %}
+                            <img src="{% static 'images/yaz.png' %}" alt="Yaz" title="Yaz Lastiği" 
+                                 style="width: 24px; height: 24px; object-fit: contain; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+                        {% elif s.mevsim == 'kis' %}
+                            <img src="{% static 'images/kis.png' %}" alt="Kış" title="Kış Lastiği" 
+                                 style="width: 24px; height: 24px; object-fit: contain; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+                        {% elif s.mevsim == 'dort-mevsim' %}
+                            <img src="{% static 'images/dörtmevsim.png' %}" alt="4 Mevsim" title="4 Mevsim Lastiği" 
+                                 style="width: 24px; height: 24px; object-fit: contain; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">{{ s.adet }}</td>
+                    <td class="text-end">₺{{ s.birim_fiyat|floatformat:2 }}</td>
+                    <td class="text-end">₺{{ s.toplam_fiyat|floatformat:2 }}</td>
+                    <td><span class="badge bg-{{ s.get_durum_display_color }}">{{ s.get_durum_display }}</span></td>
+                    <td><span class="badge bg-secondary">{{ s.get_ambar_display }}</span></td>
+                    <td class="text-end">
+                        <a class="btn btn-sm btn-outline-primary" href="{% url 'dashboard:siparis_detay' s.id %}">Detay</a>
+                        <a class="btn btn-sm btn-outline-warning" href="{% url 'dashboard:siparis_duzenle' s.id %}">Düzenle</a>
+                        <a class="btn btn-sm btn-outline-success" href="{% url 'dashboard:siparis_whatsapp' s.id %}">WhatsApp</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="11" class="text-center text-muted py-4">Kayıt bulunamadı.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Marka Dağılımı -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Marka Dağılımı</h5>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-striped align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Marka</th>
+                    <th class="text-end">Kayıt</th>
+                    <th class="text-end">Adet</th>
+                    <th class="text-end">Tutar</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for m in marka_dagilimi %}
+                <tr>
+                    <td class="fw-medium">{{ m.marka }}</td>
+                    <td class="text-end">{{ m.kayit_sayisi|default:0 }}</td>
+                    <td class="text-end">{{ m.adet_toplam|default:0 }}</td>
+                    <td class="text-end">₺{{ m.tutar_toplam|floatformat:2 }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="text-center text-muted py-4">Marka dağılımı için veri yok.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

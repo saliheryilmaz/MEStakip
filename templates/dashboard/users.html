@@ -1,0 +1,210 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load tz %}
+
+{% block title %}Users - Mestakip{% endblock %}
+{% block page_name %}users{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">Users</h1>
+        <p class="text-muted mb-0">Kullanıcı yönetimi ve yetkilendirme.</p>
+        <small class="text-info">
+            <i class="bi bi-info-circle me-1"></i>
+            Mevcut Rol: <strong>
+                {% if user.is_superuser or user.is_staff or user_profile.role == 'admin' %}
+                    Admin
+                {% else %}
+                    Yönetici
+                {% endif %}
+            </strong>
+        </small>
+    </div>
+    {% if is_admin %}
+    <div class="d-flex gap-2">
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
+            <i class="bi bi-plus-lg me-2"></i>
+            Kullanıcı Ekle
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Users Content -->
+<div class="row g-4">
+    {% if is_admin %}
+    <!-- Admin View - Kullanıcı Listesi -->
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Kullanıcı Listesi</h5>
+            </div>
+            <div class="card-body">
+                {% if users_list %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Kullanıcı Adı</th>
+                                <th>Ad Soyad</th>
+                                <th>E-posta</th>
+                                <th>Rol</th>
+                                <th>Son Giriş</th>
+                                <th>Kayıt Tarihi</th>
+                                <th>Durum</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in users_list %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2">
+                                            {{ user.first_name|first|default:user.username|first|upper }}
+                                        </div>
+                                        <strong>{{ user.username }}</strong>
+                                    </div>
+                                </td>
+                                <td>{{ user.first_name }} {{ user.last_name }}</td>
+                                <td>{{ user.email|default:"-" }}</td>
+                                <td>
+                                    {% if user.is_superuser or user.is_staff or user.userprofile.role == 'admin' %}
+                                        <span class="badge bg-danger">Admin</span>
+                                    {% else %}
+                                        <span class="badge bg-info">Yönetici</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if user.last_login %}
+                                        {{ user.last_login|localtime|date:"d.m.Y H:i" }}
+                                    {% else %}
+                                        <span class="text-muted">Hiç giriş yapmamış</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ user.date_joined|localtime|date:"d.m.Y H:i" }}</td>
+                                <td>
+                                    {% if user.is_active %}
+                                        <span class="badge bg-success">Aktif</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Pasif</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-people text-muted" style="font-size: 3rem;"></i>
+                    <p class="text-muted mt-2">Henüz kullanıcı bulunmuyor.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <!-- Yönetici View - Sınırlı Görünüm -->
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Yetki Bilgisi</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning" role="alert">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Yönetici Rolü:</strong> Bu sayfada kullanıcı oluşturma ve yönetme yetkiniz bulunmamaktadır. 
+                    Sadece admin kullanıcıları bu işlemleri gerçekleştirebilir.
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card border-0 bg-light">
+                            <div class="card-body text-center">
+                                <i class="bi bi-person-check text-success" style="font-size: 2rem;"></i>
+                                <h6 class="mt-2">Mevcut Yetkileriniz</h6>
+                                <ul class="list-unstyled text-start mt-3">
+                                    <li><i class="bi bi-check-circle text-success me-2"></i>Sipariş görüntüleme</li>
+                                    <li><i class="bi bi-check-circle text-success me-2"></i>Rapor görüntüleme</li>
+                                    <li><i class="bi bi-check-circle text-success me-2"></i>Dashboard erişimi</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card border-0 bg-light">
+                            <div class="card-body text-center">
+                                <i class="bi bi-person-x text-danger" style="font-size: 2rem;"></i>
+                                <h6 class="mt-2">Kısıtlı Yetkiler</h6>
+                                <ul class="list-unstyled text-start mt-3">
+                                    <li><i class="bi bi-x-circle text-danger me-2"></i>Kullanıcı oluşturma</li>
+                                    <li><i class="bi bi-x-circle text-danger me-2"></i>Kullanıcı yönetimi</li>
+                                    <li><i class="bi bi-x-circle text-danger me-2"></i>Rol değiştirme</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Add User Modal (Sadece Admin için) -->
+{% if is_admin %}
+<div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addUserModalLabel">Yeni Kullanıcı Ekle</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="username" class="form-label">Kullanıcı Adı *</label>
+                            <input type="text" class="form-control" id="username" name="username" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="email" class="form-label">E-posta</label>
+                            <input type="email" class="form-control" id="email" name="email">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="first_name" class="form-label">Ad</label>
+                            <input type="text" class="form-control" id="first_name" name="first_name">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="last_name" class="form-label">Soyad</label>
+                            <input type="text" class="form-control" id="last_name" name="last_name">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="password" class="form-label">Şifre *</label>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="role" class="form-label">Rol</label>
+                            <select class="form-select" id="role" name="role">
+                                <option value="yonetici" selected>Yönetici</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-primary">Kullanıcı Oluştur</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

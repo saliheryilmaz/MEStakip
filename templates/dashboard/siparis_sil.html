@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load tz %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-danger">{{ page_title }}</h1>
+            <p class="text-muted mb-0">Bu işlem geri alınamaz!</p>
+        </div>
+        <div>
+            <a href="{% url 'dashboard:elements' %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left me-1"></i>
+                Geri Dön
+            </a>
+        </div>
+    </div>
+
+    <!-- Uyarı Kartı -->
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        Sipariş Silme Onayı
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger" role="alert">
+                        <h4 class="alert-heading">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            Dikkat!
+                        </h4>
+                        <p>Bu siparişi silmek üzeresiniz. Bu işlem <strong>geri alınamaz</strong> ve sipariş veritabanından tamamen kaldırılacaktır.</p>
+                        <hr>
+                        <p class="mb-0">Emin misiniz? Devam etmek için aşağıdaki butona tıklayın.</p>
+                    </div>
+                    
+                    <!-- Silinecek Sipariş Bilgileri -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="card-title mb-0">
+                                <i class="bi bi-info-circle me-2"></i>
+                                Silinecek Sipariş Bilgileri
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-2">
+                                        <strong>Sipariş No:</strong> #{{ siparis.id }}
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Cari (Firma):</strong> {{ siparis.cari_firma }}
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Marka:</strong> {{ siparis.marka }}
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Ürün:</strong> {{ siparis.urun }}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-2">
+                                        <strong>Grup:</strong> 
+                                        <span class="badge bg-{{ siparis.get_grup_display_color }}">{{ siparis.get_grup_display }}</span>
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Mevsim:</strong> 
+                                        <span class="badge bg-{{ siparis.get_mevsim_display_color }}">{{ siparis.get_mevsim_display }}</span>
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Adet:</strong> {{ siparis.adet }}
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Toplam Fiyat:</strong> ₺{{ siparis.toplam_fiyat|floatformat:2 }}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-12">
+                                    <div class="mb-2">
+                                        <strong>Oluşturma Tarihi:</strong> 
+                                        <i class="bi bi-calendar-plus me-1"></i>
+                                        {{ siparis.olusturma_tarihi|localtime|date:"d.m.Y" }}
+                                        <small class="text-muted ms-2">
+                                            <i class="bi bi-clock me-1"></i>
+                                            {{ siparis.olusturma_tarihi|localtime|date:"H:i" }}
+                                        </small>
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Son Güncelleme:</strong> 
+                                        <i class="bi bi-calendar-check me-1"></i>
+                                        {{ siparis.guncelleme_tarihi|localtime|date:"d.m.Y" }}
+                                        <small class="text-muted ms-2">
+                                            <i class="bi bi-clock me-1"></i>
+                                            {{ siparis.guncelleme_tarihi|localtime|date:"H:i" }}
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Silme Formu -->
+                    <form method="post" id="silmeForm">
+                        {% csrf_token %}
+                        <div class="d-flex gap-2 justify-content-center">
+                            <button type="submit" class="btn btn-danger btn-lg" onclick="return confirm('Son kez soruyorum: Bu siparişi silmek istediğinizden emin misiniz?')">
+                                <i class="bi bi-trash me-2"></i>
+                                Evet, Siparişi Sil
+                            </button>
+                            <a href="{% url 'dashboard:elements' %}" class="btn btn-secondary btn-lg">
+                                <i class="bi bi-x-lg me-2"></i>
+                                İptal Et
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Sipariş silme sayfası yüklendi');
+    
+    const silmeForm = document.getElementById('silmeForm');
+    
+    if (silmeForm) {
+        silmeForm.addEventListener('submit', function(e) {
+            const confirmed = confirm('Son kez soruyorum: Bu siparişi silmek istediğinizden emin misiniz?');
+            if (!confirmed) {
+                e.preventDefault();
+                console.log('Silme işlemi iptal edildi');
+            } else {
+                console.log('Silme işlemi onaylandı');
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

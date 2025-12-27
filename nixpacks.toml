@@ -1,0 +1,20 @@
+[phases.setup]
+nixPkgs = ['python311', 'pip', 'bash', 'nodejs20']
+aptPkgs = ['libsqlite3-0', 'libsqlite3-dev', 'sqlite3']
+
+[phases.install]
+cmds = [
+    'npm install',
+    'pip install --upgrade pip',
+    'pip install -r requirements.txt'
+]
+
+[phases.build]
+cmds = [
+    'npm run build',
+    'python manage.py collectstatic --noinput',
+    'chmod +x railway_start.sh'
+]
+
+[start]
+cmd = 'bash railway_start.sh'

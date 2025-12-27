@@ -1,0 +1,2078 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+
+<head>
+    <!-- Meta Tags -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Modern Bootstrap 5 Admin Template - Clean, responsive dashboard">
+    <meta name="keywords" content="bootstrap, admin, dashboard, template, modern, responsive">
+    <meta name="author" content="Bootstrap Admin Template">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="Mestakip">
+    <meta property="og:description" content="Clean and modern admin dashboard template built with Bootstrap 5">
+    <meta property="og:type" content="website">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{% load static %}{% static 'images/favicon.ico' %}?v={{ timestamp }}">
+
+    <!-- Preconnect to external domains -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Title -->
+    <title>{% block title %}Dashboard - Mestakip{% endblock %}</title>
+
+    <!-- Theme Color -->
+    <meta name="theme-color" content="#6366f1">
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="{% load static %}{% static 'manifest.json' %}">
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.css" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{% load static %}{% static 'main-DLfE7m78.css' %}">
+
+    <!-- Override Bootstrap Icons font-face to use CDN fonts to avoid local font decode warnings -->
+    <style>
+        @font-face {
+            font-family: "bootstrap-icons";
+            src: url("https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/fonts/bootstrap-icons.woff2") format("woff2"),
+                url("https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/fonts/bootstrap-icons.woff") format("woff");
+            font-display: swap;
+        }
+
+        /* Finance Payment Fields Styles */
+        .payment-field {
+            transition: all 0.3s ease;
+        }
+
+        .payment-field:focus {
+            box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+        }
+
+        .payment-field.selected {
+            background-color: #e8f5e8 !important;
+            border-color: #28a745 !important;
+            box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+        }
+
+        .payment-field.focused {
+            background-color: #f8f9fa !important;
+        }
+        
+        /* Logo Styles */
+        .navbar-logo, .sidebar-logo {
+            object-fit: contain;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 4px;
+            transition: all 0.3s ease;
+        }
+        
+        .navbar-logo:hover, .sidebar-logo:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+        }
+        
+        .sidebar-logo {
+            background: rgba(255, 255, 255, 0.15);
+        }
+    </style>
+
+    {% block extra_css %}{% endblock %}
+
+    <!-- Sidebar Toggle Styles -->
+    <style>
+        .admin-wrapper {
+            transition: all 0.3s ease;
+        }
+
+        .admin-sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            background: #1f2937;
+            z-index: 1000;
+            overflow-y: auto;
+            width: 250px;
+            transition: width 0.3s ease;
+        }
+
+        .admin-sidebar .nav-link span {
+            transition: opacity 0.3s ease;
+        }
+
+        .admin-sidebar .nav-link .badge {
+            transition: opacity 0.3s ease;
+        }
+
+        .admin-sidebar .nav-link .ms-auto {
+            transition: opacity 0.3s ease;
+        }
+
+        .admin-sidebar .text-muted {
+            transition: opacity 0.3s ease;
+        }
+
+        /* Collapse icon rotation */
+        .admin-sidebar .collapse-icon {
+            transition: transform 0.3s ease;
+        }
+
+        .admin-sidebar .nav-link[aria-expanded="true"] .collapse-icon {
+            transform: rotate(180deg);
+        }
+
+        .admin-main {
+            margin-left: 250px;
+            min-height: 100vh;
+            background: #f8fafc;
+            transition: margin-left 0.3s ease;
+        }
+
+        .admin-wrapper.sidebar-collapsed .admin-sidebar {
+            width: 60px;
+            overflow: hidden;
+        }
+
+        .admin-wrapper.sidebar-collapsed .admin-main {
+            margin-left: 60px;
+        }
+
+        .admin-wrapper.sidebar-collapsed .admin-sidebar .nav-link span {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .admin-wrapper.sidebar-collapsed .admin-sidebar .nav-link .badge {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .admin-wrapper.sidebar-collapsed .admin-sidebar .nav-link .ms-auto {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .admin-wrapper.sidebar-collapsed .admin-sidebar .text-muted {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .admin-wrapper.sidebar-collapsed .admin-sidebar .nav-link {
+            justify-content: center;
+            padding: 0.75rem 0.5rem;
+        }
+
+        .admin-wrapper.sidebar-collapsed .admin-sidebar .nav-link i {
+            margin-right: 0;
+        }
+
+        .admin-wrapper.sidebar-collapsed .admin-sidebar .navbar-brand {
+            justify-content: center;
+            padding: 1rem 0.5rem;
+        }
+
+        .admin-wrapper.sidebar-collapsed .admin-sidebar .navbar-brand h1 {
+            display: none;
+        }
+
+        .admin-wrapper.sidebar-collapsed .admin-sidebar .navbar-brand img {
+            margin-right: 0;
+        }
+
+        .admin-wrapper.sidebar-collapsed .admin-sidebar .sidebar-header {
+            justify-content: center;
+            padding: 1rem 0.5rem;
+        }
+
+        /* Hide toggle button when sidebar is collapsed (Railway style) */
+        .admin-wrapper.sidebar-collapsed .sidebar-toggle-btn {
+            display: none !important;
+        }
+
+        /* Hide unwanted toast notifications (CSS fallback) */
+        .toast-body:has(span:contains("Application loaded successfully")),
+        .toast:has(.toast-body span:contains("Application loaded successfully")) {
+            display: none !important;
+        }
+
+        .admin-sidebar .sidebar-header .sidebar-toggle-btn,
+        .sidebar-toggle-btn {
+            display: flex !important;
+            background: #6366f1 !important;
+            border: 2px solid #4f46e5 !important;
+            color: white !important;
+            padding: 0.75rem !important;
+            border-radius: 8px !important;
+            transition: all 0.3s ease !important;
+            min-width: 50px !important;
+            height: 50px !important;
+            align-items: center !important;
+            justify-content: center !important;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2) !important;
+            cursor: pointer !important;
+            font-size: 1rem !important;
+            position: relative !important;
+            z-index: 1000 !important;
+            margin: 0 !important;
+            font-family: inherit !important;
+            line-height: 1.5 !important;
+            text-align: center !important;
+            text-decoration: none !important;
+            vertical-align: middle !important;
+            user-select: none !important;
+        }
+
+        .admin-sidebar .sidebar-header .sidebar-toggle-btn:hover,
+        .sidebar-toggle-btn:hover {
+            background: #4f46e5 !important;
+            border-color: #3730a3 !important;
+            color: white !important;
+            transform: scale(1.05) !important;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3) !important;
+        }
+
+        .admin-sidebar .sidebar-header .sidebar-toggle-btn i,
+        .sidebar-toggle-btn i {
+            font-size: 1.2rem !important;
+            font-weight: bold !important;
+            color: white !important;
+        }
+
+        /* Mobile Responsive Styles */
+        @media (max-width: 768px) {
+
+            /* Sidebar Mobile Ayarları */
+            .admin-sidebar {
+                transform: translateX(-100%);
+                z-index: 1050;
+                position: fixed;
+                width: 280px;
+            }
+
+            .admin-main {
+                margin-left: 0;
+                padding: 1rem;
+            }
+
+            .admin-wrapper.sidebar-collapsed .admin-sidebar {
+                transform: translateX(-100%);
+            }
+
+            /* Navbar Mobile Ayarları */
+            .navbar .container-fluid {
+                padding: 0.5rem 1rem;
+            }
+
+            .navbar-brand h1 {
+                font-size: 1.2rem;
+            }
+
+            .search-container {
+                display: none;
+                /* Mobilde arama çubuğunu gizle */
+            }
+
+            .navbar-nav.flex-row {
+                gap: 0.5rem;
+            }
+
+            .navbar-nav .btn {
+                padding: 0.5rem;
+                font-size: 0.9rem;
+            }
+
+            /* Dashboard Mobile Ayarları */
+            .d-flex.justify-content-between.align-items-center {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+
+            .d-flex.gap-2 {
+                width: 100%;
+                justify-content: space-between;
+                flex-wrap: wrap;
+            }
+
+            .d-flex.gap-2 .btn {
+                flex: 1;
+                min-width: 120px;
+                font-size: 0.85rem;
+                padding: 0.5rem 0.75rem;
+            }
+
+            /* Stats Cards Mobile */
+            .stats-card .card-body {
+                padding: 1rem;
+            }
+
+            .stats-icon {
+                width: 40px;
+                height: 40px;
+            }
+
+            .stats-card h3 {
+                font-size: 1.5rem;
+            }
+
+            /* Table Mobile Ayarları */
+            .table-responsive {
+                font-size: 0.85rem;
+            }
+
+            .table th,
+            .table td {
+                padding: 0.5rem 0.25rem;
+                white-space: nowrap;
+            }
+
+            /* Card Mobile Ayarları */
+            .card {
+                margin-bottom: 1rem;
+            }
+
+            .card-header {
+                padding: 0.75rem 1rem;
+            }
+
+            .card-body {
+                padding: 1rem;
+            }
+
+            /* Form Mobile Ayarları */
+            .form-control,
+            .form-select {
+                font-size: 16px;
+                /* iOS zoom önleme */
+            }
+
+            /* Modal Mobile Ayarları */
+            .modal-dialog {
+                margin: 0.5rem;
+                max-width: calc(100% - 1rem);
+            }
+
+            .modal-body {
+                padding: 1rem;
+            }
+
+            /* Bildirim Dropdown Mobile */
+            .dropdown-menu {
+                width: 300px !important;
+                max-width: calc(100vw - 2rem);
+                left: auto !important;
+                right: 0 !important;
+            }
+
+            .notification-item {
+                padding: 0.75rem;
+            }
+
+            .notification-title {
+                font-size: 0.9rem;
+            }
+
+            .notification-message {
+                font-size: 0.8rem;
+            }
+        }
+
+        /* Tablet Responsive Styles */
+        @media (max-width: 1024px) and (min-width: 769px) {
+            .admin-sidebar {
+                width: 220px;
+            }
+
+            .admin-main {
+                margin-left: 220px;
+            }
+
+            .admin-wrapper.sidebar-collapsed .admin-main {
+                margin-left: 60px;
+            }
+
+            .search-container {
+                max-width: 300px;
+            }
+
+            .d-flex.gap-2 .btn {
+                font-size: 0.9rem;
+                padding: 0.6rem 1rem;
+            }
+        }
+
+        /* Extra Small Mobile (iPhone SE, etc.) */
+        @media (max-width: 480px) {
+            .admin-main {
+                padding: 0.5rem;
+            }
+
+            .navbar-brand h1 {
+                font-size: 1rem;
+            }
+
+            .d-flex.gap-2 .btn {
+                font-size: 0.8rem;
+                padding: 0.4rem 0.6rem;
+                min-width: 100px;
+            }
+
+            .stats-card h3 {
+                font-size: 1.3rem;
+            }
+
+            .card-header h5 {
+                font-size: 1rem;
+            }
+
+            .table-responsive {
+                font-size: 0.8rem;
+            }
+
+            .dropdown-menu {
+                width: 280px !important;
+            }
+        }
+
+        /* Landscape Mobile */
+        @media (max-width: 768px) and (orientation: landscape) {
+            .admin-main {
+                padding: 0.5rem;
+            }
+
+            .stats-card .card-body {
+                padding: 0.75rem;
+            }
+
+            .d-flex.justify-content-between.align-items-center {
+                flex-direction: row;
+                align-items: center;
+            }
+
+            .d-flex.gap-2 {
+                width: auto;
+            }
+        }
+
+        /* Touch Device Optimizations */
+        @media (hover: none) and (pointer: coarse) {
+            .btn {
+                min-height: 44px;
+                /* Apple touch target minimum */
+            }
+
+            .nav-link {
+                min-height: 44px;
+                display: flex;
+                align-items: center;
+            }
+
+            .dropdown-item {
+                min-height: 44px;
+                display: flex;
+                align-items: center;
+            }
+
+            .notification-item {
+                min-height: 60px;
+            }
+        }
+    </style>
+</head>
+
+<body data-page="{% block page_name %}dashboard{% endblock %}" class="admin-layout">
+    <!-- Main Wrapper -->
+    <div class="admin-wrapper" id="admin-wrapper">
+
+        <!-- Header -->
+        <header class="admin-header">
+            <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom" style="overflow: visible !important;">
+                <div class="container-fluid">
+                    <!-- Mobile Sidebar Toggle (sadece mobilde görünür) -->
+                    <button class="btn btn-outline-primary d-lg-none me-2" type="button" onclick="toggleMobileSidebar()"
+                        aria-label="Toggle sidebar">
+                        <i class="bi bi-list"></i>
+                    </button>
+
+                    <!-- Logo/Brand - Now first on the left -->
+                    <a class="navbar-brand d-flex align-items-center" href="{% url 'dashboard:index' %}">
+                        <img src="{% load static %}{% static 'images/mestakip1.png' %}" alt="Logo" height="40"
+                            class="d-inline-block align-text-top me-2 navbar-logo">
+                       
+                    </a>
+
+                    <!-- Search Bar -->
+                    <div class="search-container flex-grow-1 mx-4">
+                        <div class="position-relative">
+                            <input type="search" class="form-control" placeholder="Search... (Ctrl+K)" data-search-input
+                                aria-label="Search">
+                            <i class="bi bi-search position-absolute top-50 end-0 translate-middle-y me-3"></i>
+                        </div>
+                    </div>
+
+                    <!-- Right Side Icons -->
+                    <div class="navbar-nav flex-row">
+                        <!-- Theme Toggle -->
+                        <button class="btn btn-outline-secondary me-2" type="button" data-theme-toggle
+                            data-bs-toggle="tooltip" data-bs-placement="bottom" title="Toggle theme">
+                            <i class="bi bi-sun-fill"></i>
+                        </button>
+
+                        <!-- Fullscreen Toggle -->
+                        <button class="btn btn-outline-secondary me-2" type="button" data-fullscreen-toggle
+                            data-bs-toggle="tooltip" data-bs-placement="bottom" title="Toggle fullscreen">
+                            <i class="bi bi-arrows-fullscreen icon-hover"></i>
+                        </button>
+
+                        <!-- Notifications -->
+                        <button class="btn btn-outline-secondary me-2 position-relative" type="button" data-bs-toggle="modal" data-bs-target="#notificationModal">
+                            <i class="bi bi-bell"></i>
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="notificationBadge" style="display: none;">
+                                0
+                            </span>
+                        </button>
+
+                        <!-- User Info & Logout -->
+                        {% if user.is_authenticated %}
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="text-white">{{ user.username }}</span>
+                            <a href="{% url 'dashboard:logout' %}" class="btn btn-outline-light btn-sm">
+                                <i class="bi bi-box-arrow-right me-1"></i>
+                                Çıkış
+                            </a>
+                        </div>
+                        {% else %}
+                        <a href="{% url 'dashboard:login' %}" class="btn btn-primary">
+                            <i class="bi bi-box-arrow-in-right me-1"></i>
+                            Giriş Yap
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </nav>
+        </header>
+
+        <!-- Sidebar -->
+        <aside class="admin-sidebar" id="admin-sidebar">
+            <div class="sidebar-content">
+                <!-- Sidebar Header -->
+                <div class="sidebar-header d-flex align-items-center justify-content-between p-3">
+                    <a class="navbar-brand d-flex align-items-center" href="{% url 'dashboard:index' %}">
+                        <img src="{% load static %}{% static 'images/mestakip1.png' %}" alt="Logo" height="40"
+                            class="d-inline-block align-text-top me-2 sidebar-logo">
+                        <h1 class="h4 mb-0 fw-bold text-white">MesTakip</h1>
+                    </a>
+                    <button class="sidebar-toggle-btn" type="button" data-sidebar-toggle aria-label="Toggle sidebar"
+                        title="Toggle Sidebar">
+                        <i class="bi bi-list"></i>
+                    </button>
+                </div>
+
+                <nav class="sidebar-nav">
+                    <ul class="nav flex-column">
+                        <!-- Ana -->
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'index' %}active{% endif %}"
+                                href="{% url 'dashboard:index' %}">
+                                <i class="bi bi-speedometer2"></i>
+                                <span>Dashboard</span>
+                            </a>
+                        </li>
+                       
+
+                        <!-- Siparişler -->
+                        <li class="nav-item mt-3">
+                            <small class="text-muted px-3 text-uppercase fw-bold">Siparişler</small>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="collapse" data-bs-target="#sidebarOrders" href="#" role="button" aria-expanded="false" aria-controls="sidebarOrders">
+                                <i class="bi bi-box-seam"></i>
+                                <span>Sipariş Yönetimi</span>
+                                <i class="bi bi-chevron-down ms-auto collapse-icon"></i>
+                            </a>
+                            <div class="collapse" id="sidebarOrders">
+                                <ul class="nav flex-column ms-3 my-2">
+                                    <li class="nav-item"><a class="nav-link" href="{% url 'dashboard:analytics' %}"><span>Analist</span></a></li>
+                                    <li class="nav-item"><a class="nav-link" href="{% url 'dashboard:yeni_lastik' %}"><span>Yeni Sipariş Ekle</span></a></li>
+                                    <li class="nav-item"><a class="nav-link" href="{% url 'dashboard:elements' %}"><span>Sipariş Hareketleri</span></a></li>
+                                    <li class="nav-item"><a class="nav-link" href="{% url 'dashboard:forms' %}"><span>Kontrol Edilen</span></a></li>
+                                    <li class="nav-item"><a class="nav-link" href="{% url 'dashboard:reports' %}"><span>İptal Siparişler</span></a></li>
+                                </ul>
+                            </div>
+                        </li>
+
+                        <!-- Finance -->
+                        <li class="nav-item mt-3">
+                            <small class="text-muted px-3 text-uppercase fw-bold">Finans</small>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="collapse" data-bs-target="#sidebarFinance" href="#" role="button" aria-expanded="false" aria-controls="sidebarFinance">
+                                <i class="bi bi-cash-coin"></i>
+                                <span>Finans Takip Yönetimi</span>
+                                <i class="bi bi-chevron-down ms-auto collapse-icon"></i>
+                            </a>
+                            <div class="collapse" id="sidebarFinance">
+                                <ul class="nav flex-column ms-3 my-2">
+                                    <li class="nav-item"><a class="nav-link" href="{% url 'dashboard:finance' %}"><span>İşlem Ekle</span></a></li>
+                                    <li class="nav-item"><a class="nav-link" href="{% url 'dashboard:products' %}"><span>Günlük Kasa Hareketleri</span></a></li>
+                                    <li class="nav-item"><a class="nav-link" href="{% url 'dashboard:messages' %}"><span>Kasa Toplamları</span></a></li>
+                                    <li class="nav-item"><a class="nav-link" href="{% url 'dashboard:income_expense_report' %}"><span>Gelir/Gider Raporu</span></a></li>
+                                    <li class="nav-item"><a class="nav-link" href="{% url 'dashboard:kategoriler' %}"><span>Kategoriler</span></a></li>
+                                </ul>
+                            </div>
+                        </li>
+
+                        <!-- Diğer -->
+                        <li class="nav-item mt-3">
+                            <small class="text-muted px-3 text-uppercase fw-bold">Diğer</small>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'dashboard:calendar' %}">
+                                <i class="bi bi-calendar-event"></i>
+                                <span>Takvim</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'dashboard:cikma_lastikler' %}">
+                                <i class="bi bi-arrow-down-circle"></i>
+                                <span>Çıkma Lastikler</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'dashboard:users' %}">
+                                <i class="bi bi-people"></i>
+                                <span>Kullanıcılar</span>
+                            </a>
+                        </li>
+
+                        <li class="nav-item mt-3">
+                            <small class="text-muted px-3 text-uppercase fw-bold">Admin</small>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'dashboard:settings' %}">
+                                <i class="bi bi-gear"></i>
+                                <span>Settings</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'dashboard:security' %}">
+                                <i class="bi bi-shield-check"></i>
+                                <span>Security</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'dashboard:help' %}">
+                                <i class="bi bi-question-circle"></i>
+                                <span>Help & Support</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'dashboard:logout' %}">
+                                <i class="bi bi-box-arrow-right"></i>
+                                <span>Çıkış Yap</span>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </aside>
+
+
+        <!-- Main Content -->
+        <main class="admin-main">
+            <div class="container-fluid p-4 p-lg-5">
+                {% block content %}
+                {% endblock %}
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="admin-footer">
+            <div class="container-fluid">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p class="mb-0 text-muted">© 2025 Mestakip</p>
+                    </div>
+                </div>
+            </div>
+        </footer>
+    </div> <!-- /.admin-wrapper -->
+
+    <!-- Notification Modal -->
+    <div class="modal fade" id="notificationModal" tabindex="-1" aria-labelledby="notificationModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="notificationModalLabel">
+                        <i class="bi bi-bell me-2"></i>Bildirimler
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div id="notificationList">
+                        <div class="text-center text-muted py-4">
+                            <i class="bi bi-bell-slash fs-4 d-block mb-2"></i>
+                            Henüz bildirim yok
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="markAllReadBtn">
+                        <i class="bi bi-check-all me-1"></i>Tümünü Okundu İşaretle
+                    </button>
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div aria-live="polite" aria-atomic="true" class="position-fixed top-0 end-0 p-3" style="z-index: 11">
+        <div id="toast-container"></div>
+    </div>
+
+    <!-- Bootstrap JS (bundle includes Popper) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    
+    <!-- Dropdown Initialization -->
+    <script src="{% load static %}{% static 'dropdown-init.js' %}"></script>
+    
+
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Chart.js Configuration -->
+    <script>
+        // Ensure Chart.js is properly configured
+        if (typeof Chart !== 'undefined') {
+            // Chart.js v4+ has Filler plugin built-in, just need to ensure defaults are set
+            Chart.defaults.elements.line.fill = false; // Disable fill by default to avoid warnings
+        }
+    </script>
+
+    <!-- Suppress unwanted toast notifications and console messages - MUST BE BEFORE main.js -->
+    <script>
+        // Hide unwanted toast notifications
+        (function () {
+            // MutationObserver to watch for toast notifications
+            const observer = new MutationObserver(function (mutations) {
+                mutations.forEach(function (mutation) {
+                    mutation.addedNodes.forEach(function (node) {
+                        if (node.nodeType === 1) { // Element node
+                            // Check if it's a toast with unwanted message
+                            const toastBody = node.querySelector('.toast-body');
+                            if (toastBody) {
+                                const text = toastBody.textContent || toastBody.innerText;
+                                if (text.includes('Application loaded successfully') ||
+                                    text.includes('Admin App initialized') ||
+                                    text.includes('Dashboard Manager initialized')) {
+                                    // Remove the toast immediately
+                                    node.remove();
+                                }
+                            }
+                        }
+                    });
+                });
+            });
+
+            // Start observing when DOM is ready
+            if (document.body) {
+                observer.observe(document.body, {
+                    childList: true,
+                    subtree: true
+                });
+            } else {
+                document.addEventListener('DOMContentLoaded', function () {
+                    observer.observe(document.body, {
+                        childList: true,
+                        subtree: true
+                    });
+                });
+            }
+        })();
+
+        // Override console methods to filter out unwanted messages
+        (function () {
+            const originalLog = console.log;
+            const originalInfo = console.info;
+            const originalDebug = console.debug;
+            const originalWarn = console.warn;
+
+            // List of unwanted message patterns
+            const blockedPatterns = [
+                'Application loaded successfully',
+                'application loaded successfully',
+                'App loaded successfully',
+                'Admin App initialized',
+                'admin app initialized',
+                'Dashboard Manager initialized',
+                'Advanced Dashboard Manager',
+                'dashboard manager',
+                '🚀',
+                'loaded successfully',
+                'initialized successfully'
+            ];
+
+            // Check if message should be blocked
+            function shouldBlock(message) {
+                const msgStr = String(message).toLowerCase();
+                return blockedPatterns.some(pattern =>
+                    msgStr.includes(pattern.toLowerCase())
+                );
+            }
+
+            // Override console.log
+            console.log = function (...args) {
+                const message = args.join(' ');
+                if (shouldBlock(message)) {
+                    return; // Block this message
+                }
+                originalLog.apply(console, args);
+            };
+
+            // Override console.info
+            console.info = function (...args) {
+                const message = args.join(' ');
+                if (shouldBlock(message)) {
+                    return; // Block this message
+                }
+                originalInfo.apply(console, args);
+            };
+
+            // Override console.debug
+            console.debug = function (...args) {
+                const message = args.join(' ');
+                if (shouldBlock(message)) {
+                    return; // Block this message
+                }
+                originalDebug.apply(console, args);
+            };
+
+            // Override console.warn (optional)
+            console.warn = function (...args) {
+                const message = args.join(' ');
+                if (shouldBlock(message)) {
+                    return; // Block this message
+                }
+                originalWarn.apply(console, args);
+            };
+
+        })();
+    </script>
+
+    <!-- Custom JS (ES Module build) -->
+    <script type="module" src="{% load static %}{% static 'main-f0Mg-34g.js' %}"></script>
+
+    <!-- Page specific scripts -->
+    {% block extra_js %}
+    {% endblock %}
+
+    <!-- Sidebar Toggle Script -->
+    <script>
+        // FORCE RESET: Sidebar açık olsun (bu satırı bir kez çalıştırın, sonra silin)
+        localStorage.setItem('sidebar-collapsed', 'false');
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const toggleButton = document.querySelector('[data-sidebar-toggle]');
+            const wrapper = document.getElementById('admin-wrapper');
+
+            if (toggleButton && wrapper) {
+                // Set initial state from localStorage (default: open/false)
+                const savedState = localStorage.getItem('sidebar-collapsed');
+
+                // If no saved state, default to open (false)
+                // If saved state is 'true', collapse the sidebar
+                if (savedState === 'true') {
+                    wrapper.classList.add('sidebar-collapsed');
+                } else {
+                    // Ensure sidebar is open by default
+                    wrapper.classList.remove('sidebar-collapsed');
+                    // Set default state if not set
+                    if (savedState === null) {
+                        localStorage.setItem('sidebar-collapsed', 'false');
+                    }
+                }
+
+                // Attach click listener
+                toggleButton.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const isCurrentlyCollapsed = wrapper.classList.contains('sidebar-collapsed');
+
+                    if (isCurrentlyCollapsed) {
+                        // Show sidebar
+                        wrapper.classList.remove('sidebar-collapsed');
+                        localStorage.setItem('sidebar-collapsed', 'false');
+                    } else {
+                        // Hide sidebar
+                        wrapper.classList.add('sidebar-collapsed');
+                        localStorage.setItem('sidebar-collapsed', 'true');
+                    }
+                });
+
+                // Logo'ya tıklayınca sidebar'ı aç (Railway style)
+                const logo = document.querySelector('.admin-sidebar .navbar-brand');
+                if (logo) {
+                    logo.addEventListener('click', function (e) {
+                        const isCurrentlyCollapsed = wrapper.classList.contains('sidebar-collapsed');
+
+                        if (isCurrentlyCollapsed) {
+                            e.preventDefault();
+                            // Show sidebar
+                            wrapper.classList.remove('sidebar-collapsed');
+                            localStorage.setItem('sidebar-collapsed', 'false');
+                        }
+                        // Eğer sidebar açıksa, normal link davranışı (dashboard'a git)
+                    });
+                }
+            }
+
+            // Collapse event listeners for sidebar navigation - Manual toggle implementation
+            const collapseElements = document.querySelectorAll('.admin-sidebar .collapse');
+            collapseElements.forEach(function(collapseElement) {
+                const collapseId = collapseElement.getAttribute('id');
+                const toggleLink = document.querySelector(`[data-bs-target="#${collapseId}"]`);
+                
+                if (toggleLink && typeof bootstrap !== 'undefined') {
+                    // Remove data-bs-toggle to prevent Bootstrap's automatic handling
+                    toggleLink.removeAttribute('data-bs-toggle');
+                    
+                    // Manual toggle implementation
+                    toggleLink.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        
+                        // Get or create Bootstrap Collapse instance
+                        let bsCollapse = bootstrap.Collapse.getInstance(collapseElement);
+                        if (!bsCollapse) {
+                            bsCollapse = new bootstrap.Collapse(collapseElement, {
+                                toggle: false
+                            });
+                        }
+                        
+                        // Check current state and toggle
+                        const isExpanded = collapseElement.classList.contains('show');
+                        if (isExpanded) {
+                            bsCollapse.hide();
+                        } else {
+                            bsCollapse.show();
+                        }
+                    });
+                    
+                    // Bootstrap collapse event listeners for aria-expanded and icon rotation
+                    collapseElement.addEventListener('show.bs.collapse', function() {
+                        toggleLink.setAttribute('aria-expanded', 'true');
+                    });
+                    
+                    collapseElement.addEventListener('hide.bs.collapse', function() {
+                        toggleLink.setAttribute('aria-expanded', 'false');
+                    });
+                    
+                    collapseElement.addEventListener('shown.bs.collapse', function() {
+                        toggleLink.setAttribute('aria-expanded', 'true');
+                    });
+                    
+                    collapseElement.addEventListener('hidden.bs.collapse', function() {
+                        toggleLink.setAttribute('aria-expanded', 'false');
+                    });
+                    
+                    // Set initial state based on collapse element
+                    if (collapseElement.classList.contains('show')) {
+                        toggleLink.setAttribute('aria-expanded', 'true');
+                    } else {
+                        toggleLink.setAttribute('aria-expanded', 'false');
+                    }
+                }
+            });
+        });
+    </script>
+
+    <!-- Theme Toggle Script -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const themeToggleButton = document.querySelector('[data-theme-toggle]');
+            const htmlElement = document.documentElement;
+
+            // Set initial theme from localStorage
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            htmlElement.setAttribute('data-bs-theme', savedTheme);
+
+            // Update button icon based on current theme
+            updateThemeIcon(savedTheme);
+
+            if (themeToggleButton) {
+                themeToggleButton.addEventListener('click', function (e) {
+                    e.preventDefault();
+
+                    const currentTheme = htmlElement.getAttribute('data-bs-theme');
+                    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+
+                    // Apply new theme
+                    htmlElement.setAttribute('data-bs-theme', newTheme);
+                    localStorage.setItem('theme', newTheme);
+
+                    // Update button icon
+                    updateThemeIcon(newTheme);
+                });
+            }
+
+            function updateThemeIcon(theme) {
+                if (themeToggleButton) {
+                    const icon = themeToggleButton.querySelector('i');
+                    if (icon) {
+                        if (theme === 'light') {
+                            icon.className = 'bi bi-sun-fill';
+                        } else {
+                            icon.className = 'bi bi-moon-fill';
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+
+    <!-- Fullscreen Toggle Script -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const fullscreenToggleButton = document.querySelector('[data-fullscreen-toggle]');
+
+            if (fullscreenToggleButton) {
+                fullscreenToggleButton.addEventListener('click', function () {
+                    toggleFullscreen();
+                });
+            }
+
+            function toggleFullscreen() {
+                if (!document.fullscreenElement) {
+                    // Tam ekrana geç
+                    document.documentElement.requestFullscreen().then(() => {
+                        updateFullscreenIcon(true);
+                    }).catch(err => {
+                        // Tam ekran modu desteklenmiyor
+                    });
+                } else {
+                    // Tam ekrandan çık
+                    document.exitFullscreen().then(() => {
+                        updateFullscreenIcon(false);
+                    }).catch(err => {
+                        // Tam ekrandan çıkma hatası
+                    });
+                }
+            }
+
+            function updateFullscreenIcon(isFullscreen) {
+                const icon = fullscreenToggleButton?.querySelector('i');
+                if (icon) {
+                    if (isFullscreen) {
+                        icon.className = 'bi bi-fullscreen-exit icon-hover';
+                        fullscreenToggleButton.setAttribute('title', 'Tam Ekrandan Çık');
+                    } else {
+                        icon.className = 'bi bi-arrows-fullscreen icon-hover';
+                        fullscreenToggleButton.setAttribute('title', 'Tam Ekran');
+                    }
+                }
+            }
+
+            // Fullscreen değişikliklerini dinle (ESC tuşu vs.)
+            document.addEventListener('fullscreenchange', function () {
+                updateFullscreenIcon(!!document.fullscreenElement);
+            });
+        });
+    </script>
+
+    <!-- Animation Keyframes -->
+    <style>
+        @keyframes slideInLeft {
+            from {
+                transform: translateX(-100%);
+            }
+
+            to {
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes slideOutLeft {
+            from {
+                transform: translateX(0);
+            }
+
+            to {
+                transform: translateX(-100%);
+            }
+        }
+    </style>
+
+    <!-- Dark Theme Styles -->
+    <style>
+        [data-bs-theme="dark"] {
+            --bs-body-bg: #0f172a;
+            --bs-body-color: #ffffff;
+        }
+
+        [data-bs-theme="dark"] .admin-main {
+            background: #0f172a !important;
+            color: #ffffff !important;
+        }
+
+        [data-bs-theme="dark"] .card {
+            background-color: #1e293b !important;
+            border-color: #334155 !important;
+            color: #ffffff !important;
+        }
+
+        [data-bs-theme="dark"] .card-header {
+            background-color: #334155 !important;
+            border-bottom-color: #334155 !important;
+            color: #ffffff !important;
+        }
+
+        [data-bs-theme="dark"] .table {
+            color: #ffffff !important;
+        }
+
+        [data-bs-theme="dark"] .table-light {
+            background-color: #334155 !important;
+            color: #ffffff !important;
+        }
+
+        [data-bs-theme="dark"] .text-muted {
+            color: #94a3b8 !important;
+        }
+
+        [data-bs-theme="dark"] .navbar {
+            background-color: #1e293b !important;
+            border-bottom-color: #334155 !important;
+        }
+
+        [data-bs-theme="dark"] .navbar-brand {
+            color: #ffffff !important;
+        }
+
+        [data-bs-theme="dark"] .form-control {
+            background-color: #334155 !important;
+            border-color: #334155 !important;
+            color: #ffffff !important;
+        }
+
+        [data-bs-theme="dark"] .form-control:focus {
+            background-color: #334155 !important;
+            border-color: #6366f1 !important;
+            color: #ffffff !important;
+            box-shadow: 0 0 0 0.2rem rgba(99, 102, 241, 0.25) !important;
+        }
+
+        [data-bs-theme="dark"] .btn-outline-secondary {
+            color: #ffffff !important;
+            border-color: #334155 !important;
+        }
+
+        [data-bs-theme="dark"] .btn-outline-secondary:hover {
+            background-color: #334155 !important;
+            border-color: #334155 !important;
+            color: #ffffff !important;
+        }
+
+        [data-bs-theme="dark"] .dropdown-menu {
+            background-color: #1e293b !important;
+            border-color: #334155 !important;
+        }
+
+        [data-bs-theme="dark"] .dropdown-item {
+            color: #ffffff !important;
+        }
+
+        [data-bs-theme="dark"] .dropdown-item:hover {
+            background-color: #334155 !important;
+            color: #ffffff !important;
+        }
+
+        [data-bs-theme="dark"] .admin-footer {
+            background-color: #1e293b !important;
+            color: #94a3b8 !important;
+        }
+
+        /* Dark theme chart colors */
+        [data-bs-theme="dark"] .chart-container {
+            background-color: #1e293b !important;
+        }
+
+        [data-bs-theme="dark"] canvas {
+            filter: brightness(0.9) contrast(1.1);
+        }
+
+        /* Header - Fixed at top */
+        .admin-header {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: white;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Bildirim dropdown */
+        .dropdown-menu {
+            z-index: 1050;
+        }
+
+        .notification-item {
+            padding: 12px 16px;
+            border-bottom: 1px solid #e2e8f0;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: block;
+        }
+
+        .notification-item:hover {
+            background-color: #f8fafc;
+        }
+
+        .notification-item.unread {
+            background-color: #eff6ff;
+            border-left: 3px solid #3b82f6;
+        }
+
+        #notificationList {
+            padding: 0;
+            margin: 0;
+        }
+
+        .notification-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: white;
+            margin-right: 12px;
+        }
+
+        .notification-content {
+            flex: 1;
+        }
+
+        .notification-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: #1e293b;
+        }
+
+        .notification-message {
+            font-size: 13px;
+            color: #64748b;
+            margin-bottom: 4px;
+            line-height: 1.4;
+        }
+
+        .notification-time {
+            font-size: 11px;
+            color: #94a3b8;
+        }
+
+        .notification-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .notification-actions .btn {
+            font-size: 11px;
+            padding: 2px 8px;
+        }
+
+        [data-bs-theme="dark"] .notification-item {
+            border-bottom-color: #334155;
+        }
+
+        [data-bs-theme="dark"] .notification-item:hover {
+            background-color: #334155;
+        }
+
+        [data-bs-theme="dark"] .notification-item.unread {
+            background-color: #1e3a8a;
+            border-left-color: #3b82f6;
+        }
+
+        [data-bs-theme="dark"] .notification-title {
+            color: #ffffff;
+        }
+
+        [data-bs-theme="dark"] .notification-message {
+            color: #cbd5e1;
+        }
+
+        [data-bs-theme="dark"] .notification-time {
+            color: #94a3b8;
+        }
+
+        /* Etkinlik Başlangıcı Toast Stilleri */
+        .event-start-popup {
+            border: 3px solid #f59e0b !important;
+            box-shadow: 0 0 20px rgba(245, 158, 11, 0.5) !important;
+            animation: pulse-event-start 2s infinite !important;
+        }
+
+        .event-start-title {
+            font-size: 1.2rem !important;
+            font-weight: bold !important;
+            color: #f59e0b !important;
+        }
+
+        .event-start-button {
+            font-weight: bold !important;
+            padding: 0.5rem 1.5rem !important;
+        }
+
+        @keyframes pulse-event-start {
+            0%, 100% {
+                box-shadow: 0 0 20px rgba(245, 158, 11, 0.5);
+            }
+            50% {
+                box-shadow: 0 0 30px rgba(245, 158, 11, 0.8);
+            }
+        }
+    </style>
+
+    <!-- Bildirim Sistemi JavaScript -->
+    <script>
+        class NotificationSystem {
+            constructor() {
+                this.notifications = [];
+                this.unreadCount = 0;
+                this.checkInterval = 3000; // 3 saniye - etkinlik başlangıcı için daha sık kontrol (daha hassas)
+                this.shownNotificationRetention = 7 * 24 * 60 * 60 * 1000; // 7 gün
+                this.shownNotifications = this.loadShownNotifications();
+                this.init();
+            }
+
+            init() {
+                this.loadNotifications();
+                this.setupEventListeners();
+                this.startPeriodicCheck();
+            }
+
+            setupEventListeners() {
+                // Tümünü okundu işaretle butonu
+                const markAllReadBtn = document.getElementById('markAllReadBtn');
+                if (markAllReadBtn) {
+                    markAllReadBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        this.markAllAsRead();
+                    });
+                }
+            }
+
+            loadShownNotifications() {
+                try {
+                    const raw = localStorage.getItem('shownNotifications');
+                    if (!raw) {
+                        return {};
+                    }
+                    const parsed = JSON.parse(raw);
+                    const now = Date.now();
+                    const cleaned = {};
+
+                    Object.entries(parsed).forEach(([id, timestamp]) => {
+                        if (typeof timestamp === 'number' && (now - timestamp) < this.shownNotificationRetention) {
+                            cleaned[id] = timestamp;
+                        }
+                    });
+
+                    localStorage.setItem('shownNotifications', JSON.stringify(cleaned));
+                    return cleaned;
+                } catch (error) {
+                    localStorage.removeItem('shownNotifications');
+                    return {};
+                }
+            }
+
+            saveShownNotifications() {
+                try {
+                    localStorage.setItem('shownNotifications', JSON.stringify(this.shownNotifications));
+                } catch (error) {
+                    // Save error
+                }
+            }
+
+            isNotificationShown(notificationId) {
+                if (!notificationId) {
+                    return false;
+                }
+                const key = String(notificationId);
+                return Object.prototype.hasOwnProperty.call(this.shownNotifications, key);
+            }
+
+            markLocalNotificationShown(notificationId) {
+                if (!notificationId) {
+                    return;
+                }
+                const key = String(notificationId);
+                this.shownNotifications[key] = Date.now();
+                this.saveShownNotifications();
+            }
+
+            async loadNotifications() {
+                try {
+                    const response = await fetch('/dashboard/api/notifications/');
+                    const data = await response.json();
+
+                    if (data.success) {
+                        // Önceki bildirimlerin "shown" durumunu koru
+                        const previousNotifications = this.notifications.reduce((acc, notif) => {
+                            acc[notif.id] = notif.shown || false;
+                            return acc;
+                        }, {});
+                        
+                        const oldNotificationIds = new Set(this.notifications.map(n => n.id));
+                        const newNotifications = data.notifications.map(notif => {
+                            const wasShown = previousNotifications[notif.id] || this.isNotificationShown(notif.id);
+                            return {
+                                ...notif,
+                                shown: !!wasShown
+                            };
+                        });
+                        
+                        // Yeni eklenen bildirimleri kontrol et
+                        const newlyAdded = newNotifications.filter(n => !oldNotificationIds.has(n.id));
+                        
+                        this.notifications = newNotifications;
+                        this.unreadCount = data.unread_count;
+                        this.updateUI();
+                        
+                        // Yeni eklenen bildirimler için sadece event_start/hatırlatıcıları önceliklendireceğiz.
+                        newlyAdded.forEach(notification => {
+                            if ((notification.type === 'event_start' || notification.type === 'event_reminder') && !this.isNotificationShown(notification.id)) {
+                                // Yeni eklenen ve kritik bir hatırlatıcı ise kontrol döngüsünün hemen yakalaması için işaretleme yapma
+                            } else if (notification.type === 'event_created') {
+                                // Oluşturma bildirimlerini otomatik olarak toast şeklinde göstermiyoruz.
+                                // Kullanıcı dilerse bildirim dropdown'ından görebilir.
+                                this.markLocalNotificationShown(notification.id);
+                            }
+                        });
+                        
+                        // Promise resolve et
+                        return Promise.resolve();
+                    }
+                    return Promise.resolve();
+                } catch (error) {
+                    return Promise.reject(error);
+                }
+            }
+
+            updateUI() {
+                this.updateBadge();
+                this.updateNotificationList();
+            }
+
+            updateBadge() {
+                const badge = document.getElementById('notificationBadge');
+                if (badge) {
+                    if (this.unreadCount > 0) {
+                        badge.textContent = this.unreadCount;
+                        badge.style.display = 'block';
+                    } else {
+                        badge.style.display = 'none';
+                    }
+                }
+            }
+
+            updateNotificationList() {
+                const listContainer = document.getElementById('notificationList');
+                if (!listContainer) return;
+
+                const displayNotifications = this.notifications.filter(notification => {
+                    // Sadece kullanıcıya gösterilmiş (shown) veya artık pending olmayan bildirimleri göster
+                    if (notification.shown) {
+                        return true;
+                    }
+                    if (notification.status && notification.status !== 'pending') {
+                        return true;
+                    }
+                    return false;
+                });
+
+                if (displayNotifications.length === 0) {
+                    listContainer.innerHTML = `
+                    <div class="dropdown-item text-center text-muted py-3">
+                        <i class="bi bi-bell-slash fs-4 d-block mb-2"></i>
+                        Henüz bildirim yok
+                    </div>
+                `;
+                    return;
+                }
+
+                let html = '';
+                displayNotifications.forEach(notification => {
+                    const isUnread = notification.status === 'pending' || notification.status === 'sent';
+                    const timeAgo = this.getTimeAgo(notification.scheduled_time);
+
+                    html += `
+                    <div class="notification-item ${isUnread ? 'unread' : ''}" 
+                        data-notification-id="${notification.id}">
+                        <div class="d-flex">
+                            <div class="notification-icon" style="background-color: ${notification.color}">
+                                <i class="${notification.icon}"></i>
+                            </div>
+                            <div class="notification-content">
+                                <div class="notification-title">${notification.title}</div>
+                                <div class="notification-message">${notification.message}</div>
+                                <div class="notification-time">${timeAgo}</div>
+                                ${isUnread ? `
+                                    <div class="notification-actions">
+                                        <button class="btn btn-sm btn-primary" onclick="notificationSystem.markAsRead(${notification.id})">
+                                            Okundu İşaretle
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-secondary" onclick="notificationSystem.dismiss(${notification.id})">
+                                            Kapat
+                                        </button>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                });
+
+                listContainer.innerHTML = html;
+            }
+
+            async markAsRead(notificationId) {
+                try {
+                    const response = await fetch(`/dashboard/api/notifications/${notificationId}/read/`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': this.getCSRFToken(),
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    const data = await response.json();
+                    if (data.success) {
+                        this.loadNotifications();
+                        this.showToast('Bildirim okundu olarak işaretlendi', 'success');
+                    }
+                } catch (error) {
+                    this.showToast('Bir hata oluştu', 'error');
+                }
+            }
+
+            async markAllAsRead() {
+                try {
+                    const response = await fetch('/dashboard/api/notifications/read-all/', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': this.getCSRFToken(),
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    const data = await response.json();
+                    if (data.success) {
+                        this.loadNotifications();
+                        this.showToast(data.message, 'success');
+                    }
+                } catch (error) {
+                    this.showToast('Bir hata oluştu', 'error');
+                }
+            }
+
+            async dismiss(notificationId) {
+                try {
+                    const response = await fetch(`/dashboard/api/notifications/${notificationId}/dismiss/`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': this.getCSRFToken(),
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    const data = await response.json();
+                    if (data.success) {
+                        this.loadNotifications();
+                        this.showToast('Bildirim kapatıldı', 'success');
+                    }
+                } catch (error) {
+                    this.showToast('Bir hata oluştu', 'error');
+                }
+            }
+
+            startPeriodicCheck() {
+                // İlk kontrolü hemen yap (sayfa yüklendiğinde)
+                // İlk yükleme ve kontrol
+                this.loadNotifications().then(() => {
+                    this.checkReminders();
+                });
+                
+                // Periyodik olarak bildirimleri yükle ve hatırlatıcıları kontrol et
+                setInterval(() => {
+                    this.loadNotifications().then(() => {
+                        this.checkReminders();
+                    });
+                }, this.checkInterval);
+                
+                // Ek olarak sadece kontrol için daha sık bir interval (bildirim yüklemeden)
+                // Bu sayede sayfa yenilenmeden de zamanı gelen bildirimler gösterilir
+                setInterval(() => {
+                    this.checkReminders();
+                }, 2000); // Her 2 saniyede bir kontrol et
+                
+
+            }
+
+            checkReminders() {
+                // Zamanı gelmiş bekleyen hatırlatıcıları kontrol et
+                const now = new Date();
+                let hasNewReminders = false;
+                
+                // Aynı etkinlik için gösterilen bildirimleri takip et (çift gösterimi önlemek için)
+                const shownEventIds = new Set();
+                
+                // Önce event_start bildirimlerini kontrol et (öncelikli)
+                const sortedNotifications = [...this.notifications].sort((a, b) => {
+                    // event_start öncelikli
+                    if (a.type === 'event_start' && b.type !== 'event_start') return -1;
+                    if (a.type !== 'event_start' && b.type === 'event_start') return 1;
+                    return 0;
+                });
+                
+                sortedNotifications.forEach(notification => {
+                    // Tüm bildirim tiplerini kontrol et (event_reminder, event_start, event_created)
+                    const isEventNotification = notification.type === 'event_reminder' || 
+                                                  notification.type === 'event_start' || 
+                                                  notification.type === 'event_created';
+                    
+                    if ((notification.status === 'pending' || notification.status === 'sent') && 
+                        isEventNotification && 
+                        !notification.shown) { // Zaten gösterilmişse atla
+                        
+                        const scheduledTime = new Date(notification.scheduled_time);
+                        
+                        // Zamanı gelmiş mi kontrol et (daha geniş tolerans)
+                        const timeDiff = now - scheduledTime;
+                        const minutesDiff = timeDiff / (1000 * 60);
+                        
+                        // event_start için daha geniş tolerans (etkinlik başlangıcı önemli!)
+                        let shouldShow = false;
+                        if (notification.type === 'event_created') {
+                            // event_created için hemen göster (sadece yeni oluşturulmuşsa)
+                            shouldShow = (minutesDiff >= -5 && minutesDiff <= 60);
+                        } else if (notification.type === 'event_start') {
+                            // event_start için: zamanı gelmişse göster (0-60 dakika arası)
+                            // Etkinlik başlangıcı çok önemli, mutlaka görülmeli!
+                            shouldShow = (minutesDiff >= 0 && minutesDiff <= 60);
+                        } else {
+                            // event_reminder için normal tolerans
+                            shouldShow = (minutesDiff >= -2 && minutesDiff <= 10);
+                        }
+                        
+                        // Aynı etkinlik için sadece bir bildirim göster
+                        if (shouldShow && notification.extra_data) {
+                            try {
+                                const extraData = JSON.parse(notification.extra_data);
+                                const eventId = extraData.event_id;
+                                
+                                // Eğer bu etkinlik için zaten bir bildirim gösterildiyse, atla
+                                if (eventId && shownEventIds.has(eventId)) {
+                                    // Aynı etkinlik için başka bir bildirim gösterildi, bu atlanıyor
+                                    notification.shown = true; // Gösterilmiş olarak işaretle
+                                    this.markLocalNotificationShown(notification.id);
+                                    return;
+                                }
+                                
+                                if (eventId) {
+                                    shownEventIds.add(eventId);
+                                }
+                            } catch (e) {
+                                // JSON parse hatası, devam et
+                            }
+                        }
+                        
+                        if (shouldShow) {
+                            // Bildirimi HEMEN "gösterildi" olarak işaretle (çift gösterimi önlemek için)
+                            notification.shown = true;
+                            this.markLocalNotificationShown(notification.id);
+                            
+                            // Sağ üstten alert göster - mesajı da göster
+                            const alertMessage = `${notification.title}\n${notification.message}`;
+                            
+                            // Özel toast göster (event_start için daha belirgin)
+                            if (notification.type === 'event_start') {
+                                this.showEventStartToast(alertMessage);
+                            } else {
+                                const alertType = notification.type === 'event_created' ? 'info' : 'info';
+                                this.showToast(alertMessage, alertType);
+                            }
+                            
+                            // Tarayıcı bildirimi göster (izin varsa)
+                            if ('Notification' in window) {
+                                if (Notification.permission === 'granted') {
+                                    try {
+                                        const browserNotification = new Notification(notification.title, {
+                                            body: notification.message,
+                                            icon: '/static/images/mestakip1.png',
+                                            badge: '/static/images/mestakip1.png',
+                                            tag: `notification-${notification.id}`,
+                                            requireInteraction: notification.type === 'event_start',
+                                            silent: false
+                                        });
+                                        
+                                        // Bildirim kapandığında veya tıklandığında
+                                        browserNotification.onclick = function() {
+                                            window.focus();
+                                            this.close();
+                                        };
+                                    } catch (error) {
+                                        // Tarayıcı bildirimi gösterilirken hata
+                                    }
+                                } else if (Notification.permission === 'default') {
+                                    // İzin iste
+                                    Notification.requestPermission().then(permission => {
+                                        // İzin verildi
+                                    });
+                                }
+                            }
+                            
+                            hasNewReminders = true;
+                            
+                            // Backend'e bildirimi "sent" olarak işaretle
+                            this.markNotificationAsSent(notification.id);
+                        }
+                    }
+                });
+                
+                // Yeni hatırlatıcılar varsa UI'ı güncelle
+                if (hasNewReminders) {
+                    this.updateUI();
+                }
+            }
+
+            async markNotificationAsSent(notificationId) {
+                try {
+                    // Backend'e bildirim gönderildi olarak işaretleme isteği gönder
+                    // Bu opsiyonel, eğer backend'de otomatik olarak yapılıyorsa gerek yok
+                    await fetch(`/dashboard/api/notifications/${notificationId}/mark-sent/`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': this.getCSRFToken(),
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                } catch (error) {
+                    // Bildirim gönderildi olarak işaretlenirken hata
+                }
+            }
+
+            getTimeAgo(dateString) {
+                const now = new Date();
+                const date = new Date(dateString);
+                const diffMs = now - date;
+                const diffMins = Math.floor(diffMs / 60000);
+                const diffHours = Math.floor(diffMins / 60);
+                const diffDays = Math.floor(diffHours / 24);
+
+                if (diffMins < 1) return 'Şimdi';
+                if (diffMins < 60) return `${diffMins} dakika önce`;
+                if (diffHours < 24) return `${diffHours} saat önce`;
+                if (diffDays < 7) return `${diffDays} gün önce`;
+
+                return date.toLocaleDateString('tr-TR');
+            }
+
+            getCSRFToken() {
+                const token = document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+                    document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+                if (!token) {
+                    const cookies = document.cookie.split(';');
+                    for (let cookie of cookies) {
+                        const [name, value] = cookie.trim().split('=');
+                        if (name === 'csrftoken') {
+                            return value;
+                        }
+                    }
+                }
+
+                return token;
+            }
+
+            showToast(message, type = 'info') {
+                // SweetAlert2 kullanarak toast göster
+                if (typeof Swal !== 'undefined') {
+                    // Çok satırlı mesajları title ve text olarak ayır
+                    let title = message;
+                    let text = '';
+                    
+                    if (message.includes('\n')) {
+                        const parts = message.split('\n');
+                        title = parts[0];
+                        text = parts.slice(1).join('\n');
+                    }
+                    
+                    // Hatırlatıcılar için daha uzun süre göster
+                    const timer = type === 'success' ? 6000 : type === 'info' ? 8000 : 5000;
+                    
+                    Swal.fire({
+                        title: title,
+                        text: text || undefined,
+                        icon: type === 'success' ? 'success' : type === 'error' ? 'error' : type === 'warning' ? 'warning' : 'info',
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: timer,
+                        timerProgressBar: true,
+                        width: 'auto',
+                        padding: '1rem',
+                        didOpen: (toast) => {
+                            // Mouse ile üzerine gelince durdur
+                            toast.addEventListener('mouseenter', Swal.stopTimer);
+                            toast.addEventListener('mouseleave', Swal.resumeTimer);
+                            
+                            // Ses çal (opsiyonel - tarayıcı desteği varsa)
+                            try {
+                                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                                const oscillator = audioContext.createOscillator();
+                                const gainNode = audioContext.createGain();
+                                
+                                oscillator.connect(gainNode);
+                                gainNode.connect(audioContext.destination);
+                                
+                                oscillator.frequency.value = 800;
+                                oscillator.type = 'sine';
+                                
+                                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+                                
+                                oscillator.start(audioContext.currentTime);
+                                oscillator.stop(audioContext.currentTime + 0.1);
+                            } catch (e) {
+                                // Ses çalma hatası görmezden gel
+                            }
+                        }
+                    });
+                } else {
+                    // Fallback olarak alert kullan
+                    alert(message);
+                }
+            }
+
+            showEventStartToast(message) {
+                // Etkinlik başlangıcı için özel, daha dikkat çekici toast
+                if (typeof Swal !== 'undefined') {
+                    // Çok satırlı mesajları title ve text olarak ayır
+                    let title = message;
+                    let text = '';
+                    
+                    if (message.includes('\n')) {
+                        const parts = message.split('\n');
+                        title = parts[0];
+                        text = parts.slice(1).join('\n');
+                    }
+                    
+                    // Etkinlik başlangıcı için daha uzun süre (20 saniye) ve daha belirgin stil
+                    Swal.fire({
+                        title: title,
+                        text: text || undefined,
+                        icon: 'warning',
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: true,
+                        confirmButtonText: 'Tamam',
+                        confirmButtonColor: '#f59e0b',
+                        timer: 20000, // 20 saniye
+                        timerProgressBar: true,
+                        width: '400px',
+                        padding: '1.5rem',
+                        customClass: {
+                            popup: 'event-start-popup',
+                            title: 'event-start-title',
+                            confirmButton: 'event-start-button'
+                        },
+                        didOpen: (toast) => {
+                            // Mouse ile üzerine gelince timer'ı durdur
+                            toast.addEventListener('mouseenter', Swal.stopTimer);
+                            toast.addEventListener('mouseleave', Swal.resumeTimer);
+                            
+                            // Daha belirgin ses çal (etkinlik başlangıcı için)
+                            try {
+                                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                                
+                                // İki kez bip sesi çal (daha dikkat çekici)
+                                for (let i = 0; i < 2; i++) {
+                                    setTimeout(() => {
+                                        const oscillator = audioContext.createOscillator();
+                                        const gainNode = audioContext.createGain();
+                                        
+                                        oscillator.connect(gainNode);
+                                        gainNode.connect(audioContext.destination);
+                                        
+                                        oscillator.frequency.value = 1000; // Daha yüksek frekans
+                                        oscillator.type = 'sine';
+                                        
+                                        gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
+                                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+                                        
+                                        oscillator.start(audioContext.currentTime);
+                                        oscillator.stop(audioContext.currentTime + 0.2);
+                                    }, i * 300);
+                                }
+                            } catch (e) {
+                                // Ses çalma hatası görmezden gel
+                            }
+                            
+                            // Sayfayı titreştir (eğer kullanıcı başka sekmedeyse dikkat çekmek için)
+                            if (document.hidden) {
+                                // Sayfa görünmüyorsa, tarayıcı bildirimi zaten gösterilecek
+                            }
+                        }
+                    });
+                } else {
+                    // Fallback olarak alert kullan (daha belirgin)
+                    alert('🔔 ETKİNLİK BAŞLIYOR!\n\n' + message);
+                }
+            }
+
+            // Yeni bildirim geldiğinde çağrılacak
+            addNotification(notification) {
+                this.notifications.unshift(notification);
+                this.unreadCount++;
+                this.updateUI();
+
+                // Tarayıcı bildirimi göster (izin varsa)
+                if (Notification.permission === 'granted') {
+                    new Notification(notification.title, {
+                        body: notification.message,
+                        icon: '/static/images/mestakip1.png'
+                    });
+                }
+            }
+
+            // Tarayıcı bildirim izni iste
+            requestNotificationPermission() {
+                if ('Notification' in window && Notification.permission === 'default') {
+                    Notification.requestPermission();
+                }
+            }
+        }
+
+        // Sayfa yüklendiğinde bildirim sistemini başlat
+        document.addEventListener('DOMContentLoaded', function () {
+            console.log('DOM loaded, initializing...');
+            
+            // Bootstrap kontrolü
+            if (typeof bootstrap === 'undefined') {
+                console.error('Bootstrap is not loaded!');
+                return;
+            }
+            
+            console.log('Bootstrap is loaded, version check:', bootstrap.Dropdown);
+
+            // Bildirim sistemini başlat
+            try {
+                window.notificationSystem = new NotificationSystem();
+                window.notificationSystem.requestNotificationPermission();
+                console.log('Notification system initialized');
+            } catch (error) {
+                console.error('Notification system error:', error);
+            }
+
+            // Dropdown açıldığında bildirimleri yükle
+            const notificationButton = document.getElementById('notificationButton');
+            if (notificationButton) {
+                notificationButton.addEventListener('shown.bs.dropdown', function () {
+                    console.log('Notification dropdown opened');
+                    if (window.notificationSystem) {
+                        window.notificationSystem.loadNotifications();
+                    }
+                });
+            }
+            
+            console.log('Dropdowns should work now with data-bs-toggle');
+        });
+    </script>
+</body>
+
+</html> <!- - Mobile Sidebar Toggle Function -->
+    <script>
+        function toggleMobileSidebar() {
+            const sidebar = document.getElementById('admin-sidebar');
+
+            if (sidebar) {
+                // Sidebar'ı göster/gizle
+                sidebar.classList.toggle('mobile-show');
+
+                // Backdrop ekle/kaldır
+                let backdrop = document.querySelector('.mobile-sidebar-backdrop');
+                if (sidebar.classList.contains('mobile-show')) {
+                    if (!backdrop) {
+                        backdrop = document.createElement('div');
+                        backdrop.className = 'mobile-sidebar-backdrop';
+                        backdrop.onclick = toggleMobileSidebar;
+                        document.body.appendChild(backdrop);
+                    }
+                } else {
+                    if (backdrop) {
+                        backdrop.remove();
+                    }
+                }
+            }
+        }
+
+        // ESC tuşu ile sidebar'ı kapat
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                const sidebar = document.getElementById('admin-sidebar');
+                if (sidebar && sidebar.classList.contains('mobile-show')) {
+                    toggleMobileSidebar();
+                }
+            }
+        });
+    </script>
+
+    <!-- Mobile Sidebar Backdrop Styles -->
+    <style>
+        .mobile-sidebar-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1040;
+            display: block;
+        }
+
+        @media (min-width: 769px) {
+            .mobile-sidebar-backdrop {
+                display: none !important;
+            }
+        }
+
+        /* Mobile Sidebar Show Animation */
+        .admin-sidebar.mobile-show {
+            transform: translateX(0) !important;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+        }
+    </style>
+
+    <!-- Dropdown Manuel Başlatma -->
+
+    </body>
+
+    </html>

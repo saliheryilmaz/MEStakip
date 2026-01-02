@@ -1,4 +1,4 @@
-# Generated manually for Railway deployment fix
+# Generated manually for deployment fix
 
 from django.db import migrations
 
@@ -10,6 +10,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        # Bu migration Railway'deki Event tablosu çakışmasını çözmek için boş
+        # Bu migration Event tablosu çakışmasını çözmek için boş
         # Event modeli zaten 0007_event.py'de oluşturulmuş
     ]

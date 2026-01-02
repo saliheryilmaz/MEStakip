@@ -72,6 +72,8 @@
                                 <td>
                                     {% if user.is_superuser or user.is_staff or user.userprofile.role == 'admin' %}
                                         <span class="badge bg-danger">Admin</span>
+                                    {% elif user.userprofile.role == 'misafir' %}
+                                        <span class="badge bg-warning">Misafir</span>
                                     {% else %}
                                         <span class="badge bg-info">Yönetici</span>
                                     {% endif %}
@@ -194,6 +196,7 @@
                             <select class="form-select" id="role" name="role">
                                 <option value="yonetici" selected>Yönetici</option>
                                 <option value="admin">Admin</option>
+                                <option value="misafir">Misafir</option>
                             </select>
                         </div>
                     </div>

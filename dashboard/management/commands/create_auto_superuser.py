@@ -12,8 +12,8 @@ class Command(BaseCommand):
     help = 'Automatically create superuser if none exists'
 
     def handle(self, *args, **options):
-        # Railway environment'de çalış
-        if os.environ.get('RAILWAY_ENVIRONMENT'):
+        # Production environment'de çalış
+        if not os.environ.get('DEBUG', 'False').lower() == 'true':
             # Eğer hiç kullanıcı yoksa, otomatik oluştur
             if User.objects.filter(is_superuser=True).count() == 0:
                 username = os.environ.get('ADMIN_USERNAME', 'admin')

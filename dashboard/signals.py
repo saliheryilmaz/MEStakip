@@ -5,10 +5,13 @@ from .models import TransactionCategory, UserProfile
 
 @receiver(post_save, sender=User)
 def create_or_update_user_profile(sender, instance, created, **kwargs):
-    """Kullanıcı profili oluştur ve rolü Django bayraklarına göre senkronize et"""
-    profile, _ = UserProfile.objects.get_or_create(user=instance)
-    # Süperuser veya staff ise rolü admin yap, değilse mevcut rolü koru (varsayılan yonetici)
-    desired_role = 'admin' if (instance.is_superuser or instance.is_staff) else profile.role or 'yonetici'
-    if profile.role != desired_role:
-        profile.role = desired_role
-        profile.save(update_fields=['role'])
+    """Kullanıcı profili oluştur - sadece profil yoksa oluştur, rolü değiştirme"""
+    # Sadece profil yoksa oluştur, mevcut rolü değiştirme
+    if not hasattr(instance, 'userprofile'):
+        UserProfile.objects.get_or_create(user=instance, defaults={'role': 'yonetici'})
+    
+    # Sadece süperuser/staff kullanıcıları için admin rolünü zorla ata
+    elif (instance.is_superuser or instance.is_staff) and hasattr(instance, 'userprofile'):
+        if instance.userprofile.role != 'admin':
+            instance.userprofile.role = 'admin'
+            instance.userprofile.save(update_fields=['role'])

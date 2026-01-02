@@ -108,6 +108,7 @@
         font-weight: 600;
         text-align: right;
         flex: 1;
+        color: #212529;
     }
     
     .ebat-code {
@@ -287,20 +288,24 @@
         <p class="text-muted mb-0 small">Müşterilerden çıkan lastiklerin takibi</p>
     </div>
     <div class="d-none d-md-flex gap-2">
+        {% if not is_misafir %}
         <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#yeniKayitModal">
             <i class="bi bi-plus-lg me-1"></i>
             Yeni Kayıt
         </button>
+        {% endif %}
         <a href="{% url 'dashboard:satilan_cikma_lastikler' %}" class="btn btn-warning">
             <i class="bi bi-check-circle me-1"></i>
             Satılanları Görüntüle
         </a>
     </div>
     <div class="d-md-none btn-group w-100">
+        {% if not is_misafir %}
         <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#yeniKayitModal">
             <i class="bi bi-plus-lg"></i>
             Yeni
         </button>
+        {% endif %}
         <a href="{% url 'dashboard:satilan_cikma_lastikler' %}" class="btn btn-warning btn-sm">
             <i class="bi bi-check-circle"></i>
             Satılan
@@ -323,7 +328,9 @@
     <form method="get" class="d-flex gap-2 flex-wrap">
         <input type="text" class="form-control form-control-sm" name="marka" value="{{ filters.marka }}" placeholder="Marka ara..." style="flex: 2; min-width: 120px;">
         <input type="text" class="form-control form-control-sm" name="ebat" value="{{ filters.ebat }}" placeholder="Ebat..." style="flex: 1; min-width: 80px;">
+        {% if not is_misafir %}
         <input type="text" class="form-control form-control-sm" name="depo_konumu" value="{{ filters.depo_konumu }}" placeholder="Depo..." style="flex: 1; min-width: 80px;">
+        {% endif %}
         <button type="submit" class="btn btn-primary btn-sm">
             <i class="bi bi-search"></i>
         </button>
@@ -351,10 +358,12 @@
                     <label for="ebat" class="form-label">EBAT</label>
                     <input type="text" class="form-control" id="ebat" name="ebat" value="{{ filters.ebat }}" placeholder="205/55R16...">
                 </div>
+                {% if not is_misafir %}
                 <div class="col-md-2 col-6 filter-col">
                     <label for="depo_konumu" class="form-label">AMBAR (DEPO)</label>
                     <input type="text" class="form-control" id="depo_konumu" name="depo_konumu" value="{{ filters.depo_konumu }}" placeholder="Raf A-1...">
                 </div>
+                {% endif %}
                 <div class="col-md-2 col-6 filter-col">
                     <label for="durum" class="form-label">DURUM</label>
                     <select class="form-select" id="durum" name="durum">
@@ -407,20 +416,27 @@
             <table class="table table-hover mb-0">
                 <thead class="table-light">
                     <tr>
+                        {% if not is_misafir %}
                         <th style="min-width: 80px;">KALİTE</th>
+                        {% endif %}
                         <th style="min-width: 100px;">EBAT</th>
                         <th style="min-width: 150px;">MARKA/MODEL</th>
                         <th style="min-width: 60px;" class="text-center">MEVSİM</th>
                         <th style="min-width: 60px;">ADET</th>
+                        {% if not is_misafir %}
                         <th style="min-width: 120px;">AMBAR (DEPO)</th>
+                        {% endif %}
                         <th style="min-width: 150px;">AÇIKLAMA</th>
                         <th style="min-width: 100px;">GİRİŞ TARİHİ</th>
+                        {% if not is_misafir %}
                         <th style="min-width: 120px;">İŞLEMLER</th>
+                        {% endif %}
                     </tr>
                 </thead>
                 <tbody>
                     {% for lastik in cikma_lastikler %}
                     <tr>
+                        {% if not is_misafir %}
                         <td>
                             {% if lastik.kalite_notu %}
                                 <span class="badge bg-{{ lastik.get_kalite_display_color }}">{{ lastik.get_kalite_display }}</span>
@@ -428,6 +444,7 @@
                                 <span class="text-muted">-</span>
                             {% endif %}
                         </td>
+                        {% endif %}
                         <td><code style="font-size: 1.1em; font-weight: 600;">{{ lastik.ebat }}</code></td>
                         <td>
                             <strong>{{ lastik.marka }}</strong>
@@ -450,6 +467,7 @@
                             {% endif %}
                         </td>
                         <td><strong>{{ lastik.adet }}</strong></td>
+                        {% if not is_misafir %}
                         <td>
                             {% if lastik.depo_konumu %}
                                 <span class="badge bg-info">{{ lastik.depo_konumu }}</span>
@@ -457,6 +475,7 @@
                                 <span class="text-muted">-</span>
                             {% endif %}
                         </td>
+                        {% endif %}
                         <td>
                             {% if lastik.aciklama %}
                                 <span class="text-truncate d-inline-block" style="max-width: 150px;" title="{{ lastik.aciklama }}">
@@ -467,6 +486,7 @@
                             {% endif %}
                         </td>
                         <td>{{ lastik.olusturma_tarihi|date:"d.m.Y" }}</td>
+                        {% if not is_misafir %}
                         <td>
                             <div class="btn-group btn-group-sm" role="group">
                                 <button type="button" class="btn btn-success btn-sm" title="Sat" 
@@ -484,6 +504,7 @@
                                 </button>
                             </div>
                         </td>
+                        {% endif %}
                     </tr>
                     {% empty %}
                     <tr>
@@ -537,6 +558,7 @@
                             <strong class="text-success">{{ lastik.adet }} adet</strong>
                         </span>
                     </div>
+                    {% if not is_misafir %}
                     <div class="lastik-info-row">
                         <span class="info-label">Kalite:</span>
                         <span class="info-value">
@@ -547,7 +569,8 @@
                             {% endif %}
                         </span>
                     </div>
-                    {% if lastik.depo_konumu %}
+                    {% endif %}
+                    {% if lastik.depo_konumu and not is_misafir %}
                     <div class="lastik-info-row">
                         <span class="info-label">Depo:</span>
                         <span class="info-value">
@@ -556,18 +579,13 @@
                     </div>
                     {% endif %}
                     <div class="lastik-info-row">
-                        <span class="info-label">Tarih:</span>
-                        <span class="info-value">{{ lastik.olusturma_tarihi|date:"d.m.Y" }}</span>
-                    </div>
-                    {% if lastik.aciklama %}
-                    <div class="lastik-info-row">
                         <span class="info-label">Açıklama:</span>
-                        <span class="info-value text-truncate-mobile" title="{{ lastik.aciklama }}">
-                            {{ lastik.aciklama }}
+                        <span class="info-value text-truncate-mobile" title="{{ lastik.aciklama|default:'' }}">
+                            {{ lastik.aciklama|default:"-" }}
                         </span>
                     </div>
-                    {% endif %}
                     
+                    {% if not is_misafir %}
                     <div class="mobile-actions">
                         <button type="button" class="btn btn-success btn-sm" 
                                 data-bs-toggle="modal" data-bs-target="#satisModal{{ lastik.id }}">
@@ -583,6 +601,7 @@
                             <i class="bi bi-trash"></i> Sil
                         </button>
                     </div>
+                    {% endif %}
                 </div>
             </div>
             {% empty %}
@@ -648,9 +667,11 @@
 </div>
 
 <!-- Floating Action Button (Mobile) -->
+{% if not is_misafir %}
 <button type="button" class="fab d-md-none" data-bs-toggle="modal" data-bs-target="#yeniKayitModal">
     <i class="bi bi-plus-lg"></i>
 </button>
+{% endif %}
 
 <!-- Yeni Kayıt Modal -->
 <div class="modal fade" id="yeniKayitModal" tabindex="-1" aria-labelledby="yeniKayitModalLabel" aria-hidden="true">
@@ -791,10 +812,12 @@
                                         4 Mevsim
                                     {% endif %}
                                 </div>
+                                {% if not is_misafir %}
                                 <div class="col-6 mt-2">
                                     <strong>Kalite:</strong><br>
                                     {{ lastik.get_kalite_display }}
                                 </div>
+                                {% endif %}
                             </div>
                         </div>
                     </div>

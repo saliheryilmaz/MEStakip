@@ -31,10 +31,7 @@
         <form method="post">
             {% csrf_token %}
             <div class="row g-3">
-                <!-- Lastik Bilgileri -->
-                <div class="col-12">
-                    <h6 class="text-primary border-bottom pb-2 mb-3">Lastik Bilgileri</h6>
-                </div>
+                <!-- Temel Lastik Bilgileri -->
                 <div class="col-md-6">
                     <label for="marka" class="form-label">Marka *</label>
                     <input type="text" class="form-control" id="marka" name="marka" value="{{ lastik.marka }}" required>
@@ -43,11 +40,11 @@
                     <label for="model" class="form-label">Model</label>
                     <input type="text" class="form-control" id="model" name="model" value="{{ lastik.model|default:'' }}" placeholder="Lastik modeli">
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <label for="ebat" class="form-label">Ebat *</label>
                     <input type="text" class="form-control" id="ebat" name="ebat" value="{{ lastik.ebat }}" placeholder="205/55R16" required>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <label for="mevsim" class="form-label">Mevsim *</label>
                     <select class="form-select" id="mevsim" name="mevsim" required>
                         <option value="">Seçiniz</option>
@@ -56,64 +53,47 @@
                         {% endfor %}
                     </select>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <label for="adet" class="form-label">Adet *</label>
                     <input type="number" class="form-control" id="adet" name="adet" min="1" value="{{ lastik.adet }}" required>
                 </div>
                 
                 <!-- Durum ve Kalite -->
-                <div class="col-12">
-                    <h6 class="text-primary border-bottom pb-2 mb-3 mt-3">Durum ve Kalite</h6>
-                </div>
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <label for="durum" class="form-label">Durum</label>
                     <select class="form-select" id="durum" name="durum">
                         <option value="depolandi" {% if lastik.durum == 'depolandi' %}selected{% endif %}>Depolandı</option>
                         <option value="satildi" {% if lastik.durum == 'satildi' %}selected{% endif %}>Satıldı</option>
                     </select>
                 </div>
-                <div class="col-md-3">
-                    <label for="dis_derinligi" class="form-label">Diş Derinliği (mm)</label>
-                    <input type="text" class="form-control" id="dis_derinligi" name="dis_derinligi" value="{{ lastik.diş_derinligi|default:'' }}" placeholder="3-4 mm">
+                <div class="col-md-4">
+                    <label for="kalite_notu" class="form-label">Kalite</label>
+                    <select class="form-select" id="kalite_notu" name="kalite_notu">
+                        <option value="">Seçiniz</option>
+                        {% for value, label in kalite_choices %}
+                        <option value="{{ value }}" {% if lastik.kalite_notu == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
-                <div class="col-md-3">
-                    <label for="kalite_notu" class="form-label">Kalite (1-5)</label>
-                    <input type="number" class="form-control" id="kalite_notu" name="kalite_notu" min="1" max="5" value="{{ lastik.kalite_notu|default:'' }}">
-                </div>
-                <div class="col-md-3">
-                    <label for="tahmini_deger" class="form-label">Tahmini Değer (₺)</label>
-                    <input type="number" class="form-control" id="tahmini_deger" name="tahmini_deger" step="0.01" min="0" value="{{ lastik.tahmini_deger|default:'' }}">
+                <div class="col-md-4">
+                    <label for="depo_konumu" class="form-label">Depo Konumu</label>
+                    <input type="text" class="form-control" id="depo_konumu" name="depo_konumu" value="{{ lastik.depo_konumu|default:'' }}" placeholder="Raf A-1, Saha 2">
                 </div>
                 
                 <!-- Satış Bilgileri - Sadece durum "satildi" ise göster -->
-                <div class="col-md-3" id="satis_fiyati_field" style="display: none;">
+                <div class="col-md-6" id="satis_fiyati_field" style="display: none;">
                     <label for="satis_fiyati" class="form-label">Satış Fiyatı (₺)</label>
                     <input type="number" class="form-control" id="satis_fiyati" name="satis_fiyati" step="0.01" min="0" value="{{ lastik.satis_fiyati|default:'' }}">
                 </div>
-                <div class="col-md-3" id="satis_tarihi_field" style="display: none;">
+                <div class="col-md-6" id="satis_tarihi_field" style="display: none;">
                     <label for="satis_tarihi" class="form-label">Satış Tarihi</label>
                     <input type="date" class="form-control" id="satis_tarihi" name="satis_tarihi" value="{{ lastik.satis_tarihi|date:'Y-m-d' }}">
                 </div>
-                <div class="col-md-6">
-                    <label for="hasar_durumu" class="form-label">Hasar Durumu</label>
-                    <textarea class="form-control" id="hasar_durumu" name="hasar_durumu" rows="2" placeholder="Yan duvar çatlağı, onarım izi vb.">{{ lastik.hasar_durumu|default:'' }}</textarea>
-                </div>
-                <div class="col-md-6">
-                    <label for="depo_konumu" class="form-label">Depo Konumu</label>
-                    <input type="text" class="form-control" id="depo_konumu" name="depo_konumu" value="{{ lastik.depo_konumu|default:'' }}" placeholder="Raf A-1, Saha 2 vb.">
-                </div>
                 
-                <!-- Ek Bilgiler -->
-                <div class="col-12">
-                    <h6 class="text-primary border-bottom pb-2 mb-3 mt-3">Ek Bilgiler</h6>
-                </div>
-                <div class="col-md-6">
-                    <label for="cikis_tarihi" class="form-label">Çıkış Tarihi</label>
-                    <input type="date" class="form-control" id="cikis_tarihi" name="cikis_tarihi" value="{{ lastik.cikis_tarihi|date:'Y-m-d' }}">
-                </div>
+                <!-- Açıklama -->
                 <div class="col-12">
                     <label for="aciklama" class="form-label">Açıklama</label>
-                    <textarea class="form-control" id="aciklama" name="aciklama" rows="3" placeholder="Ek notlar, özel durumlar vb.">{{ lastik.aciklama|default:'' }}</textarea>
+                    <textarea class="form-control" id="aciklama" name="aciklama" rows="2" placeholder="Ek notlar...">{{ lastik.aciklama|default:'' }}</textarea>
                 </div>
             </div>
             
@@ -131,26 +111,6 @@
     </div>
 </div>
 
-<!-- Kayıt Bilgileri -->
-<div class="card mt-4">
-    <div class="card-header">
-        <h6 class="card-title mb-0">Kayıt Bilgileri</h6>
-    </div>
-    <div class="card-body">
-        <div class="row">
-            <div class="col-md-4">
-                <strong>Kayıt ID:</strong> #{{ lastik.id }}
-            </div>
-            <div class="col-md-4">
-                <strong>Oluşturulma:</strong> {{ lastik.olusturma_tarihi|date:"d.m.Y H:i" }}
-            </div>
-            <div class="col-md-4">
-                <strong>Son Güncelleme:</strong> {{ lastik.guncelleme_tarihi|date:"d.m.Y H:i" }}
-            </div>
-        </div>
-    </div>
-</div>
-
 {% endblock %}
 
 {% block extra_js %}
@@ -159,7 +119,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const durumSelect = document.getElementById('durum');
     const satisFiyatiField = document.getElementById('satis_fiyati_field');
     const satisTarihiField = document.getElementById('satis_tarihi_field');
-    const satisFiyatiInput = document.getElementById('satis_fiyati');
     const satisTarihiInput = document.getElementById('satis_tarihi');
     
     function toggleSatisFields() {
@@ -175,10 +134,6 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             satisFiyatiField.style.display = 'none';
             satisTarihiField.style.display = 'none';
-            
-            // Depolandı durumunda satış bilgilerini temizle
-            satisFiyatiInput.value = '';
-            satisTarihiInput.value = '';
         }
     }
     

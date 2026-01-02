@@ -25,7 +25,7 @@ def redirect_to_login(request):
     return redirect('dashboard:login')
 
 def healthcheck(request):
-    """Simple healthcheck endpoint for Railway"""
+    """Simple healthcheck endpoint"""
     try:
         # Basit bir database check
         from django.db import connection
@@ -50,7 +50,6 @@ def debug_info(request):
     
     # Environment variables
     import os
-    info.append(f"RAILWAY_ENVIRONMENT: {os.environ.get('RAILWAY_ENVIRONMENT', 'Not set')}")
     info.append(f"PORT: {os.environ.get('PORT', 'Not set')}")
     info.append(f"DATABASE_URL: {'Set' if os.environ.get('DATABASE_URL') else 'Not set'}")
     

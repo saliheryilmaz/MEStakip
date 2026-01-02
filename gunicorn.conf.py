@@ -1,5 +1,5 @@
 """
-Gunicorn configuration for Railway deployment
+Gunicorn configuration for production deployment
 """
 import os
 
@@ -7,8 +7,8 @@ import os
 bind = f"0.0.0.0:{os.environ.get('PORT', 8000)}"
 backlog = 2048
 
-# Worker processes - Railway için optimize edildi
-workers = int(os.environ.get('WEB_CONCURRENCY', 1))
+# Worker processes - PythonAnywhere için optimize edildi
+workers = int(os.environ.get('WEB_CONCURRENCY', 2))
 worker_class = "sync"
 worker_connections = 1000
 timeout = 300

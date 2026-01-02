@@ -196,7 +196,7 @@
             padding: 1rem 0.5rem;
         }
 
-        /* Hide toggle button when sidebar is collapsed (Railway style) */
+        /* Hide toggle button when sidebar is collapsed */
         .admin-wrapper.sidebar-collapsed .sidebar-toggle-btn {
             display: none !important;
         }
@@ -582,6 +582,23 @@
 
                 <nav class="sidebar-nav">
                     <ul class="nav flex-column">
+                        {% if user.userprofile.role == 'misafir' %}
+                        <!-- Misafir kullanıcısı için sadece Çıkma Lastikler -->
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'cikma_lastikler' %}active{% endif %}"
+                                href="{% url 'dashboard:cikma_lastikler' %}">
+                                <i class="bi bi-arrow-down-circle"></i>
+                                <span>Çıkma Lastikler</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'dashboard:logout' %}">
+                                <i class="bi bi-box-arrow-right"></i>
+                                <span>Çıkış Yap</span>
+                            </a>
+                        </li>
+                        {% else %}
+                        <!-- Normal kullanıcılar için tüm menü -->
                         <!-- Ana -->
                         <li class="nav-item">
                             <a class="nav-link {% if request.resolver_match.url_name == 'index' %}active{% endif %}"
@@ -684,6 +701,7 @@
                                 <span>Çıkış Yap</span>
                             </a>
                         </li>
+                        {% endif %}
                     </ul>
                 </nav>
             </div>
@@ -923,7 +941,7 @@
                     }
                 });
 
-                // Logo'ya tıklayınca sidebar'ı aç (Railway style)
+                // Logo'ya tıklayınca sidebar'ı aç
                 const logo = document.querySelector('.admin-sidebar .navbar-brand');
                 if (logo) {
                     logo.addEventListener('click', function (e) {

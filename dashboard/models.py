@@ -10,6 +10,7 @@ class UserProfile(models.Model):
     ROLE_CHOICES = [
         ('admin', 'Admin'),
         ('yonetici', 'Yönetici'),
+        ('misafir', 'Misafir'),
     ]
     
     user = models.OneToOneField(User, on_delete=models.CASCADE, verbose_name="Kullanıcı")
@@ -31,6 +32,10 @@ class UserProfile(models.Model):
     def is_yonetici(self):
         """Yönetici rolü kontrolü"""
         return self.role == 'yonetici'
+    
+    def is_misafir(self):
+        """Misafir rolü kontrolü"""
+        return self.role == 'misafir'
 
 class Siparis(models.Model):
     """Sipariş modeli - Lastik, Akü, Jant siparişleri"""
@@ -50,12 +55,13 @@ class Siparis(models.Model):
     
     DURUM_CHOICES = [
         ('yolda', 'Yolda'),
-        ('islemde', 'İşleme Devam Ediyor'),
+        ('islemde', 'İşlem Beklemede'),
         ('teslim', 'Teslim Edildi'),
         ('kontrol', 'Kontrol Edildi'),
         ('iptal', 'İptal Edildi'),
         ('yolda-fatura-islendi', 'Yolda/Fatura İşlendi'),
         ('takilacak-faturasi-islendi', 'Takılacak/Faturası İşlendi'),
+        ('islemde-faturasi-islendi', 'İşlem devam ediyor/Faturası İşlendi'),
     ]
     
     ODEME_CHOICES = [

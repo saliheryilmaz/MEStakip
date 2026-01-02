@@ -13,30 +13,36 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # GENERAL SETTINGS
 # ============================================================
 
-DEBUG = True
+# DEBUG: Environment variable yoksa True (development), varsa değerine göre
+DEBUG_ENV = os.environ.get('DEBUG', '').strip().lower()
+if DEBUG_ENV:
+    DEBUG = DEBUG_ENV == 'true'
+else:
+    # Environment variable yoksa development modu (True)
+    DEBUG = True
 
 SECRET_KEY = os.environ.get(
     'SECRET_KEY',
-    'django-insecure-8gy15^z036tfb9a%#36tgy6ssb==3+@c1)1nh6@!fdowo$%e!n'
+    'django-insecure-8gy15^z036tfb9a%#36tgy6ssb==3+@c1)1nh6@!fdowo$%e!n'  # Production'da mutlaka değiştirin!
 )
 
 
-ALLOWED_HOSTS = [
-    'localhost',
-    '127.0.0.1',
-    'wadmory.pythonanywhere.com',
-    'takip.meslas.com',
-]
+# ALLOWED_HOSTS environment variable'dan alınabilir (virgülle ayrılmış)
+ALLOWED_HOSTS = os.environ.get(
+    'ALLOWED_HOSTS',
+    'localhost,127.0.0.1,wadmory.pythonanywhere.com,takip.meslas.com'
+).split(',')
 
 
 # ============================================================
 # CSRF / SECURITY SETTINGS
 # ============================================================
 
-CSRF_TRUSTED_ORIGINS = [
-    'https://wadmory.pythonanywhere.com',
-    'https://takip.meslas.com',
-]
+# CSRF_TRUSTED_ORIGINS environment variable'dan alınabilir (virgülle ayrılmış)
+CSRF_TRUSTED_ORIGINS = os.environ.get(
+    'CSRF_TRUSTED_ORIGINS',
+    'https://wadmory.pythonanywhere.com,https://takip.meslas.com'
+).split(',')
 
 SESSION_COOKIE_SECURE = False
 CSRF_COOKIE_SECURE = False
@@ -107,24 +113,34 @@ WSGI_APPLICATION = 'metis_admin.wsgi.application'
 # DATABASE (PythonAnywhere MySQL)
 # ============================================================
 
-# Geliştirme ortamında SQLite, production'da MySQL kullan
-if DEBUG:
-    # Development - SQLite
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
-    }
-else:
+# Database ayarları: Eğer DB_NAME environment variable'ı varsa MySQL kullan, yoksa SQLite
+DB_NAME = os.environ.get('DB_NAME', '').strip()
+DB_USER = os.environ.get('DB_USER', '').strip()
+DB_PASSWORD = os.environ.get('DB_PASSWORD', '').strip()
+DB_HOST = os.environ.get('DB_HOST', '').strip()
+
+# Eğer tüm MySQL bilgileri varsa MySQL kullan, yoksa SQLite (development)
+if DB_NAME and DB_USER and DB_PASSWORD and DB_HOST:
     # Production - MySQL (PythonAnywhere)
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.mysql',
-            'NAME': 'wadmory$default',
-            'USER': 'wadmory',
-            'PASSWORD': 'S346020r',
-            'HOST': 'wadmory.mysql.pythonanywhere-services.com',
+            'NAME': DB_NAME,
+            'USER': DB_USER,
+            'PASSWORD': DB_PASSWORD,
+            'HOST': DB_HOST,
+            'PORT': os.environ.get('DB_PORT', '3306'),
+            'OPTIONS': {
+                'charset': 'utf8mb4',
+            },
+        }
+    }
+else:
+    # Development - SQLite (varsayılan)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
 

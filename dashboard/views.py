@@ -22,8 +22,24 @@ from collections import defaultdict
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.dateparse import parse_date
 from .utils import parse_decimal_value, format_tire_size, normalize_turkish_text, create_turkish_search_variants
+from functools import wraps
+
+def misafir_forbidden(view_func):
+    """Misafir kullanıcılarının erişimini engelleyen decorator"""
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        try:
+            user_profile = UserProfile.objects.get(user=request.user)
+            if user_profile.role == 'misafir':
+                messages.error(request, 'Bu sayfaya erişim yetkiniz bulunmamaktadır.')
+                return redirect('dashboard:cikma_lastikler')
+        except UserProfile.DoesNotExist:
+            pass
+        return view_func(request, *args, **kwargs)
+    return wrapper
 
 @login_required
+@misafir_forbidden
 def index(request):
     """Dashboard ana sayfası"""
     # Sadece kontrol edilen siparişlerden lastik satış analizi verileri (sadece kullanıcının siparişleri)
@@ -171,6 +187,7 @@ def index(request):
     }
     return render(request, 'dashboard/index.html', context)
 
+@misafir_forbidden
 def analytics(request):
     """Analytics sayfası"""
     context = {
@@ -179,6 +196,7 @@ def analytics(request):
     return render(request, 'dashboard/analytics.html', context)
 
 @login_required
+@misafir_forbidden
 def users(request):
     """Users sayfası - Rol bazlı yetkilendirme"""
     # Kullanıcının profilini al
@@ -219,7 +237,8 @@ def users(request):
                     last_name=last_name
                 )
                 
-                # Profil oluştur
+                # Signal'den önce profil oluştur
+                UserProfile.objects.filter(user=user).delete()  # Eğer signal oluşturduysa sil
                 UserProfile.objects.create(user=user, role=role)
                 
                 messages.success(request, f'Kullanıcı {username} başarıyla oluşturuldu!')
@@ -238,6 +257,7 @@ def users(request):
     return render(request, 'dashboard/users.html', context)
 
 @login_required
+@misafir_forbidden
 def products(request):
     """Products sayfası: tarih aralığı filtresi ile işlemleri göster"""
     from datetime import date
@@ -566,6 +586,7 @@ def transaction_sil(request, transaction_id):
 
 
 @login_required
+@misafir_forbidden
 def orders(request):
     """Sipariş Envanteri Dashboard (Orders)"""
     # Hızlı arama (cari ile arama)
@@ -614,6 +635,7 @@ def orders(request):
     return render(request, 'dashboard/orders.html', context)
 
 @login_required
+@misafir_forbidden
 def forms(request):
     """Kontrol Edilen Siparişler Sayfası"""
     # Filtreleme parametreleri
@@ -641,8 +663,11 @@ def forms(request):
             q_objects |= Q(marka__icontains=variant)
         siparisler = siparisler.filter(q_objects)
     if urun_arama:
+        # Ebat formatını otomatik düzenle (2055516 -> 205/55R16)
+        formatted_urun_arama = format_tire_size(urun_arama)
         siparisler = siparisler.filter(
-            Q(urun__icontains=urun_arama) | Q(marka__icontains=urun_arama)
+            Q(urun__icontains=urun_arama) | Q(marka__icontains=urun_arama) |
+            Q(urun__icontains=formatted_urun_arama) | Q(marka__icontains=formatted_urun_arama)
         )
     if grup:
         siparisler = siparisler.filter(grup=grup)
@@ -741,6 +766,7 @@ def forms(request):
     return render(request, 'dashboard/forms.html', context)
 
 @login_required
+@misafir_forbidden
 def elements(request):
     """Sipariş Envanteri Listesi sayfası"""
     # Filtreleme parametreleri
@@ -769,8 +795,11 @@ def elements(request):
             q_objects |= Q(marka__icontains=variant)
         siparisler = siparisler.filter(q_objects)
     if urun_arama:
+        # Ebat formatını otomatik düzenle (2055516 -> 205/55R16)
+        formatted_urun_arama = format_tire_size(urun_arama)
         siparisler = siparisler.filter(
-            Q(urun__icontains=urun_arama) | Q(marka__icontains=urun_arama)
+            Q(urun__icontains=urun_arama) | Q(marka__icontains=urun_arama) |
+            Q(urun__icontains=formatted_urun_arama) | Q(marka__icontains=formatted_urun_arama)
         )
     if grup:
         siparisler = siparisler.filter(grup=grup)
@@ -836,16 +865,18 @@ def elements(request):
     # 1) Teslim Edildi (teslim) - her zaman en üstte
     # 2) Takılacak/Faturası İşlendi (takilacak-faturasi-islendi)
     # 3) Yolda/Fatura İşlendi (yolda-fatura-islendi)
-    # 4) İşleme Devam Ediyor (islemde)
-    # 5) Yolda (yolda)
-    # 6) Diğer durumlar
+    # 4) İşlem devam ediyor/Faturası İşlendi (islemde-faturasi-islendi)
+    # 5) İşleme Devam Ediyor (islemde)
+    # 6) Yolda (yolda) - en aşağıda
+    # 7) Diğer durumlar
     durum_sira = Case(
         When(durum='teslim', then=0),
         When(durum='takilacak-faturasi-islendi', then=1),
         When(durum='yolda-fatura-islendi', then=2),
-        When(durum='islemde', then=3),
-        When(durum='yolda', then=4),
-        default=5,
+        When(durum='islemde-faturasi-islendi', then=3),
+        When(durum='islemde', then=4),
+        When(durum='yolda', then=5),
+        default=6,
         output_field=IntegerField(),
     )
     siparisler = siparisler.annotate(durum_sira=durum_sira).order_by('durum_sira', '-olusturma_tarihi')
@@ -2315,6 +2346,7 @@ def create_event_notifications(event):
 # Aşağıdaki sürüm kaldırıldı; aktif olan basit `create_event` yukarıda tanımlıdır.
 
 @login_required
+@misafir_forbidden
 def finance(request):
     """Gelir/Gider İşlemleri sayfası"""
     form = TransactionForm(request.POST or None, user=request.user)
@@ -2804,7 +2836,7 @@ def malzeme_excel_kaydet(request):
         return JsonResponse({'success': False, 'error': f'Sunucu hatası: {str(e)}'}, status=500)
 
 def health_check(request):
-    """Railway health check endpoint"""
+    """Health check endpoint"""
     return JsonResponse({'status': 'healthy', 'timestamp': datetime.now().isoformat()})
 
 @login_required
@@ -2812,6 +2844,18 @@ def cikma_lastikler(request):
     """Çıkma Lastikler sayfası"""
     from .models import CikmaLastik
     from django.core.paginator import Paginator
+    
+    # Kullanıcı profili kontrolü
+    try:
+        user_profile = request.user.userprofile
+        is_misafir = user_profile.is_misafir()
+    except:
+        is_misafir = False
+    
+    # Misafir kullanıcılar için POST işlemleri yasak
+    if request.method == 'POST' and is_misafir:
+        messages.error(request, 'Bu işlemi yapmaya yetkiniz yok.')
+        return redirect('dashboard:cikma_lastikler')
     
     # Yeni kayıt ekleme - POST işlemi önce kontrol edilir
     if request.method == 'POST':
@@ -2890,8 +2934,14 @@ def cikma_lastikler(request):
     baslangic_tarihi = request.GET.get('baslangic_tarihi', '')
     bitis_tarihi = request.GET.get('bitis_tarihi', '')
     
-    # Çıkma lastikleri getir (sadece kullanıcının kayıtları ve satılmayanlar)
-    cikma_lastikler = CikmaLastik.objects.filter(user=request.user).exclude(durum='satildi')
+    # Çıkma lastikleri getir
+    # Misafir kullanıcılar tüm aktif verileri görür, diğer kullanıcılar sadece kendi kayıtlarını görür
+    if is_misafir:
+        # Misafir kullanıcılar için tüm aktif veriler (satılmayanlar)
+        cikma_lastikler = CikmaLastik.objects.exclude(durum='satildi')
+    else:
+        # Diğer kullanıcılar için sadece kendi kayıtları (satılmayanlar)
+        cikma_lastikler = CikmaLastik.objects.filter(user=request.user).exclude(durum='satildi')
     
     print(f"DEBUG: Kullanıcı {request.user.username} için toplam kayıt sayısı: {cikma_lastikler.count()}")
     if cikma_lastikler.exists():
@@ -3031,6 +3081,7 @@ def cikma_lastikler(request):
         'mevsim_choices': CikmaLastik.MEVSIM_CHOICES,
         'arac_tipi_choices': CikmaLastik.ARAC_TIPI_CHOICES,
         'kalite_choices': CikmaLastik.KALITE_CHOICES,
+        'is_misafir': is_misafir,
     }
     return render(request, 'dashboard/cikma_lastikler.html', context)
 
@@ -3039,6 +3090,15 @@ def cikma_lastikler(request):
 def cikma_lastik_duzenle(request, lastik_id):
     """Çıkma lastik düzenleme sayfası"""
     from .models import CikmaLastik
+    
+    # Kullanıcı profili kontrolü
+    try:
+        user_profile = request.user.userprofile
+        if user_profile.is_misafir():
+            messages.error(request, 'Bu işlemi yapmaya yetkiniz yok.')
+            return redirect('dashboard:cikma_lastikler')
+    except:
+        pass
     
     # Kaydı getir (sadece kullanıcının kayıtları)
     lastik = get_object_or_404(CikmaLastik, id=lastik_id, user=request.user)
@@ -3120,6 +3180,7 @@ def cikma_lastik_duzenle(request, lastik_id):
         'page_title': 'Çıkma Lastik Düzenle',
         'lastik': lastik,
         'mevsim_choices': CikmaLastik.MEVSIM_CHOICES,
+        'kalite_choices': CikmaLastik.KALITE_CHOICES,
     }
     return render(request, 'dashboard/cikma_lastik_duzenle.html', context)
 
@@ -3128,6 +3189,15 @@ def cikma_lastik_duzenle(request, lastik_id):
 def cikma_lastik_sil(request, lastik_id):
     """Çıkma lastik silme"""
     from .models import CikmaLastik
+    
+    # Kullanıcı profili kontrolü
+    try:
+        user_profile = request.user.userprofile
+        if user_profile.is_misafir():
+            messages.error(request, 'Bu işlemi yapmaya yetkiniz yok.')
+            return redirect('dashboard:cikma_lastikler')
+    except:
+        pass
     
     # Kaydı getir (sadece kullanıcının kayıtları)
     lastik = get_object_or_404(CikmaLastik, id=lastik_id, user=request.user)
@@ -3241,6 +3311,15 @@ def cikma_lastik_sat(request, lastik_id):
 def satilan_cikma_lastikler(request):
     """Satılan Çıkma Lastikler sayfası"""
     from .models import CikmaLastik
+    
+    # Kullanıcı profili kontrolü - Misafir kullanıcılar bu sayfayı göremez
+    try:
+        user_profile = request.user.userprofile
+        if user_profile.is_misafir():
+            messages.error(request, 'Bu sayfayı görüntüleme yetkiniz yok.')
+            return redirect('dashboard:cikma_lastikler')
+    except:
+        pass
     from django.core.paginator import Paginator
     
     # Filtreleme parametreleri

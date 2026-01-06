@@ -185,7 +185,7 @@
             </label>
             <input type="file" id="excelFileInput" accept=".xls,.xlsx" class="form-control" />
             <div class="form-text">
-                Beklenen sütunlar: TARİH, FATURANO, MÜŞTERİ, ÜRÜN, TUTAR, ÖDEME PLANI
+                Beklenen sütunlar: TARİH, FATURANO, MÜŞTERİ, KATEGORİ, ÜRÜN, TUTAR, ÖDEME PLANI
             </div>
         </div>
 
@@ -410,6 +410,7 @@
             { source: "TARİH", label: "TARİH" },
             { source: "FATURANO", label: "FATURANO" },
             { source: "MÜŞTERİ", label: "MÜŞTERİ" },
+            { source: "KATEGORİ", label: "KATEGORİ" },
             { source: "ÜRÜN", label: "ÜRÜN" },
             { source: "TUTAR", label: "TUTAR" },
             { source: "ÖDEME PLANI", label: "ÖDEME PLANI" }
@@ -503,6 +504,11 @@
                         cell = `<span class="fw-semibold text-light">${cell}</span>`;
                     }
 
+                    // KATEGORİ için
+                    if (col.label === "KATEGORİ") {
+                        cell = `<span class="badge bg-info text-dark">${cell}</span>`;
+                    }
+
                     // ÖDEME PLANI için
                     if (col.label === "ÖDEME PLANI") {
                         const badgeClass = cell.toLowerCase().includes('nakit') ? 'bg-success' :
@@ -593,6 +599,8 @@
                                 normalizedKey = 'FATURANO';
                             } else if (normalizedKey.includes('MÜŞTERI') || normalizedKey.includes('MÜŞTERİ')) {
                                 normalizedKey = 'MÜŞTERİ';
+                            } else if (normalizedKey.includes('KATEGORİ') || normalizedKey.includes('KATEGORI')) {
+                                normalizedKey = 'KATEGORİ';
                             } else if (normalizedKey.includes('ÜRÜN') || normalizedKey.includes('URUN')) {
                                 normalizedKey = 'ÜRÜN';
                             } else if (normalizedKey === 'TUTAR' || normalizedKey === 'MIKTAR') {
@@ -677,7 +685,7 @@
                 console.log('İlk kayıt tam veri:', excelData[0]);
 
                 // Beklenen sütunları kontrol et
-                const expectedColumns = ['TARİH', 'FATURANO', 'MÜŞTERİ', 'ÜRÜN', 'TUTAR', 'ÖDEME PLANI'];
+                const expectedColumns = ['TARİH', 'FATURANO', 'MÜŞTERİ', 'KATEGORİ', 'ÜRÜN', 'TUTAR', 'ÖDEME PLANI'];
                 const actualColumns = Object.keys(excelData[0]);
                 console.log('Beklenen sütunlar:', expectedColumns);
                 console.log('Mevcut sütunlar:', actualColumns);

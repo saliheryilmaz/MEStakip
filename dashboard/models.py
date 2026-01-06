@@ -2,6 +2,7 @@ from django.db import models
 from django.core.validators import MinValueValidator
 from django.utils import timezone
 from django.contrib.auth.models import User
+from decimal import Decimal
 import json
 
 class UserProfile(models.Model):
@@ -443,6 +444,7 @@ class Transaction(models.Model):
         ('servis', 'Servis'),
         ('merkez-satis', 'Merkez Satış'),
         ('virman', 'Virman'),
+        ('joker-satis', 'Joker Satış'),
     ]
 
     hareket_tipi = models.CharField(max_length=10, choices=TYPE_CHOICES, default='gelir', verbose_name="Hareket Tipi")
@@ -616,6 +618,7 @@ class MalzemeHareketi(models.Model):
     tarih = models.DateField()
     faturano = models.CharField(max_length=100)
     musteri = models.CharField(max_length=255)
+    kategori = models.CharField(max_length=255, blank=True, null=True)
     urun = models.CharField(max_length=255)
     tutar = models.DecimalField(max_digits=14, decimal_places=2)
     odeme_sekli = models.CharField(max_length=100)
@@ -623,3 +626,53 @@ class MalzemeHareketi(models.Model):
     eklenme_zamani = models.DateTimeField(auto_now_add=True)
     def __str__(self):
         return f'{self.tarih} - {self.urun} - {self.tutar}'
+
+
+class JokerSatisDosya(models.Model):
+    """Joker Satış Excel dosyaları"""
+    dosya_adi = models.CharField(max_length=200, verbose_name="Dosya Adı")
+    yukleme_tarihi = models.DateTimeField(auto_now_add=True, verbose_name="Yükleme Tarihi")
+    kullanici = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, verbose_name="Yükleyen Kullanıcı")
+    
+    class Meta:
+        verbose_name = "Joker Satış Dosyası"
+        verbose_name_plural = "Joker Satış Dosyaları"
+        ordering = ['-yukleme_tarihi']
+    
+    def __str__(self):
+        return f"{self.dosya_adi} - {self.yukleme_tarihi.strftime('%d.%m.%Y %H:%M')}"
+
+
+class JokerSatisHareketi(models.Model):
+    """Joker Satış Excel satırları"""
+    dosya = models.ForeignKey('JokerSatisDosya', on_delete=models.CASCADE, related_name='satirlar', verbose_name="Dosya")
+    tarih = models.DateField(verbose_name="Tarih")
+    cari = models.CharField(max_length=255, blank=True, null=True, verbose_name="Cari")
+    kategori = models.CharField(max_length=255, blank=True, null=True, verbose_name="Kategori")
+    marka = models.CharField(max_length=255, blank=True, null=True, verbose_name="Marka")
+    urun_kodu = models.CharField(max_length=255, blank=True, null=True, verbose_name="Ürün Kodu")
+    urun = models.CharField(max_length=255, blank=True, null=True, verbose_name="Ürün")
+    miktar = models.DecimalField(max_digits=10, decimal_places=2, default=1, verbose_name="Miktar")
+    alis_fiyati = models.DecimalField(max_digits=14, decimal_places=2, default=0, verbose_name="Alış Fiyatı")
+    satis_fiyati = models.DecimalField(max_digits=14, decimal_places=2, default=0, verbose_name="Satış Fiyatı")
+    kar_tutari = models.DecimalField(max_digits=14, decimal_places=2, default=0, verbose_name="Kar Tutarı")
+    kullanici = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Ekleyen Kullanıcı")
+    eklenme_zamani = models.DateTimeField(auto_now_add=True, verbose_name="Eklenme Zamanı")
+    
+    class Meta:
+        verbose_name = "Joker Satış Hareketi"
+        verbose_name_plural = "Joker Satış Hareketleri"
+        ordering = ['-tarih', '-eklenme_zamani']
+    
+    def save(self, *args, **kwargs):
+        # Yeni kar hesaplama: (Satış × 1.20 - Alış) × Miktar
+        if self.satis_fiyati and self.alis_fiyati and self.miktar:
+            kar_per_unit = (self.satis_fiyati * Decimal('1.20')) - self.alis_fiyati
+            self.kar_tutari = kar_per_unit * self.miktar
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f'{self.tarih.strftime("%d.%m.%Y")} - {self.cari} - {self.urun} - Kar: {self.kar_tutari} TL'
+    
+    def __str__(self):
+        return f'{self.tarih.strftime("%d.%m.%Y")} - {self.cari} - {self.urun} - Kar: {self.kar_tutari} TL'

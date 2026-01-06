@@ -69,7 +69,12 @@
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <div>
-                                        <p class="text-muted mb-1 small">Toplam Gelir</p>
+                                        <p class="text-muted mb-1 small">
+                                            Toplam Gelir
+                                            {% if gun_ozeti.servis_merkez_toplam.excel_hizmet and gun_ozeti.servis_merkez_toplam.excel_hizmet > 0 %}
+                                            <i class="bi bi-file-earmark-excel text-info ms-1" title="Excel hizmet gelirleri dahil"></i>
+                                            {% endif %}
+                                        </p>
                                         <h3 class="mb-0 text-success">{{ gun_ozeti.servis_merkez_toplam.gelir|turkish_lira }}</h3>
                                     </div>
                                     <div class="text-success opacity-50">
@@ -173,6 +178,38 @@
                         </div>
                     </div>
                 </div>
+                
+                <!-- Excel Hizmet Tutarları -->
+                {% if gun_ozeti.servis_merkez_toplam.excel_hizmet and gun_ozeti.servis_merkez_toplam.excel_hizmet > 0 %}
+                <div class="row g-3 mt-2">
+                    <div class="col-12">
+                        <div class="alert alert-info d-flex align-items-center" role="alert">
+                            <i class="bi bi-file-earmark-excel me-2"></i>
+                            <div>
+                                <strong>Excel Hizmet Gelirleri:</strong> 
+                                <span class="fw-bold text-success">{{ gun_ozeti.servis_merkez_toplam.excel_hizmet|turkish_lira }}</span>
+                                <small class="text-muted ms-2">(Servis Toplamlarına dahil edilmiştir)</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Debug Bilgileri (Geçici) -->
+                {% if gun_ozeti.servis_merkez_toplam.excel_debug %}
+                <div class="row g-3 mt-2">
+                    <div class="col-12">
+                        <div class="alert alert-warning" role="alert">
+                            <strong>Debug:</strong> 
+                            Excel Kayıt: {{ gun_ozeti.servis_merkez_toplam.excel_debug.toplam_excel_kayit }}, 
+                            Hizmet: {{ gun_ozeti.servis_merkez_toplam.excel_debug.hizmet_kayit }}, 
+                            Nakit: {{ gun_ozeti.servis_merkez_toplam.excel_debug.excel_nakit|turkish_lira }}, 
+                            Kart: {{ gun_ozeti.servis_merkez_toplam.excel_debug.excel_kart|turkish_lira }}, 
+                            Cari: {{ gun_ozeti.servis_merkez_toplam.excel_debug.excel_cari|turkish_lira }}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -428,6 +465,7 @@
                                                 <th>Tarih</th>
                                                 <th>Fatura No</th>
                                                 <th>Müşteri</th>
+                                                <th>Kategori</th>
                                                 <th>Ürün</th>
                                                 <th>Tutar</th>
                                                 <th>Ödeme Şekli</th>
@@ -445,6 +483,17 @@
                                                 <td>
                                                     <span class="fw-semibold">{{ satir.musteri }}</span>
                                                 </td>
+                                                <td>
+                                                    {% if satir.kategori %}
+                                                    {% if 'hizmet' in satir.kategori|lower %}
+                                                    <span class="badge bg-success">{{ satir.kategori }}</span>
+                                                    {% else %}
+                                                    <span class="badge bg-info">{{ satir.kategori }}</span>
+                                                    {% endif %}
+                                                    {% else %}
+                                                    <span class="text-muted">-</span>
+                                                    {% endif %}
+                                                </td>
                                                 <td>{{ satir.urun|truncatechars:30 }}</td>
                                                 <td>
                                                     <span class="text-warning fw-bold">{{ satir.tutar|turkish_lira }}</span>
@@ -453,8 +502,10 @@
                                                     {% if satir.odeme_sekli %}
                                                     {% if 'nakit' in satir.odeme_sekli|lower %}
                                                     <span class="badge bg-success">{{ satir.odeme_sekli }}</span>
-                                                    {% elif 'kart' in satir.odeme_sekli|lower %}
+                                                    {% elif 'kart' in satir.odeme_sekli|lower or 'pos' in satir.odeme_sekli|lower or 'kuveyttürk' in satir.odeme_sekli|lower %}
                                                     <span class="badge bg-primary">{{ satir.odeme_sekli }}</span>
+                                                    {% elif 'cari' in satir.odeme_sekli|lower %}
+                                                    <span class="badge bg-info">{{ satir.odeme_sekli }}</span>
                                                     {% elif 'havale' in satir.odeme_sekli|lower %}
                                                     <span class="badge bg-warning">{{ satir.odeme_sekli }}</span>
                                                     {% else %}

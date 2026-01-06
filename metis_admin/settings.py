@@ -120,29 +120,27 @@ DB_PASSWORD = os.environ.get('DB_PASSWORD', '').strip()
 DB_HOST = os.environ.get('DB_HOST', '').strip()
 
 # Eğer tüm MySQL bilgileri varsa MySQL kullan, yoksa SQLite (development)
-if DB_NAME and DB_USER and DB_PASSWORD and DB_HOST:
-    # Production - MySQL (PythonAnywhere)
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.mysql',
-            'NAME': DB_NAME,
-            'USER': DB_USER,
-            'PASSWORD': DB_PASSWORD,
-            'HOST': DB_HOST,
-            'PORT': os.environ.get('DB_PORT', '3306'),
-            'OPTIONS': {
-                'charset': 'utf8mb4',
-            },
-        }
-    }
-else:
-    # Development - SQLite (varsayılan)
+# Geliştirme ortamında SQLite, production'da MySQL kullan
+if DEBUG:
+    # Development - SQLite
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
+else:
+    # Production - MySQL (PythonAnywhere)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': 'wadmory$default',
+            'USER': 'wadmory',
+            'PASSWORD': 'S346020r',
+            'HOST': 'wadmory.mysql.pythonanywhere-services.com',
+        }
+    }
+
 
 
 

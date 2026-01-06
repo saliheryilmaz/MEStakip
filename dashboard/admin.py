@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Siparis, UserProfile, Notification, Transaction, TransactionCategory, Event, MalzemeHareketi, MalzemeDosya, CikmaLastik
+from .models import Siparis, UserProfile, Notification, Transaction, TransactionCategory, Event, MalzemeHareketi, MalzemeDosya, CikmaLastik, JokerSatisDosya, JokerSatisHareketi
 
 @admin.register(Siparis)
 class SiparisAdmin(admin.ModelAdmin):
@@ -294,3 +294,75 @@ class CikmaLastikAdmin(admin.ModelAdmin):
 
 admin.site.register(MalzemeHareketi)
 admin.site.register(MalzemeDosya)
+
+
+@admin.register(JokerSatisDosya)
+class JokerSatisDosyaAdmin(admin.ModelAdmin):
+    """Joker Satış Dosyası admin paneli"""
+    
+    list_display = [
+        'id', 'dosya_adi', 'yukleme_tarihi', 'kullanici', 'satirlar_sayisi'
+    ]
+    
+    list_filter = [
+        'yukleme_tarihi', 'kullanici'
+    ]
+    
+    search_fields = [
+        'dosya_adi', 'kullanici__username', 'kullanici__first_name', 'kullanici__last_name'
+    ]
+    
+    readonly_fields = [
+        'yukleme_tarihi', 'satirlar_sayisi'
+    ]
+    
+    def satirlar_sayisi(self, obj):
+        return obj.satirlar.count()
+    satirlar_sayisi.short_description = 'Satır Sayısı'
+    
+    ordering = ['-yukleme_tarihi']
+
+
+@admin.register(JokerSatisHareketi)
+class JokerSatisHareketiAdmin(admin.ModelAdmin):
+    """Joker Satış Hareketi admin paneli"""
+    
+    list_display = [
+        'id', 'tarih', 'cari_kisaltma', 'kategori', 'marka', 'urun_kodu', 'urun_kisaltma', 
+        'miktar', 'alis_fiyati', 'satis_fiyati', 'kar_tutari', 'dosya', 'kullanici'
+    ]
+    
+    list_filter = [
+        'tarih', 'kategori', 'marka', 'dosya', 'kullanici', 'eklenme_zamani'
+    ]
+    
+    search_fields = [
+        'cari', 'kategori', 'marka', 'urun_kodu', 'urun'
+    ]
+    
+    readonly_fields = [
+        'kar_tutari', 'eklenme_zamani'
+    ]
+    
+    def cari_kisaltma(self, obj):
+        return obj.cari[:20] + '...' if obj.cari and len(obj.cari) > 20 else (obj.cari or '-')
+    cari_kisaltma.short_description = 'Cari'
+    
+    def urun_kisaltma(self, obj):
+        return obj.urun[:30] + '...' if obj.urun and len(obj.urun) > 30 else (obj.urun or '-')
+    urun_kisaltma.short_description = 'Ürün'
+    
+    ordering = ['-tarih', '-eklenme_zamani']
+    
+    fieldsets = (
+        ('Temel Bilgiler', {
+            'fields': ('dosya', 'tarih', 'faturano', 'musteri')
+        }),
+        ('Ürün Bilgileri', {
+            'fields': ('kategori', 'urun', 'tutar', 'odeme_sekli')
+        }),
+        ('Sistem Bilgileri', {
+            'fields': ('kullanici', 'eklenme_zamani'),
+            'classes': ('collapse',)
+        }),
+    )

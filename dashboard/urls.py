@@ -53,6 +53,10 @@ urlpatterns = [
     path('kategoriler/', views.kategoriler, name='kategoriler'),
     path('kategoriler/<int:kategori_id>/sil/', views.kategori_sil, name='kategori_sil'),
     path('kategoriler/<int:kategori_id>/duzenle/', views.kategori_duzenle, name='kategori_duzenle'),
+    path('joker-satis/', views.joker_satis, name='joker_satis'),
+    path('joker-satis/excel-yukle/', views.joker_satis_excel_upload, name='joker_satis_excel_upload'),
+    path('debug-excel-headers/', views.debug_excel_headers, name='debug_excel_headers'),
+
     path('api/alt-kategoriler/<int:ana_kategori_id>/', views.get_alt_kategoriler, name='get_alt_kategoriler'),
     path('api/brand-distribution/', views.brand_distribution_api, name='brand_distribution_api'),
     path('settings/', views.settings, name='settings'),

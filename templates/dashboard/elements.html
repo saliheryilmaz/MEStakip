@@ -232,6 +232,7 @@
                                 <button type="button" class="btn btn-success btn-sm" title="WhatsApp" 
                                         data-telefon="{{ siparis.musteri_telefon|slice:'1:' }}" 
                                         data-musteri="{{ siparis.musteri_adi|default:'' }}" 
+                                        data-cari="{{ siparis.cari_firma|default:'' }}"
                                         data-urun="{{ siparis.urun }}" 
                                         data-marka="{{ siparis.marka }}"
                                         data-adet="{{ siparis.adet }}"
@@ -586,11 +587,11 @@ document.addEventListener('DOMContentLoaded', function() {
 function whatsappGonderData(button) {
     const telefon = button.getAttribute('data-telefon');
     const musteriAdi = button.getAttribute('data-musteri');
+    const cariFirma = button.getAttribute('data-cari');
     const urun = button.getAttribute('data-urun');
     const marka = button.getAttribute('data-marka');
     const adet = button.getAttribute('data-adet');
     const durum = button.getAttribute('data-durum');
-    const tarih = button.getAttribute('data-tarih');
     
     // Telefon numarasını temizle ve formatla
     let cleanTelefon = telefon.toString().replace(/\D/g, '');
@@ -602,13 +603,15 @@ function whatsappGonderData(button) {
         cleanTelefon = '90' + cleanTelefon;
     }
     
-    // Detaylı mesaj formatı (MesTakip - LB formatında)
-    const mesaj = `*MesTakip - LB*
+    // Cari firma adını kullan, yoksa varsayılan olarak "MesTakip" kullan
+    const firmaAdi = cariFirma && cariFirma.trim() !== '' ? cariFirma.trim() : 'MesTakip';
+    
+    // Detaylı mesaj formatı (Cari firma adı ile)
+    const mesaj = `*MesTakip - ${firmaAdi}*
 *Ürün:* ${urun}
 *Marka:* ${marka}
 *Adet:* ${adet}
-*Durum:* ${durum}
-*Güncellenen Son Tarih:* ${tarih}`;
+*Durum:* ${durum}`;
     
     console.log('Detaylı mesaj gönderiliyor:', mesaj);
     

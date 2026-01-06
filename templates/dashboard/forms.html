@@ -174,7 +174,7 @@
                         <option value="bu-hafta" {% if filters.tarih == 'bu-hafta' %}selected{% endif %}>Bu Hafta</option>
                         <option value="bu-ay" {% if filters.tarih == 'bu-ay' %}selected{% endif %}>Bu Ay</option>
                         <option value="son-1-ay" {% if filters.tarih == 'son-1-ay' %}selected{% endif %}>Son 1 Ay</option>
-                        <option value="son-3-ay" {% if filters.tarih == 'son-3-ay' %}selected{% endif %}>Son 3 Ay</option>
+                        <option value="son-3-ay" {% if filters.tarih == 'son-3-ay' or not filters.tarih %}selected{% endif %}>Son 3 Ay</option>
                         <option value="son-6-ay" {% if filters.tarih == 'son-6-ay' %}selected{% endif %}>Son 6 Ay</option>
                         <option value="ozel-tarih" {% if filters.tarih == 'ozel-tarih' %}selected{% endif %}>Özel Tarih Aralığı</option>
                     </select>
@@ -309,6 +309,7 @@
                                 <button type="button" class="btn btn-success btn-sm" title="WhatsApp" 
                                         data-telefon="{{ siparis.musteri_telefon|slice:'1:' }}" 
                                         data-musteri="{{ siparis.musteri_adi|default:'' }}" 
+                                        data-cari="{{ siparis.cari_firma|default:'' }}"
                                         data-urun="{{ siparis.urun }}" 
                                         data-marka="{{ siparis.marka }}"
                                         data-adet="{{ siparis.adet }}"
@@ -635,11 +636,11 @@ document.addEventListener('DOMContentLoaded', function() {
 function whatsappGonderData(button) {
     const telefon = button.getAttribute('data-telefon');
     const musteriAdi = button.getAttribute('data-musteri');
+    const cariFirma = button.getAttribute('data-cari');
     const urun = button.getAttribute('data-urun');
     const marka = button.getAttribute('data-marka');
     const adet = button.getAttribute('data-adet');
     const durum = button.getAttribute('data-durum');
-    const tarih = button.getAttribute('data-tarih');
     
     // Telefon numarasını temizle ve formatla
     let cleanTelefon = telefon.toString().replace(/\D/g, '');
@@ -651,13 +652,15 @@ function whatsappGonderData(button) {
         cleanTelefon = '90' + cleanTelefon;
     }
     
-    // Detaylı mesaj formatı (MesTakip - LB formatında)
-    const mesaj = `*MesTakip - LB*
+    // Cari firma adını kullan, yoksa varsayılan olarak "MesTakip" kullan
+    const firmaAdi = cariFirma && cariFirma.trim() !== '' ? cariFirma.trim() : 'MesTakip';
+    
+    // Detaylı mesaj formatı (Cari firma adı ile)
+    const mesaj = `*MesTakip - ${firmaAdi}*
 *Ürün:* ${urun}
 *Marka:* ${marka}
 *Adet:* ${adet}
-*Durum:* ${durum}
-*Güncellenen Son Tarih:* ${tarih}`;
+*Durum:* ${durum}`;
     
     console.log('Detaylı mesaj gönderiliyor:', mesaj);
     

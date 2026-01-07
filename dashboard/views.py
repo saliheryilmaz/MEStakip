@@ -3739,6 +3739,105 @@ def get_filtered_transactions(user, **filters):
     return islemler.order_by('-tarih', '-created_at')
 
 
+def get_excel_hizmet_transactions(user, **filters):
+    """Excel'den yüklenen hizmet kategorisindeki işlemleri Transaction formatında döndür"""
+    # Excel'den hizmet kategorisindeki hareketleri al
+    # Türkçe karakter sorunu için hem büyük hem küçük harf kontrol et
+    excel_hareketler = MalzemeHareketi.objects.filter(
+        kullanici=user
+    ).filter(
+        Q(kategori__icontains='hizmet') | 
+        Q(kategori__icontains='HİZMET') |
+        Q(kategori__iexact='hizmet') |
+        Q(kategori__iexact='HİZMET')
+    )
+    
+    # Tarih filtreleri uygula
+    if filters.get('baslangic_tarih'):
+        try:
+            baslangic = datetime.strptime(filters['baslangic_tarih'], '%Y-%m-%d').date()
+            excel_hareketler = excel_hareketler.filter(tarih__gte=baslangic)
+        except ValueError:
+            pass
+    
+    if filters.get('bitis_tarih'):
+        try:
+            bitis = datetime.strptime(filters['bitis_tarih'], '%Y-%m-%d').date()
+            excel_hareketler = excel_hareketler.filter(tarih__lte=bitis)
+        except ValueError:
+            pass
+    
+    # Hareket tipi filtresi - Excel verileri sadece gelir olarak kabul edilir
+    if filters.get('hareket_tipi') and filters['hareket_tipi'] != 'gelir':
+        return []
+    
+    # Kasa adı filtresi - Excel hizmet verileri servis kasasına ait
+    if filters.get('kasa_adi') and filters['kasa_adi'] != 'servis':
+        return []
+    
+    # Excel verilerini Transaction benzeri objeler olarak döndür
+    excel_transactions = []
+    for hareket in excel_hareketler:
+        # Ödeme şeklini Transaction alanlarına dönüştür
+        nakit = kredi_karti = cari = sanal_pos = mehmet_havale = banka_havale = Decimal('0')
+        
+        odeme_sekli = (hareket.odeme_sekli or '').lower().strip()
+        
+        if 'nakit' in odeme_sekli:
+            nakit = hareket.tutar
+        elif any(x in odeme_sekli for x in ['kart', 'pos', 'kuveyttürk', 'kuveyt']) and 'sanal' not in odeme_sekli:
+            kredi_karti = hareket.tutar
+        elif any(x in odeme_sekli for x in ['cari', 'carı']) or 'gün cari' in odeme_sekli:
+            cari = hareket.tutar
+        elif 'sanal' in odeme_sekli:
+            sanal_pos = hareket.tutar
+        elif 'havale' in odeme_sekli:
+            if 'garanti' in odeme_sekli:
+                mehmet_havale = hareket.tutar
+            else:
+                banka_havale = hareket.tutar
+        else:
+            # Belirtilmemiş ödeme şekilleri nakit olarak kabul et
+            nakit = hareket.tutar
+        
+        # Transaction benzeri obje oluştur
+        class ExcelTransaction:
+            def __init__(self, hareket, nakit, kredi_karti, cari, sanal_pos, mehmet_havale, banka_havale):
+                self.id = f"excel_{hareket.id}"
+                self.tarih = hareket.tarih
+                self.hareket_tipi = 'gelir'
+                self.kasa_adi = 'servis'
+                self.nakit = nakit
+                self.kredi_karti = kredi_karti
+                self.cari = cari
+                self.sanal_pos = sanal_pos
+                self.mehmet_havale = mehmet_havale
+                self.banka_havale = banka_havale
+                self.pafgo = Decimal('0')
+                self.aciklama = f"Excel: {hareket.musteri} - {hareket.urun}"
+                self.kategori1 = None
+                self.kategori2 = None
+                self.kategori3 = None
+                self.created_at = hareket.eklenme_zamani
+                
+            def get_kasa_adi_display(self):
+                return 'Servis'
+                
+            def get_hareket_tipi_display(self):
+                return 'Gelir'
+                
+            @property
+            def toplam(self):
+                return (self.nakit + self.kredi_karti + self.cari + 
+                       self.sanal_pos + self.mehmet_havale + self.banka_havale + self.pafgo)
+        
+        excel_transactions.append(ExcelTransaction(
+            hareket, nakit, kredi_karti, cari, sanal_pos, mehmet_havale, banka_havale
+        ))
+    
+    return excel_transactions
+
+
 def income_expense_report(request):
     """Gelir/Gider Raporu sayfası"""
     from datetime import date, timedelta
@@ -3776,6 +3875,22 @@ def income_expense_report(request):
         kategori_id=kategori_id
     )
     
+    # Excel'den gelen hizmet işlemlerini de al
+    excel_hizmet_islemleri = get_excel_hizmet_transactions(
+        user=request.user,
+        baslangic_tarih=baslangic_tarih,
+        bitis_tarih=bitis_tarih,
+        hareket_tipi=hareket_tipi,
+        kasa_adi=kasa_adi,
+        kategori_id=kategori_id
+    )
+    
+    # İki listeyi birleştir
+    tum_islemler = list(islemler) + excel_hizmet_islemleri
+    
+    # Tarihe göre sırala
+    tum_islemler.sort(key=lambda x: (x.tarih, x.created_at), reverse=True)
+    
     # Özet hesaplamaları ve detaylı işlem listeleri
     summary = {
         'nakit': 0,
@@ -3810,7 +3925,11 @@ def income_expense_report(request):
         ana_kategori = ''
         alt_kategori = ''
         
-        if islem.kategori1:
+        # Excel işlemleri için özel durum
+        if hasattr(islem, 'id') and str(islem.id).startswith('excel_'):
+            ana_kategori = 'Hizmet'
+            alt_kategori = 'Excel Verisi'
+        elif islem.kategori1:
             if islem.kategori1.parent:
                 ana_kategori = islem.kategori1.parent.name
                 alt_kategori = islem.kategori1.name
@@ -3819,7 +3938,7 @@ def income_expense_report(request):
         
         return ana_kategori, alt_kategori
     
-    for islem in islemler:
+    for islem in tum_islemler:
         multiplier = 1 if islem.hareket_tipi == 'gelir' else -1
         ana_kategori, alt_kategori = get_kategori_bilgisi(islem)
         
@@ -4012,6 +4131,7 @@ def income_expense_report(request):
     print(f"  - Pafgo: {summary['pafgo']}")
     print(f"  - Toplam: {summary['toplam']}")
     print(f"DEBUG: Pafgo işlem sayısı: {len(odeme_detaylari['pafgo'])}")
+    print(f"DEBUG: Excel hizmet işlem sayısı: {len(excel_hizmet_islemleri)}")
     
     # Her ödeme yöntemi için komisyon toplamlarını hesapla
     komisyon_kredi_karti = sum(entry.get('komisyon', 0) for entry in odeme_detaylari['kredi_karti'])
@@ -4062,7 +4182,7 @@ def income_expense_report(request):
     
     context = {
         'page_title': 'Gelir/Gider Raporu',
-        'islemler': islemler,
+        'islemler': tum_islemler,
         'summary': summary,
         'kategoriler': kategoriler,
         'kasa_choices': kasa_choices,
@@ -4113,53 +4233,31 @@ def export_income_expense_excel(request):
     kasa_adi = request.GET.get('kasa_adi', '')
     kategori_id = request.GET.get('kategori', '')
     
-    # İşlemleri filtrele (kategorileri ve parent kategorileri de yükle)
-    # Merkez Satış kasasından sadece giderleri çek, Virman kasasını tamamen hariç tut
-    from django.db.models import Q
-    islemler = Transaction.objects.filter(created_by=request.user).exclude(
-        Q(kasa_adi='merkez-satis') & Q(hareket_tipi='gelir')
-    ).exclude(
-        kasa_adi='virman'
-    ).select_related(
-        'kategori1', 'kategori1__parent', 'kategori2', 'kategori2__parent', 'kategori3', 'kategori3__parent'
-    ).order_by('-tarih', '-created_at')
+    # Filtrelenmiş işlemleri al (normal Transaction verileri)
+    islemler = get_filtered_transactions(
+        user=request.user,
+        baslangic_tarih=baslangic_tarih,
+        bitis_tarih=bitis_tarih,
+        hareket_tipi=hareket_tipi,
+        kasa_adi=kasa_adi,
+        kategori_id=kategori_id
+    )
     
-    # Tarih filtreleri
-    if baslangic_tarih:
-        try:
-            baslangic = datetime.strptime(baslangic_tarih, '%Y-%m-%d').date()
-            islemler = islemler.filter(tarih__gte=baslangic)
-        except ValueError:
-            baslangic_tarih = ''
+    # Excel'den gelen hizmet işlemlerini de al
+    excel_hizmet_islemleri = get_excel_hizmet_transactions(
+        user=request.user,
+        baslangic_tarih=baslangic_tarih,
+        bitis_tarih=bitis_tarih,
+        hareket_tipi=hareket_tipi,
+        kasa_adi=kasa_adi,
+        kategori_id=kategori_id
+    )
     
-    if bitis_tarih:
-        try:
-            bitis = datetime.strptime(bitis_tarih, '%Y-%m-%d').date()
-            islemler = islemler.filter(tarih__lte=bitis)
-        except ValueError:
-            bitis_tarih = ''
+    # İki listeyi birleştir
+    tum_islemler = list(islemler) + excel_hizmet_islemleri
     
-    # Hareket tipi filtresi
-    if hareket_tipi:
-        islemler = islemler.filter(hareket_tipi=hareket_tipi)
-    
-    # Kasa filtresi
-    if kasa_adi:
-        islemler = islemler.filter(kasa_adi=kasa_adi)
-    
-    # Kategori filtresi (ana kategoriye göre)
-    if kategori_id:
-        # Seçilen ana kategoriye ait alt kategorileri bul
-        alt_kategoriler = TransactionCategory.objects.filter(
-            parent_id=kategori_id,
-            created_by=request.user
-        ).values_list('id', flat=True)
-        
-        # Ana kategori veya alt kategorilerden biri ile eşleşenleri filtrele
-        islemler = islemler.filter(
-            Q(kategori1_id=kategori_id) |  # Doğrudan ana kategori
-            Q(kategori1_id__in=alt_kategoriler)  # Alt kategorilerden biri
-        )
+    # Tarihe göre sırala
+    tum_islemler.sort(key=lambda x: (x.tarih, x.created_at), reverse=True)
     
     # Excel dosyası oluştur
     wb = Workbook()
@@ -4185,22 +4283,25 @@ def export_income_expense_excel(request):
         cell.alignment = header_alignment
     
     # Veri satırları
-    for row, islem in enumerate(islemler, 2):
+    for row, islem in enumerate(tum_islemler, 2):
         # Ana kategori
         ana_kategori = ''
-        if islem.kategori1 and islem.kategori1.parent:
-            ana_kategori = islem.kategori1.parent.name
-        elif islem.kategori1:
-            ana_kategori = islem.kategori1.name
-        
-        # Alt kategori
         alt_kategori = ''
-        if islem.kategori1 and islem.kategori1.parent:
-            alt_kategori = islem.kategori1.name
-        elif islem.kategori2:
-            alt_kategori = islem.kategori2.name
-        elif islem.kategori3:
-            alt_kategori = islem.kategori3.name
+        
+        # Excel işlemleri için özel durum
+        if hasattr(islem, 'id') and str(islem.id).startswith('excel_'):
+            ana_kategori = 'Hizmet'
+            alt_kategori = 'Excel Verisi'
+        else:
+            if islem.kategori1 and islem.kategori1.parent:
+                ana_kategori = islem.kategori1.parent.name
+                alt_kategori = islem.kategori1.name
+            elif islem.kategori1:
+                ana_kategori = islem.kategori1.name
+            elif islem.kategori2:
+                alt_kategori = islem.kategori2.name
+            elif islem.kategori3:
+                alt_kategori = islem.kategori3.name
         
         # Tüm ödeme yöntemlerinin brüt değerlerini al
         kredi_karti_brut = float(islem.kredi_karti or 0)

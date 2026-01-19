@@ -26,6 +26,7 @@ urlpatterns = [
     path('siparis/<int:siparis_id>/duzenle/', views.siparis_duzenle, name='siparis_duzenle'),
     path('siparis/<int:siparis_id>/sil/', views.siparis_sil, name='siparis_sil'),
     path('siparis/<int:siparis_id>/whatsapp/', views.siparis_whatsapp, name='siparis_whatsapp'),
+    path('siparis/<int:siparis_id>/kontrol-edildi/', views.siparis_kontrol_edildi, name='siparis_kontrol_edildi'),
     path('export-excel/', views.export_excel, name='export_excel'),
     path('export-cancelled-excel/', views.export_cancelled_excel, name='export_cancelled_excel'),
     path('export-checked-excel/', views.export_checked_excel, name='export_checked_excel'),

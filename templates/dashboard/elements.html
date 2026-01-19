@@ -175,7 +175,6 @@
                         <th>TOPLAM FİYAT</th>
                         <th>AÇIKLAMA </th>
                         <th>ÖDEME</th>
-                        <th>SMS</th>
                         <th>İŞLEMLER</th>
                     </tr>
                 </thead>
@@ -213,9 +212,14 @@
                         <td><strong>{{ siparis.toplam_fiyat|turkish_lira_symbol }}</strong></td>
                         <td>{{ siparis.aciklama|default:"-" }}</td>
                         <td>{{ siparis.get_odeme_display }}</td>
-                        <td><span class="badge bg-{{ siparis.get_sms_display_color }}">{{ siparis.get_sms_durum_display }}</span></td>
                         <td>
                             <div class="btn-group btn-group-sm" role="group">
+                                {% if siparis.durum != 'kontrol' %}
+                                <button type="button" class="btn btn-success btn-sm" title="Kontrol Edildi" 
+                                        onclick="kontrolEdildi({{ siparis.id }})">
+                                    <i class="bi bi-check-circle"></i>
+                                </button>
+                                {% endif %}
                                 <a href="{% url 'dashboard:siparis_detay' siparis.id %}" class="btn btn-primary btn-sm" title="Detay">
                                     <i class="bi bi-eye"></i>
                                 </a>
@@ -254,7 +258,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="14" class="text-center text-muted py-4">
+                        <td colspan="13" class="text-center text-muted py-4">
                             <i class="bi bi-inbox fs-1 d-block mb-2"></i>
                             Henüz sipariş bulunmuyor.
                         </td>
@@ -678,6 +682,53 @@ function exportToExcel() {
     // Excel export URL'sine yönlendir
     const exportUrl = '{% url "dashboard:export_excel" %}' + '?' + params.toString();
     window.location.href = exportUrl;
+}
+
+// Kontrol Edildi butonu fonksiyonu
+function kontrolEdildi(siparisId) {
+    if (confirm('Bu siparişi kontrol edildi olarak işaretlemek istediğinizden emin misiniz?')) {
+        // AJAX ile sipariş durumunu güncelle
+        fetch(`/dashboard/siparis/${siparisId}/kontrol-edildi/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+                              document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
+                              getCookie('csrftoken')
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Başarılı mesaj göster
+                alert('Sipariş başarıyla kontrol edildi olarak işaretlendi!');
+                // Sayfayı yenile
+                location.reload();
+            } else {
+                alert('Hata: ' + (data.error || 'Bilinmeyen bir hata oluştu'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Bir hata oluştu. Lütfen tekrar deneyin.');
+        });
+    }
+}
+
+// CSRF token alma fonksiyonu
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
 }
 </script>
 

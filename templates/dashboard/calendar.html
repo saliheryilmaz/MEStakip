@@ -1361,9 +1361,9 @@
                                required>
                     </div>
 
-                    <!-- Event Type & Priority -->
+                    <!-- Event Type -->
                     <div class="row mb-4">
-                        <div class="col-md-6">
+                        <div class="col-12">
                             <label for="eventType" class="form-label fw-semibold">
                                 <i class="bi bi-tag me-1"></i>Etkinlik Türü
                             </label>
@@ -1373,16 +1373,6 @@
                                 <option value="task">✅ Görev</option>
                                 <option value="reminder">🔔 Hatırlatıcı</option>
                                 <option value="deadline">⚠️ Son Tarih</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="eventPriority" class="form-label fw-semibold">
-                                <i class="bi bi-flag me-1"></i>Öncelik
-                            </label>
-                            <select class="form-select" id="eventPriority" x-model="eventData.priority">
-                                <option value="low">Düşük Öncelik</option>
-                                <option value="medium">Orta Öncelik</option>
-                                <option value="high">Yüksek Öncelik</option>
                             </select>
                         </div>
                     </div>
@@ -1400,36 +1390,6 @@
                                 <i class="bi bi-clock me-1"></i>Başlangıç Saati *
                             </label>
                             <input type="time" class="form-control" id="eventTime" x-model="eventData.time" required>
-                        </div>
-                    </div>
-
-                    <!-- Duration & Location -->
-                    <div class="row mb-4">
-                        <div class="col-md-6">
-                            <label for="eventDuration" class="form-label fw-semibold">
-                                <i class="bi bi-hourglass-split me-1"></i>Süre
-                            </label>
-                            <select class="form-select" id="eventDuration" x-model="eventData.duration">
-                                <option value="15">15 dakika</option>
-                                <option value="30">30 dakika</option>
-                                <option value="45">45 dakika</option>
-                                <option value="60">1 saat</option>
-                                <option value="90">1.5 saat</option>
-                                <option value="120">2 saat</option>
-                                <option value="180">3 saat</option>
-                                <option value="240">4 saat</option>
-                                <option value="480">Tüm gün</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="eventLocation" class="form-label fw-semibold">
-                                <i class="bi bi-geo-alt me-1"></i>Konum
-                            </label>
-                            <input type="text" 
-                                   class="form-control" 
-                                   id="eventLocation" 
-                                   x-model="eventData.location" 
-                                   placeholder="Toplantı odası, adres veya link...">
                         </div>
                     </div>
                     

@@ -91,7 +91,7 @@ class Siparis(models.Model):
     
     # Kategori Bilgileri
     grup = models.CharField(max_length=20, choices=GRUP_CHOICES, verbose_name="GRUP")
-    mevsim = models.CharField(max_length=20, choices=MEVSIM_CHOICES, verbose_name="MEVSİM")
+    mevsim = models.CharField(max_length=20, choices=MEVSIM_CHOICES, verbose_name="MEVSİM", blank=True, null=True)
     
     # Miktar ve Fiyat
     adet = models.PositiveIntegerField(
@@ -511,9 +511,17 @@ class CikmaLastik(models.Model):
     ]
     
     KALITE_CHOICES = [
-        ('cok-iyi', 'Çok İyi'),
-        ('iyi', 'İyi'),
-        ('orta', 'Orta'),
+        ('100', '%100'),
+        ('95', '%95'),
+        ('90', '%90'),
+        ('85', '%85'),
+        ('80', '%80'),
+        ('75', '%75'),
+        ('70', '%70'),
+        ('65', '%65'),
+        ('60', '%60'),
+        ('55', '%55'),
+        ('50', '%50'),
     ]
     
     # Kullanıcı bilgisi
@@ -598,12 +606,19 @@ class CikmaLastik(models.Model):
     
     def get_kalite_display_color(self):
         """Kalite için renk döndür"""
-        colors = {
-            'cok-iyi': 'success',  # Yeşil
-            'iyi': 'warning',      # Sarı
-            'orta': 'danger',      # Kırmızı
-        }
-        return colors.get(self.kalite_notu, 'secondary')
+        if not self.kalite_notu:
+            return 'secondary'
+        
+        try:
+            kalite_deger = int(self.kalite_notu)
+            if kalite_deger >= 85:
+                return 'success'  # Yeşil - %85 ve üzeri
+            elif kalite_deger >= 70:
+                return 'warning'  # Sarı - %70-84 arası
+            else:
+                return 'danger'   # Kırmızı - %50-69 arası
+        except (ValueError, TypeError):
+            return 'secondary'
 
 
 class MalzemeDosya(models.Model):

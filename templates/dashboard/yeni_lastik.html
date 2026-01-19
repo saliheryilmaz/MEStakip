@@ -436,8 +436,16 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Form gönderiliyor');
         
         // Form validation kontrolü
-        const requiredFields = ['cari_firma', 'marka', 'urun', 'grup', 'mevsim', 'adet', 'birim_fiyat', 'ambar', 'odeme'];
+        const requiredFields = ['cari_firma', 'marka', 'urun', 'grup', 'adet', 'birim_fiyat', 'ambar', 'odeme'];
         let hasErrors = false;
+        
+        // Grup değerini kontrol et
+        const selectedGrup = grupSelect.value;
+        
+        // Eğer lastik grubu seçilmişse (ticari veya binek) mevsim zorunlu
+        if (selectedGrup === 'ticari' || selectedGrup === 'binek') {
+            requiredFields.push('mevsim');
+        }
         
         requiredFields.forEach(fieldName => {
             const field = document.getElementById(`id_${fieldName}`);

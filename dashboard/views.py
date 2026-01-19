@@ -141,7 +141,7 @@ def index(request):
         .values('cari_firma')
         .annotate(
             total_purchase=Sum('toplam_fiyat'),
-            siparis_sayisi=Count('id')
+            toplam_adet=Sum('adet')
         )
         .order_by('-total_purchase')[:8]
     )
@@ -162,7 +162,41 @@ def index(request):
         customer_details.append({
             'name': original_name,
             'total': float(customer['total_purchase']),
-            'count': customer['siparis_sayisi']
+            'count': customer['toplam_adet']
+        })
+    
+    # Ödemeler analizi - Sipariş ödeme türlerine göre dağılım
+    payment_stats = (
+        Siparis.objects
+        .filter(durum='kontrol', user=request.user)  # Sadece kontrol edilmiş siparişler
+        .values('odeme')
+        .annotate(
+            count=Count('id'),
+            total_amount=Sum('toplam_fiyat')
+        )
+        .order_by('-total_amount')
+    )
+    
+    payment_data = []
+    payment_colors = {
+        'kredi-karti': '#3b82f6',  # Mavi
+        'havale': '#10b981',       # Yeşil
+        'cari': '#f59e0b',         # Sarı
+    }
+    
+    payment_labels = {
+        'kredi-karti': 'Kredi Kartı',
+        'havale': 'Havale',
+        'cari': 'Cari',
+    }
+    
+    for payment in payment_stats:
+        payment_type = payment['odeme']
+        payment_data.append({
+            'category': payment_labels.get(payment_type, payment_type.title()),
+            'value': float(payment['total_amount']),
+            'count': payment['count'],
+            'color': payment_colors.get(payment_type, '#6b7280')
         })
     
     context = {
@@ -184,7 +218,8 @@ def index(request):
             'labels': customer_labels,
             'data': customer_data,
             'details': customer_details
-        })
+        }),
+        'payment_data': json.dumps(payment_data)
     }
     return render(request, 'dashboard/index.html', context)
 
@@ -1260,6 +1295,38 @@ def siparis_whatsapp(request, siparis_id):
     return redirect(whatsapp_url)
 
 @login_required
+def siparis_kontrol_edildi(request, siparis_id):
+    """Siparişi kontrol edildi olarak işaretle"""
+    if request.method == 'POST':
+        try:
+            siparis = get_object_or_404(Siparis, id=siparis_id, user=request.user)
+            
+            # Siparişin durumunu kontrol olarak güncelle
+            siparis.durum = 'kontrol'
+            siparis.save()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Sipariş başarıyla kontrol edildi olarak işaretlendi.'
+            })
+            
+        except Siparis.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Sipariş bulunamadı.'
+            }, status=404)
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            }, status=500)
+    
+    return JsonResponse({
+        'success': False,
+        'error': 'Sadece POST istekleri kabul edilir.'
+    }, status=405)
+
+@login_required
 def reports(request):
     """İptal Edilen Siparişler Raporu"""
     # Filtreleme parametreleri
@@ -1645,11 +1712,8 @@ def create_event(request):
                 title=data.get('title', ''),
                 description=data.get('description', ''),
                 type=data.get('type', 'event'),
-                priority=data.get('priority', 'medium'),
                 date=date_obj,
                 time=time_obj,
-                duration=int(data.get('duration', 60)),
-                location=data.get('location', ''),
                 attendees=data.get('attendees', ''),
                 recurring=data.get('recurring', False),
                 recurrence=data.get('recurrence', 'none'),
@@ -3139,7 +3203,6 @@ def cikma_lastikler(request):
     # Filtreleme parametreleri - sadece GET request'te
     marka = request.GET.get('marka', '')
     ebat = request.GET.get('ebat', '')
-    durum = request.GET.get('durum', '')
     mevsim = request.GET.get('mevsim', '')
     arac_tipi = request.GET.get('arac_tipi', '')
     depo_konumu = request.GET.get('depo_konumu', '')
@@ -3174,8 +3237,6 @@ def cikma_lastikler(request):
         # Ebat formatını otomatik düzenle (2055516 -> 205/55R16)
         formatted_ebat = format_tire_size(ebat)
         cikma_lastikler = cikma_lastikler.filter(ebat__icontains=formatted_ebat)
-    if durum:
-        cikma_lastikler = cikma_lastikler.filter(durum=durum)
     if mevsim:
         cikma_lastikler = cikma_lastikler.filter(mevsim=mevsim)
     if arac_tipi:
@@ -3251,8 +3312,6 @@ def cikma_lastikler(request):
         filter_params.append(f'marka={marka}')
     if ebat:
         filter_params.append(f'ebat={ebat}')
-    if durum:
-        filter_params.append(f'durum={durum}')
     if mevsim:
         filter_params.append(f'mevsim={mevsim}')
     if arac_tipi:
@@ -3274,7 +3333,6 @@ def cikma_lastikler(request):
         'filters': {
             'marka': marka,
             'ebat': ebat,
-            'durum': durum,
             'mevsim': mevsim,
             'arac_tipi': arac_tipi,
             'depo_konumu': depo_konumu,
@@ -3415,6 +3473,11 @@ def cikma_lastik_sil(request, lastik_id):
     # Kaydı getir (sadece kullanıcının kayıtları)
     lastik = get_object_or_404(CikmaLastik, id=lastik_id, user=request.user)
     
+    # Silme işleminden sonra hangi sayfaya dönüleceğini belirle
+    next_url = request.GET.get('next', 'dashboard:cikma_lastikler')
+    if 'satilan' in request.META.get('HTTP_REFERER', ''):
+        next_url = 'dashboard:satilan_cikma_lastikler'
+    
     if request.method == 'POST':
         try:
             lastik_info = f"{lastik.marka} {lastik.ebat} ({lastik.adet} adet)"
@@ -3422,11 +3485,9 @@ def cikma_lastik_sil(request, lastik_id):
             messages.success(request, f'Çıkma lastik kaydı silindi: {lastik_info}')
         except Exception as e:
             messages.error(request, f'Kayıt silinirken hata oluştu: {str(e)}')
-    
-    # Silme işleminden sonra hangi sayfaya dönüleceğini belirle
-    next_url = request.GET.get('next', 'dashboard:cikma_lastikler')
-    if 'satilan' in request.META.get('HTTP_REFERER', ''):
-        next_url = 'dashboard:satilan_cikma_lastikler'
+    else:
+        # GET request ile silme işlemi güvenli değil
+        messages.warning(request, 'Silme işlemi için POST metodu kullanılmalıdır.')
     
     return redirect(next_url)
 

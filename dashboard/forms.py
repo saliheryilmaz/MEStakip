@@ -223,7 +223,8 @@ class SiparisForm(forms.ModelForm):
         self.fields['marka'].required = True
         self.fields['urun'].required = True
         self.fields['grup'].required = True
-        self.fields['mevsim'].required = True
+        # Mevsim sadece lastik grupları için zorunlu (akü ve jant için değil)
+        self.fields['mevsim'].required = False
         self.fields['adet'].required = True
         self.fields['birim_fiyat'].required = True
         self.fields['ambar'].required = True
@@ -238,12 +239,24 @@ class SiparisForm(forms.ModelForm):
         cleaned_data = super().clean()
         durum = cleaned_data.get('durum')
         iptal_sebebi = cleaned_data.get('iptal_sebebi')
+        grup = cleaned_data.get('grup')
+        mevsim = cleaned_data.get('mevsim')
         
         # Durum iptal ise sebep zorunlu
         if durum == 'iptal' and not iptal_sebebi:
             raise forms.ValidationError({
                 'iptal_sebebi': 'İptal edilecek siparişler için iptal sebebi belirtmek zorunludur.'
             })
+        
+        # Lastik grupları (ticari, binek) için mevsim zorunlu
+        if grup in ['ticari', 'binek'] and not mevsim:
+            raise forms.ValidationError({
+                'mevsim': 'Lastik siparişleri için mevsim seçimi zorunludur.'
+            })
+        
+        # Akü ve jant için mevsim alanını temizle
+        if grup in ['aku', 'jant']:
+            cleaned_data['mevsim'] = None
         
         return cleaned_data
 

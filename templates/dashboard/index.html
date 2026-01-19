@@ -9,7 +9,7 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h1 class="h3 mb-0">Dashboard</h1>
-        <p class="text-muted mb-0">Welcome back! Here's what's happening.</p>
+       
     </div>
     <div class="d-flex gap-2">
         <a href="{% url 'dashboard:yeni_lastik' %}" class="btn btn-primary">
@@ -33,28 +33,7 @@
 
 <!-- Stats Cards -->
 <div class="row g-4 mb-4">
-    <div class="col-xl-3 col-lg-6">
-        <div class="card stats-card">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="flex-shrink-0">
-                        <div class="stats-icon bg-primary bg-opacity-10 text-primary">
-                            <i class="bi bi-people"></i>
-                        </div>
-                    </div>
-                    <div class="flex-grow-1 ms-3">
-                        <h6 class="mb-0 text-muted">Toplam Sipariş</h6>
-                        <h3 class="mb-0">{{ stats.total_users|floatformat:0 }}</h3>
-                        <small class="text-success">
-                            <i class="bi bi-arrow-up"></i> Aktif
-                        </small>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-xl-3 col-lg-6">
+    <div class="col-xl-6 col-lg-6">
         <div class="card stats-card">
             <div class="card-body">
                 <div class="d-flex align-items-center">
@@ -64,7 +43,7 @@
                         </div>
                     </div>
                     <div class="flex-grow-1 ms-3">
-                        <h6 class="mb-0 text-muted">Toplam Ciro</h6>
+                        <h6 class="mb-0 text-muted">Sipariş Geçilen Ciro</h6>
                         <h3 class="mb-0">{{ stats.revenue|turkish_lira }}</h3>
                         <small class="text-success">
                             <i class="bi bi-arrow-up"></i> Toplam
@@ -75,28 +54,7 @@
         </div>
     </div>
 
-    <div class="col-xl-3 col-lg-6">
-        <div class="card stats-card">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="flex-shrink-0">
-                        <div class="stats-icon bg-warning bg-opacity-10 text-warning">
-                            <i class="bi bi-bag-check"></i>
-                        </div>
-                    </div>
-                    <div class="flex-grow-1 ms-3">
-                        <h6 class="mb-0 text-muted">Kontrol Edilen</h6>
-                        <h3 class="mb-0">{{ stats.orders|floatformat:0 }}</h3>
-                        <small class="text-success">
-                            <i class="bi bi-arrow-up"></i> Kontrol
-                        </small>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-xl-3 col-lg-6">
+    <div class="col-xl-6 col-lg-6">
         <div class="card stats-card">
             <div class="card-body">
                 <div class="d-flex align-items-center">
@@ -106,7 +64,7 @@
                         </div>
                     </div>
                     <div class="flex-grow-1 ms-3">
-                        <h6 class="mb-0 text-muted">Toplam Adet</h6>
+                        <h6 class="mb-0 text-muted">Toplam Sipariş Adeti</h6>
                         <h3 class="mb-0">{{ stats.avg_response|floatformat:0 }}</h3>
                         <small class="text-success">
                             <i class="bi bi-arrow-up"></i> Adet
@@ -118,37 +76,7 @@
     </div>
 </div>
 
-<!-- Finance Chart Section -->
-<div class="row g-4 mb-4">
-    <div class="col-12">
-        <div class="card shadow-sm">
-            <div class="card-header bg-white border-bottom">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h5 class="card-title mb-1">
-                            <i class="bi bi-graph-up-arrow text-primary me-2"></i>
-                            Aylık Gelir & Gider Analizi
-                        </h5>
-                        <small class="text-muted">Son 12 ayın finansal özeti</small>
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="badge bg-success-subtle text-success">
-                            <i class="bi bi-arrow-up-circle me-1"></i>Gelir
-                        </span>
-                        <span class="badge bg-danger-subtle text-danger">
-                            <i class="bi bi-arrow-down-circle me-1"></i>Gider
-                        </span>
-                    </div>
-                </div>
-            </div>
-            <div class="card-body p-4">
-                <div class="chart-container" style="position: relative; height: 350px;">
-                    <canvas id="financeOverviewChart"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+
 
 <!-- Additional Charts Row -->
 <div class="row g-4 mb-4">
@@ -158,7 +86,7 @@
                 <h5 class="card-title mb-0">Lastik Satış Analizi (3D)</h5>
             </div>
             <div class="card-body">
-                <canvas id="tireSalesChart" height="200"></canvas>
+                <div id="chartdiv" style="width: 100%; height: 500px;"></div>
             </div>
         </div>
     </div>
@@ -169,7 +97,7 @@
                 <h5 class="card-title mb-0">Lastik Marka Dağılımı (Toplam Adet)</h5>
             </div>
             <div class="card-body">
-                <canvas id="brandDistributionChart" height="200"></canvas>
+                <div id="brandDistributionChart" style="width: 100%; height: 400px;"></div>
             </div>
         </div>
     </div>
@@ -196,6 +124,23 @@
             </div>
         </div>
     </div>
+    
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h5 class="card-title mb-1">Ödeme Yöntemleri Dağılımı</h5>
+                        <small class="text-muted">Kontrol edilmiş siparişlerdeki ödeme türleri - Tutar bazında</small>
+                    </div>
+                    <span class="badge bg-info">Analiz</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="variableRadiusPieChart" style="width: 100%; height: 400px;"></div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Son Finance İşlemleri bölümü kaldırıldı -->
@@ -203,6 +148,33 @@
 
 {% block extra_css %}
 <style>
+    /* amCharts container styling */
+    #chartdiv {
+        width: 100% !important;
+        height: 500px !important;
+        min-height: 500px !important;
+        background: transparent !important;
+        position: relative !important;
+    }
+
+    /* Variable Radius Pie Chart styling */
+    #variableRadiusPieChart {
+        width: 100% !important;
+        height: 400px !important;
+        min-height: 400px !important;
+        background: transparent !important;
+        position: relative !important;
+    }
+
+    /* Brand Distribution Chart styling */
+    #brandDistributionChart {
+        width: 100% !important;
+        height: 400px !important;
+        min-height: 400px !important;
+        background: transparent !important;
+        position: relative !important;
+    }
+
     /* Hide any demo charts that might appear */
     .demo-chart,
     [data-demo="true"],
@@ -417,6 +389,12 @@
 {% endblock %}
 
 {% block extra_js %}
+<!-- amCharts 5 Resources -->
+<script src="https://cdn.amcharts.com/lib/5/index.js"></script>
+<script src="https://cdn.amcharts.com/lib/5/xy.js"></script>
+<script src="https://cdn.amcharts.com/lib/5/percent.js"></script>
+<script src="https://cdn.amcharts.com/lib/5/themes/Animated.js"></script>
+
 <script>
     // Override problematic demo chart logic from bundled script
     if (typeof window.M2 !== 'undefined') {
@@ -646,568 +624,539 @@
             }
         }
         
-
-        // Modern Finance Overview Chart - Canlı veri çeken güzel chart
-        const financeChartCanvas = document.getElementById('financeOverviewChart');
-        if (financeChartCanvas) {
-            let financeChart = null;
-
-            // Gradient oluşturma fonksiyonu
-            function createGradient(ctx, color1, color2) {
-                const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-                gradient.addColorStop(0, color1);
-                gradient.addColorStop(1, color2);
-                return gradient;
+        // Lastik Satış Analizi Chart (amCharts 5) - XY Chart
+        function initLastikSatisChart() {
+            const chartContainer = document.getElementById('chartdiv');
+            if (!chartContainer) {
+                console.error('chartdiv container bulunamadı!');
+                return;
             }
 
-            async function loadFinanceOverview() {
+            // amCharts kütüphanesi kontrolü
+            if (typeof am5 === 'undefined') {
+                console.error('amCharts kütüphanesi yüklenmedi!');
+                chartContainer.innerHTML = '<div style="text-align: center; padding: 50px; color: #666; font-size: 14px;">amCharts kütüphanesi yüklenemedi</div>';
+                return;
+            }
+
+            if (typeof am5xy === 'undefined') {
+                console.error('amCharts XY kütüphanesi yüklenmedi!');
+                chartContainer.innerHTML = '<div style="text-align: center; padding: 50px; color: #666; font-size: 14px;">amCharts XY kütüphanesi yüklenemedi</div>';
+                return;
+            }
+
+            console.log('amCharts XY yüklendi, chart oluşturuluyor...');
+
+            am5.ready(function() {
                 try {
-                    const response = await fetch('/dashboard/api/finance/overview/');
-                    if (!response.ok) throw new Error('API yanıtı alınamadı');
+                    // Önceki chart'ı temizle
+                    chartContainer.innerHTML = '';
                     
-                    const data = await response.json();
-                    if (!data.success) {
-                        console.error('API hatası:', data.error || 'Bilinmeyen hata');
-                        showError();
+                    // Create root element
+                    var root = am5.Root.new("chartdiv");
+
+                    // Set themes
+                    root.setThemes([
+                        am5themes_Animated.new(root)
+                    ]);
+
+                    // Django'dan gelen tire sales data'yı al
+                    const tireSalesDataRaw = {{ tire_sales_data|safe }};
+                    console.log('Tire sales data:', tireSalesDataRaw);
+
+                    // Veriyi amCharts formatına çevir
+                    const chartData = [
+                        {
+                            "season": "Yaz",
+                            "binek": tireSalesDataRaw.yaz.binek || 0,
+                            "ticari": tireSalesDataRaw.yaz.ticari || 0
+                        },
+                        {
+                            "season": "Kış", 
+                            "binek": tireSalesDataRaw.kis.binek || 0,
+                            "ticari": tireSalesDataRaw.kis.ticari || 0
+                        },
+                        {
+                            "season": "4 Mevsim",
+                            "binek": tireSalesDataRaw.dort_mevsim.binek || 0,
+                            "ticari": tireSalesDataRaw.dort_mevsim.ticari || 0
+                        }
+                    ];
+
+                    console.log('Chart data:', chartData);
+
+                    // Create chart
+                    var chart = root.container.children.push(am5xy.XYChart.new(root, {
+                        panX: false,
+                        panY: false,
+                        paddingLeft: 0,
+                        wheelX: "panX",
+                        wheelY: "zoomX",
+                        layout: root.verticalLayout
+                    }));
+
+                    // Set interface colors for light text
+                    root.interfaceColors.set("text", am5.color("#9ca3af"));
+                    root.interfaceColors.set("alternativeText", am5.color("#d1d5db"));
+                    root.interfaceColors.set("grid", am5.color("#374151"));
+
+                    // Add legend
+                    var legend = chart.children.push(
+                        am5.Legend.new(root, {
+                            centerX: am5.p50,
+                            x: am5.p50
+                        })
+                    );
+
+                    // Set legend text color
+                    legend.labels.template.setAll({
+                        fill: am5.color("#d1d5db")
+                    });
+
+                    // Legend yazı rengini ayarla
+                    legend.labels.template.setAll({
+                        fill: am5.color("#d1d5db") // Solgun beyaz
+                    });
+
+                    // Create axes
+                    var xRenderer = am5xy.AxisRendererX.new(root, {
+                        cellStartLocation: 0.1,
+                        cellEndLocation: 0.9,
+                        minorGridEnabled: true
+                    });
+
+                    var xAxis = chart.xAxes.push(am5xy.CategoryAxis.new(root, {
+                        categoryField: "season",
+                        renderer: xRenderer,
+                        tooltip: am5.Tooltip.new(root, {})
+                    }));
+
+                    // X ekseni yazı rengini ayarla
+                    xRenderer.labels.template.setAll({
+                        fill: am5.color("#9ca3af") // Solgun gri
+                    });
+
+                    xRenderer.grid.template.setAll({
+                        location: 1,
+                        stroke: am5.color("#374151") // Grid çizgileri koyu gri
+                    });
+
+                    xAxis.data.setAll(chartData);
+
+                    var yAxis = chart.yAxes.push(am5xy.ValueAxis.new(root, {
+                        renderer: am5xy.AxisRendererY.new(root, {
+                            strokeOpacity: 0.1
+                        })
+                    }));
+
+                    // Y ekseni yazı rengini ayarla
+                    yAxis.get("renderer").labels.template.setAll({
+                        fill: am5.color("#9ca3af") // Solgun gri
+                    });
+
+                    yAxis.get("renderer").grid.template.setAll({
+                        stroke: am5.color("#374151") // Grid çizgileri koyu gri
+                    });
+
+                    // Y ekseni yazı rengini ayarla
+                    yAxis.get("renderer").labels.template.setAll({
+                        fill: am5.color("#9ca3af") // Solgun gri
+                    });
+
+                    yAxis.get("renderer").grid.template.setAll({
+                        stroke: am5.color("#374151") // Grid çizgileri koyu gri
+                    });
+
+                    // Add series
+                    function makeSeries(name, fieldName, color) {
+                        var series = chart.series.push(am5xy.ColumnSeries.new(root, {
+                            name: name,
+                            xAxis: xAxis,
+                            yAxis: yAxis,
+                            valueYField: fieldName,
+                            categoryXField: "season"
+                        }));
+
+                        series.columns.template.setAll({
+                            tooltipText: "{name}, {categoryX}: {valueY} adet",
+                            width: am5.percent(90),
+                            tooltipY: 0,
+                            strokeOpacity: 0,
+                            fill: am5.color(color)
+                        });
+
+                        series.data.setAll(chartData);
+
+                        // Make stuff animate on load
+                        series.appear();
+
+                        series.bullets.push(function () {
+                            return am5.Bullet.new(root, {
+                                locationY: 0,
+                                sprite: am5.Label.new(root, {
+                                    text: "{valueY}",
+                                    fill: am5.color("#d1d5db"), // Solgun beyaz
+                                    centerY: 0,
+                                    centerX: am5.p50,
+                                    populateText: true
+                                })
+                            });
+                        });
+
+                        legend.data.push(series);
+                        console.log('Series oluşturuldu:', name);
+                    }
+
+                    makeSeries("Binek Araç", "binek", "#3b82f6");
+                    makeSeries("Ticari Araç", "ticari", "#ef4444");
+
+                    // Make stuff animate on load
+                    chart.appear(1000, 100);
+
+                    console.log('amCharts XY chart başarıyla oluşturuldu!');
+
+                } catch (error) {
+                    console.error('Chart oluşturulurken hata:', error);
+                    chartContainer.innerHTML = '<div style="text-align: center; padding: 50px; color: #e74c3c; font-size: 14px;">Chart oluşturulamadı: ' + error.message + '</div>';
+                }
+            }); // end am5.ready()
+        }
+
+        // Variable Radius Pie Chart (amCharts 5)
+        function initPaymentPieChart() {
+            const pieChartContainer = document.getElementById('variableRadiusPieChart');
+            if (!pieChartContainer) {
+                console.error('variableRadiusPieChart container bulunamadı!');
+                return;
+            }
+
+            // amCharts kütüphanesi kontrolü
+            if (typeof am5 === 'undefined' || typeof am5percent === 'undefined') {
+                console.error('amCharts percent kütüphanesi yüklenmedi!');
+                pieChartContainer.innerHTML = '<div style="text-align: center; padding: 50px; color: #666; font-size: 14px;">amCharts percent kütüphanesi yüklenemedi</div>';
+                return;
+            }
+
+            console.log('amCharts percent yüklendi, pie chart oluşturuluyor...');
+
+            am5.ready(function() {
+                try {
+                    // Payment data'yı al (Django'dan gelen veri)
+                    const paymentDataRaw = {{ payment_data|safe }};
+                    console.log('Payment data:', paymentDataRaw);
+
+                    // Veri kontrolü
+                    if (!paymentDataRaw || paymentDataRaw.length === 0) {
+                        pieChartContainer.innerHTML = '<div style="text-align: center; padding: 50px; color: #666; font-size: 14px;">Ödeme verisi bulunamadı</div>';
                         return;
                     }
 
-                    const { labels, income, expense } = data;
+                    // Önceki chart'ı temizle
+                    pieChartContainer.innerHTML = '';
 
-                    // Net kar hesapla (Gelir - Gider)
-                    const netProfit = income.map((val, idx) => val - expense[idx]);
+                    // Create root element
+                    var root = am5.Root.new("variableRadiusPieChart");
 
-                    // Mevcut chart varsa yok et
-                    if (financeChart) {
-                        financeChart.destroy();
-                    }
+                    // Set themes
+                    root.setThemes([
+                        am5themes_Animated.new(root)
+                    ]);
 
-                    const ctx = financeChartCanvas.getContext('2d');
-                    
-                    // Gradyanlar oluştur
-                    const incomeGradient = createGradient(ctx, 'rgba(34, 197, 94, 0.3)', 'rgba(34, 197, 94, 0.05)');
-                    const expenseGradient = createGradient(ctx, 'rgba(239, 68, 68, 0.3)', 'rgba(239, 68, 68, 0.05)');
+                    // Create chart
+                    var chart = root.container.children.push(am5percent.PieChart.new(root, {
+                        layout: root.verticalLayout
+                    }));
 
-                    // Yeni chart oluştur
-                    financeChart = new Chart(ctx, {
-                        type: 'line',
-                        data: {
-                            labels: labels,
-                            datasets: [
-                                {
-                                    label: 'Gelir',
-                                    data: income,
-                                    borderColor: 'rgb(34, 197, 94)',
-                                    backgroundColor: incomeGradient,
-                                    borderWidth: 3,
-                                    fill: true,
-                                    tension: 0.5,
-                                    pointRadius: 5,
-                                    pointHoverRadius: 8,
-                                    pointBackgroundColor: '#fff',
-                                    pointBorderColor: 'rgb(34, 197, 94)',
-                                    pointBorderWidth: 3,
-                                    pointHoverBackgroundColor: 'rgb(34, 197, 94)',
-                                    pointHoverBorderColor: '#fff',
-                                    pointHoverBorderWidth: 3,
-                                    cubicInterpolationMode: 'monotone'
-                                },
-                                {
-                                    label: 'Gider',
-                                    data: expense,
-                                    borderColor: 'rgb(239, 68, 68)',
-                                    backgroundColor: expenseGradient,
-                                    borderWidth: 3,
-                                    fill: true,
-                                    tension: 0.5,
-                                    pointRadius: 5,
-                                    pointHoverRadius: 8,
-                                    pointBackgroundColor: '#fff',
-                                    pointBorderColor: 'rgb(239, 68, 68)',
-                                    pointBorderWidth: 3,
-                                    pointHoverBackgroundColor: 'rgb(239, 68, 68)',
-                                    pointHoverBorderColor: '#fff',
-                                    pointHoverBorderWidth: 3,
-                                    cubicInterpolationMode: 'monotone'
-                                }
-                            ]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            interaction: {
-                                mode: 'index',
-                                intersect: false
-                            },
-                            plugins: {
-                                legend: {
-                                    display: true,
-                                    position: 'top',
-                                    align: 'end',
-                                    labels: {
-                                        usePointStyle: true,
-                                        padding: 20,
-                                        font: {
-                                            size: 13,
-                                            weight: '500',
-                                            family: "'Inter', sans-serif"
-                                        },
-                                        generateLabels: function(chart) {
-                                            const original = Chart.defaults.plugins.legend.labels.generateLabels;
-                                            const labels = original(chart);
-                                            labels.forEach(label => {
-                                                if (label.text === 'Gelir') {
-                                                    label.fillStyle = 'rgb(34, 197, 94)';
-                                                } else if (label.text === 'Gider') {
-                                                    label.fillStyle = 'rgb(239, 68, 68)';
-                                                }
-                                            });
-                                            return labels;
-                                        }
-                                    }
-                                },
-                                tooltip: {
-                                    enabled: true,
-                                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                                    padding: 12,
-                                    titleFont: {
-                                        size: 14,
-                                        weight: '600'
-                                    },
-                                    bodyFont: {
-                                        size: 13
-                                    },
-                                    borderColor: 'rgba(255, 255, 255, 0.1)',
-                                    borderWidth: 1,
-                                    cornerRadius: 8,
-                                    displayColors: true,
-                                    callbacks: {
-                                        title: function(context) {
-                                            return context[0].label;
-                                        },
-                                        label: function(context) {
-                                            const value = context.parsed.y;
-                                            const label = context.dataset.label;
-                                            const symbol = label === 'Gelir' ? '↑' : '↓';
-                                            return `${symbol} ${label}: ₺${value.toLocaleString('tr-TR', { 
-                                                minimumFractionDigits: 0, 
-                                                maximumFractionDigits: 0 
-                                            })}`;
-                                        },
-                                        footer: function(tooltipItems) {
-                                            if (tooltipItems.length === 2) {
-                                                const gelir = tooltipItems[0].parsed.y;
-                                                const gider = tooltipItems[1].parsed.y;
-                                                const net = gelir - gider;
-                                                const netColor = net >= 0 ? '#22c55e' : '#ef4444';
-                                                return `────────────────\nNet: ₺${net.toLocaleString('tr-TR', { 
-                                                    minimumFractionDigits: 0, 
-                                                    maximumFractionDigits: 0 
-                                                })}`;
-                                            }
-                                            return '';
-                                        }
-                                    }
-                                }
-                            },
-                            scales: {
-                                y: {
-                                    beginAtZero: true,
-                                    grid: {
-                                        color: 'rgba(0, 0, 0, 0.05)',
-                                        drawBorder: false
-                                    },
-                                    ticks: {
-                                        callback: function(value) {
-                                            if (value >= 1000000) {
-                                                return '₺' + (value / 1000000).toFixed(1) + 'M';
-                                            } else if (value >= 1000) {
-                                                return '₺' + (value / 1000).toFixed(0) + 'K';
-                                            }
-                                            return '₺' + value.toLocaleString('tr-TR');
-                                        },
-                                        font: {
-                                            size: 11,
-                                            family: "'Inter', sans-serif"
-                                        },
-                                        color: '#6b7280',
-                                        padding: 8
-                                    }
-                                },
-                                x: {
-                                    grid: {
-                                        display: false,
-                                        drawBorder: false
-                                    },
-                                    ticks: {
-                                        font: {
-                                            size: 11,
-                                            family: "'Inter', sans-serif"
-                                        },
-                                        color: '#6b7280',
-                                        padding: 10
-                                    }
-                                }
-                            },
-                            animation: {
-                                duration: 1000,
-                                easing: 'easeInOutQuart'
-                            },
-                            elements: {
-                                point: {
-                                    hoverRadius: 8
-                                }
-                            }
-                        }
+                    // Create series
+                    var series = chart.series.push(am5percent.PieSeries.new(root, {
+                        alignLabels: true,
+                        calculateAggregates: true,
+                        valueField: "value",
+                        categoryField: "category"
+                    }));
+
+                    // Pie chart label renklerini ayarla
+                    series.labels.template.setAll({
+                        fill: am5.color("#d1d5db") // Solgun beyaz
                     });
 
+                    series.ticks.template.setAll({
+                        stroke: am5.color("#6b7280") // Tick çizgileri gri
+                    });
+
+                    series.slices.template.setAll({
+                        strokeWidth: 3,
+                        stroke: am5.color(0xffffff)
+                    });
+
+                    series.labelsContainer.set("paddingTop", 30);
+
+                    // Set up adapters for variable slice radius
+                    series.slices.template.adapters.add("radius", function (radius, target) {
+                        var dataItem = target.dataItem;
+                        var high = series.getPrivate("valueHigh");
+
+                        if (dataItem) {
+                            var value = target.dataItem.get("valueWorking", 0);
+                            return radius * value / high;
+                        }
+                        return radius;
+                    });
+
+                    // Django'dan gelen payment data'yı amCharts formatına çevir
+                    const chartData = paymentDataRaw.map(payment => ({
+                        category: payment.category,
+                        value: payment.value,
+                        count: payment.count
+                    }));
+
+                    console.log('Pie chart data:', chartData);
+
+                    // Set data
+                    series.data.setAll(chartData);
+
+                    // Slice renklerini ayarla
+                    series.slices.template.adapters.add("fill", function(fill, target) {
+                        const dataItem = target.dataItem;
+                        if (dataItem) {
+                            const category = dataItem.get("category");
+                            // Renk eşleştirmesi
+                            if (category === "Kredi Kartı") {
+                                return am5.color("#3b82f6"); // Mavi
+                            } else if (category === "Havale") {
+                                return am5.color("#10b981"); // Yeşil
+                            } else if (category === "Cari") {
+                                return am5.color("#f59e0b"); // Sarı
+                            }
+                        }
+                        return fill;
+                    });
+
+                    // Tooltip'i özelleştir
+                    series.slices.template.setAll({
+                        tooltipText: "{category}: {value.formatNumber('#,###.00')} TL\nSipariş Sayısı: {count}"
+                    });
+
+                    // Create legend
+                    var legend = chart.children.push(am5.Legend.new(root, {
+                        centerX: am5.p50,
+                        x: am5.p50,
+                        marginTop: 15,
+                        marginBottom: 15
+                    }));
+
+                    // Set legend text color
+                    legend.labels.template.setAll({
+                        fill: am5.color("#d1d5db") // Solgun beyaz
+                    });
+
+                    legend.data.setAll(series.dataItems);
+
+                    // Play initial series animation
+                    series.appear(1000, 100);
+
+                    console.log('Variable Radius Pie Chart başarıyla oluşturuldu!');
+
                 } catch (error) {
-                    console.error('Finans verisi yüklenirken hata:', error);
-                    showError();
+                    console.error('Pie Chart oluşturulurken hata:', error);
+                    pieChartContainer.innerHTML = '<div style="text-align: center; padding: 50px; color: #e74c3c; font-size: 14px;">Pie Chart oluşturulamadı: ' + error.message + '</div>';
                 }
-            }
-
-            function showError() {
-                if (financeChartCanvas) {
-                    const ctx = financeChartCanvas.getContext('2d');
-                    ctx.clearRect(0, 0, financeChartCanvas.width, financeChartCanvas.height);
-                    ctx.fillStyle = '#9ca3af';
-                    ctx.font = 'bold 16px Inter, sans-serif';
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.fillText('Veri yüklenemedi', financeChartCanvas.width / 2, financeChartCanvas.height / 2 - 10);
-                    ctx.font = '14px Inter, sans-serif';
-                    ctx.fillText('Lütfen sayfayı yenileyin', financeChartCanvas.width / 2, financeChartCanvas.height / 2 + 15);
-                }
-            }
-
-            // İlk yükleme
-            loadFinanceOverview();
-
-            // Her 60 saniyede bir otomatik güncelle
-            setInterval(loadFinanceOverview, 60000);
+            }); // end am5.ready()
         }
 
-        // Lastik Satış Analizi Chart (3D Bar Chart)
-        const tireSalesCtx = document.getElementById('tireSalesChart');
-        if (tireSalesCtx) {
-            const tireSalesData = JSON.parse('{{ tire_sales_data|escapejs }}');
+        // Chart'ları başlat
+        setTimeout(function() {
+            initLastikSatisChart();
+            initPaymentPieChart();
+            initBrandDistributionChart();
+        }, 100);
 
-            const tireSalesChart = new Chart(tireSalesCtx, {
-                type: 'bar',
-                data: {
-                    labels: ['Yaz', 'Kış', '4 Mevsim'],
-                    datasets: [{
-                        label: 'Binek',
-                        data: [
-                            tireSalesData.yaz.binek,
-                            tireSalesData.kis.binek,
-                            tireSalesData.dort_mevsim.binek
-                        ],
-                        backgroundColor: 'rgba(99, 102, 241, 0.8)',
-                        borderColor: '#6366f1',
-                        borderWidth: 2,
-                        borderRadius: 6,
-                        borderSkipped: false,
-                    }, {
-                        label: 'Ticari',
-                        data: [
-                            tireSalesData.yaz.ticari,
-                            tireSalesData.kis.ticari,
-                            tireSalesData.dort_mevsim.ticari
-                        ],
-                        backgroundColor: 'rgba(236, 72, 153, 0.8)',
-                        borderColor: '#ec4899',
-                        borderWidth: 2,
-                        borderRadius: 6,
-                        borderSkipped: false,
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        title: {
-                            display: true,
-                            text: 'Lastik Satış Analizi - Mevsim ve Araç Tipi',
-                            font: {
-                                size: 14,
-                                weight: 'bold'
-                            }
-                        },
-                        legend: {
-                            display: true,
-                            position: 'top',
-                            labels: {
-                                usePointStyle: true,
-                                padding: 20,
-                                font: {
-                                    size: 12
-                                }
-                            }
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function (context) {
-                                    const vehicleType = context.dataset.label;
-                                    const value = context.parsed.y;
-                                    return `${vehicleType}: ${value} adet`;
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            max: 16,
-                            ticks: {
-                                stepSize: 2,
-                                callback: function (value) {
-                                    return value;
-                                }
-                            },
-                            title: {
-                                display: true,
-                                text: 'Satılan Adet',
-                                font: {
-                                    size: 12,
-                                    weight: 'bold'
-                                }
-                            },
-                            grid: {
-                                color: 'rgba(0,0,0,0.1)',
-                                drawBorder: false
-                            }
-                        },
-                        x: {
-                            title: {
-                                display: true,
-                                text: 'Mevsim',
-                                font: {
-                                    size: 12,
-                                    weight: 'bold'
-                                }
-                            },
-                            grid: {
-                                display: false
-                            }
-                        }
-                    },
-                    interaction: {
-                        intersect: false,
-                        mode: 'index'
-                    }
-                }
-            });
-        }
+        // Lastik Marka Dağılımı Chart (amCharts Semi-Circle Pie) - Real Data Implementation
+        function initBrandDistributionChart() {
+            const brandDistributionContainer = document.getElementById('brandDistributionChart');
+            if (!brandDistributionContainer) {
+                console.error('brandDistributionChart container bulunamadı!');
+                return;
+            }
 
-        // Lastik Marka Dağılımı Chart (Doughnut) - Clean Implementation
-        const brandDistributionCtx = document.getElementById('brandDistributionChart');
-        if (brandDistributionCtx) {
-            let brandChart = null;
+            // amCharts kütüphanesi kontrolü
+            if (typeof am5 === 'undefined' || typeof am5percent === 'undefined') {
+                console.error('amCharts percent kütüphanesi yüklenmedi!');
+                brandDistributionContainer.innerHTML = '<div style="text-align: center; padding: 50px; color: #666; font-size: 14px;">amCharts percent kütüphanesi yüklenemedi</div>';
+                return;
+            }
 
-            // Create brand distribution chart
-            async function createBrandChart() {
+            console.log('amCharts percent yüklendi, brand distribution chart oluşturuluyor...');
+
+            am5.ready(function() {
                 try {
-                    const response = await fetch('/dashboard/api/brand-distribution/');
-                    const data = await response.json();
+                    // Django'dan gelen brand chart data'yı al
+                    const brandChartDataRaw = {{ brand_chart_data|safe }};
+                    console.log('Brand chart data:', brandChartDataRaw);
 
-                    if (data.success && data.brands && data.brands.length > 0) {
-                        // Create chart with real data
-                        brandChart = new Chart(brandDistributionCtx, {
-                            type: 'doughnut',
-                            data: {
-                                labels: data.brands.map(brand => brand.name),
-                                datasets: [{
-                                    data: data.brands.map(brand => brand.count),
-                                    backgroundColor: data.brands.map(brand => brand.color),
-                                    borderWidth: 2,
-                                    borderColor: '#ffffff'
-                                }]
-                            },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                plugins: {
-                                    legend: {
-                                        position: 'bottom',
-                                        labels: {
-                                            padding: 20,
-                                            usePointStyle: true,
-                                            font: {
-                                                size: 12
-                                            }
-                                        }
-                                    },
-                                    tooltip: {
-                                        callbacks: {
-                                            label: function (context) {
-                                                const label = context.label || '';
-                                                const value = context.parsed;
-                                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                                const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                                                return `${label}: ${value} adet (${percentage}%)`;
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        });
-
-                        console.log(`Brand chart created with ${data.brands.length} brands`);
-                    } else {
-                        // No data - show empty state
-                        brandChart = new Chart(brandDistributionCtx, {
-                            type: 'doughnut',
-                            data: {
-                                labels: ['Henüz veri yok'],
-                                datasets: [{
-                                    data: [1],
-                                    backgroundColor: ['#f1f5f9'],
-                                    borderWidth: 0
-                                }]
-                            },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                plugins: {
-                                    legend: {
-                                        display: false
-                                    },
-                                    tooltip: {
-                                        enabled: false
-                                    }
-                                }
-                            }
-                        });
-
-                        console.log('No brand data available');
+                    // Veri kontrolü
+                    if (!brandChartDataRaw || !brandChartDataRaw.labels || brandChartDataRaw.labels.length === 0) {
+                        brandDistributionContainer.innerHTML = '<div style="text-align: center; padding: 50px; color: #666; font-size: 14px;">Marka verisi bulunamadı</div>';
+                        return;
                     }
-                } catch (error) {
-                    console.error('Brand chart creation error:', error);
-                    // Show error state
-                    brandChart = new Chart(brandDistributionCtx, {
-                        type: 'doughnut',
-                        data: {
-                            labels: ['Veri yüklenemedi'],
-                            datasets: [{
-                                data: [1],
-                                backgroundColor: ['#ef4444'],
-                                borderWidth: 0
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: {
-                                    display: false
-                                },
-                                tooltip: {
-                                    enabled: false
-                                }
+
+                    // Önceki chart'ı temizle
+                    brandDistributionContainer.innerHTML = '';
+
+                    // Create root element
+                    var root = am5.Root.new("brandDistributionChart");
+
+                    // Set themes
+                    root.setThemes([
+                        am5themes_Animated.new(root)
+                    ]);
+
+                    // Create chart
+                    var chart = root.container.children.push(
+                        am5percent.PieChart.new(root, {
+                            endAngle: 270
+                        })
+                    );
+
+                    // Create series
+                    var series = chart.series.push(
+                        am5percent.PieSeries.new(root, {
+                            valueField: "value",
+                            categoryField: "category",
+                            endAngle: 270
+                        })
+                    );
+
+                    // Set label colors for brand chart
+                    series.labels.template.setAll({
+                        fill: am5.color("#d1d5db") // Solgun beyaz
+                    });
+
+                    series.ticks.template.setAll({
+                        stroke: am5.color("#6b7280") // Tick çizgileri gri
+                    });
+
+                    series.states.create("hidden", {
+                        endAngle: -90
+                    });
+
+                    // Django'dan gelen brand data'yı amCharts formatına çevir
+                    const chartData = brandChartDataRaw.labels.map((label, index) => ({
+                        category: label,
+                        value: brandChartDataRaw.data[index]
+                    }));
+
+                    console.log('Brand semi-circle chart data:', chartData);
+
+                    // Set data
+                    series.data.setAll(chartData);
+
+                    // Slice renklerini ayarla (brandChartDataRaw.colors kullan)
+                    series.slices.template.adapters.add("fill", function(fill, target) {
+                        const dataItem = target.dataItem;
+                        if (dataItem) {
+                            const index = series.dataItems.indexOf(dataItem);
+                            if (brandChartDataRaw.colors && brandChartDataRaw.colors[index]) {
+                                return am5.color(brandChartDataRaw.colors[index]);
                             }
                         }
+                        return fill;
                     });
+
+                    // Tooltip'i özelleştir
+                    series.slices.template.setAll({
+                        tooltipText: "{category}: {value} adet"
+                    });
+
+                    // Create legend
+                    var legend = chart.children.push(am5.Legend.new(root, {
+                        centerX: am5.p50,
+                        x: am5.p50,
+                        marginTop: 15,
+                        marginBottom: 15
+                    }));
+
+                    // Set legend text color
+                    legend.labels.template.setAll({
+                        fill: am5.color("#d1d5db") // Solgun beyaz
+                    });
+
+                    legend.data.setAll(series.dataItems);
+
+                    // Play initial series animation
+                    series.appear(1000, 100);
+
+                    console.log('Brand distribution semi-circle chart başarıyla oluşturuldu!');
+
+                } catch (error) {
+                    console.error('Brand distribution chart oluşturulurken hata:', error);
+                    brandDistributionContainer.innerHTML = '<div style="text-align: center; padding: 50px; color: #e74c3c; font-size: 14px;">Brand chart oluşturulamadı: ' + error.message + '</div>';
                 }
-            }
-
-            // Create chart
-            createBrandChart();
-
-            // Refresh every 5 minutes
-            setInterval(createBrandChart, 300000);
+            }); // end am5.ready()
         }
 
-
-        // En Çok Alım Yaptığımız Cariler Chart (Bar Chart)
+        // En Çok Alım Yaptığımız Cariler Chart (Chart.js)
         const topCustomersCtx = document.getElementById('topCustomersChart');
         if (topCustomersCtx) {
-            const topCustomersData = JSON.parse('{{ top_customers_data|escapejs }}');
+            // Django'dan gelen customer data'yı al
+            const topCustomersDataRaw = {{ top_customers_data|safe }};
+            console.log('Top customers data:', topCustomersDataRaw);
 
-            // Renkli bar chart için farklı renkler
-            const colors = [
-                'rgba(239, 68, 68, 0.8)',   // Kırmızı
-                'rgba(59, 130, 246, 0.8)',  // Mavi
-                'rgba(245, 158, 11, 0.8)',  // Sarı
-                'rgba(16, 185, 129, 0.8)',  // Yeşil
-                'rgba(139, 92, 246, 0.8)',  // Mor
-                'rgba(236, 72, 153, 0.8)',  // Pembe
-                'rgba(6, 182, 212, 0.8)',   // Cyan
-                'rgba(132, 204, 22, 0.8)'   // Lime
-            ];
-
-            const topCustomersChart = new Chart(topCustomersCtx, {
-                type: 'bar',
-                data: {
-                    labels: topCustomersData.labels,
-                    datasets: [{
-                        label: 'Toplam Alım (₺)',
-                        data: topCustomersData.data,
-                        backgroundColor: colors.slice(0, topCustomersData.labels.length),
-                        borderColor: colors.slice(0, topCustomersData.labels.length).map(color => color.replace('0.8', '1')),
-                        borderWidth: 2,
-                        borderRadius: 4,
-                        borderSkipped: false,
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: true,
-                            position: 'top',
-                            labels: {
-                                usePointStyle: true,
-                                padding: 20
-                            }
-                        },
-                        tooltip: {
-                            callbacks: {
-                                title: function (context) {
-                                    const details = topCustomersData.details[context[0].dataIndex];
-                                    return details.name;
-                                },
-                                label: function (context) {
-                                    const details = topCustomersData.details[context.dataIndex];
-                                    return [
-                                        'Toplam Alım: ₺' + context.parsed.y.toLocaleString('tr-TR'),
-                                        'Sipariş Sayısı: ' + details.count + ' adet'
-                                    ];
-                                }
-                            },
-                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                            titleColor: '#fff',
-                            bodyColor: '#fff',
-                            borderColor: 'rgba(255, 255, 255, 0.1)',
+            if (topCustomersDataRaw && topCustomersDataRaw.labels && topCustomersDataRaw.labels.length > 0) {
+                const topCustomersChart = new Chart(topCustomersCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: topCustomersDataRaw.labels,
+                        datasets: [{
+                            label: 'Toplam Alım (TL)',
+                            data: topCustomersDataRaw.data,
+                            backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                            borderColor: 'rgba(59, 130, 246, 1)',
                             borderWidth: 1
-                        }
+                        }]
                     },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            grid: {
-                                color: 'rgba(0,0,0,0.1)'
-                            },
-                            ticks: {
-                                callback: function (value) {
-                                    return '₺' + value.toLocaleString('tr-TR');
-                                }
-                            }
-                        },
-                        x: {
-                            grid: {
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
                                 display: false
                             },
-                            ticks: {
-                                maxRotation: 45,
-                                minRotation: 0
+                            tooltip: {
+                                callbacks: {
+                                    label: function (context) {
+                                        const value = context.parsed.y;
+                                        const detail = topCustomersDataRaw.details[context.dataIndex];
+                                        return [
+                                            `Toplam: ${value.toLocaleString('tr-TR')} TL`,
+                                            `Adet: ${detail.count} sipariş`
+                                        ];
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return value.toLocaleString('tr-TR') + ' TL';
+                                    }
+                                }
+                            },
+                            x: {
+                                ticks: {
+                                    maxRotation: 45,
+                                    minRotation: 0
+                                }
                             }
                         }
                     }
-                }
-            });
+                });
+                console.log('Top customers chart başarıyla oluşturuldu!');
+            } else {
+                topCustomersCtx.parentElement.innerHTML = '<div style="text-align: center; padding: 50px; color: #666; font-size: 14px;">Cari verisi bulunamadı</div>';
+            }
         }
 
     });

@@ -315,9 +315,7 @@
 
 <!-- Quick Filters (Mobile) -->
 <div class="quick-filters d-md-none">
-    <a href="?durum=" class="quick-filter-btn {% if not filters.durum %}active{% endif %}">Tümü</a>
-    <a href="?durum=depolandi" class="quick-filter-btn {% if filters.durum == 'depolandi' %}active{% endif %}">Depoda</a>
-    <a href="?durum=cikti" class="quick-filter-btn {% if filters.durum == 'cikti' %}active{% endif %}">Çıktı</a>
+    <a href="?" class="quick-filter-btn {% if not filters.mevsim %}active{% endif %}">Tümü</a>
     <a href="?mevsim=yaz" class="quick-filter-btn {% if filters.mevsim == 'yaz' %}active{% endif %}">☀️ Yaz</a>
     <a href="?mevsim=kis" class="quick-filter-btn {% if filters.mevsim == 'kis' %}active{% endif %}">❄️ Kış</a>
     <a href="?mevsim=dort-mevsim" class="quick-filter-btn {% if filters.mevsim == 'dort-mevsim' %}active{% endif %}">🔄 4 Mevsim</a>
@@ -364,15 +362,6 @@
                     <input type="text" class="form-control" id="depo_konumu" name="depo_konumu" value="{{ filters.depo_konumu }}" placeholder="Raf A-1...">
                 </div>
                 {% endif %}
-                <div class="col-md-2 col-6 filter-col">
-                    <label for="durum" class="form-label">DURUM</label>
-                    <select class="form-select" id="durum" name="durum">
-                        <option value="">Tümü</option>
-                        {% for value, label in durum_choices %}
-                        <option value="{{ value }}" {% if filters.durum == value %}selected{% endif %}>{{ label }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
                 <div class="col-md-2 col-6 filter-col">
                     <label for="mevsim" class="form-label">MEVSİM</label>
                     <select class="form-select" id="mevsim" name="mevsim">
@@ -1084,8 +1073,10 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Sil butonları
     document.querySelectorAll('[data-delete-url]').forEach(function(button) {
-        button.addEventListener('click', function() {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
             const message = this.getAttribute('data-confirm-message');
+            const deleteUrl = this.getAttribute('data-delete-url');
             
             // Mobil cihazlarda daha büyük confirm dialog
             if (window.innerWidth <= 768) {
@@ -1097,15 +1088,38 @@ document.addEventListener('DOMContentLoaded', function() {
                     this.innerHTML = '<i class="bi bi-hourglass-split"></i>';
                     this.disabled = true;
                     
-                    window.location.href = this.getAttribute('data-delete-url');
+                    // POST request ile silme işlemi
+                    sendDeleteRequest(deleteUrl);
                 }
             } else {
                 if (confirm(message)) {
-                    window.location.href = this.getAttribute('data-delete-url');
+                    // POST request ile silme işlemi
+                    sendDeleteRequest(deleteUrl);
                 }
             }
         });
     });
+    
+    // POST request gönderme fonksiyonu
+    function sendDeleteRequest(url) {
+        // Form oluştur ve gönder
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = url;
+        
+        // CSRF token ekle
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (csrfToken) {
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrfmiddlewaretoken';
+            csrfInput.value = csrfToken.value;
+            form.appendChild(csrfInput);
+        }
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
     
     // Haptic feedback for mobile (if supported)
     if ('vibrate' in navigator && window.innerWidth <= 768) {

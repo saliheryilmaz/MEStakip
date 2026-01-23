@@ -182,6 +182,25 @@
         display: none !important;
     }
 
+    /* Hide amCharts watermark/logo */
+    .am5-logo,
+    .am5-logo-group,
+    [aria-label*="Chart created using amCharts"],
+    a[href*="amcharts.com"] {
+        display: none !important;
+        opacity: 0 !important;
+        visibility: hidden !important;
+    }
+
+    /* Hide pie chart labels and ticks */
+    #variableRadiusPieChart .am5-label,
+    #brandDistributionChart .am5-label,
+    #variableRadiusPieChart .am5-tick,
+    #brandDistributionChart .am5-tick {
+        display: none !important;
+        visibility: hidden !important;
+    }
+
     /* Ensure our custom chart is visible */
     #orderStatusChart {
         display: block !important;
@@ -660,8 +679,11 @@
                         am5themes_Animated.new(root)
                     ]);
 
+                    // Remove amCharts logo/watermark
+                    root._logo.dispose();
+
                     // Django'dan gelen tire sales data'yı al
-                    const tireSalesDataRaw = {{ tire_sales_data|safe }};
+                    const tireSalesDataRaw = JSON.parse('{{ tire_sales_data|escapejs }}');
                     console.log('Tire sales data:', tireSalesDataRaw);
 
                     // Veriyi amCharts formatına çevir
@@ -842,7 +864,7 @@
             am5.ready(function() {
                 try {
                     // Payment data'yı al (Django'dan gelen veri)
-                    const paymentDataRaw = {{ payment_data|safe }};
+                    const paymentDataRaw = JSON.parse('{{ payment_data|escapejs }}');
                     console.log('Payment data:', paymentDataRaw);
 
                     // Veri kontrolü
@@ -862,6 +884,9 @@
                         am5themes_Animated.new(root)
                     ]);
 
+                    // Remove amCharts logo/watermark
+                    root._logo.dispose();
+
                     // Create chart
                     var chart = root.container.children.push(am5percent.PieChart.new(root, {
                         layout: root.verticalLayout
@@ -877,11 +902,13 @@
 
                     // Pie chart label renklerini ayarla
                     series.labels.template.setAll({
-                        fill: am5.color("#d1d5db") // Solgun beyaz
+                        fill: am5.color("#d1d5db"), // Solgun beyaz
+                        visible: false // Label'ları gizle
                     });
 
                     series.ticks.template.setAll({
-                        stroke: am5.color("#6b7280") // Tick çizgileri gri
+                        stroke: am5.color("#6b7280"), // Tick çizgileri gri
+                        visible: false // Tick çizgilerini gizle
                     });
 
                     series.slices.template.setAll({
@@ -971,7 +998,7 @@
             initBrandDistributionChart();
         }, 100);
 
-        // Lastik Marka Dağılımı Chart (amCharts Semi-Circle Pie) - Real Data Implementation
+        // Lastik Marka Dağılımı Chart (amCharts Donut Chart) - Real Data Implementation
         function initBrandDistributionChart() {
             const brandDistributionContainer = document.getElementById('brandDistributionChart');
             if (!brandDistributionContainer) {
@@ -986,12 +1013,12 @@
                 return;
             }
 
-            console.log('amCharts percent yüklendi, brand distribution chart oluşturuluyor...');
+            console.log('amCharts percent yüklendi, brand distribution donut chart oluşturuluyor...');
 
             am5.ready(function() {
                 try {
                     // Django'dan gelen brand chart data'yı al
-                    const brandChartDataRaw = {{ brand_chart_data|safe }};
+                    const brandChartDataRaw = JSON.parse('{{ brand_chart_data|escapejs }}');
                     console.log('Brand chart data:', brandChartDataRaw);
 
                     // Veri kontrolü
@@ -1011,33 +1038,32 @@
                         am5themes_Animated.new(root)
                     ]);
 
-                    // Create chart
-                    var chart = root.container.children.push(
-                        am5percent.PieChart.new(root, {
-                            endAngle: 270
-                        })
-                    );
+                    // Remove amCharts logo/watermark
+                    root._logo.dispose();
+
+                    // Create chart (Donut chart with inner radius)
+                    var chart = root.container.children.push(am5percent.PieChart.new(root, {
+                        layout: root.verticalLayout,
+                        innerRadius: am5.percent(50) // Donut chart için inner radius
+                    }));
 
                     // Create series
-                    var series = chart.series.push(
-                        am5percent.PieSeries.new(root, {
-                            valueField: "value",
-                            categoryField: "category",
-                            endAngle: 270
-                        })
-                    );
+                    var series = chart.series.push(am5percent.PieSeries.new(root, {
+                        valueField: "value",
+                        categoryField: "category",
+                        alignLabels: false
+                    }));
 
-                    // Set label colors for brand chart
+                    // Circular labels configuration
                     series.labels.template.setAll({
-                        fill: am5.color("#d1d5db") // Solgun beyaz
+                        textType: "circular",
+                        centerX: 0,
+                        centerY: 0,
+                        visible: false // Label'ları gizle
                     });
 
                     series.ticks.template.setAll({
-                        stroke: am5.color("#6b7280") // Tick çizgileri gri
-                    });
-
-                    series.states.create("hidden", {
-                        endAngle: -90
+                        visible: false // Tick çizgilerini gizle
                     });
 
                     // Django'dan gelen brand data'yı amCharts formatına çevir
@@ -1046,7 +1072,7 @@
                         value: brandChartDataRaw.data[index]
                     }));
 
-                    console.log('Brand semi-circle chart data:', chartData);
+                    console.log('Brand donut chart data:', chartData);
 
                     // Set data
                     series.data.setAll(chartData);
@@ -1070,8 +1096,8 @@
 
                     // Create legend
                     var legend = chart.children.push(am5.Legend.new(root, {
-                        centerX: am5.p50,
-                        x: am5.p50,
+                        centerX: am5.percent(50),
+                        x: am5.percent(50),
                         marginTop: 15,
                         marginBottom: 15
                     }));
@@ -1086,11 +1112,11 @@
                     // Play initial series animation
                     series.appear(1000, 100);
 
-                    console.log('Brand distribution semi-circle chart başarıyla oluşturuldu!');
+                    console.log('Brand distribution donut chart başarıyla oluşturuldu!');
 
                 } catch (error) {
-                    console.error('Brand distribution chart oluşturulurken hata:', error);
-                    brandDistributionContainer.innerHTML = '<div style="text-align: center; padding: 50px; color: #e74c3c; font-size: 14px;">Brand chart oluşturulamadı: ' + error.message + '</div>';
+                    console.error('Brand distribution donut chart oluşturulurken hata:', error);
+                    brandDistributionContainer.innerHTML = '<div style="text-align: center; padding: 50px; color: #e74c3c; font-size: 14px;">Brand donut chart oluşturulamadı: ' + error.message + '</div>';
                 }
             }); // end am5.ready()
         }
@@ -1099,7 +1125,7 @@
         const topCustomersCtx = document.getElementById('topCustomersChart');
         if (topCustomersCtx) {
             // Django'dan gelen customer data'yı al
-            const topCustomersDataRaw = {{ top_customers_data|safe }};
+            const topCustomersDataRaw = JSON.parse('{{ top_customers_data|escapejs }}');
             console.log('Top customers data:', topCustomersDataRaw);
 
             if (topCustomersDataRaw && topCustomersDataRaw.labels && topCustomersDataRaw.labels.length > 0) {

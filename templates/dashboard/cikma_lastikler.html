@@ -111,6 +111,11 @@
         color: #212529;
     }
     
+    /* Açıklama metni için özel renk */
+    .lastik-info-row .info-value {
+        color: #212529 !important;
+    }
+    
     .ebat-code {
         background: #e3f2fd;
         color: #1976d2;
@@ -270,13 +275,6 @@
 .badge {
     font-size: 0.75rem;
 }
-
-.text-truncate-mobile {
-    max-width: 120px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
 </style>
 {% endblock %}
 
@@ -415,7 +413,7 @@
                         {% if not is_misafir %}
                         <th style="min-width: 120px;">AMBAR (DEPO)</th>
                         {% endif %}
-                        <th style="min-width: 150px;">AÇIKLAMA</th>
+                        <th style="min-width: 250px;">AÇIKLAMA</th>
                         <th style="min-width: 100px;">GİRİŞ TARİHİ</th>
                         {% if not is_misafir %}
                         <th style="min-width: 120px;">İŞLEMLER</th>
@@ -467,7 +465,7 @@
                         {% endif %}
                         <td>
                             {% if lastik.aciklama %}
-                                <span class="text-truncate d-inline-block" style="max-width: 150px;" title="{{ lastik.aciklama }}">
+                                <span title="{{ lastik.aciklama }}">
                                     {{ lastik.aciklama }}
                                 </span>
                             {% else %}
@@ -569,7 +567,7 @@
                     {% endif %}
                     <div class="lastik-info-row">
                         <span class="info-label">Açıklama:</span>
-                        <span class="info-value text-truncate-mobile" title="{{ lastik.aciklama|default:'' }}">
+                        <span class="info-value" title="{{ lastik.aciklama|default:'' }}">
                             {{ lastik.aciklama|default:"-" }}
                         </span>
                     </div>

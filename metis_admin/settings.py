@@ -18,7 +18,7 @@ DEBUG_ENV = os.environ.get('DEBUG', '').strip().lower()
 if DEBUG_ENV:
     DEBUG = DEBUG_ENV == 'true'
 else:
-    # Environment variable yoksa development modu (True)
+    # Environment variable yoksa development modu (True) - Geçici olarak True yapıldı
     DEBUG = True
 
 SECRET_KEY = os.environ.get(

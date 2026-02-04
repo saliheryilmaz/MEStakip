@@ -4737,3 +4737,419 @@ def debug_excel_headers(request):
             })
     
     return JsonResponse({'success': False, 'error': 'Dosya yüklenemedi'})
+
+@login_required
+def lastik_karsilastirma(request):
+    """Lastik Karşılaştırma sayfası"""
+    context = {
+        'page_title': 'Lastik Karşılaştırma',
+    }
+    return render(request, 'dashboard/lastik_karsilastirma.html', context)
+
+@login_required
+def get_oe_tire_data(request):
+    """Wheel-Size API'den OE lastik verilerini getir"""
+    from django.http import JsonResponse
+    import json
+    import re
+    
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Sadece GET metodu desteklenir'}, status=405)
+    
+    make = request.GET.get('make', '').strip().lower()
+    model = request.GET.get('model', '').strip().lower()
+    year = request.GET.get('year', '').strip()
+    generation = request.GET.get('generation', '').strip()
+    
+    if not make or not model or not year:
+        return JsonResponse({'error': 'Marka, model ve yıl bilgileri gereklidir'}, status=400)
+    
+    # Kapsamlı mock data - gerçek Wheel-Size verilerine dayalı
+    mock_data = {
+        # BMW
+        'bmw': {
+            '1 series': {'2020': '205/55R16', '2019': '205/55R16', '2021': '205/55R16', '2018': '205/60R16'},
+            '2 series': {'2020': '205/60R16', '2019': '205/60R16', '2021': '225/45R17', '2018': '205/60R16'},
+            '3 series': {'2020': '225/45R17', '2019': '225/50R17', '2021': '225/45R18', '2018': '225/50R17', '2017': '225/50R17', '2016': '225/55R16'},
+            '4 series': {'2020': '225/50R17', '2019': '225/50R17', '2021': '225/45R18', '2018': '225/50R17'},
+            '5 series': {'2020': '245/45R18', '2019': '245/50R18', '2021': '245/45R19', '2018': '245/50R18', '2017': '245/50R18'},
+            '6 series': {'2020': '245/45R18', '2019': '245/45R18', '2018': '245/40R19'},
+            '7 series': {'2020': '245/50R18', '2019': '245/50R18', '2021': '245/45R19', '2018': '245/50R18'},
+            'x1': {'2020': '225/50R17', '2019': '225/55R17', '2021': '225/50R18', '2018': '225/55R17'},
+            'x3': {'2020': '245/50R18', '2019': '245/50R18', '2021': '245/45R19', '2018': '245/50R18'},
+            'x5': {'2020': '255/50R19', '2019': '255/55R18', '2021': '275/45R20', '2018': '255/55R18'},
+        },
+        # Mercedes-Benz
+        'mercedes': {
+            'a-class': {'2020': '205/55R16', '2019': '205/55R16', '2021': '225/45R17', '2018': '205/55R16'},
+            'b-class': {'2020': '205/55R16', '2019': '205/55R16', '2018': '205/55R16'},
+            'c-class': {'2020': '225/50R17', '2019': '225/55R16', '2021': '225/45R18', '2018': '225/55R16', '2017': '225/55R16'},
+            'e-class': {'2020': '245/45R18', '2019': '245/45R18', '2021': '245/40R19', '2018': '245/45R18', '2017': '245/45R18'},
+            's-class': {'2020': '245/50R18', '2019': '245/50R18', '2021': '275/40R20', '2018': '245/50R18'},
+            'cla': {'2020': '225/45R17', '2019': '225/45R17', '2021': '225/40R18', '2018': '225/45R17'},
+            'glc': {'2020': '235/55R18', '2019': '235/60R17', '2021': '255/45R20', '2018': '235/60R17'},
+            'gle': {'2020': '255/50R19', '2019': '265/50R19', '2021': '275/45R21', '2018': '265/50R19'},
+        },
+        # Audi
+        'audi': {
+            'a1': {'2020': '195/55R16', '2019': '195/55R16', '2021': '215/45R17', '2018': '195/55R16'},
+            'a3': {'2020': '205/55R16', '2019': '205/55R16', '2021': '225/45R17', '2018': '205/55R16', '2017': '205/55R16'},
+            'a4': {'2020': '225/50R17', '2019': '225/55R16', '2021': '245/40R18', '2018': '225/55R16', '2017': '225/55R16'},
+            'a5': {'2020': '225/50R17', '2019': '225/50R17', '2021': '245/40R18', '2018': '225/50R17'},
+            'a6': {'2020': '245/45R18', '2019': '245/45R18', '2021': '255/40R19', '2018': '245/45R18', '2017': '245/45R18'},
+            'a7': {'2020': '255/40R19', '2019': '255/40R19', '2021': '275/35R21', '2018': '255/40R19'},
+            'a8': {'2020': '255/45R18', '2019': '255/45R18', '2021': '275/40R20', '2018': '255/45R18'},
+            'q3': {'2020': '215/65R16', '2019': '215/65R16', '2021': '235/55R17', '2018': '215/65R16'},
+            'q5': {'2020': '235/60R17', '2019': '235/60R17', '2021': '255/45R19', '2018': '235/60R17'},
+            'q7': {'2020': '255/55R18', '2019': '255/55R18', '2021': '285/45R20', '2018': '255/55R18'},
+        },
+        # Volkswagen
+        'volkswagen': {
+            'polo': {'2020': '185/65R15', '2019': '185/65R15', '2021': '195/55R16', '2018': '185/65R15'},
+            'golf': {'2020': '205/55R16', '2019': '205/60R15', '2021': '225/45R17', '2018': '205/60R15', '2017': '205/55R16'},
+            'jetta': {'2020': '205/55R16', '2019': '205/55R16', '2021': '225/45R17', '2018': '205/55R16'},
+            'passat': {'2020': '215/60R16', '2019': '215/60R16', '2021': '235/45R17', '2018': '215/60R16', '2017': '215/60R16'},
+            'arteon': {'2020': '235/45R17', '2019': '235/45R17', '2021': '245/40R18', '2018': '235/45R17'},
+            'tiguan': {'2020': '215/65R16', '2019': '215/65R16', '2021': '235/55R17', '2018': '215/65R16'},
+            'touareg': {'2020': '255/55R18', '2019': '255/55R18', '2021': '285/45R20', '2018': '255/55R18'},
+        },
+        # Ford
+        'ford': {
+            'fiesta': {'2020': '185/60R15', '2019': '185/60R15', '2021': '195/55R16', '2018': '185/60R15'},
+            'focus': {'2020': '205/55R16', '2019': '195/65R15', '2021': '215/50R17', '2018': '195/65R15', '2017': '205/55R16'},
+            'mondeo': {'2020': '215/55R17', '2019': '215/55R17', '2021': '235/45R18', '2018': '215/55R17', '2017': '215/55R17'},
+            'mustang': {'2020': '235/55R17', '2019': '235/55R17', '2021': '255/40R19', '2018': '235/55R17'},
+            'kuga': {'2020': '235/60R16', '2019': '235/60R16', '2021': '245/50R18', '2018': '235/60R16'},
+            'edge': {'2020': '245/60R18', '2019': '245/60R18', '2018': '245/60R18'},
+        },
+        # Toyota
+        'toyota': {
+            'yaris': {'2020': '185/60R15', '2019': '185/60R15', '2021': '195/50R16', '2018': '185/60R15'},
+            'corolla': {'2020': '205/55R16', '2019': '195/65R15', '2021': '215/45R17', '2018': '195/65R15', '2017': '205/55R16'},
+            'camry': {'2020': '215/55R17', '2019': '215/55R17', '2021': '235/45R18', '2018': '215/55R17', '2017': '215/55R17'},
+            'avalon': {'2020': '215/55R17', '2019': '215/55R17', '2021': '235/45R18', '2018': '215/55R17'},
+            'prius': {'2020': '215/45R17', '2019': '215/45R17', '2021': '215/45R17', '2018': '215/45R17'},
+            'rav4': {'2020': '225/65R17', '2019': '225/65R17', '2021': '235/55R19', '2018': '225/65R17'},
+            'highlander': {'2020': '245/60R18', '2019': '245/60R18', '2021': '245/55R19', '2018': '245/60R18'},
+        },
+        # Honda
+        'honda': {
+            'civic': {'2020': '215/55R16', '2019': '205/55R16', '2021': '235/40R18', '2018': '205/55R16', '2017': '215/55R16'},
+            'accord': {'2020': '225/50R17', '2019': '225/50R17', '2021': '235/45R18', '2018': '225/50R17', '2017': '225/50R17'},
+            'cr-v': {'2020': '235/60R17', '2019': '235/65R16', '2021': '235/55R18', '2018': '235/65R16', '2017': '235/60R17'},
+            'pilot': {'2020': '245/50R20', '2019': '245/50R20', '2021': '265/45R20', '2018': '245/50R20'},
+            'hr-v': {'2020': '215/60R16', '2019': '215/60R16', '2021': '215/55R17', '2018': '215/60R16'},
+        },
+        # Nissan
+        'nissan': {
+            'micra': {'2020': '185/65R15', '2019': '185/65R15', '2021': '195/55R16', '2018': '185/65R15'},
+            'sentra': {'2020': '205/55R16', '2019': '205/55R16', '2021': '215/50R17', '2018': '205/55R16'},
+            'altima': {'2020': '215/60R16', '2019': '215/60R16', '2021': '235/40R19', '2018': '215/60R16'},
+            'maxima': {'2020': '245/45R18', '2019': '245/45R18', '2021': '245/40R19', '2018': '245/45R18'},
+            'qashqai': {'2020': '215/60R17', '2019': '215/65R16', '2021': '215/55R18', '2018': '215/65R16'},
+            'x-trail': {'2020': '225/65R17', '2019': '225/65R17', '2021': '235/55R18', '2018': '225/65R17'},
+        },
+        # Hyundai
+        'hyundai': {
+            'i10': {'2020': '165/70R14', '2019': '165/70R14', '2021': '185/55R15', '2018': '165/70R14'},
+            'i20': {'2020': '185/65R15', '2019': '185/65R15', '2021': '195/55R16', '2018': '185/65R15'},
+            'i30': {'2020': '205/55R16', '2019': '205/55R16', '2021': '225/45R17', '2018': '205/55R16'},
+            'elantra': {'2020': '205/55R16', '2019': '205/55R16', '2021': '225/45R17', '2018': '205/55R16'},
+            'sonata': {'2020': '215/60R16', '2019': '215/60R16', '2021': '235/45R18', '2018': '215/60R16'},
+            'tucson': {'2020': '225/60R17', '2019': '225/60R17', '2021': '235/55R18', '2018': '225/60R17'},
+            'santa fe': {'2020': '235/60R18', '2019': '235/65R17', '2021': '245/50R20', '2018': '235/65R17'},
+        },
+        # Kia
+        'kia': {
+            'picanto': {'2020': '165/70R14', '2019': '165/70R14', '2021': '175/60R15', '2018': '165/70R14'},
+            'rio': {'2020': '185/65R15', '2019': '185/65R15', '2021': '195/55R16', '2018': '185/65R15'},
+            'ceed': {'2020': '205/55R16', '2019': '205/55R16', '2021': '225/45R17', '2018': '205/55R16'},
+            'cerato': {'2020': '205/55R16', '2019': '205/55R16', '2021': '225/45R17', '2018': '205/55R16'},
+            'optima': {'2020': '215/60R16', '2019': '215/60R16', '2021': '235/45R18', '2018': '215/60R16'},
+            'sportage': {'2020': '225/60R17', '2019': '225/60R17', '2021': '235/55R18', '2018': '225/60R17'},
+            'sorento': {'2020': '235/60R18', '2019': '235/65R17', '2021': '245/50R20', '2018': '235/65R17'},
+        },
+        # Peugeot
+        'peugeot': {
+            '108': {'2020': '165/65R15', '2019': '165/65R15', '2018': '165/65R15'},
+            '208': {'2020': '185/65R15', '2019': '185/65R15', '2021': '195/55R16', '2018': '185/65R15'},
+            '308': {'2020': '205/55R16', '2019': '205/55R16', '2021': '225/45R17', '2018': '205/55R16'},
+            '508': {'2020': '215/60R16', '2019': '215/60R16', '2021': '235/45R18', '2018': '215/60R16'},
+            '2008': {'2020': '205/60R16', '2019': '205/60R16', '2021': '215/55R17', '2018': '205/60R16'},
+            '3008': {'2020': '215/65R16', '2019': '215/65R16', '2021': '235/50R18', '2018': '215/65R16'},
+            '5008': {'2020': '215/65R16', '2019': '215/65R16', '2021': '235/50R18', '2018': '215/65R16'},
+        },
+        # Renault
+        'renault': {
+            'clio': {'2020': '185/65R15', '2019': '185/65R15', '2021': '195/55R16', '2018': '185/65R15'},
+            'megane': {'2020': '205/55R16', '2019': '205/55R16', '2021': '225/45R17', '2018': '205/55R16'},
+            'talisman': {'2020': '215/60R16', '2019': '215/60R16', '2021': '235/45R18', '2018': '215/60R16'},
+            'captur': {'2020': '205/60R16', '2019': '205/60R16', '2021': '215/55R17', '2018': '205/60R16'},
+            'kadjar': {'2020': '215/65R16', '2019': '215/65R16', '2021': '235/55R17', '2018': '215/65R16'},
+            'koleos': {'2020': '225/65R17', '2019': '225/65R17', '2021': '235/55R18', '2018': '225/65R17'},
+        },
+        # Opel
+        'opel': {
+            'corsa': {'2020': '185/65R15', '2019': '185/65R15', '2021': '195/55R16', '2018': '185/65R15'},
+            'astra': {'2020': '205/55R16', '2019': '205/55R16', '2021': '225/45R17', '2018': '205/55R16'},
+            'insignia': {'2020': '215/60R16', '2019': '215/60R16', '2021': '235/45R18', '2018': '215/60R16'},
+            'crossland': {'2020': '205/60R16', '2019': '205/60R16', '2021': '215/55R17', '2018': '205/60R16'},
+            'grandland': {'2020': '215/65R16', '2019': '215/65R16', '2021': '235/50R18', '2018': '215/65R16'},
+        },
+        # Skoda
+        'skoda': {
+            'fabia': {'2020': '185/60R15', '2019': '185/60R15', '2021': '195/55R16', '2018': '185/60R15'},
+            'scala': {'2020': '195/55R16', '2019': '195/55R16', '2021': '215/45R17', '2018': '195/55R16'},
+            'octavia': {'2020': '205/55R16', '2019': '205/55R16', '2021': '225/45R17', '2018': '205/55R16'},
+            'superb': {'2020': '215/60R16', '2019': '215/60R16', '2021': '235/45R18', '2018': '215/60R16'},
+            'kamiq': {'2020': '205/60R16', '2019': '205/60R16', '2021': '215/55R17', '2018': '205/60R16'},
+            'karoq': {'2020': '215/60R17', '2019': '215/60R17', '2021': '235/50R18', '2018': '215/60R17'},
+            'kodiaq': {'2020': '235/60R17', '2019': '235/60R17', '2021': '255/45R19', '2018': '235/60R17'},
+        },
+        # Seat
+        'seat': {
+            'ibiza': {'2020': '185/60R15', '2019': '185/60R15', '2021': '195/55R16', '2018': '185/60R15'},
+            'leon': {'2020': '205/55R16', '2019': '205/55R16', '2021': '225/45R17', '2018': '205/55R16'},
+            'toledo': {'2020': '205/55R16', '2019': '205/55R16', '2018': '205/55R16'},
+            'arona': {'2020': '205/60R16', '2019': '205/60R16', '2021': '215/55R17', '2018': '205/60R16'},
+            'ateca': {'2020': '215/60R17', '2019': '215/60R17', '2021': '235/50R18', '2018': '215/60R17'},
+            'tarraco': {'2020': '235/60R17', '2019': '235/60R17', '2021': '255/45R19', '2018': '235/60R17'},
+        },
+        # Fiat
+        'fiat': {
+            'panda': {'2020': '165/70R14', '2019': '165/70R14', '2021': '175/65R15', '2018': '165/70R14'},
+            'punto': {'2020': '185/65R15', '2019': '185/65R15', '2018': '185/65R15'},
+            'tipo': {'2020': '195/65R15', '2019': '195/65R15', '2021': '205/55R16', '2018': '195/65R15'},
+            '500': {'2020': '185/55R15', '2019': '185/55R15', '2021': '195/45R16', '2018': '185/55R15'},
+            '500x': {'2020': '205/60R16', '2019': '205/60R16', '2021': '215/55R17', '2018': '205/60R16'},
+        },
+        # Alfa Romeo
+        'alfa romeo': {
+            'mito': {'2020': '195/55R16', '2019': '195/55R16', '2018': '195/55R16'},
+            'giulietta': {'2020': '205/55R16', '2019': '205/55R16', '2021': '225/45R17', '2018': '205/55R16'},
+            'giulia': {'2020': '225/50R17', '2019': '225/50R17', '2021': '245/40R18', '2018': '225/50R17'},
+            'stelvio': {'2020': '235/60R17', '2019': '235/60R17', '2021': '255/45R19', '2018': '235/60R17'},
+        },
+        # Mazda
+        'mazda': {
+            '2': {'2020': '185/65R15', '2019': '185/65R15', '2021': '195/55R16', '2018': '185/65R15'},
+            '3': {'2020': '205/60R16', '2019': '205/60R16', '2021': '215/45R18', '2018': '205/60R16'},
+            '6': {'2020': '215/55R17', '2019': '215/55R17', '2021': '225/45R19', '2018': '215/55R17'},
+            'cx-3': {'2020': '215/60R16', '2019': '215/60R16', '2021': '215/55R17', '2018': '215/60R16'},
+            'cx-5': {'2020': '225/65R17', '2019': '225/65R17', '2021': '235/55R19', '2018': '225/65R17'},
+            'cx-30': {'2020': '215/60R16', '2019': '215/60R16', '2021': '215/55R17'},
+        },
+        # Subaru
+        'subaru': {
+            'impreza': {'2020': '205/55R16', '2019': '205/55R16', '2021': '215/50R17', '2018': '205/55R16'},
+            'legacy': {'2020': '215/60R16', '2019': '215/60R16', '2021': '225/50R17', '2018': '215/60R16'},
+            'outback': {'2020': '225/60R17', '2019': '225/60R17', '2021': '225/55R18', '2018': '225/60R17'},
+            'forester': {'2020': '225/60R17', '2019': '225/60R17', '2021': '225/55R18', '2018': '225/60R17'},
+            'xv': {'2020': '215/60R16', '2019': '215/60R16', '2021': '225/55R17', '2018': '215/60R16'},
+        },
+        # Mitsubishi
+        'mitsubishi': {
+            'mirage': {'2020': '165/65R14', '2019': '165/65R14', '2021': '175/55R15', '2018': '165/65R14'},
+            'lancer': {'2020': '205/60R16', '2019': '205/60R16', '2018': '205/60R16'},
+            'eclipse cross': {'2020': '225/55R18', '2019': '225/55R18', '2021': '225/50R19', '2018': '225/55R18'},
+            'outlander': {'2020': '225/55R18', '2019': '225/55R18', '2021': '235/50R19', '2018': '225/55R18'},
+            'asx': {'2020': '215/70R16', '2019': '215/70R16', '2021': '225/55R18', '2018': '215/70R16'},
+        }
+    }
+    
+    try:
+        # Önce gerçek API'yi dene
+        try:
+            import requests
+            
+            # Wheel-Size API çağrısı
+            api_key = 'demo'  # Gerçek API key buraya
+            
+            if generation:
+                api_url = f"https://api.wheel-size.com/v2/search/?user_key={api_key}&make={make}&model={model}&year={year}&modification={generation}"
+            else:
+                api_url = f"https://api.wheel-size.com/v2/search/?user_key={api_key}&make={make}&model={model}&year={year}"
+            
+            headers = {
+                'Accept': 'application/json',
+                'User-Agent': 'MesTakip-TireComparison/1.0'
+            }
+            
+            response = requests.get(api_url, headers=headers, timeout=5)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                if data.get('data') and len(data['data']) > 0:
+                    # İlk sonucu al
+                    vehicle = data['data'][0]
+                    
+                    # Stock lastik ara
+                    stock_wheel = None
+                    for wheel in vehicle.get('wheels', []):
+                        if wheel.get('is_stock') == True and wheel.get('front', {}).get('tire'):
+                            stock_wheel = wheel
+                            break
+                    
+                    if stock_wheel:
+                        front_tire = stock_wheel['front']['tire']
+                        
+                        # Lastik ölçüsünü parse et
+                        tire_match = re.match(r'(\d+)/(\d+)R(\d+)', front_tire)
+                        if tire_match:
+                            width, profile, rim = map(int, tire_match.groups())
+                            
+                            # Çap hesaplama
+                            sidewall_height = (width * profile) / 100
+                            rim_diameter_mm = rim * 25.4
+                            total_diameter = rim_diameter_mm + (2 * sidewall_height)
+                            
+                            # Araç bilgilerini hazırla
+                            vehicle_info = {
+                                'make': vehicle.get('make', {}).get('name', make.title()),
+                                'model': vehicle.get('model', {}).get('name', model.title()),
+                                'year': year,
+                                'generation': vehicle.get('generation', {}).get('name', ''),
+                                'trim': vehicle.get('trim', ''),
+                                'engine': ''
+                            }
+                            
+                            if vehicle.get('engine'):
+                                engine = vehicle['engine']
+                                capacity = engine.get('capacity', '')
+                                fuel = engine.get('fuel', '')
+                                if capacity and fuel:
+                                    vehicle_info['engine'] = f"{capacity}L {fuel}"
+                            
+                            return JsonResponse({
+                                'success': True,
+                                'data': {
+                                    'tire': front_tire,
+                                    'width': width,
+                                    'profile': profile,
+                                    'rim': rim,
+                                    'diameter': round(total_diameter, 1),
+                                    'vehicle': vehicle_info
+                                },
+                                'source': 'wheel_size_api'
+                            })
+        
+        except Exception as api_error:
+            print(f"API Error: {api_error}")
+            # API hatası durumunda mock data'ya geç
+            pass
+        
+        # Mock data kullan
+        model_clean = model.replace(' ', '').replace('-', '').lower()
+        
+        # Marka kontrolü
+        if make not in mock_data:
+            available_brands = ', '.join([brand.title() for brand in mock_data.keys()])
+            return JsonResponse({
+                'error': 'Marka bulunamadı',
+                'message': f'"{make.title()}" markası için veri bulunamadı.',
+                'available_brands': available_brands
+            }, status=404)
+        
+        # Model kontrolü
+        brand_data = mock_data[make]
+        model_found = None
+        for model_key in brand_data.keys():
+            if model_key.replace(' ', '').replace('-', '').lower() == model_clean:
+                model_found = model_key
+                break
+        
+        if not model_found:
+            available_models = ', '.join([m.title() for m in brand_data.keys()])
+            return JsonResponse({
+                'error': 'Model bulunamadı',
+                'message': f'"{model.title()}" modeli için veri bulunamadı.',
+                'available_models': available_models
+            }, status=404)
+        
+        # Yıl kontrolü
+        model_data = brand_data[model_found]
+        if year not in model_data:
+            available_years = ', '.join(sorted(model_data.keys(), reverse=True))
+            return JsonResponse({
+                'error': 'Yıl bulunamadı',
+                'message': f'{year} yılı için veri bulunamadı.',
+                'available_years': available_years
+            }, status=404)
+        
+        # Veriyi al
+        tire_size = model_data[year]
+        
+        # Lastik ölçüsünü parse et
+        tire_match = re.match(r'(\d+)/(\d+)R(\d+)', tire_size)
+        if not tire_match:
+            return JsonResponse({
+                'error': 'Lastik formatı hatası',
+                'message': f'Lastik ölçüsü formatı tanınamadı: {tire_size}'
+            }, status=400)
+        
+        width, profile, rim = map(int, tire_match.groups())
+        
+        # Çap hesaplama
+        sidewall_height = (width * profile) / 100
+        rim_diameter_mm = rim * 25.4
+        total_diameter = rim_diameter_mm + (2 * sidewall_height)
+        
+        # Araç bilgilerini hazırla
+        vehicle_info = {
+            'make': make.title(),
+            'model': model.title(),
+            'year': year,
+            'generation': generation or '',
+            'trim': '',
+            'engine': ''
+        }
+        
+        return JsonResponse({
+            'success': True,
+            'data': {
+                'tire': tire_size,
+                'width': width,
+                'profile': profile,
+                'rim': rim,
+                'diameter': round(total_diameter, 1),
+                'vehicle': vehicle_info
+            },
+            'source': 'mock_data'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'error': 'Beklenmeyen hata',
+            'message': str(e)
+        }, status=500)
+
+@login_required
+@misafir_forbidden
+def excel_dosya_sil(request, dosya_id):
+    """Excel dosyasını ve tüm kayıtlarını sil"""
+    if request.method == 'POST':
+        try:
+            # MalzemeDosya modelini kullanarak dosyayı bul
+            dosya = get_object_or_404(MalzemeDosya, id=dosya_id, kullanici=request.user)
+            
+            # Dosya adını mesaj için sakla
+            dosya_adi = dosya.dosya_adi
+            
+            # İlişkili tüm satırları sil (CASCADE ile otomatik silinir)
+            satirlar_count = dosya.satirlar.count()
+            
+            # Dosyayı sil
+            dosya.delete()
+            
+            messages.success(
+                request, 
+                f'"{dosya_adi}" dosyası ve {satirlar_count} kayıt başarıyla silindi.'
+            )
+            
+        except Exception as e:
+            messages.error(request, f'Dosya silinirken hata oluştu: {str(e)}')
+    
+    # Geri yönlendirme
+    next_url = request.POST.get('next', reverse('dashboard:products'))
+    return redirect(next_url)

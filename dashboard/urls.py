@@ -42,6 +42,8 @@ urlpatterns = [
     path('cikma-lastikler/<int:lastik_id>/sil/', views.cikma_lastik_sil, name='cikma_lastik_sil'),
     path('cikma-lastikler/<int:lastik_id>/sat/', views.cikma_lastik_sat, name='cikma_lastik_sat'),
     path('satilan-cikma-lastikler/', views.satilan_cikma_lastikler, name='satilan_cikma_lastikler'),
+    path('lastik-karsilastirma/', views.lastik_karsilastirma, name='lastik_karsilastirma'),
+    path('api/oe-tire-data/', views.get_oe_tire_data, name='get_oe_tire_data'),
     path('api/events/create/', views.create_event, name='create_event'),
     path('api/events/', views.get_events, name='get_events'),
     path('api/finance/overview/', views.finance_overview, name='finance_overview'),
@@ -65,5 +67,6 @@ urlpatterns = [
     path('help/', views.help, name='help'),
     path('malzeme-excel-yukle/', views.malzeme_excel_upload, name='malzeme_excel_upload'),
     path('malzeme-excel-kaydet/', views.malzeme_excel_kaydet, name='malzeme_excel_kaydet'),
+    path('excel-dosya/<int:dosya_id>/sil/', views.excel_dosya_sil, name='excel_dosya_sil'),
     path('health/', views.health_check, name='health_check'),
 ]

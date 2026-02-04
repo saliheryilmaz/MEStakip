@@ -668,6 +668,12 @@
                             </a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'lastik_karsilastirma' %}active{% endif %}" href="{% url 'dashboard:lastik_karsilastirma' %}">
+                                <i class="bi bi-speedometer2"></i>
+                                <span>Lastik Karşılaştırma</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link" href="{% url 'dashboard:users' %}">
                                 <i class="bi bi-people"></i>
                                 <span>Kullanıcılar</span>

@@ -185,7 +185,7 @@
             </label>
             <input type="file" id="excelFileInput" accept=".xls,.xlsx" class="form-control" />
             <div class="form-text">
-                Beklenen sütunlar: TARİH, FATURANO, MÜŞTERİ, KATEGORİ, ÜRÜN, TUTAR, ÖDEME PLANI
+                Beklenen sütunlar: TARİH, FATURANO, MÜŞTERİ, KATEGORİ, ÜRÜN, TUTAR, ÖDEME PLANI, REF
             </div>
         </div>
 
@@ -413,7 +413,8 @@
             { source: "KATEGORİ", label: "KATEGORİ" },
             { source: "ÜRÜN", label: "ÜRÜN" },
             { source: "TUTAR", label: "TUTAR" },
-            { source: "ÖDEME PLANI", label: "ÖDEME PLANI" }
+            { source: "ÖDEME PLANI", label: "ÖDEME PLANI" },
+            { source: "REF", label: "REF" }
         ];
 
         function excelDateToString(serial) {
@@ -515,6 +516,11 @@
                             cell.toLowerCase().includes('kart') ? 'bg-primary' :
                                 cell.toLowerCase().includes('havale') ? 'bg-warning' : 'bg-secondary';
                         cell = `<span class="badge ${badgeClass}">${cell}</span>`;
+                    }
+
+                    // REF için
+                    if (col.label === "REF") {
+                        cell = `<span class="badge bg-dark text-light">${cell}</span>`;
                     }
 
                     table += `<td class="text-center">${cell}</td>`;
@@ -685,7 +691,7 @@
                 console.log('İlk kayıt tam veri:', excelData[0]);
 
                 // Beklenen sütunları kontrol et
-                const expectedColumns = ['TARİH', 'FATURANO', 'MÜŞTERİ', 'KATEGORİ', 'ÜRÜN', 'TUTAR', 'ÖDEME PLANI'];
+                const expectedColumns = ['TARİH', 'FATURANO', 'MÜŞTERİ', 'KATEGORİ', 'ÜRÜN', 'TUTAR', 'ÖDEME PLANI', 'REF'];
                 const actualColumns = Object.keys(excelData[0]);
                 console.log('Beklenen sütunlar:', expectedColumns);
                 console.log('Mevcut sütunlar:', actualColumns);

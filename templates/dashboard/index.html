@@ -11,23 +11,77 @@
         <h1 class="h3 mb-0">Dashboard</h1>
        
     </div>
-    <div class="d-flex gap-2">
-        <a href="{% url 'dashboard:yeni_lastik' %}" class="btn btn-primary">
-            <i class="bi bi-plus-lg me-2"></i>
-            Yeni Sipariş Ekle
-        </a>
-        <button type="button" class="btn btn-outline-secondary" data-bs-toggle="tooltip" title="Sayfayı Yenile"
-            onclick="location.reload()">
-            <i class="bi bi-arrow-clockwise icon-hover"></i>
-        </button>
-        <a href="{% url 'dashboard:export_excel' %}" class="btn btn-outline-secondary" data-bs-toggle="tooltip"
-            title="Excel'e Aktar">
-            <i class="bi bi-download icon-hover"></i>
-        </a>
-        <button type="button" class="btn btn-outline-secondary" data-fullscreen-toggle data-bs-toggle="tooltip"
-            title="Tam Ekran">
-            <i class="bi bi-arrows-fullscreen icon-hover"></i>
-        </button>
+    
+</div>
+
+<!-- Quick Action Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-xl-3 col-lg-4 col-md-6">
+        <div class="card quick-action-card bg-primary text-white h-100">
+            <div class="card-body d-flex align-items-center">
+                <div class="flex-shrink-0 me-3">
+                    <div class="quick-action-icon">
+                        <i class="bi bi-plus-circle-fill"></i>
+                    </div>
+                </div>
+                <div class="flex-grow-1">
+                    <h6 class="card-title mb-1">Yeni Sipariş Ekle</h6>
+                    <small class="opacity-75">Lastik siparişi oluştur</small>
+                </div>
+                <a href="{% url 'dashboard:yeni_lastik' %}" class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-lg-4 col-md-6">
+        <div class="card quick-action-card bg-success text-white h-100">
+            <div class="card-body d-flex align-items-center">
+                <div class="flex-shrink-0 me-3">
+                    <div class="quick-action-icon">
+                        <i class="bi bi-cash-coin"></i>
+                    </div>
+                </div>
+                <div class="flex-grow-1">
+                    <h6 class="card-title mb-1">İşlem Ekle</h6>
+                    <small class="opacity-75">Gelir/Gider kaydı</small>
+                </div>
+                <a href="{% url 'dashboard:finance' %}" class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-lg-4 col-md-6">
+        <div class="card quick-action-card bg-info text-white h-100">
+            <div class="card-body d-flex align-items-center">
+                <div class="flex-shrink-0 me-3">
+                    <div class="quick-action-icon">
+                        <i class="bi bi-wallet2"></i>
+                    </div>
+                </div>
+                <div class="flex-grow-1">
+                    <h6 class="card-title mb-1">Kasa Toplamları</h6>
+                    <small class="opacity-75">Nakit durumu</small>
+                </div>
+                <a href="{% url 'dashboard:messages' %}" class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-lg-4 col-md-6">
+        <div class="card quick-action-card bg-warning text-white h-100">
+            <div class="card-body d-flex align-items-center">
+                <div class="flex-shrink-0 me-3">
+                    <div class="quick-action-icon">
+                        <i class="bi bi-arrow-left-right"></i>
+                    </div>
+                </div>
+                <div class="flex-grow-1">
+                    <h6 class="card-title mb-1">Sipariş Hareketleri</h6>
+                    <small class="opacity-75">Sipariş takibi</small>
+                </div>
+                <a href="{% url 'dashboard:elements' %}" class="stretched-link"></a>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -148,6 +202,87 @@
 
 {% block extra_css %}
 <style>
+    /* Quick Action Cards */
+    .quick-action-card {
+        border: none;
+        border-radius: 12px;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+        cursor: pointer;
+    }
+
+    .quick-action-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+
+    .quick-action-card .card-body {
+        padding: 1.5rem;
+        position: relative;
+        z-index: 2;
+    }
+
+    .quick-action-icon {
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 12px;
+        font-size: 1.5rem;
+    }
+
+    .quick-action-card .card-title {
+        font-size: 1rem;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+
+    .quick-action-card small {
+        font-size: 0.85rem;
+        opacity: 0.8;
+    }
+
+    .quick-action-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 100px;
+        height: 100px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        transform: translate(30px, -30px);
+        transition: all 0.3s ease;
+    }
+
+    .quick-action-card:hover::before {
+        transform: translate(20px, -20px) scale(1.1);
+    }
+
+    /* Responsive adjustments for quick action cards */
+    @media (max-width: 768px) {
+        .quick-action-card .card-body {
+            padding: 1.25rem;
+        }
+        
+        .quick-action-icon {
+            width: 40px;
+            height: 40px;
+            font-size: 1.25rem;
+        }
+        
+        .quick-action-card .card-title {
+            font-size: 0.9rem;
+        }
+        
+        .quick-action-card small {
+            font-size: 0.8rem;
+        }
+    }
+
     /* amCharts container styling */
     #chartdiv {
         width: 100% !important;

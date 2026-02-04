@@ -1,0 +1,679 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }} - Mestakip{% endblock %}
+
+{% block extra_css %}
+<style>
+    .tire-calculator-container {
+        background: #f5f5f5;
+        min-height: 100vh;
+        padding: 20px 0;
+    }
+
+    .calculator-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        overflow: hidden;
+        max-width: 1000px;
+        margin: 0 auto;
+    }
+
+    .header-section {
+        background: linear-gradient(135deg, #ff8c42 0%, #ff6b1a 100%);
+        color: white;
+        padding: 30px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+    }
+
+    .header-icon {
+        width: 60px;
+        height: 60px;
+        background: rgba(255,255,255,0.2);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 30px;
+    }
+
+    .header-text h1 {
+        font-size: 2.2em;
+        font-weight: 700;
+        margin: 0;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .header-text p {
+        margin: 5px 0 0 0;
+        opacity: 0.9;
+        font-size: 1.1em;
+    }
+
+    .calculation-section {
+        background: linear-gradient(135deg, #ff8c42 0%, #ff6b1a 100%);
+        color: white;
+        padding: 25px 30px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+    }
+
+    .calc-icon {
+        width: 50px;
+        height: 50px;
+        background: rgba(255,255,255,0.2);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+    }
+
+    .calc-text {
+        flex: 1;
+    }
+
+    .calc-text h3 {
+        margin: 0;
+        font-size: 1.4em;
+        font-weight: 600;
+    }
+
+    .calc-text p {
+        margin: 5px 0 0 0;
+        opacity: 0.9;
+        font-size: 0.95em;
+    }
+
+    .content-section {
+        padding: 40px;
+        background: white;
+    }
+
+    .description-text {
+        color: #666;
+        font-size: 1.05em;
+        line-height: 1.6;
+        margin-bottom: 30px;
+        text-align: justify;
+    }
+
+    .tire-input-section {
+        margin-bottom: 30px;
+    }
+
+    .tire-input-section h4 {
+        color: #333;
+        font-weight: 600;
+        margin-bottom: 15px;
+        font-size: 1.2em;
+    }
+
+    .tire-inputs {
+        display: flex;
+        gap: 15px;
+        align-items: end;
+        flex-wrap: wrap;
+    }
+
+    .input-group {
+        flex: 1;
+        min-width: 120px;
+    }
+
+    .input-group label {
+        display: block;
+        color: #555;
+        font-weight: 500;
+        margin-bottom: 8px;
+        font-size: 0.95em;
+    }
+
+    .tire-select {
+        width: 100%;
+        padding: 12px 15px;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        font-size: 16px;
+        background: white;
+        color: #333;
+        transition: border-color 0.3s;
+    }
+
+    .tire-select:focus {
+        outline: none;
+        border-color: #ff8c42;
+        box-shadow: 0 0 0 3px rgba(255, 140, 66, 0.1);
+    }
+
+    .calculate-btn {
+        background: linear-gradient(135deg, #ff8c42 0%, #ff6b1a 100%);
+        color: white;
+        border: none;
+        padding: 12px 25px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 1em;
+        cursor: pointer;
+        transition: transform 0.2s;
+        min-width: 120px;
+    }
+
+    .calculate-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(255, 140, 66, 0.3);
+    }
+
+    .results-section {
+        margin-top: 30px;
+        padding: 25px;
+        background: #f8f9fa;
+        border-radius: 10px;
+        border-left: 5px solid #ff8c42;
+    }
+
+    .result-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 0;
+        border-bottom: 1px solid #e0e0e0;
+    }
+
+    .result-item:last-child {
+        border-bottom: none;
+    }
+
+    .result-label {
+        color: #555;
+        font-weight: 500;
+    }
+
+    .result-value {
+        color: #333;
+        font-weight: 600;
+        font-size: 1.1em;
+    }
+
+    .difference-value {
+        font-weight: 700;
+        font-size: 1.2em;
+    }
+
+    .difference-positive {
+        color: #28a745;
+    }
+
+    .difference-negative {
+        color: #dc3545;
+    }
+
+    .difference-neutral {
+        color: #6c757d;
+    }
+
+    .compatibility-alert {
+        border-radius: 10px;
+        padding: 20px;
+        border: 2px solid;
+        background: white;
+    }
+
+    .compatibility-alert.compatible {
+        border-color: #28a745;
+        background: linear-gradient(135deg, #f8fff9 0%, #f0fff4 100%);
+    }
+
+    .compatibility-alert.warning {
+        border-color: #ffc107;
+        background: linear-gradient(135deg, #fffdf0 0%, #fff8e1 100%);
+    }
+
+    .compatibility-alert.incompatible {
+        border-color: #dc3545;
+        background: linear-gradient(135deg, #fff8f8 0%, #fff5f5 100%);
+    }
+
+    .alert-content {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .alert-icon {
+        font-size: 2.5em;
+        min-width: 50px;
+        text-align: center;
+    }
+
+    .alert-icon.compatible {
+        color: #28a745;
+    }
+
+    .alert-icon.warning {
+        color: #ffc107;
+    }
+
+    .alert-icon.incompatible {
+        color: #dc3545;
+    }
+
+    .alert-text h5 {
+        margin: 0 0 8px 0;
+        font-weight: 700;
+        font-size: 1.3em;
+    }
+
+    .alert-text p {
+        margin: 0;
+        font-size: 1em;
+        line-height: 1.4;
+    }
+
+    .compatible .alert-text h5 {
+        color: #28a745;
+    }
+
+    .warning .alert-text h5 {
+        color: #856404;
+    }
+
+    .incompatible .alert-text h5 {
+        color: #dc3545;
+    }
+
+    .compatible .alert-text p {
+        color: #155724;
+    }
+
+    .warning .alert-text p {
+        color: #856404;
+    }
+
+    .incompatible .alert-text p {
+        color: #721c24;
+    }
+
+    .warning-section {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 8px;
+        padding: 20px;
+        margin-top: 25px;
+    }
+
+    .warning-icon {
+        color: #856404;
+        font-size: 1.2em;
+        margin-right: 10px;
+    }
+
+    .warning-text {
+        color: #856404;
+        font-size: 0.95em;
+        line-height: 1.5;
+        margin: 0;
+    }
+
+    .close-btn {
+        background: #6c757d;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 6px;
+        font-weight: 500;
+        cursor: pointer;
+        float: right;
+        margin-top: 20px;
+    }
+
+    .close-btn:hover {
+        background: #5a6268;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .header-section {
+            flex-direction: column;
+            text-align: center;
+            padding: 25px 20px;
+        }
+
+        .calculation-section {
+            flex-direction: column;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .content-section {
+            padding: 25px 20px;
+        }
+
+        .tire-inputs {
+            flex-direction: column;
+        }
+
+        .input-group {
+            min-width: 100%;
+        }
+
+        .header-text h1 {
+            font-size: 1.8em;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="tire-calculator-container">
+    <div class="calculator-card">
+        <!-- Calculation Section -->
+        <div class="calculation-section">
+            <div class="calc-icon">
+                <i class="bi bi-calculator"></i>
+            </div>
+            <div class="calc-text">
+                <h3>HESAPLAMA ARACI</h3>
+                <p>Örn: 205/55R16 vs 225/45R17</p>
+            </div>
+        </div>
+
+        <!-- Content Section -->
+        <div class="content-section">
+            <div class="description-text">
+                Hesaplama aracı ile mevcut lastik ölçülerinizi ve takmak istediğiniz hedef lastik ölçülerini girerek lastik çapındaki değişim oranını hesaplayabilirsiniz.
+            </div>
+
+            <!-- Mevcut Lastik -->
+            <div class="tire-input-section">
+                <h4>Mevcut Lastik Ölçüleriniz:</h4>
+                <div class="tire-inputs">
+                    <div class="input-group">
+                        <label>Taban Genişliği</label>
+                        <select class="tire-select" id="current_width">
+                            <option value="">Seçiniz</option>
+                            <option value="155">155</option>
+                            <option value="165">165</option>
+                            <option value="175">175</option>
+                            <option value="185">185</option>
+                            <option value="195">195</option>
+                            <option value="205">205</option>
+                            <option value="215" selected>215</option>
+                            <option value="225">225</option>
+                            <option value="235">235</option>
+                            <option value="245">245</option>
+                            <option value="255">255</option>
+                            <option value="265">265</option>
+                            <option value="275">275</option>
+                            <option value="285">285</option>
+                            <option value="295">295</option>
+                            <option value="305">305</option>
+                            <option value="315">315</option>
+                            <option value="325">325</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Yanak Kesiti</label>
+                        <select class="tire-select" id="current_profile">
+                            <option value="">Seçiniz</option>
+                            <option value="30">30</option>
+                            <option value="35">35</option>
+                            <option value="40">40</option>
+                            <option value="45">45</option>
+                            <option value="50" selected>50</option>
+                            <option value="55">55</option>
+                            <option value="60">60</option>
+                            <option value="65">65</option>
+                            <option value="70">70</option>
+                            <option value="75">75</option>
+                            <option value="80">80</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Jant Çapı</label>
+                        <select class="tire-select" id="current_rim">
+                            <option value="">Seçiniz</option>
+                            <option value="13">13</option>
+                            <option value="14">14</option>
+                            <option value="15">15</option>
+                            <option value="16">16</option>
+                            <option value="17" selected>17</option>
+                            <option value="18">18</option>
+                            <option value="19">19</option>
+                            <option value="20">20</option>
+                            <option value="21">21</option>
+                            <option value="22">22</option>
+                            <option value="23">23</option>
+                            <option value="24">24</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hedef Lastik -->
+            <div class="tire-input-section">
+                <h4>Hedef Lastik Ölçüleri:</h4>
+                <div class="tire-inputs">
+                    <div class="input-group">
+                        <label>Taban Genişliği</label>
+                        <select class="tire-select" id="target_width">
+                            <option value="">Seçiniz</option>
+                            <option value="155">155</option>
+                            <option value="165">165</option>
+                            <option value="175">175</option>
+                            <option value="185">185</option>
+                            <option value="195">195</option>
+                            <option value="205">205</option>
+                            <option value="215">215</option>
+                            <option value="225" selected>225</option>
+                            <option value="235">235</option>
+                            <option value="245">245</option>
+                            <option value="255">255</option>
+                            <option value="265">265</option>
+                            <option value="275">275</option>
+                            <option value="285">285</option>
+                            <option value="295">295</option>
+                            <option value="305">305</option>
+                            <option value="315">315</option>
+                            <option value="325">325</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Yanak Kesiti</label>
+                        <select class="tire-select" id="target_profile">
+                            <option value="">Seçiniz</option>
+                            <option value="30">30</option>
+                            <option value="35">35</option>
+                            <option value="40">40</option>
+                            <option value="45" selected>45</option>
+                            <option value="50">50</option>
+                            <option value="55">55</option>
+                            <option value="60">60</option>
+                            <option value="65">65</option>
+                            <option value="70">70</option>
+                            <option value="75">75</option>
+                            <option value="80">80</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Jant Çapı</label>
+                        <select class="tire-select" id="target_rim">
+                            <option value="">Seçiniz</option>
+                            <option value="13">13</option>
+                            <option value="14">14</option>
+                            <option value="15">15</option>
+                            <option value="16">16</option>
+                            <option value="17" selected>17</option>
+                            <option value="18">18</option>
+                            <option value="19">19</option>
+                            <option value="20">20</option>
+                            <option value="21">21</option>
+                            <option value="22">22</option>
+                            <option value="23">23</option>
+                            <option value="24">24</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <button class="calculate-btn" onclick="calculateDifference()">Hesapla</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div id="results" class="results-section" style="display: none;">
+                <div class="result-item">
+                    <span class="result-label">Mevcut lastiğinizin çevresi:</span>
+                    <span class="result-value" id="current_circumference">-</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Takmak istediğiniz hedef lastiğin çevresi:</span>
+                    <span class="result-value" id="target_circumference">-</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Değişim oranı:</span>
+                    <span class="result-value difference-value" id="difference_percentage">-</span>
+                </div>
+                
+                <!-- Uyumluluk Uyarısı -->
+                <div id="compatibility_warning" class="compatibility-alert" style="margin-top: 20px;">
+                    <div class="alert-content">
+                        <i class="alert-icon" id="compatibility_icon"></i>
+                        <div class="alert-text">
+                            <h5 id="compatibility_title">-</h5>
+                            <p id="compatibility_message">-</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Warning Section -->
+            <div class="warning-section">
+                <p class="warning-text">
+                    <i class="bi bi-exclamation-triangle warning-icon"></i>
+                    Hesaplama sonucunun, ebat değişikliği araştırıldığı durumlarda size yardımcı olması niteliği taşıyan bir kılavuz olduğunu hatırlatır; araç üreticisinin belirttiği lastik ebatları dışındaki lastikleri araçınıza takmamanızı tavsiye ederiz.
+                </p>
+            </div>
+
+            <button class="close-btn" onclick="window.history.back()">Kapat</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// Lastik çapı hesaplama fonksiyonu
+function calculateTireDiameter(width, profile, rim) {
+    const sidewallHeight = (width * profile) / 100;
+    const rimDiameterMm = rim * 25.4; // inç'i mm'ye çevir
+    return rimDiameterMm + (2 * sidewallHeight);
+}
+
+// Lastik çevresi hesaplama fonksiyonu
+function calculateTireCircumference(diameter) {
+    return Math.PI * diameter;
+}
+
+// Fark hesaplama
+function calculateDifference() {
+    // Mevcut lastik değerleri
+    const currentWidth = parseInt(document.getElementById('current_width').value);
+    const currentProfile = parseInt(document.getElementById('current_profile').value);
+    const currentRim = parseInt(document.getElementById('current_rim').value);
+
+    // Hedef lastik değerleri
+    const targetWidth = parseInt(document.getElementById('target_width').value);
+    const targetProfile = parseInt(document.getElementById('target_profile').value);
+    const targetRim = parseInt(document.getElementById('target_rim').value);
+
+    // Validasyon
+    if (!currentWidth || !currentProfile || !currentRim || !targetWidth || !targetProfile || !targetRim) {
+        alert('Lütfen tüm alanları doldurun.');
+        return;
+    }
+
+    // Çap hesaplamaları
+    const currentDiameter = calculateTireDiameter(currentWidth, currentProfile, currentRim);
+    const targetDiameter = calculateTireDiameter(targetWidth, targetProfile, targetRim);
+
+    // Çevre hesaplamaları
+    const currentCircumference = calculateTireCircumference(currentDiameter);
+    const targetCircumference = calculateTireCircumference(targetDiameter);
+
+    // Yüzde farkı
+    const percentageDifference = ((targetCircumference - currentCircumference) / currentCircumference) * 100;
+
+    // Sonuçları göster
+    document.getElementById('current_circumference').textContent = currentCircumference.toFixed(1) + ' mm';
+    document.getElementById('target_circumference').textContent = targetCircumference.toFixed(1) + ' mm';
+    
+    const differenceElement = document.getElementById('difference_percentage');
+    const differenceText = (percentageDifference >= 0 ? '+' : '') + percentageDifference.toFixed(2) + '%';
+    differenceElement.textContent = differenceText;
+
+    // Renk kodlaması
+    differenceElement.className = 'result-value difference-value';
+    if (Math.abs(percentageDifference) <= 3) {
+        differenceElement.classList.add('difference-neutral');
+    } else if (percentageDifference > 0) {
+        differenceElement.classList.add('difference-positive');
+    } else {
+        differenceElement.classList.add('difference-negative');
+    }
+
+    // Uyumluluk uyarısını göster
+    showCompatibilityWarning(percentageDifference);
+
+    // Sonuç bölümünü göster
+    document.getElementById('results').style.display = 'block';
+    
+    // Sonuç bölümüne kaydır
+    document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
+}
+
+// Uyumluluk uyarısını göster
+function showCompatibilityWarning(percentageDifference) {
+    const warningElement = document.getElementById('compatibility_warning');
+    const iconElement = document.getElementById('compatibility_icon');
+    const titleElement = document.getElementById('compatibility_title');
+    const messageElement = document.getElementById('compatibility_message');
+    
+    const absDifference = Math.abs(percentageDifference);
+    
+    // Uyumluluk durumunu belirle
+    if (absDifference <= 2) {
+        // Çok uyumlu (0-2%)
+        warningElement.className = 'compatibility-alert compatible';
+        iconElement.className = 'alert-icon compatible bi bi-check-circle-fill';
+        titleElement.textContent = '✅ TAKILABİLİR - İDEAL UYUM';
+        messageElement.textContent = 'Bu lastik ölçüsü aracınıza güvenle takılabilir. Çap farkı çok düşük olduğu için performans ve güvenlik açısından ideal bir seçimdir.';
+    } else if (absDifference <= 3) {
+        // Uyumlu ama dikkatli (2-3%)
+        warningElement.className = 'compatibility-alert warning';
+        iconElement.className = 'alert-icon warning bi bi-exclamation-triangle-fill';
+        titleElement.textContent = '⚠️ TAKILABİLİR - DİKKATLİ OLUN';
+        messageElement.textContent = 'Bu lastik ölçüsü takılabilir ancak çap farkı sınır değerde. Hız göstergesi ve kilometre sayacında küçük sapmalar olabilir.';
+    } else if (absDifference <= 5) {
+        // Riskli (3-5%)
+        warningElement.className = 'compatibility-alert incompatible';
+        iconElement.className = 'alert-icon incompatible bi bi-x-circle-fill';
+        titleElement.textContent = '❌ TAKILABİLİR AMA RİSKLİ';
+        messageElement.textContent = 'Bu lastik ölçüsü teknik olarak takılabilir ancak önerilmez. Hız göstergesi, ABS ve ESP sistemlerinde sorunlar yaşayabilirsiniz.';
+    } else {
+        // Kesinlikle takılmamalı (5%+)
+        warningElement.className = 'compatibility-alert incompatible';
+        iconElement.className = 'alert-icon incompatible bi bi-shield-x-fill';
+        titleElement.textContent = '🚫 TAKILAMAz - GÜVENSİZ';
+        messageElement.textContent = 'Bu lastik ölçüsü aracınıza kesinlikle takılmamalıdır. Çap farkı çok yüksek olduğu için güvenlik riski oluşturur ve araç sistemlerine zarar verebilir.';
+    }
+}
+
+// Sayfa yüklendiğinde otomatik hesaplama (örnek değerlerle)
+document.addEventListener('DOMContentLoaded', function() {
+    // Örnek değerler zaten HTML'de seçili
+    calculateDifference();
+});
+</script>
+{% endblock %}

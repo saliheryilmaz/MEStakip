@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lastik Ölçüsü Karşılaştırma</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .form-section {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .results {
+            margin-top: 30px;
+        }
+
+        .oe-info {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 5px solid #2196f3;
+        }
+
+        .stock-item {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+        }
+
+        .stock-item.compatible {
+            border-color: #28a745;
+            background: #f8fff9;
+        }
+
+        .stock-item.incompatible {
+            border-color: #dc3545;
+            background: #fff8f8;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .compatible-badge {
+            background: #28a745;
+            color: white;
+        }
+
+        .incompatible-badge {
+            background: #dc3545;
+            color: white;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .col {
+            flex: 1;
+        }
+
+        @media (max-width: 768px) {
+            .row {
+                flex-direction: column;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚗 Lastik Ölçüsü Karşılaştırma</h1>
+            <p>OE lastik ölçüsüne göre stok uyumluluğu kontrolü (±%3 tolerans)</p>
+        </div>
+
+        <div class="content">
+            <div class="form-section">
+                <h2>Araç Bilgileri</h2>
+                <div class="row">
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="make">Marka:</label>
+                            <input type="text" id="make" placeholder="Örn: BMW" required>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="model">Model:</label>
+                            <input type="text" id="model" placeholder="Örn: 3 Series" required>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="year">Yıl:</label>
+                            <input type="number" id="year" min="1990" max="2024" placeholder="Örn: 2020" required>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="form-group">
+                            <label for="generation">Nesil (opsiyonel):</label>
+                            <input type="text" id="generation" placeholder="Örn: F30">
+                        </div>
+                    </div>
+                </div>
+
+                <button class="btn" onclick="getOETireSize()">OE Lastik Ölçüsünü Getir</button>
+            </div>
+
+            <div class="form-section">
+                <h2>Stok Lastikleri</h2>
+                <div id="stockTires">
+                    <div class="stock-tire-input">
+                        <div class="row">
+                            <div class="col">
+                                <div class="form-group">
+                                    <label>Genişlik:</label>
+                                    <input type="number" class="tire-width" placeholder="225" min="100" max="400">
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="form-group">
+                                    <label>Profil:</label>
+                                    <input type="number" class="tire-profile" placeholder="45" min="25" max="100">
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="form-group">
+                                    <label>Jant:</label>
+                                    <input type="number" class="tire-rim" placeholder="17" min="10" max="30">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <button class="btn" onclick="addStockTire()">+ Lastik Ekle</button>
+                <button class="btn" onclick="compareWithStock()" style="margin-left: 10px;">Karşılaştır</button>
+            </div>
+
+            <div id="results" class="results" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        let oeData = null;
+
+        // Lastik çapı hesaplama fonksiyonu
+        function calculateTireDiameter(width, profile, rim) {
+            const sidewallHeight = (width * profile) / 100;
+            const rimDiameterMm = rim * 25.4; // inç'i mm'ye çevir
+            return rimDiameterMm + (2 * sidewallHeight);
+        }
+
+        // OE lastik ölçüsünü getir
+        async function getOETireSize() {
+            const make = document.getElementById('make').value.trim();
+            const model = document.getElementById('model').value.trim();
+            const year = document.getElementById('year').value;
+            const generation = document.getElementById('generation').value.trim();
+
+            if (!make || !model || !year) {
+                alert('Lütfen marka, model ve yıl bilgilerini girin.');
+                return;
+            }
+
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.style.display = 'block';
+            resultsDiv.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>OE lastik ölçüsü getiriliyor...</p>
+                </div>
+            `;
+
+            try {
+                // Wheel-Size API'sine istek gönder
+                const searchQuery = generation ? 
+                    `${make} ${model} ${generation} ${year}` : 
+                    `${make} ${model} ${year}`;
+                
+                // API endpoint'i (gerçek API key'inizi buraya ekleyin)
+                const apiUrl = `https://api.wheel-size.com/v2/search/?user_key=YOUR_API_KEY&make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}&year=${year}`;
+                
+                // Demo amaçlı mock data (gerçek API'yi kullanırken bu kısmı silin)
+                const mockResponse = {
+                    data: [{
+                        market: "EUDM",
+                        body: "Sedan",
+                        trim: "320i",
+                        wheels: [{
+                            front: {
+                                tire: "225/45R17",
+                                rim: "17x8.0"
+                            },
+                            rear: {
+                                tire: "225/45R17", 
+                                rim: "17x8.0"
+                            }
+                        }]
+                    }]
+                };
+
+                // Gerçek API çağrısı için bu satırları kullanın:
+                // const response = await fetch(apiUrl);
+                // const data = await response.json();
+                
+                // Mock data kullanımı (demo için)
+                const data = mockResponse;
+
+                if (data.data && data.data.length > 0) {
+                    const vehicle = data.data[0];
+                    const frontTire = vehicle.wheels[0].front.tire;
+                    
+                    // Lastik ölçüsünü parse et (örn: "225/45R17")
+                    const tireMatch = frontTire.match(/(\d+)\/(\d+)R(\d+)/);
+                    if (tireMatch) {
+                        const [, width, profile, rim] = tireMatch.map(Number);
+                        const diameter = calculateTireDiameter(width, profile, rim);
+                        
+                        oeData = {
+                            tire: frontTire,
+                            width: width,
+                            profile: profile,
+                            rim: rim,
+                            diameter: diameter,
+                            vehicle: `${make} ${model} ${year}`
+                        };
+
+                        displayOEInfo();
+                    } else {
+                        throw new Error('Lastik ölçüsü formatı tanınamadı');
+                    }
+                } else {
+                    throw new Error('Bu araç için OE lastik bilgisi bulunamadı');
+                }
+
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="error">
+                        <strong>Hata:</strong> ${error.message}
+                        <br><br>
+                        <small>Not: Bu demo sürümde mock data kullanılmaktadır. Gerçek API key'inizi ekleyerek canlı veri alabilirsiniz.</small>
+                    </div>
+                `;
+            }
+        }
+
+        // OE bilgilerini göster
+        function displayOEInfo() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = `
+                <div class="oe-info">
+                    <h3>🎯 OE Lastik Bilgisi</h3>
+                    <p><strong>Araç:</strong> ${oeData.vehicle}</p>
+                    <p><strong>OE Lastik:</strong> ${oeData.tire}</p>
+                    <p><strong>Toplam Çap:</strong> ${oeData.diameter.toFixed(1)} mm</p>
+                    <p><strong>Tolerans Aralığı:</strong> ${(oeData.diameter * 0.97).toFixed(1)} - ${(oeData.diameter * 1.03).toFixed(1)} mm (±%3)</p>
+                </div>
+            `;
+        }
+
+        // Stok lastik ekleme
+        function addStockTire() {
+            const stockTiresDiv = document.getElementById('stockTires');
+            const newTireDiv = document.createElement('div');
+            newTireDiv.className = 'stock-tire-input';
+            newTireDiv.innerHTML = `
+                <div class="row">
+                    <div class="col">
+                        <div class="form-group">
+                            <label>Genişlik:</label>
+                            <input type="number" class="tire-width" placeholder="225" min="100" max="400">
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="form-group">
+                            <label>Profil:</label>
+                            <input type="number" class="tire-profile" placeholder="45" min="25" max="100">
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="form-group">
+                            <label>Jant:</label>
+                            <input type="number" class="tire-rim" placeholder="17" min="10" max="30">
+                        </div>
+                    </div>
+                    <div class="col" style="flex: 0 0 auto;">
+                        <div class="form-group">
+                            <label>&nbsp;</label>
+                            <button class="btn" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()" style="background: #dc3545;">Sil</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            stockTiresDiv.appendChild(newTireDiv);
+        }
+
+        // Stok lastiklerle karşılaştırma
+        function compareWithStock() {
+            if (!oeData) {
+                alert('Önce OE lastik ölçüsünü getirin.');
+                return;
+            }
+
+            const stockInputs = document.querySelectorAll('.stock-tire-input');
+            const stockTires = [];
+
+            stockInputs.forEach((input, index) => {
+                const width = parseInt(input.querySelector('.tire-width').value);
+                const profile = parseInt(input.querySelector('.tire-profile').value);
+                const rim = parseInt(input.querySelector('.tire-rim').value);
+
+                if (width && profile && rim) {
+                    const diameter = calculateTireDiameter(width, profile, rim);
+                    const difference = diameter - oeData.diameter;
+                    const percentageDiff = (difference / oeData.diameter) * 100;
+                    const isCompatible = Math.abs(percentageDiff) <= 3;
+
+                    stockTires.push({
+                        index: index + 1,
+                        tire: `${width}/${profile}R${rim}`,
+                        width, profile, rim,
+                        diameter,
+                        difference,
+                        percentageDiff,
+                        isCompatible
+                    });
+                }
+            });
+
+            if (stockTires.length === 0) {
+                alert('Lütfen en az bir stok lastik ölçüsü girin.');
+                return;
+            }
+
+            displayComparison(stockTires);
+        }
+
+        // Karşılaştırma sonuçlarını göster
+        function displayComparison(stockTires) {
+            const resultsDiv = document.getElementById('results');
+            
+            let html = `
+                <div class="oe-info">
+                    <h3>🎯 OE Lastik Bilgisi</h3>
+                    <p><strong>Araç:</strong> ${oeData.vehicle}</p>
+                    <p><strong>OE Lastik:</strong> ${oeData.tire}</p>
+                    <p><strong>Toplam Çap:</strong> ${oeData.diameter.toFixed(1)} mm</p>
+                    <p><strong>Tolerans Aralığı:</strong> ${(oeData.diameter * 0.97).toFixed(1)} - ${(oeData.diameter * 1.03).toFixed(1)} mm (±%3)</p>
+                </div>
+                
+                <h3>📊 Stok Lastik Karşılaştırması</h3>
+            `;
+
+            stockTires.forEach(tire => {
+                const statusClass = tire.isCompatible ? 'compatible' : 'incompatible';
+                const badgeClass = tire.isCompatible ? 'compatible-badge' : 'incompatible-badge';
+                const statusText = tire.isCompatible ? '✅ UYUMLU' : '❌ UYUMSUZ';
+                const diffSign = tire.difference > 0 ? '+' : '';
+
+                html += `
+                    <div class="stock-item ${statusClass}">
+                        <div style="display: flex; justify-content: between; align-items: center;">
+                            <div style="flex: 1;">
+                                <h4>Lastik ${tire.index}: ${tire.tire}</h4>
+                                <p><strong>Toplam Çap:</strong> ${tire.diameter.toFixed(1)} mm</p>
+                                <p><strong>Fark:</strong> ${diffSign}${tire.difference.toFixed(1)} mm (${diffSign}${tire.percentageDiff.toFixed(2)}%)</p>
+                            </div>
+                            <span class="status-badge ${badgeClass}">${statusText}</span>
+                        </div>
+                    </div>
+                `;
+            });
+
+            const compatibleCount = stockTires.filter(t => t.isCompatible).length;
+            html += `
+                <div style="text-align: center; margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 10px;">
+                    <h3>📈 Özet</h3>
+                    <p><strong>${compatibleCount}/${stockTires.length}</strong> lastik OE ölçüsüyle uyumlu (±%3 tolerans içinde)</p>
+                </div>
+            `;
+
+            resultsDiv.innerHTML = html;
+        }
+
+        // Sayfa yüklendiğinde bir örnek lastik ekle
+        document.addEventListener('DOMContentLoaded', function() {
+            // Örnek değerler
+            document.getElementById('make').value = 'BMW';
+            document.getElementById('model').value = '3 Series';
+            document.getElementById('year').value = '2020';
+            document.getElementById('generation').value = 'F30';
+            
+            // İlk lastik için örnek değerler
+            document.querySelector('.tire-width').value = '225';
+            document.querySelector('.tire-profile').value = '45';
+            document.querySelector('.tire-rim').value = '17';
+        });
+    </script>
+</body>
+</html>

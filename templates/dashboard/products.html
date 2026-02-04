@@ -196,20 +196,7 @@
                 {% endif %}
                 
                 <!-- Debug Bilgileri (Geçici) -->
-                {% if gun_ozeti.servis_merkez_toplam.excel_debug %}
-                <div class="row g-3 mt-2">
-                    <div class="col-12">
-                        <div class="alert alert-warning" role="alert">
-                            <strong>Debug:</strong> 
-                            Excel Kayıt: {{ gun_ozeti.servis_merkez_toplam.excel_debug.toplam_excel_kayit }}, 
-                            Hizmet: {{ gun_ozeti.servis_merkez_toplam.excel_debug.hizmet_kayit }}, 
-                            Nakit: {{ gun_ozeti.servis_merkez_toplam.excel_debug.excel_nakit|turkish_lira }}, 
-                            Kart: {{ gun_ozeti.servis_merkez_toplam.excel_debug.excel_kart|turkish_lira }}, 
-                            Cari: {{ gun_ozeti.servis_merkez_toplam.excel_debug.excel_cari|turkish_lira }}
-                        </div>
-                    </div>
-                </div>
-                {% endif %}
+                
             </div>
         </div>
     </div>
@@ -294,9 +281,7 @@
                                             {% endif %}
                                         </span>
                                     {% else %}
-                                        <span class="badge bg-warning text-dark">
-                                            <i class="bi bi-exclamation-triangle me-1"></i>Kategori Yok
-                                        </span>
+                                        <span class="text-muted">-</span>
                                     {% endif %}
                                 </td>
                                 <td>{{ tx.aciklama|truncatechars:50 }}</td>
@@ -340,6 +325,21 @@
                 {% endif %}
             </div>
         </div>
+    </div>
+</div>
+
+<!-- Ayırıcı Çizgi -->
+<div class="row mt-4 mb-3">
+    <div class="col-12">
+        <hr class="border-2 border-primary opacity-25">
+        <div class="text-center">
+            <span class="badge bg-primary px-3 py-2 fs-6">
+                <i class="bi bi-arrow-down me-2"></i>
+                Merkez Satış Verileri
+                <i class="bi bi-arrow-down ms-2"></i>
+            </span>
+        </div>
+        <hr class="border-2 border-primary opacity-25 mt-3">
     </div>
 </div>
 
@@ -453,7 +453,18 @@
                                         <strong>{{ dosya.dosya_adi }}</strong>
                                         <small class="text-muted ms-2">{{ dosya.yukleme_tarihi|date:'H:i' }}</small>
                                     </div>
-                                    <span class="badge bg-info">{{ dosya.satirlar.count }} kayıt</span>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="badge bg-info">{{ dosya.satirlar.count }} kayıt</span>
+                                        <form method="post" action="{% url 'dashboard:excel_dosya_sil' dosya.id %}" class="d-inline">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                            <button type="submit" class="btn btn-outline-danger btn-sm" 
+                                                    title="Excel dosyasını sil"
+                                                    onclick="return confirm('{{ dosya.dosya_adi }} dosyasını ve tüm kayıtlarını silmek istediğinize emin misiniz?');">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
                                 </div>
                             </div>
                             <div class="card-body p-0">
@@ -635,9 +646,7 @@
                                                 {% endif %}
                                             </span>
                                         {% else %}
-                                            <span class="badge bg-warning text-dark">
-                                                <i class="bi bi-exclamation-triangle me-1"></i>Kategori Yok
-                                            </span>
+                                            <span class="text-muted">-</span>
                                         {% endif %}
                                     </td>
                                     <td>{{ tx.aciklama|default:"-" }}</td>

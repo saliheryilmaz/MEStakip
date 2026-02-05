@@ -442,9 +442,9 @@ def products(request):
     # Toplam Excel hizmet tutarı
     excel_servis_toplam = excel_nakit_toplam + excel_kart + excel_cari + excel_sanal_pos + excel_havale
     
-    # Hizmet ve LASTİK olmayan kategorilerdeki tutarları Merkez Satış'a ekle (AKÜ, JANT vb.)
+    # Hizmet olmayan kategorilerdeki tutarları Merkez Satış'a ekle (LASTİK, AKÜ, JANT vb.)
     excel_merkez_hareketler = excel_hareketler.exclude(
-        Q(kategori__icontains='hizmet') | Q(kategori__icontains='HİZMET') | Q(kategori='LASTİK')
+        Q(kategori__icontains='hizmet') | Q(kategori__icontains='HİZMET')
     )
     
     excel_merkez_nakit = excel_merkez_hareketler.filter(
@@ -503,15 +503,23 @@ def products(request):
     
     excel_merkez_nakit_toplam = excel_merkez_nakit + excel_merkez_diger
     
-    # LASTİK kategorisindeki tüm tutarları M.Havale'ye ekle
-    excel_lastik_toplam = excel_hareketler.filter(kategori='LASTİK').aggregate(total=Sum('tutar', default=0))['total'] or 0
+    # LASTİK kategorisindeki sadece M.HAVALE ödeme şekilli tutarları M.Havale'ye ekle
+    excel_lastik_mhavale = excel_hareketler.filter(
+        kategori='LASTİK'
+    ).filter(
+        Q(odeme_sekli__icontains='m.havale') |
+        Q(odeme_sekli__icontains='m havale') |
+        Q(odeme_sekli__icontains='mhavale') |
+        Q(odeme_sekli__icontains='mehmet havale') |
+        Q(odeme_sekli__iexact='M.HAVALE')
+    ).aggregate(total=Sum('tutar', default=0))['total'] or 0
     
     # Excel hizmet tutarlarını ödeme yöntemlerine göre dağıt (SADECE HİZMET KATEGORİSİ)
     gun_ozeti['nakit_toplam'] = gelir_nakit + excel_nakit_toplam  # Sadece hizmet nakit tutarları
     gun_ozeti['kredi_karti_toplam'] = gelir_kredi_karti + excel_kart  # Sadece hizmet kart tutarları
     gun_ozeti['cari_toplam'] = gelir_cari + excel_cari  # Sadece hizmet cari tutarları
     gun_ozeti['sanal_pos_toplam'] = gelir_sanal_pos + excel_sanal_pos  # Transaction + hizmet sanal pos tutarları
-    gun_ozeti['mehmet_havale_toplam'] = gelir_mehmet_havale + excel_havale + excel_lastik_toplam  # Hizmet havale + TÜM LASTİK tutarları
+    gun_ozeti['mehmet_havale_toplam'] = gelir_mehmet_havale + excel_havale + excel_lastik_mhavale  # Hizmet havale + LASTİK M.HAVALE tutarları
     gun_ozeti['banka_havale_toplam'] = gelir_banka_havale
     
     # Servis ve Merkez Satış kasaları için Nakit, Kredi Kartı ve M.Havale toplamları
@@ -641,9 +649,9 @@ def products(request):
     # Excel verilerine göre ödeme şekillerine göre toplamlar
     excel_odeme_toplamlari = {}
     
-    # Tüm filtrelenmiş Excel satırlarını al (HİZMET ve LASTİK hariç - AKÜ, JANT vb.)
+    # Tüm filtrelenmiş Excel satırlarını al (HİZMET hariç - LASTİK, AKÜ, JANT vb.)
     excel_satirlar = MalzemeHareketi.objects.filter(kullanici=request.user).exclude(
-        Q(kategori__icontains='hizmet') | Q(kategori='HİZMET') | Q(kategori='LASTİK')
+        Q(kategori__icontains='hizmet') | Q(kategori='HİZMET')
     )
     if baslangic_tarih:
         excel_satirlar = excel_satirlar.filter(tarih__gte=baslangic_tarih)

@@ -391,13 +391,16 @@ def products(request):
         Q(odeme_sekli__icontains='sanalpos')
     ).aggregate(total=Sum('tutar', default=0))['total'] or 0
     
-    # Cari eşleştirmesi (cari 1 gün, cari 5 gün vb.)
+    # Cari eşleştirmesi (cari 1 gün, cari 5 gün vb.) ve GÜN ödeme şekli
     excel_cari = excel_hizmet_hareketler.filter(
         Q(odeme_sekli__icontains='cari') |
         Q(odeme_sekli__icontains='carı') |
         Q(odeme_sekli__iexact='cari') |
         Q(odeme_sekli__iregex=r'cari\s*\d+\s*gün') |
-        Q(odeme_sekli__iregex=r'carı\s*\d+\s*gün')
+        Q(odeme_sekli__iregex=r'carı\s*\d+\s*gün') |
+        Q(odeme_sekli__iexact='GÜN') |
+        Q(odeme_sekli__icontains='gün') |
+        Q(odeme_sekli__iregex=r'\d+\s*gün')  # "5 GÜN", "30 GÜN" gibi
     ).aggregate(total=Sum('tutar', default=0))['total'] or 0
     
     # Sanal POS eşleştirmesi
@@ -439,9 +442,9 @@ def products(request):
     # Toplam Excel hizmet tutarı
     excel_servis_toplam = excel_nakit_toplam + excel_kart + excel_cari + excel_sanal_pos + excel_havale
     
-    # Hizmet olmayan kategorilerdeki tutarları Merkez Satış'a ekle (LASTİK, AKÜ, JANT vb.)
+    # Hizmet ve LASTİK olmayan kategorilerdeki tutarları Merkez Satış'a ekle (AKÜ, JANT vb.)
     excel_merkez_hareketler = excel_hareketler.exclude(
-        Q(kategori__icontains='hizmet') | Q(kategori__icontains='HİZMET')
+        Q(kategori__icontains='hizmet') | Q(kategori__icontains='HİZMET') | Q(kategori='LASTİK')
     )
     
     excel_merkez_nakit = excel_merkez_hareketler.filter(
@@ -461,7 +464,10 @@ def products(request):
         Q(odeme_sekli__icontains='cari') |
         Q(odeme_sekli__icontains='carı') |
         Q(odeme_sekli__iregex=r'cari\s*\d+\s*gün') |
-        Q(odeme_sekli__iregex=r'carı\s*\d+\s*gün')
+        Q(odeme_sekli__iregex=r'carı\s*\d+\s*gün') |
+        Q(odeme_sekli__iexact='GÜN') |
+        Q(odeme_sekli__icontains='gün') |
+        Q(odeme_sekli__iregex=r'\d+\s*gün')  # "5 GÜN", "30 GÜN" gibi
     ).aggregate(total=Sum('tutar', default=0))['total'] or 0
     
     excel_merkez_sanal_pos = excel_merkez_hareketler.filter(
@@ -497,12 +503,15 @@ def products(request):
     
     excel_merkez_nakit_toplam = excel_merkez_nakit + excel_merkez_diger
     
+    # LASTİK kategorisindeki tüm tutarları M.Havale'ye ekle
+    excel_lastik_toplam = excel_hareketler.filter(kategori='LASTİK').aggregate(total=Sum('tutar', default=0))['total'] or 0
+    
     # Excel hizmet tutarlarını ödeme yöntemlerine göre dağıt (SADECE HİZMET KATEGORİSİ)
     gun_ozeti['nakit_toplam'] = gelir_nakit + excel_nakit_toplam  # Sadece hizmet nakit tutarları
     gun_ozeti['kredi_karti_toplam'] = gelir_kredi_karti + excel_kart  # Sadece hizmet kart tutarları
     gun_ozeti['cari_toplam'] = gelir_cari + excel_cari  # Sadece hizmet cari tutarları
     gun_ozeti['sanal_pos_toplam'] = gelir_sanal_pos + excel_sanal_pos  # Transaction + hizmet sanal pos tutarları
-    gun_ozeti['mehmet_havale_toplam'] = gelir_mehmet_havale + excel_havale  # Sadece hizmet havale tutarları
+    gun_ozeti['mehmet_havale_toplam'] = gelir_mehmet_havale + excel_havale + excel_lastik_toplam  # Hizmet havale + TÜM LASTİK tutarları
     gun_ozeti['banka_havale_toplam'] = gelir_banka_havale
     
     # Servis ve Merkez Satış kasaları için Nakit, Kredi Kartı ve M.Havale toplamları
@@ -632,9 +641,9 @@ def products(request):
     # Excel verilerine göre ödeme şekillerine göre toplamlar
     excel_odeme_toplamlari = {}
     
-    # Tüm filtrelenmiş Excel satırlarını al (HİZMET hariç - LASTİK, AKÜ, JANT vb.)
+    # Tüm filtrelenmiş Excel satırlarını al (HİZMET ve LASTİK hariç - AKÜ, JANT vb.)
     excel_satirlar = MalzemeHareketi.objects.filter(kullanici=request.user).exclude(
-        Q(kategori__icontains='hizmet') | Q(kategori='HİZMET')
+        Q(kategori__icontains='hizmet') | Q(kategori='HİZMET') | Q(kategori='LASTİK')
     )
     if baslangic_tarih:
         excel_satirlar = excel_satirlar.filter(tarih__gte=baslangic_tarih)
@@ -695,12 +704,15 @@ def products(request):
               odeme_sekli_original.lower() in ['m.havale', 'm havale', 'mhavale', 'mehmet havale'] or
               ('havale' in odeme_sekli_normalized and 'banka' not in odeme_sekli_normalized)):
             excel_odeme_dict['Mehmet_Havale'] += amount
-        # Cari kontrolü
+        # Cari kontrolü (GÜN ödeme şekli de dahil)
         elif ('cari' in odeme_sekli_normalized or 
               'carı' in odeme_sekli_normalized or
               odeme_sekli_original.lower() == 'cari' or
               odeme_sekli_normalized == 'cari' or
-              'gün' in odeme_sekli_normalized):  # "CARİ 5 GÜN", "CARİ 1 GÜN" için
+              'gün' in odeme_sekli_normalized or
+              odeme_sekli_original.upper() == 'GÜN' or
+              # Regex ile "5 GÜN", "30 GÜN" gibi formatları yakala
+              any(char.isdigit() for char in odeme_sekli_original) and 'gün' in odeme_sekli_original.lower()):  
             excel_odeme_dict['Cari'] += amount
         else:
             # Eğer eşleşme yoksa, varsayılan olarak hiçbir şeye eklenmez
@@ -2898,6 +2910,7 @@ def malzeme_excel_upload(request):
                             urun=str(row_data.get('ÜRÜN') or row_data.get('URUN') or '')[:255],
                             tutar=tutar,
                             odeme_sekli=str(row_data.get('ÖDEME ŞEKLİ') or row_data.get('ÖDEME PLANI') or '')[:100],
+                            ref=str(row_data.get('REF') or '')[:100],
                             kullanici=request.user,
                         )
                         hareket.save()
@@ -3047,6 +3060,14 @@ def malzeme_excel_kaydet(request):
                         odeme_sekli = str(val).strip() if val is not None else ''
                         break
                 
+                ref = ''
+                for key in row_keys:
+                    key_upper = key.upper().strip()
+                    if key_upper == 'REF' or 'REF' in key_upper:
+                        val = row[key]
+                        ref = str(val).strip() if val is not None else ''
+                        break
+                
                 tutar = parse_decimal_value(tutar_raw)
                 
                 print(f"İşlenmiş veri: TARİH={tarih}, FATURANO='{faturano}', MÜŞTERİ='{musteri}', ÜRÜN='{urun}', TUTAR={tutar}, ÖDEME='{odeme_sekli}'")
@@ -3075,6 +3096,7 @@ def malzeme_excel_kaydet(request):
                         urun=(urun or 'Belirtilmemiş')[:255],
                         tutar=tutar,
                         odeme_sekli=(odeme_sekli or 'Belirtilmemiş')[:100],
+                        ref=(ref or '')[:100],
                         kullanici=request.user,
                     )
                     print(f"Kayıt başarılı: ID={hareket.id}")

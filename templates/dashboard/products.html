@@ -195,7 +195,7 @@
                 </div>
                 {% endif %}
                 
-                <!-- Debug Bilgileri (Geçici) -->
+                
                 
             </div>
         </div>
@@ -480,6 +480,8 @@
                                                 <th>Ürün</th>
                                                 <th>Tutar</th>
                                                 <th>Ödeme Şekli</th>
+                                                <th>REF</th>
+                                                
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -522,6 +524,13 @@
                                                     {% else %}
                                                     <span class="badge bg-secondary">{{ satir.odeme_sekli }}</span>
                                                     {% endif %}
+                                                    {% else %}
+                                                    <span class="text-muted">-</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    {% if satir.ref %}
+                                                    <span class="badge bg-info text-white">{{ satir.ref }}</span>
                                                     {% else %}
                                                     <span class="text-muted">-</span>
                                                     {% endif %}

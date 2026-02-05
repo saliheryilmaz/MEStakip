@@ -637,6 +637,7 @@ class MalzemeHareketi(models.Model):
     urun = models.CharField(max_length=255)
     tutar = models.DecimalField(max_digits=14, decimal_places=2)
     odeme_sekli = models.CharField(max_length=100)
+    ref = models.CharField(max_length=100, blank=True, null=True, verbose_name="REF")
     kullanici = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     eklenme_zamani = models.DateTimeField(auto_now_add=True)
     def __str__(self):

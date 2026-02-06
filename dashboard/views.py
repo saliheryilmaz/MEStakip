@@ -1571,6 +1571,31 @@ def messages_view(request):
     )
     mehmet_havale_toplam = float((mehmet_havale_field_toplam['mehmet_havale_gelir'] or 0) - (mehmet_havale_field_toplam['mehmet_havale_gider'] or 0))
     
+    # Excel'den sadece M.HAVALE ödeme şekli olanları ekle
+    from dashboard.models import MalzemeHareketi
+    
+    # Excel kayıtlarını al
+    excel_lastik_mhavale_qs = MalzemeHareketi.objects.filter(kullanici=request.user)
+    
+    # Tarih filtrelerini uygula
+    if start_date:
+        excel_lastik_mhavale_qs = excel_lastik_mhavale_qs.filter(tarih__gte=start_date)
+    if end_date:
+        excel_lastik_mhavale_qs = excel_lastik_mhavale_qs.filter(tarih__lte=end_date)
+    
+    # Sadece M.HAVALE ödeme şekli olanları filtrele
+    excel_lastik_mhavale_qs = excel_lastik_mhavale_qs.filter(
+        Q(odeme_sekli__icontains='M.HAVALE') |
+        Q(odeme_sekli__icontains='M HAVALE') |
+        Q(odeme_sekli__icontains='MHAVALE')
+    )
+    
+    # Toplamı hesapla ve mehmet_havale_toplam'a ekle
+    excel_lastik_mhavale_sum = excel_lastik_mhavale_qs.aggregate(
+        total=Sum('tutar', default=0)
+    )['total'] or 0
+    mehmet_havale_toplam += float(excel_lastik_mhavale_sum)
+    
     # Banka havale field'ından toplam hesapla
     banka_havale_field_toplam = qs.aggregate(
         banka_havale_gelir=Sum(Case(When(hareket_tipi='gelir', then='banka_havale'), default=0, output_field=DecimalField(max_digits=14, decimal_places=2))),
@@ -1612,9 +1637,36 @@ def messages_view(request):
     # Kart modal verileri
     canta_entries = build_entries(qs.filter(Q(kasa_adi='canta') | ~Q(nakit=0)), lambda tx: tx.nakit)
     mehmet_havale_entries = build_entries(qs.filter(~Q(mehmet_havale=0)), lambda tx: tx.mehmet_havale)
+    
+    # Excel'den LASTİK + M.HAVALE kayıtlarını mehmet_havale_entries'e ekle
+    for hareket in excel_lastik_mhavale_qs.order_by('-tarih', '-id'):
+        mehmet_havale_entries.append({
+            'id': f'excel_{hareket.id}',
+            'tarih': hareket.tarih.strftime('%d.%m.%Y'),
+            'kasa_adi': 'Merkez Satış İş Akışı - (Excel)',
+            'hareket': 'Gelir',
+            'ana_kategori': hareket.kategori or '-',
+            'alt_kategori': '-',
+            'aciklama': f'{hareket.urun} - {hareket.musteri}',
+            'amount': float(hareket.tutar),
+        })
+    
     banka_havale_entries = build_entries(qs.filter(~Q(banka_havale=0)), lambda tx: tx.banka_havale)
     # Genel entries: Sadece Nakit ve Mehmet Havale olan işlemler (Çanta + Mehmet Havale)
     genel_entries = build_entries(qs.filter(Q(nakit__gt=0) | Q(mehmet_havale__gt=0)), lambda tx: (tx.nakit or 0) + (tx.mehmet_havale or 0))
+    
+    # Excel'den LASTİK + M.HAVALE kayıtlarını genel_entries'e de ekle
+    for hareket in excel_lastik_mhavale_qs.order_by('-tarih', '-id'):
+        genel_entries.append({
+            'id': f'excel_{hareket.id}',
+            'tarih': hareket.tarih.strftime('%d.%m.%Y'),
+            'kasa_adi': 'Merkez Satış İş Akışı - (Excel)',
+            'hareket': 'Gelir',
+            'ana_kategori': hareket.kategori or '-',
+            'alt_kategori': '-',
+            'aciklama': f'{hareket.urun} - {hareket.musteri}',
+            'amount': float(hareket.tutar),
+        })
 
     if start_date and end_date:
         date_range_label = f"{start_date.strftime('%d.%m.%Y')} - {end_date.strftime('%d.%m.%Y')}"
@@ -3883,7 +3935,8 @@ def get_excel_hizmet_transactions(user, **filters):
         elif 'sanal' in odeme_sekli:
             sanal_pos = hareket.tutar
         elif 'havale' in odeme_sekli:
-            if 'garanti' in odeme_sekli:
+            # M.HAVALE, M HAVALE, MEHMET HAVALE kontrolü
+            if any(x in odeme_sekli for x in ['m.havale', 'm havale', 'mhavale', 'mehmet havale', 'garanti']):
                 mehmet_havale = hareket.tutar
             else:
                 banka_havale = hareket.tutar

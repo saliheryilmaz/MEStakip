@@ -371,9 +371,14 @@ def products(request):
     )
     
     # Excel hizmet tutarlarını ödeme şekline göre dağıt
+    # Nakit hesaplamasından vade içeren kayıtları (GÜN) hariç tut
     excel_nakit = excel_hizmet_hareketler.filter(
         Q(odeme_sekli__icontains='nakit') |
         Q(odeme_sekli__iexact='nakit')
+    ).exclude(
+        Q(odeme_sekli__icontains='gün') |
+        Q(odeme_sekli__iregex=r'\d+\s*gün') |
+        Q(odeme_sekli__iregex=r'\d+\s*GÜN')
     ).aggregate(total=Sum('tutar', default=0))['total'] or 0
     
     # Kredi kartı eşleştirmesi (kart, pos, kuveyttürk pos vb.) - SANAL POS hariç
@@ -419,6 +424,7 @@ def products(request):
     ).aggregate(total=Sum('tutar', default=0))['total'] or 0
     
     # Diğer ödeme şekilleri (belirtilmemiş olanlar) nakit olarak kabul et
+    # Ancak vade içeren kayıtları (GÜN) hariç tut
     excel_diger = excel_hizmet_hareketler.exclude(
         odeme_sekli__icontains='nakit'
     ).exclude(
@@ -430,7 +436,10 @@ def products(request):
         Q(odeme_sekli__icontains='carı') |
         Q(odeme_sekli__iexact='cari') |
         Q(odeme_sekli__iregex=r'cari\s*\d+\s*gün') |
-        Q(odeme_sekli__iregex=r'carı\s*\d+\s*gün')
+        Q(odeme_sekli__iregex=r'carı\s*\d+\s*gün') |
+        Q(odeme_sekli__icontains='gün') |
+        Q(odeme_sekli__iregex=r'\d+\s*gün') |
+        Q(odeme_sekli__iregex=r'\d+\s*GÜN')
     ).exclude(
         odeme_sekli__icontains='sanal pos'
     ).exclude(
@@ -447,8 +456,13 @@ def products(request):
         Q(kategori__icontains='hizmet') | Q(kategori__icontains='HİZMET')
     )
     
+    # Merkez Satış nakit hesaplamasından vade içeren kayıtları (GÜN) hariç tut
     excel_merkez_nakit = excel_merkez_hareketler.filter(
         odeme_sekli__icontains='nakit'
+    ).exclude(
+        Q(odeme_sekli__icontains='gün') |
+        Q(odeme_sekli__iregex=r'\d+\s*gün') |
+        Q(odeme_sekli__iregex=r'\d+\s*GÜN')
     ).aggregate(total=Sum('tutar', default=0))['total'] or 0
     
     excel_merkez_kart = excel_merkez_hareketler.filter(
@@ -483,6 +497,7 @@ def products(request):
     ).aggregate(total=Sum('tutar', default=0))['total'] or 0
     
     # Hizmet olmayan kategorilerdeki diğer ödeme şekilleri (belirtilmemiş olanlar)
+    # Ancak vade içeren kayıtları (GÜN) hariç tut
     excel_merkez_diger = excel_merkez_hareketler.exclude(
         odeme_sekli__icontains='nakit'
     ).exclude(
@@ -494,7 +509,10 @@ def products(request):
         Q(odeme_sekli__icontains='carı') |
         Q(odeme_sekli__iexact='cari') |
         Q(odeme_sekli__iregex=r'cari\s*\d+\s*gün') |
-        Q(odeme_sekli__iregex=r'carı\s*\d+\s*gün')
+        Q(odeme_sekli__iregex=r'carı\s*\d+\s*gün') |
+        Q(odeme_sekli__icontains='gün') |
+        Q(odeme_sekli__iregex=r'\d+\s*gün') |
+        Q(odeme_sekli__iregex=r'\d+\s*GÜN')
     ).exclude(
         odeme_sekli__icontains='sanal pos'
     ).exclude(
@@ -4541,10 +4559,13 @@ def export_income_expense_excel(request):
 @misafir_forbidden
 def joker_satis(request):
     """Joker Satış Toplamları sayfası"""
-    # Joker satış verilerini getir
-    joker_hareketleri = JokerSatisHareketi.objects.filter(
-        kullanici=request.user
-    ).select_related('dosya')
+    # Joker satış verilerini getir - admin tüm verileri, diğerleri sadece kendi verilerini görür
+    if request.user.is_superuser:
+        joker_hareketleri = JokerSatisHareketi.objects.all()
+    else:
+        joker_hareketleri = JokerSatisHareketi.objects.filter(kullanici=request.user)
+    
+    joker_hareketleri = joker_hareketleri.select_related('dosya')
     
     # Filtreleme parametreleri
     tarih_baslangic = request.GET.get('tarih_baslangic')
@@ -4587,9 +4608,14 @@ def joker_satis(request):
     ).order_by('-ay')[:12]
     
     # Dosya bazında toplamlar - sadece kar
-    dosya_toplamlar = JokerSatisDosya.objects.filter(
-        satirlar__kullanici=request.user
-    ).annotate(
+    if request.user.is_superuser:
+        dosya_toplamlar = JokerSatisDosya.objects.all()
+    else:
+        dosya_toplamlar = JokerSatisDosya.objects.filter(
+            satirlar__kullanici=request.user
+        ).distinct()
+    
+    dosya_toplamlar = dosya_toplamlar.annotate(
         toplam_kar=Sum('satirlar__kar_tutari'),
         satir_sayisi=Count('satirlar')
     ).order_by('-yukleme_tarihi')
@@ -4612,7 +4638,17 @@ def joker_satis_excel_upload(request):
     if request.method == 'POST':
         form = MalzemeExcelUploadForm(request.POST, request.FILES)
         if form.is_valid():
-            excel_file = request.FILES['file']
+            excel_file = request.FILES.get('file')
+            
+            if not excel_file:
+                messages.error(request, "Lütfen bir dosya seçin.")
+                return redirect('dashboard:joker_satis_excel_upload')
+            
+            # Dosya uzantısını kontrol et
+            if not (excel_file.name.endswith('.xlsx') or excel_file.name.endswith('.xls')):
+                messages.error(request, "Sadece .xlsx veya .xls dosyaları yükleyebilirsiniz.")
+                return redirect('dashboard:joker_satis_excel_upload')
+            
             try:
                 from openpyxl import load_workbook
                 wb = load_workbook(excel_file)
@@ -4621,6 +4657,7 @@ def joker_satis_excel_upload(request):
                 # JokerSatisDosya oluştur
                 dosya = JokerSatisDosya.objects.create(
                     dosya_adi=excel_file.name,
+                    kullanici=request.user,
                 )
                 
                 # İlk satırdan başlıkları al
@@ -4629,7 +4666,10 @@ def joker_satis_excel_upload(request):
                     if cell.value:
                         headers.append(str(cell.value).strip())
                 
-                print(f"Excel başlıkları: {headers}")  # Debug
+                if not headers:
+                    messages.error(request, "Excel dosyasında başlık satırı bulunamadı.")
+                    dosya.delete()
+                    return redirect('dashboard:joker_satis_excel_upload')
                 
                 eklenen = 0
                 toplam_kar = 0
@@ -4757,15 +4797,22 @@ def joker_satis_excel_upload(request):
                     except Exception as e:
                         print(f"Row error: {e}")
                         continue
-                        
-                messages.success(request, f"Başarıyla {eklenen} joker satış kaydı eklendi! Toplam kar: {toplam_kar:.2f} TL")
+                
+                if eklenen == 0:
+                    messages.warning(request, "Excel dosyasından hiç veri eklenemedi. Lütfen dosya formatını kontrol edin.")
+                    dosya.delete()
+                else:
+                    messages.success(request, f"Başarıyla {eklenen} joker satış kaydı eklendi! Toplam kar: {toplam_kar:.2f} TL")
                 return redirect('dashboard:joker_satis')
             except Exception as e:
                 print(f"Excel upload error: {e}")
+                import traceback
+                traceback.print_exc()
                 messages.error(request, f"Excel yükleme hatası: {str(e)}")
-                return redirect('dashboard:joker_satis')
+                return redirect('dashboard:joker_satis_excel_upload')
         else:
-            messages.error(request, "Lütfen geçerli bir dosya seçin.")
+            messages.error(request, "Form geçersiz. Lütfen dosya seçin.")
+            print(f"Form errors: {form.errors}")
     else:
         form = MalzemeExcelUploadForm()
     

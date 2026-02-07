@@ -261,7 +261,14 @@ class SiparisForm(forms.ModelForm):
         return cleaned_data
 
 class MalzemeExcelUploadForm(forms.Form):
-    file = forms.FileField(label='Excel Dosyası (*.xls, *.xlsx)', required=True)
+    file = forms.FileField(
+        label='Excel Dosyası (*.xls, *.xlsx)', 
+        required=True,
+        widget=forms.FileInput(attrs={
+            'class': 'form-control',
+            'accept': '.xlsx,.xls'
+        })
+    )
 
 
 class TransactionCategoryForm(forms.ModelForm):

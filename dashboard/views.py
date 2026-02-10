@@ -3245,7 +3245,7 @@ def cikma_lastikler(request):
             ebat = request.POST.get('ebat')
             mevsim = request.POST.get('mevsim')
             adet = int(request.POST.get('adet', 1))
-            durum = request.POST.get('durum', 'cikti')
+            durum = request.POST.get('durum', 'depolandi')  # Default 'depolandi' olmalı
             kalite_notu = request.POST.get('kalite_notu', '')
             depo_konumu = request.POST.get('depo_konumu', '')
             aciklama = request.POST.get('aciklama', '')
@@ -3298,7 +3298,12 @@ def cikma_lastikler(request):
             return HttpResponseRedirect(reverse('dashboard:cikma_lastikler'))
             
         except Exception as e:
+            print(f"DEBUG: Hata oluştu - {str(e)}")
+            import traceback
+            traceback.print_exc()
             messages.error(request, f'Kayıt eklenirken hata oluştu: {str(e)}')
+            # Hata durumunda da sayfayı yeniden yükle
+            return redirect('dashboard:cikma_lastikler')
     
     # Filtreleme parametreleri - sadece GET request'te
     marka = request.GET.get('marka', '')

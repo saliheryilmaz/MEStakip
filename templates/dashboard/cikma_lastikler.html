@@ -8,6 +8,170 @@
 <style>
 /* Mobil optimizasyonları */
 @media (max-width: 768px) {
+    /* Modal içeriğe göre boyutlandır */
+    .modal-dialog {
+        margin: 0;
+        max-width: 100%;
+        min-height: 100vh;
+        display: flex;
+        align-items: stretch;
+    }
+    
+    .modal-content {
+        background: #1a1d29 !important;
+        border-radius: 0;
+        border: none;
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+    }
+    
+    .modal-header {
+        padding: 15px 20px;
+        border-bottom: 2px solid #28a745;
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        flex-shrink: 0;
+    }
+    
+    .modal-header .modal-title {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #ffffff;
+    }
+    
+    .modal-body {
+        padding: 15px;
+        background: #1a1d29;
+        flex: 0 1 auto;
+    }
+    
+    .modal-body .row {
+        margin: 0 -5px;
+    }
+    
+    .modal-body .col-6,
+    .modal-body .col-12 {
+        padding: 0 5px;
+        margin-bottom: 12px;
+    }
+    
+    .modal-body .form-label {
+        color: #e9ecef;
+        font-weight: 600;
+        font-size: 0.75rem;
+        margin-bottom: 5px;
+        display: block;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }
+    
+    .modal-body .form-control,
+    .modal-body .form-select,
+    .modal-body textarea {
+        background: #2d3142;
+        border: 2px solid #3d4152;
+        color: #ffffff;
+        font-size: 0.9rem;
+        padding: 8px 10px;
+        border-radius: 6px;
+        transition: all 0.3s ease;
+        width: 100%;
+    }
+    
+    .modal-body .form-control::placeholder,
+    .modal-body textarea::placeholder {
+        color: #8b92a8;
+        font-style: italic;
+        font-size: 0.85rem;
+    }
+    
+    .modal-body .form-control:focus,
+    .modal-body .form-select:focus,
+    .modal-body textarea:focus {
+        background: #353849;
+        border-color: #28a745;
+        box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.15);
+        color: #ffffff;
+        outline: none;
+    }
+    
+    .modal-body .form-select option {
+        background: #2d3142;
+        color: #ffffff;
+        padding: 10px;
+    }
+    
+    .modal-body .text-muted,
+    .modal-body small {
+        color: #8b92a8 !important;
+        font-size: 0.7rem;
+        display: block;
+        margin-top: 3px;
+        font-style: italic;
+    }
+    
+    .modal-body textarea {
+        min-height: 60px;
+        resize: vertical;
+    }
+    
+    .modal-footer {
+        padding: 15px;
+        background: #1a1d29;
+        border-top: 2px solid #3d4152;
+        display: flex;
+        gap: 10px;
+        flex-shrink: 0;
+        margin-top: auto;
+    }
+    
+    .modal-footer .btn {
+        font-size: 0.95rem;
+        padding: 11px 18px;
+        font-weight: 700;
+        flex: 1;
+        border-radius: 6px;
+        border: none;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .modal-footer .btn i {
+        font-size: 1rem;
+        margin-right: 5px;
+    }
+    
+    .modal-footer .btn-secondary {
+        background: #495057;
+        color: #ffffff;
+    }
+    
+    .modal-footer .btn-secondary:active {
+        background: #5a6268;
+        transform: scale(0.98);
+    }
+    
+    .modal-footer .btn-success {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        color: #ffffff;
+        box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+    }
+    
+    .modal-footer .btn-success:active {
+        transform: scale(0.98);
+        box-shadow: 0 1px 4px rgba(40, 167, 69, 0.3);
+    }
+    
+    /* Input animasyonları */
+    .modal-body .form-control:valid:not(:placeholder-shown),
+    .modal-body .form-select:valid {
+        border-color: #20c997;
+    }
+    
     /* Header düzenlemeleri */
     .mobile-header {
         flex-direction: column;
@@ -111,7 +275,6 @@
         color: #212529;
     }
     
-    /* Açıklama metni için özel renk */
     .lastik-info-row .info-value {
         color: #212529 !important;
     }
@@ -148,7 +311,6 @@
         padding: 8px 4px;
     }
     
-    /* Pagination mobil */
     .pagination {
         justify-content: center;
         flex-wrap: wrap;
@@ -159,21 +321,6 @@
         font-size: 0.85rem;
     }
     
-    /* Modal optimizasyonları */
-    .modal-dialog {
-        margin: 10px;
-        max-width: calc(100% - 20px);
-    }
-    
-    .modal-body {
-        padding: 15px;
-    }
-    
-    .modal-footer {
-        padding: 10px 15px;
-    }
-    
-    /* Floating Action Button */
     .fab {
         position: fixed;
         bottom: 20px;
@@ -199,7 +346,6 @@
         box-shadow: 0 6px 16px rgba(40, 167, 69, 0.5);
     }
     
-    /* Quick filter buttons */
     .quick-filters {
         display: flex;
         gap: 8px;
@@ -237,7 +383,6 @@
         color: white;
     }
     
-    /* Compact mobile filter */
     .compact-mobile-filter {
         background: #f8f9fa;
         padding: 10px;
@@ -253,6 +398,20 @@
     .compact-mobile-filter .btn-sm {
         padding: 6px 10px;
         font-size: 0.8rem;
+    }
+    
+    /* Clear filters button - koyu tema */
+    #clearFiltersBtn {
+        background: #dc3545 !important;
+        border-color: #dc3545 !important;
+        color: #ffffff !important;
+    }
+    
+    #clearFiltersBtn:hover,
+    #clearFiltersBtn:active {
+        background: #c82333 !important;
+        border-color: #bd2130 !important;
+        transform: scale(1.05);
     }
 }
 
@@ -311,31 +470,32 @@
     </div>
 </div>
 
-<!-- Quick Filters (Mobile) -->
-<div class="quick-filters d-md-none">
-    <a href="?" class="quick-filter-btn {% if not filters.mevsim %}active{% endif %}">Tümü</a>
-    <a href="?mevsim=yaz" class="quick-filter-btn {% if filters.mevsim == 'yaz' %}active{% endif %}">☀️ Yaz</a>
-    <a href="?mevsim=kis" class="quick-filter-btn {% if filters.mevsim == 'kis' %}active{% endif %}">❄️ Kış</a>
-    <a href="?mevsim=dort-mevsim" class="quick-filter-btn {% if filters.mevsim == 'dort-mevsim' %}active{% endif %}">🔄 4 Mevsim</a>
-</div>
-
 <!-- Compact Mobile Filter -->
-<div class="compact-mobile-filter d-md-none mb-3">
-    <form method="get" class="d-flex gap-2 flex-wrap">
-        <input type="text" class="form-control form-control-sm" name="marka" value="{{ filters.marka }}" placeholder="Marka ara..." style="flex: 2; min-width: 120px;">
-        <input type="text" class="form-control form-control-sm" name="ebat" value="{{ filters.ebat }}" placeholder="Ebat..." style="flex: 1; min-width: 80px;">
+<div class="compact-mobile-filter d-md-none mb-2">
+    <form method="get" id="mobileFilterForm" class="d-flex gap-2 flex-wrap">
+        <input type="text" class="form-control form-control-sm" id="mobileEbatInput" name="ebat" value="{{ filters.ebat }}" placeholder="Ebat girin..." style="flex: 2; min-width: 140px;">
+        <input type="text" class="form-control form-control-sm" id="mobileMarkaInput" name="marka" value="{{ filters.marka }}" placeholder="Marka..." style="flex: 1; min-width: 100px;">
         {% if not is_misafir %}
-        <input type="text" class="form-control form-control-sm" name="depo_konumu" value="{{ filters.depo_konumu }}" placeholder="Depo..." style="flex: 1; min-width: 80px;">
+        <input type="text" class="form-control form-control-sm" id="mobileDepoInput" name="depo_konumu" value="{{ filters.depo_konumu }}" placeholder="Depo..." style="flex: 1; min-width: 80px;">
         {% endif %}
+        <input type="hidden" id="mobileMevsimInput" name="mevsim" value="{{ filters.mevsim }}">
         <button type="submit" class="btn btn-primary btn-sm">
             <i class="bi bi-search"></i>
         </button>
-        {% if filters.marka or filters.ebat or filters.depo_konumu %}
-        <a href="{% url 'dashboard:cikma_lastikler' %}" class="btn btn-outline-secondary btn-sm">
+        {% if filters.marka or filters.ebat or filters.depo_konumu or filters.mevsim %}
+        <a href="{% url 'dashboard:cikma_lastikler' %}" class="btn btn-outline-secondary btn-sm" id="clearFiltersBtn">
             <i class="bi bi-x"></i>
         </a>
         {% endif %}
     </form>
+</div>
+
+<!-- Quick Filters (Mobile) - Mevsim Seçimi -->
+<div class="quick-filters d-md-none mb-3">
+    <button type="button" class="quick-filter-btn {% if not filters.mevsim %}active{% endif %}" data-mevsim="">Tümü</button>
+    <button type="button" class="quick-filter-btn {% if filters.mevsim == 'yaz' %}active{% endif %}" data-mevsim="yaz">☀️ Yaz</button>
+    <button type="button" class="quick-filter-btn {% if filters.mevsim == 'kis' %}active{% endif %}" data-mevsim="kis">❄️ Kış</button>
+    <button type="button" class="quick-filter-btn {% if filters.mevsim == 'dort-mevsim' %}active{% endif %}" data-mevsim="dort-mevsim">🔄 4 Mevsim</button>
 </div>
 
 <!-- Filtering Section -->
@@ -675,20 +835,20 @@
                 {% csrf_token %}
                 <div class="modal-body">
                     <div class="row g-3">
-                        <div class="col-md-6 col-12">
+                        <div class="col-6">
                             <label for="marka" class="form-label">Marka *</label>
                             <input type="text" class="form-control" id="marka" name="marka" required>
                         </div>
-                        <div class="col-md-6 col-12">
+                        <div class="col-6">
                             <label for="model" class="form-label">Model</label>
                             <input type="text" class="form-control" id="model" name="model" placeholder="Lastik modeli">
                         </div>
-                        <div class="col-md-6 col-12">
+                        <div class="col-6">
                             <label for="ebat" class="form-label">Ebat *</label>
                             <input type="text" class="form-control" id="ebat" name="ebat" placeholder="205/55R16" required>
-                            <small class="text-muted">Örnek: 205/55R16 veya 2055516</small>
+                            <small class="text-muted">Örnek: 205/55R16</small>
                         </div>
-                        <div class="col-md-6 col-12">
+                        <div class="col-6">
                             <label for="mevsim" class="form-label">Mevsim *</label>
                             <select class="form-select" id="mevsim" name="mevsim" required>
                                 <option value="">Seçiniz</option>
@@ -697,11 +857,11 @@
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="col-md-6 col-12">
+                        <div class="col-6">
                             <label for="adet" class="form-label">Adet *</label>
                             <input type="number" class="form-control" id="adet" name="adet" min="1" value="1" required>
                         </div>
-                        <div class="col-md-6 col-12">
+                        <div class="col-6">
                             <label for="kalite_notu" class="form-label">Kalite</label>
                             <select class="form-select" id="kalite_notu" name="kalite_notu">
                                 <option value="">Seçiniz</option>
@@ -710,36 +870,39 @@
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="col-md-6 col-12">
+                        <div class="col-6">
                             <label for="durum" class="form-label">Durum</label>
                             <select class="form-select" id="durum" name="durum">
                                 <option value="depolandi" selected>Depolandı</option>
                                 <option value="satildi">Satıldı</option>
                             </select>
                         </div>
-                        <div class="col-md-6 col-12">
+                        <div class="col-6">
                             <label for="depo_konumu" class="form-label">Depo Konumu</label>
-                            <input type="text" class="form-control" id="depo_konumu" name="depo_konumu" placeholder="Raf A-1, Saha 2 vb.">
+                            <input type="text" class="form-control" id="depo_konumu" name="depo_konumu" placeholder="Raf A-1">
                         </div>
                         
                         <!-- Satış Bilgileri - Sadece durum "satildi" ise göster -->
-                        <div class="col-md-6 col-12" id="satis_fiyati_field_new" style="display: none;">
+                        <div class="col-6" id="satis_fiyati_field_new" style="display: none;">
                             <label for="satis_fiyati_new" class="form-label">Satış Fiyatı (₺)</label>
                             <input type="number" class="form-control" id="satis_fiyati_new" name="satis_fiyati" step="0.01" min="0">
                         </div>
-                        <div class="col-md-6 col-12" id="satis_tarihi_field_new" style="display: none;">
+                        <div class="col-6" id="satis_tarihi_field_new" style="display: none;">
                             <label for="satis_tarihi_new" class="form-label">Satış Tarihi</label>
                             <input type="date" class="form-control" id="satis_tarihi_new" name="satis_tarihi">
                         </div>
                         
                         <div class="col-12">
                             <label for="aciklama" class="form-label">Açıklama</label>
-                            <textarea class="form-control" id="aciklama" name="aciklama" rows="2" placeholder="Ek notlar, özel durumlar vb."></textarea>
+                            <textarea class="form-control" id="aciklama" name="aciklama" rows="2" placeholder="Ek notlar..."></textarea>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg me-1"></i>
+                        İptal
+                    </button>
                     <button type="submit" class="btn btn-success">
                         <i class="bi bi-check-lg me-1"></i>
                         Kaydet
@@ -860,21 +1023,90 @@ document.addEventListener('DOMContentLoaded', function() {
         document.body.classList.add('touch-device');
     }
     
-    // Quick filter butonları
+    // Quick filter butonları - Ebat filtresini koruyarak çalış
     document.querySelectorAll('.quick-filter-btn').forEach(function(btn) {
         btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Mevcut ebat ve diğer filtreleri al
+            const ebatInput = document.getElementById('mobileEbatInput');
+            const markaInput = document.getElementById('mobileMarkaInput');
+            const depoInput = document.getElementById('mobileDepoInput');
+            const mevsimInput = document.getElementById('mobileMevsimInput');
+            
+            // Seçilen mevsimi al
+            const selectedMevsim = this.getAttribute('data-mevsim');
+            
+            // Mevsim inputunu güncelle
+            mevsimInput.value = selectedMevsim;
+            
+            // Aktif class'ı güncelle
+            document.querySelectorAll('.quick-filter-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            
             // Loading state
             const originalText = this.innerHTML;
             this.innerHTML = '<i class="bi bi-hourglass-split"></i>';
             this.style.pointerEvents = 'none';
             
-            // Restore after navigation
-            setTimeout(() => {
-                this.innerHTML = originalText;
-                this.style.pointerEvents = 'auto';
-            }, 1000);
+            // Formu submit et
+            document.getElementById('mobileFilterForm').submit();
         });
     });
+    
+    // Ebat inputu değiştiğinde quick filter'ları vurgula
+    const ebatInput = document.getElementById('mobileEbatInput');
+    if (ebatInput) {
+        ebatInput.addEventListener('input', function() {
+            const quickFilters = document.querySelector('.quick-filters');
+            if (this.value.trim()) {
+                // Ebat girildiğinde quick filter'ları vurgula
+                quickFilters.style.border = '2px solid #007bff';
+                quickFilters.style.padding = '7px';
+                quickFilters.style.borderRadius = '8px';
+                quickFilters.style.background = '#e7f3ff';
+            } else {
+                // Ebat silindiğinde normal hale getir
+                quickFilters.style.border = '';
+                quickFilters.style.padding = '5px 0';
+                quickFilters.style.background = '';
+            }
+        });
+        
+        // Sayfa yüklendiğinde ebat varsa vurgula
+        if (ebatInput.value.trim()) {
+            const quickFilters = document.querySelector('.quick-filters');
+            quickFilters.style.border = '2px solid #007bff';
+            quickFilters.style.padding = '7px';
+            quickFilters.style.borderRadius = '8px';
+            quickFilters.style.background = '#e7f3ff';
+        }
+    }
+    
+    // Temizle butonu - tüm filtreleri ve quick filter vurgusunu temizle
+    const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+    if (clearFiltersBtn) {
+        clearFiltersBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Tüm inputları temizle
+            document.getElementById('mobileMarkaInput').value = '';
+            document.getElementById('mobileEbatInput').value = '';
+            if (document.getElementById('mobileDepoInput')) {
+                document.getElementById('mobileDepoInput').value = '';
+            }
+            document.getElementById('mobileMevsimInput').value = '';
+            
+            // Quick filter vurgusunu kaldır
+            const quickFilters = document.querySelector('.quick-filters');
+            quickFilters.style.border = '';
+            quickFilters.style.padding = '5px 0';
+            quickFilters.style.background = '';
+            
+            // Ana sayfaya yönlendir
+            window.location.href = this.getAttribute('href');
+        });
+    }
     
     // Yeni kayıt formunda satış alanları kontrolü
     const durumSelectNew = document.getElementById('durum');
@@ -924,15 +1156,34 @@ document.addEventListener('DOMContentLoaded', function() {
     forms.forEach(function(form) {
         form.addEventListener('submit', function(e) {
             const submitBtn = form.querySelector('button[type="submit"]');
-            if (submitBtn) {
+            
+            // Form validasyonu kontrol et
+            if (!form.checkValidity()) {
+                e.preventDefault();
+                e.stopPropagation();
+                form.classList.add('was-validated');
+                
+                // İlk hatalı alanı bul ve focus et
+                const firstInvalid = form.querySelector(':invalid');
+                if (firstInvalid) {
+                    firstInvalid.focus();
+                    firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+                return false;
+            }
+            
+            if (submitBtn && !submitBtn.classList.contains('processing')) {
+                submitBtn.classList.add('processing');
                 submitBtn.disabled = true;
+                const originalHTML = submitBtn.innerHTML;
                 submitBtn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Kaydediliyor...';
                 
-                // Re-enable after 3 seconds (fallback)
+                // Re-enable after 5 seconds (fallback in case of error)
                 setTimeout(() => {
                     submitBtn.disabled = false;
-                    submitBtn.innerHTML = submitBtn.innerHTML.replace('Kaydediliyor...', 'Kaydet');
-                }, 3000);
+                    submitBtn.classList.remove('processing');
+                    submitBtn.innerHTML = originalHTML;
+                }, 5000);
             }
         });
     });

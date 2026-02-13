@@ -308,9 +308,10 @@ def products(request):
         secilen_tarih = date.today().strftime('%Y-%m-%d')
     
     # İşlemleri filtrele (kategorileri ve parent kategorileri de yükle)
+    # Kredi kartı giderlerini products sayfasından tamamen hariç tut
     qs = Transaction.objects.filter(created_by=request.user).select_related(
         'kategori1', 'kategori1__parent', 'kategori2', 'kategori2__parent', 'kategori3', 'kategori3__parent'
-    )
+    ).exclude(Q(hareket_tipi='gider') & Q(kredi_karti__gt=0))
     
     if baslangic_tarih:
         qs = qs.filter(tarih__gte=baslangic_tarih)
@@ -323,6 +324,7 @@ def products(request):
     
     # Özet bilgileri (Sanal Pos ve Banka Havale hariç, Kredi Kartı dahil)
     # Merkez Satış ve Virman kasalarını hariç tut
+    # Kredi kartı giderleri zaten sorguda filtrelendi
     toplam_ifade = (F('nakit') + F('kredi_karti') + F('cari') + F('mehmet_havale'))
     
     gun_ozeti = qs.exclude(kasa_adi__in=['merkez-satis', 'virman']).aggregate(
@@ -533,6 +535,7 @@ def products(request):
     ).aggregate(total=Sum('tutar', default=0))['total'] or 0
     
     # Excel hizmet tutarlarını ödeme yöntemlerine göre dağıt (SADECE HİZMET KATEGORİSİ)
+    # Sadece gelir tutarlarını göster (gider tutarlarını dahil etme)
     gun_ozeti['nakit_toplam'] = gelir_nakit + excel_nakit_toplam  # Sadece hizmet nakit tutarları
     gun_ozeti['kredi_karti_toplam'] = gelir_kredi_karti + excel_kart  # Sadece hizmet kart tutarları
     gun_ozeti['cari_toplam'] = gelir_cari + excel_cari  # Sadece hizmet cari tutarları

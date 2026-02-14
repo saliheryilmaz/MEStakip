@@ -1649,6 +1649,28 @@ def messages_view(request):
     mehmet_havale_field_net = float(gelir_mehmet_havale - gider_mehmet_havale)
     banka_havale_field_net = float(gelir_banka_havale - gider_banka_havale)
     
+    # Excel'den LASTİK + NAKİT kayıtlarını al ve çanta toplamına ekle
+    excel_lastik_nakit_qs = MalzemeHareketi.objects.filter(kullanici=request.user)
+    
+    # Tarih filtrelerini uygula
+    if start_date:
+        excel_lastik_nakit_qs = excel_lastik_nakit_qs.filter(tarih__gte=start_date)
+    if end_date:
+        excel_lastik_nakit_qs = excel_lastik_nakit_qs.filter(tarih__lte=end_date)
+    
+    # LASTİK kategorisi ve NAKİT ödeme şekli olanları filtrele
+    excel_lastik_nakit_qs = excel_lastik_nakit_qs.filter(
+        Q(kategori__icontains='LASTİK') | Q(kategori__icontains='LASTIK')
+    ).filter(
+        Q(odeme_sekli__icontains='NAKİT') | Q(odeme_sekli__icontains='NAKIT')
+    )
+    
+    # Toplamı hesapla ve nakit_net'e ekle
+    excel_lastik_nakit_sum = excel_lastik_nakit_qs.aggregate(
+        total=Sum('tutar', default=0)
+    )['total'] or 0
+    nakit_net += float(excel_lastik_nakit_sum)
+    
     # Nakit → Çanta'ya ekle
     canta_toplam += nakit_net
     
@@ -1657,6 +1679,19 @@ def messages_view(request):
     
     # Kart modal verileri
     canta_entries = build_entries(qs.filter(Q(kasa_adi='canta') | ~Q(nakit=0)), lambda tx: tx.nakit)
+    
+    # Excel'den LASTİK + NAKİT kayıtlarını canta_entries'e ekle
+    for hareket in excel_lastik_nakit_qs.order_by('-tarih', '-id'):
+        canta_entries.append({
+            'id': f'excel_{hareket.id}',
+            'tarih': hareket.tarih.strftime('%d.%m.%Y'),
+            'kasa_adi': 'Merkez Satış İş Akışı - (Excel)',
+            'hareket': 'Gelir',
+            'ana_kategori': hareket.kategori or '-',
+            'alt_kategori': '-',
+            'aciklama': f'{hareket.urun} - {hareket.musteri}',
+            'amount': float(hareket.tutar),
+        })
     mehmet_havale_entries = build_entries(qs.filter(~Q(mehmet_havale=0)), lambda tx: tx.mehmet_havale)
     
     # Excel'den LASTİK + M.HAVALE kayıtlarını mehmet_havale_entries'e ekle
@@ -1675,6 +1710,19 @@ def messages_view(request):
     banka_havale_entries = build_entries(qs.filter(~Q(banka_havale=0)), lambda tx: tx.banka_havale)
     # Genel entries: Sadece Nakit ve Mehmet Havale olan işlemler (Çanta + Mehmet Havale)
     genel_entries = build_entries(qs.filter(Q(nakit__gt=0) | Q(mehmet_havale__gt=0)), lambda tx: (tx.nakit or 0) + (tx.mehmet_havale or 0))
+    
+    # Excel'den LASTİK + NAKİT kayıtlarını genel_entries'e de ekle
+    for hareket in excel_lastik_nakit_qs.order_by('-tarih', '-id'):
+        genel_entries.append({
+            'id': f'excel_{hareket.id}',
+            'tarih': hareket.tarih.strftime('%d.%m.%Y'),
+            'kasa_adi': 'Merkez Satış İş Akışı - (Excel)',
+            'hareket': 'Gelir',
+            'ana_kategori': hareket.kategori or '-',
+            'alt_kategori': '-',
+            'aciklama': f'{hareket.urun} - {hareket.musteri}',
+            'amount': float(hareket.tutar),
+        })
     
     # Excel'den LASTİK + M.HAVALE kayıtlarını genel_entries'e de ekle
     for hareket in excel_lastik_mhavale_qs.order_by('-tarih', '-id'):

@@ -6,6 +6,10 @@ Production environment – PythonAnywhere deployment.
 from pathlib import Path
 import os
 
+# Load environment variables from .env file
+from dotenv import load_dotenv
+load_dotenv()
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
@@ -193,3 +197,31 @@ LOGOUT_REDIRECT_URL = '/dashboard/login/'
 
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+# ============================================================
+# EMAIL SETTINGS
+# ============================================================
+
+# Email backend seçimi (.env'den)
+EMAIL_BACKEND_TYPE = os.environ.get('EMAIL_BACKEND', 'smtp').lower()
+if EMAIL_BACKEND_TYPE == 'console':
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+
+# SMTP settings
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'mail.meslas.com')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True').lower() == 'true'
+EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'False').lower() == 'true'
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'info@meslas.com')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+EMAIL_TIMEOUT = 30
+
+DEFAULT_FROM_EMAIL = 'MESLAS OTOMOTİV <info@meslas.com>'
+SERVER_EMAIL = 'info@meslas.com'
+
+# Development için console backend kullanmak isterseniz:
+# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+

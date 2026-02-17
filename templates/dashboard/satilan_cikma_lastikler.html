@@ -258,6 +258,11 @@
 {% endblock %}
 
 {% block content %}
+<!-- Hidden CSRF Token for JavaScript -->
+<form style="display: none;">
+    {% csrf_token %}
+</form>
+
 <!-- Page Header -->
 <div class="d-flex justify-content-between align-items-center mb-3 mobile-header">
     <div>
@@ -540,6 +545,25 @@
                         </span>
                     </div>
                     <div class="lastik-info-row">
+                        <span class="info-label">Ödeme:</span>
+                        <span class="info-value">
+                            <div class="d-flex gap-1 flex-wrap justify-content-end">
+                                {% if lastik.mehmet_havale %}
+                                    <span class="badge bg-primary" style="font-size: 0.7rem;">Mehmet Havale</span>
+                                {% endif %}
+                                {% if lastik.canta %}
+                                    <span class="badge bg-info" style="font-size: 0.7rem;">Çanta</span>
+                                {% endif %}
+                                {% if lastik.cari %}
+                                    <span class="badge bg-warning text-dark" style="font-size: 0.7rem;">Cari</span>
+                                {% endif %}
+                                {% if not lastik.mehmet_havale and not lastik.canta and not lastik.cari %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </div>
+                        </span>
+                    </div>
+                    <div class="lastik-info-row">
                         <span class="info-label">Kalite:</span>
                         <span class="info-value">
                             {% if lastik.kalite_notu %}
@@ -737,6 +761,25 @@
                                 {% else %}
                                     <span class="text-muted">Belirtilmemiş</span>
                                 {% endif %}
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <strong>Ödeme Seçenekleri:</strong><br>
+                                <div class="d-flex gap-2 flex-wrap mt-2">
+                                    {% if lastik.mehmet_havale %}
+                                        <span class="badge bg-primary">Mehmet Havale</span>
+                                    {% endif %}
+                                    {% if lastik.canta %}
+                                        <span class="badge bg-info">Çanta</span>
+                                    {% endif %}
+                                    {% if lastik.cari %}
+                                        <span class="badge bg-warning text-dark">Cari</span>
+                                    {% endif %}
+                                    {% if not lastik.mehmet_havale and not lastik.canta and not lastik.cari %}
+                                        <span class="text-muted">Belirtilmemiş</span>
+                                    {% endif %}
+                                </div>
                             </div>
                         </div>
                     </div>

@@ -1,0 +1,504 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load turkish_format %}
+
+{% block title %}Garanti Belgeleri - Mestakip{% endblock %}
+{% block page_name %}garanti-belgeleri{% endblock %}
+
+{% block extra_css %}
+<style>
+    .garanti-card {
+        transition: all 0.3s ease;
+        border-left: 4px solid #28a745;
+    }
+    
+    .garanti-card:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+    }
+    
+    .garanti-form-section {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 15px;
+    }
+    
+    [data-bs-theme=dark] .garanti-form-section {
+        background: #1a2332;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Header Section -->
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h4 class="mb-1">
+                    <i class="bi bi-shield-check me-2"></i>Garanti Belgesi Yönetimi
+                </h4>
+                <p class="text-muted mb-0">Lastik satış garanti belgelerini oluşturun ve yönetin</p>
+            </div>
+            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#newGarantiModal">
+                <i class="bi bi-plus-circle me-2"></i>Yeni Garanti Belgesi
+            </button>
+        </div>
+    </div>
+
+    <!-- Search and Filter Section -->
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-search"></i></span>
+                            <input type="text" class="form-control" placeholder="Müşteri adı, plaka veya belge no...">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <input type="date" class="form-control" placeholder="Başlangıç Tarihi">
+                    </div>
+                    <div class="col-md-3">
+                        <input type="date" class="form-control" placeholder="Bitiş Tarihi">
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-outline-success w-100">
+                            <i class="bi bi-funnel me-1"></i>Filtrele
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Garanti Belgeleri List -->
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Garanti Belgesi Listesi</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Belge No</th>
+                                <th>Müşteri</th>
+                                <th>Telefon</th>
+                                <th>Plaka</th>
+                                <th>Araç</th>
+                                <th>Montaj Tarihi</th>
+                                <th>Garanti Bitiş</th>
+                                <th>Adet</th>
+                                <th>Tutar</th>
+                                <th>Düzenleyen</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if belgeler %}
+                                {% for belge in belgeler %}
+                                <tr>
+                                    <td><strong>{{ belge.belge_no }}</strong></td>
+                                    <td>{{ belge.musteri_adi }}</td>
+                                    <td>{{ belge.musteri_telefon }}</td>
+                                    <td><span class="badge bg-primary">{{ belge.arac_plaka }}</span></td>
+                                    <td>{{ belge.arac_marka_model }}</td>
+                                    <td>{{ belge.montaj_tarihi|date:'d.m.Y' }}</td>
+                                    <td>
+                                        <span class="badge bg-success">
+                                            {{ belge.garanti_bitis_tarihi|date:'d.m.Y' }}
+                                        </span>
+                                    </td>
+                                    <td><span class="badge bg-info">{{ belge.toplam_adet }}</span></td>
+                                    <td class="text-success fw-bold">{{ belge.toplam_tutar|floatformat:2 }} TL</td>
+                                    <td>{{ belge.olusturan.get_full_name|default:belge.olusturan.username }}</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <a href="{% url 'dashboard:garanti_belgesi_view' belge.id %}" class="btn btn-outline-primary" title="Görüntüle/Yazdır">
+                                                <i class="bi bi-printer"></i>
+                                            </a>
+                                            <a href="{% url 'dashboard:garanti_belgesi_edit' belge.id %}" class="btn btn-outline-warning" title="Düzenle">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            <button type="button" class="btn btn-outline-danger" title="Sil" onclick="deleteGaranti({{ belge.id }}, '{{ belge.belge_no }}')">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="11" class="text-center text-muted py-4">
+                                        <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                                        Henüz garanti belgesi bulunmamaktadır.
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- New Garanti Modal -->
+<div class="modal fade" id="newGarantiModal" tabindex="-1" aria-labelledby="newGarantiModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="newGarantiModalLabel">
+                    <i class="bi bi-shield-check me-2"></i>Yeni Garanti Belgesi
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="garantiForm">
+                    {% csrf_token %}
+                    
+                    <!-- Müşteri Bilgileri -->
+                    <div class="garanti-form-section">
+                        <h6 class="mb-3 text-success">
+                            <i class="bi bi-person me-2"></i>Müşteri Bilgileri
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Müşteri Adı / Ünvan <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="musteri_adi" placeholder="Müşteri adı..." required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Telefon <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="musteri_telefon" placeholder="Telefon..." required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Araç Bilgileri -->
+                    <div class="garanti-form-section">
+                        <h6 class="mb-3 text-success">
+                            <i class="bi bi-car-front me-2"></i>Araç Bilgileri
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Plaka <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="arac_plaka" placeholder="34 ABC 123" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Marka / Model <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="arac_marka_model" placeholder="Örn: Toyota Corolla" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Yıl</label>
+                                <input type="text" class="form-control" id="arac_yil" placeholder="Örn: 2020">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Kilometre</label>
+                                <input type="text" class="form-control" id="arac_km" placeholder="Örn: 50000">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Lastik Bilgileri -->
+                    <div class="garanti-form-section">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="mb-0 text-success">
+                                <i class="bi bi-circle me-2"></i>Lastik Bilgileri
+                            </h6>
+                            <button type="button" class="btn btn-sm btn-outline-success" onclick="addLastikRow()">
+                                <i class="bi bi-plus-circle me-1"></i>Satır Ekle
+                            </button>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-bordered" id="lastiklerTable">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 25%">Marka</th>
+                                        <th style="width: 35%">Ebat</th>
+                                        <th style="width: 12%">Adet</th>
+                                        <th style="width: 15%">Fiyat</th>
+                                        <th style="width: 8%">Toplam</th>
+                                        <th style="width: 5%">İşlem</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>
+                                            <input type="text" class="form-control form-control-sm marka-input" placeholder="Marka">
+                                        </td>
+                                        <td>
+                                            <input type="text" class="form-control form-control-sm ebat-input" placeholder="Örn: 205/55 R16">
+                                        </td>
+                                        <td>
+                                            <input type="number" class="form-control form-control-sm adet-input" value="4" min="1">
+                                        </td>
+                                        <td>
+                                            <input type="number" class="form-control form-control-sm fiyat-input" placeholder="0.00" step="0.01">
+                                        </td>
+                                        <td>
+                                            <input type="text" class="form-control form-control-sm toplam-input" readonly value="0.00">
+                                        </td>
+                                        <td class="text-center">
+                                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeLastikRow(this)">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                                <tfoot class="table-light">
+                                    <tr>
+                                        <td colspan="2" class="text-end fw-bold">Toplam:</td>
+                                        <td class="fw-bold" id="toplamAdet">4</td>
+                                        <td colspan="3" class="fw-bold" id="toplamTutar">0.00 TL</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Montaj Tarihi ve Notlar -->
+                    <div class="garanti-form-section">
+                        <h6 class="mb-3 text-success">
+                            <i class="bi bi-calendar-check me-2"></i>Montaj ve Notlar
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Montaj Tarihi <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control" id="montaj_tarihi" value="{{ today|date:'Y-m-d' }}" required>
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label">Notlar</label>
+                                <textarea class="form-control" id="notlar" rows="2" placeholder="Ek notlar..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i>İptal
+                </button>
+                <button type="button" class="btn btn-success" onclick="saveGaranti()">
+                    <i class="bi bi-check-circle me-1"></i>Kaydet ve Yazdır
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const SAVE_GARANTI_URL = "{% url 'dashboard:save_garanti_belgesi' %}";
+
+    // Add new lastik row
+    function addLastikRow() {
+        const tbody = document.querySelector('#lastiklerTable tbody');
+        const newRow = tbody.querySelector('tr').cloneNode(true);
+        
+        newRow.querySelectorAll('input').forEach(input => {
+            if (input.classList.contains('adet-input')) {
+                input.value = '4';
+            } else if (input.classList.contains('toplam-input')) {
+                input.value = '0.00';
+            } else {
+                input.value = '';
+            }
+        });
+        
+        tbody.appendChild(newRow);
+        calculateTotals();
+    }
+
+    // Remove lastik row
+    function removeLastikRow(button) {
+        const tbody = document.querySelector('#lastiklerTable tbody');
+        if (tbody.querySelectorAll('tr').length > 1) {
+            button.closest('tr').remove();
+            calculateTotals();
+        } else {
+            alert('En az bir lastik satırı olmalıdır!');
+        }
+    }
+
+    // Calculate totals
+    function calculateTotals() {
+        let totalAdet = 0;
+        let totalTutar = 0;
+        
+        document.querySelectorAll('#lastiklerTable tbody tr').forEach(row => {
+            const adet = parseInt(row.querySelector('.adet-input').value) || 0;
+            const fiyat = parseFloat(row.querySelector('.fiyat-input').value) || 0;
+            const toplam = adet * fiyat;
+            
+            row.querySelector('.toplam-input').value = toplam.toFixed(2);
+            totalAdet += adet;
+            totalTutar += toplam;
+        });
+        
+        document.getElementById('toplamAdet').textContent = totalAdet;
+        document.getElementById('toplamTutar').textContent = totalTutar.toFixed(2) + ' TL';
+    }
+
+    // Add event listeners
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelector('#lastiklerTable').addEventListener('input', calculateTotals);
+    });
+
+    // Save garanti
+    function saveGaranti() {
+        console.log('saveGaranti called');
+        console.log('SAVE_GARANTI_URL:', SAVE_GARANTI_URL);
+        
+        const formData = {
+            musteri_adi: document.getElementById('musteri_adi').value,
+            musteri_telefon: document.getElementById('musteri_telefon').value,
+            arac_plaka: document.getElementById('arac_plaka').value,
+            arac_marka_model: document.getElementById('arac_marka_model').value,
+            arac_yil: document.getElementById('arac_yil').value,
+            arac_km: document.getElementById('arac_km').value,
+            montaj_tarihi: document.getElementById('montaj_tarihi').value,
+            notlar: document.getElementById('notlar').value,
+            lastikler: []
+        };
+        
+        // Validasyon
+        if (!formData.musteri_adi) {
+            alert('Lütfen Müşteri Adı giriniz!');
+            return;
+        }
+        
+        if (!formData.musteri_telefon) {
+            alert('Lütfen Telefon giriniz!');
+            return;
+        }
+        
+        if (!formData.arac_plaka) {
+            alert('Lütfen Plaka giriniz!');
+            return;
+        }
+        
+        if (!formData.arac_marka_model) {
+            alert('Lütfen Araç Marka/Model giriniz!');
+            return;
+        }
+        
+        if (!formData.montaj_tarihi) {
+            alert('Lütfen Montaj Tarihi giriniz!');
+            return;
+        }
+        
+        // Lastikleri topla
+        let hasValidLastik = false;
+        document.querySelectorAll('#lastiklerTable tbody tr').forEach(row => {
+            const marka = row.querySelector('.marka-input').value;
+            const ebat = row.querySelector('.ebat-input').value;
+            const adet = parseInt(row.querySelector('.adet-input').value) || 0;
+            const fiyat = parseFloat(row.querySelector('.fiyat-input').value) || 0;
+            
+            if (marka && ebat && adet > 0) {
+                hasValidLastik = true;
+                formData.lastikler.push({
+                    marka: marka,
+                    ebat: ebat,
+                    adet: adet,
+                    fiyat: fiyat
+                });
+            }
+        });
+        
+        if (!hasValidLastik) {
+            alert('Lütfen en az bir lastik ekleyiniz!');
+            return;
+        }
+        
+        // CSRF token
+        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        
+        if (!csrftoken) {
+            alert('CSRF token bulunamadı! Lütfen sayfayı yenileyin.');
+            return;
+        }
+        
+        console.log('Sending data:', formData);
+        console.log('CSRF Token:', csrftoken);
+        
+        // API'ye gönder
+        fetch(SAVE_GARANTI_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(response => {
+            console.log('Response status:', response.status);
+            console.log('Response headers:', response.headers);
+            
+            // Eğer response HTML ise, hata mesajı göster
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('text/html')) {
+                return response.text().then(html => {
+                    console.error('HTML Response received:', html.substring(0, 500));
+                    throw new Error('Sunucu HTML yanıtı döndü. Lütfen giriş yaptığınızdan emin olun ve sayfayı yenileyin.');
+                });
+            }
+            
+            if (!response.ok) {
+                return response.text().then(text => {
+                    throw new Error(`HTTP error! status: ${response.status}, body: ${text}`);
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                alert('Garanti belgesi başarıyla kaydedildi! Belge No: ' + data.belge_no);
+                // Yazdırma sayfasına yönlendir
+                window.location.href = data.view_url;
+            } else {
+                alert('Hata: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Bir hata oluştu: ' + error.message);
+        });
+    }
+
+    // Delete garanti
+    function deleteGaranti(id, belgeNo) {
+        if (confirm(`${belgeNo} numaralı garanti belgesini silmek istediğinize emin misiniz?`)) {
+            const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            
+            fetch(`/api/garanti-belgesi/${id}/delete/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrftoken
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Garanti belgesi başarıyla silindi!');
+                    window.location.reload();
+                } else {
+                    alert('Hata: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Bir hata oluştu: ' + error.message);
+            });
+        }
+    }
+</script>
+{% endblock %}

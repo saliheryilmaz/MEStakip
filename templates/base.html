@@ -656,6 +656,18 @@
                             <small class="text-muted px-3 text-uppercase fw-bold">Diğer</small>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'quotations' %}active{% endif %}" href="{% url 'dashboard:quotations' %}">
+                                <i class="bi bi-file-earmark-text"></i>
+                                <span>Teklifler</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'garanti_belgeleri' or request.resolver_match.url_name == 'garanti_belgesi_view' or request.resolver_match.url_name == 'garanti_belgesi_edit' %}active{% endif %}" href="{% url 'dashboard:garanti_belgeleri' %}">
+                                <i class="bi bi-shield-check"></i>
+                                <span>Garanti Belgesi</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link" href="{% url 'dashboard:calendar' %}">
                                 <i class="bi bi-calendar-event"></i>
                                 <span>Takvim</span>

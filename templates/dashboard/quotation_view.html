@@ -1,0 +1,559 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load turkish_format %}
+
+{% block title %}Teklif Görüntüle - {{ quotation.teklif_no }} - Mestakip{% endblock %}
+{% block page_name %}quotation-view{% endblock %}
+
+{% block extra_css %}
+<style>
+    @media print {
+        .no-print {
+            display: none !important;
+        }
+        .admin-sidebar,
+        .admin-navbar {
+            display: none !important;
+        }
+        .admin-content {
+            margin-left: 0 !important;
+            padding: 0 !important;
+        }
+        body {
+            background: white !important;
+        }
+        .card {
+            box-shadow: none !important;
+            border: none !important;
+        }
+    }
+    
+    .quotation-document {
+        background: white;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    .quotation-header {
+        background: #f8f9fa;
+        border-bottom: 4px solid #dc3545;
+        padding: 30px;
+        margin-bottom: 0;
+    }
+    
+    .company-logo {
+        max-width: 250px;
+        height: auto;
+        padding: 10px;
+        border-radius: 8px;
+        background: white;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .quotation-title {
+        font-size: 32px;
+        font-weight: bold;
+        color: #dc3545;
+        margin-bottom: 5px;
+    }
+    
+    .quotation-subtitle {
+        color: #666;
+        font-size: 14px;
+    }
+    
+    .quotation-body {
+        background: white;
+        padding: 30px;
+    }
+    
+    .section-title {
+        background: #f8f9fa;
+        padding: 10px 15px;
+        border-left: 4px solid #dc3545;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 15px;
+        font-size: 14px;
+        text-transform: uppercase;
+    }
+    
+    .info-table {
+        width: 100%;
+        margin-bottom: 20px;
+    }
+    
+    .info-table td {
+        padding: 8px 12px;
+        border-bottom: 1px solid #e9ecef;
+        font-size: 13px;
+    }
+    
+    .info-table td:first-child {
+        font-weight: 600;
+        color: #333;
+        width: 180px;
+        background: #f8f9fa;
+    }
+    
+    .info-table td:last-child {
+        color: #666;
+    }
+    
+    .products-table {
+        width: 100%;
+        margin: 20px 0;
+        border-collapse: collapse;
+    }
+    
+    .products-table th {
+        background: #dc3545;
+        color: white;
+        font-weight: 600;
+        padding: 12px 8px;
+        text-align: center;
+        font-size: 11px;
+        text-transform: uppercase;
+        border: 1px solid #dc3545;
+    }
+    
+    .products-table td {
+        padding: 10px 8px;
+        border: 1px solid #dee2e6;
+        font-size: 13px;
+    }
+    
+    .products-table tbody tr:hover {
+        background: #f8f9fa;
+    }
+    
+    .totals-box {
+        background: #f8f9fa;
+        border: 2px solid #dee2e6;
+        border-radius: 8px;
+        padding: 20px;
+        margin-top: 20px;
+    }
+    
+    .total-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 0;
+        font-size: 15px;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .total-row:last-child {
+        border-bottom: none;
+    }
+    
+    .total-row.grand-total {
+        background: #dc3545;
+        color: white;
+        padding: 15px 20px;
+        margin: 15px -20px -20px -20px;
+        border-radius: 0 0 6px 6px;
+        font-size: 18px;
+        font-weight: bold;
+        border: none;
+    }
+    
+    .footer-note {
+        margin-top: 30px;
+        padding: 15px;
+        background: #fff3cd;
+        border-left: 4px solid #ffc107;
+        font-size: 11px;
+        color: #856404;
+        line-height: 1.6;
+    }
+    
+    [data-bs-theme=dark] .quotation-document,
+    [data-bs-theme=dark] .quotation-header,
+    [data-bs-theme=dark] .quotation-body {
+        background: #1a2332;
+        color: #e0e0e0;
+    }
+    
+    [data-bs-theme=dark] .section-title {
+        background: #2d3748;
+        color: #e0e0e0;
+    }
+    
+    [data-bs-theme=dark] .info-table td:first-child {
+        background: #2d3748;
+        color: #e0e0e0;
+    }
+    
+    [data-bs-theme=dark] .info-table td {
+        border-bottom-color: #2d3748;
+        color: #a0aec0;
+    }
+    
+    [data-bs-theme=dark] .totals-box {
+        background: #2d3748;
+        border-color: #4a5568;
+    }
+    
+    [data-bs-theme=dark] .total-row {
+        border-bottom-color: #4a5568;
+    }
+    
+    [data-bs-theme=dark] .quotation-header {
+        background: #2d3748;
+    }
+    
+    [data-bs-theme=dark] .company-logo {
+        background: white;
+    }
+    
+    [data-bs-theme=dark] .quotation-title {
+        color: #dc3545;
+    }
+    
+    [data-bs-theme=dark] .bg-light {
+        background: #2d3748 !important;
+    }
+    
+    [data-bs-theme=dark] .text-dark {
+        color: #e0e0e0 !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="row g-4">
+    <!-- Action Buttons -->
+    <div class="col-12 no-print">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <a href="{% url 'dashboard:quotations' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Geri Dön
+            </a>
+            <div class="btn-group">
+                <a href="{% url 'dashboard:quotation_pdf' quotation.id %}" class="btn btn-success" target="_blank">
+                    <i class="bi bi-file-pdf me-2"></i>PDF İndir
+                </a>
+                <button class="btn btn-info" onclick="sendEmail()">
+                    <i class="bi bi-envelope me-2"></i>Email Gönder
+                </button>
+                <a href="{% url 'dashboard:quotation_edit' quotation.id %}" class="btn btn-warning">
+                    <i class="bi bi-pencil me-2"></i>Düzenle
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quotation Document -->
+    <div class="col-12">
+        <div class="card border-0 shadow-sm quotation-document">
+            <!-- Header -->
+            <div class="quotation-header">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <div class="quotation-title">E-TEKLİF</div>
+                        <div class="quotation-subtitle">Created by MesTakip</div>
+                    </div>
+                    <div class="col-md-6 text-end">
+                        <img src="{% static 'images/Meslas-Otomotiv.png' %}" alt="MESLAS OTOMOTİV" class="company-logo">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Body -->
+            <div class="quotation-body">
+                <!-- Company & Customer Info -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="section-title">Firma Bilgileri</div>
+                        <table class="info-table">
+                            <tr>
+                                <td>Ünvan</td>
+                                <td>MESLAS OTOMOTİV - ERHAN ERYILMAZ</td>
+                            </tr>
+                            <tr>
+                                <td>Adres</td>
+                                <td>Abdurrahmangazi Mah. Atayolu Cad. No:187/A SANCAKTEPE / İSTANBUL</td>
+                            </tr>
+                            <tr>
+                                <td>Telefon/Faks</td>
+                                <td>0216 311 60 34</td>
+                            </tr>
+                            <tr>
+                                <td>Web/E-Posta</td>
+                                <td>meslas.com / info@meslas.com</td>
+                            </tr>
+                            <tr>
+                                <td>Vergi Dairesi/No</td>
+                                <td>SULTANBEYLİ V.D. / 4485882148</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="section-title">Müşteri Bilgileri</div>
+                        <table class="info-table">
+                            <tr>
+                                <td>Cari</td>
+                                <td><strong>{{ quotation.cari }}</strong></td>
+                            </tr>
+                            <tr>
+                                <td>İlgili Kişi</td>
+                                <td>{{ quotation.ilgili_kisi|default:'-' }}</td>
+                            </tr>
+                            <tr>
+                                <td>Email</td>
+                                <td>{{ quotation.email|default:'-' }}</td>
+                            </tr>
+                            <tr>
+                                <td>Ödeme Şekli</td>
+                                <td>{{ quotation.odeme_sekli|default:'-' }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Quotation Details -->
+                <div class="row mt-3">
+                    <div class="col-md-12">
+                        <div class="section-title">Tarih Bilgileri</div>
+                        <table class="info-table">
+                            <tr>
+                                <td>Teklif No</td>
+                                <td><strong>{{ quotation.teklif_no }}</strong></td>
+                            </tr>
+                            <tr>
+                                <td>Teklif Tarihi</td>
+                                <td>{{ quotation.teklif_tarihi|date:'d.m.Y' }}</td>
+                            </tr>
+                            <tr>
+                                <td>Son Geçerlilik Tarihi</td>
+                                <td>{{ quotation.gecerlilik_tarihi|date:'d.m.Y'|default:'-' }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Products Table -->
+                <div class="section-title mt-4">Ürün/Hizmet Detayları</div>
+                <table class="products-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 15%">MARKA</th>
+                            <th style="width: 40%">ÜRÜN AÇIKLAMASI</th>
+                            <th style="width: 10%">MEVSİM</th>
+                            <th style="width: 10%">MİKTAR</th>
+                            <th style="width: 12%">BİRİM FİYAT<br/><small>(KDV Hariç)</small></th>
+                            <th style="width: 13%">TOPLAM TUTAR<br/><small>(KDV Hariç)</small></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in quotation.urunler.all %}
+                        <tr>
+                            <td class="text-center">{{ item.marka|default:'-' }}</td>
+                            <td>{{ item.urun_adi }}</td>
+                            <td class="text-center">
+                                {% if item.mevsim %}
+                                    {{ item.get_mevsim_display }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td class="text-center">{{ item.miktar|floatformat:0 }}</td>
+                            <td class="text-end">{% widthratio item.birim_fiyat 1.2 1 %}</td>
+                            <td class="text-end fw-bold">{% widthratio item.toplam 1.2 1 %}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                <!-- Totals & Notes -->
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        {% if quotation.aciklama %}
+                        <div class="section-title">Genel Açıklamalar</div>
+                        <div class="p-3 bg-light border rounded">
+                            <p class="mb-0 text-dark" style="font-size: 13px;">{{ quotation.aciklama }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <div class="totals-box">
+                            <div class="total-row">
+                                <span>TOPLAM MİKTAR</span>
+                                <strong>{{ quotation.toplam_adet }}</strong>
+                            </div>
+                            <div class="total-row">
+                                <span>TOPLAM TUTAR</span>
+                                <strong>{{ quotation.ara_toplam|floatformat:2 }}</strong>
+                            </div>
+                            <div class="total-row">
+                                <span>KDV %20</span>
+                                <strong>{{ quotation.kdv_tutari|floatformat:2 }}</strong>
+                            </div>
+                            <div class="total-row grand-total">
+                                <span>KDV DAHİL GENEL TOPLAM</span>
+                                <strong>{{ quotation.genel_toplam|floatformat:2 }} TL</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer Note -->
+                <div class="footer-note">
+                    <strong>Önemli Not:</strong> Bu ileti hukuku korunmuş, gizli veya ifşa edilmemesi gereken bilgiler içerebilir. 
+                    Sayın mesajın gönderildiği kişi değilseniz, bu iletiye çoğaltmak ve dağıtmak yasaktır. 
+                    Bu mesajı yanlışlıkla alan kişi, bu durumu derhal gönderene telefon ya da e-posta ile bildirmeli ve bilgisayarından silmelidir.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Email Modal -->
+<div class="modal fade" id="emailModal" tabindex="-1" aria-labelledby="emailModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title" id="emailModalLabel">
+                    <i class="bi bi-envelope me-2"></i>Teklifi Email ile Gönder
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="emailForm">
+                    <div class="mb-3">
+                        <label for="emailTo" class="form-label">Alıcı Email</label>
+                        <input type="email" class="form-control" id="emailTo" value="{{ quotation.email }}" required>
+                        <div class="form-text">Teklif bu email adresine gönderilecek</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="emailSubject" class="form-label">Konu</label>
+                        <input type="text" class="form-control" id="emailSubject" value="Teklif - {{ quotation.teklif_no }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="emailMessage" class="form-label">Mesaj</label>
+                        <textarea class="form-control" id="emailMessage" rows="4" required>Sayın {{ quotation.cari }},
+
+{{ quotation.teklif_no }} numaralı teklifimiz ektedir.
+
+Saygılarımızla,
+MESLAS OTOMOTİV</textarea>
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Teklif HTML formatında email içeriği olarak gönderilecektir.
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i>İptal
+                </button>
+                <button type="button" class="btn btn-info" onclick="confirmSendEmail()">
+                    <i class="bi bi-send me-1"></i>Gönder
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function sendEmail() {
+        // Email modal'ını aç
+        const emailModal = new bootstrap.Modal(document.getElementById('emailModal'));
+        emailModal.show();
+    }
+
+    function confirmSendEmail() {
+        const emailTo = document.getElementById('emailTo').value;
+        const emailSubject = document.getElementById('emailSubject').value;
+        const emailMessage = document.getElementById('emailMessage').value;
+
+        if (!emailTo || !emailSubject || !emailMessage) {
+            alert('Lütfen tüm alanları doldurun!');
+            return;
+        }
+
+        // Email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(emailTo)) {
+            alert('Geçerli bir email adresi girin!');
+            return;
+        }
+
+        // CSRF token - try multiple methods
+        let csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+        if (!csrftoken) {
+            csrftoken = document.querySelector('meta[name="csrf-token"]')?.content;
+        }
+        if (!csrftoken) {
+            // Get from cookie
+            const name = 'csrftoken';
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            csrftoken = cookieValue;
+        }
+
+        if (!csrftoken) {
+            alert('CSRF token bulunamadı. Sayfayı yenileyin.');
+            return;
+        }
+
+        // Show loading
+        const sendButton = document.querySelector('#emailModal .btn-info');
+        const originalText = sendButton.innerHTML;
+        sendButton.disabled = true;
+        sendButton.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Gönderiliyor...';
+
+        // Send email
+        fetch('{% url "dashboard:send_quotation_email" quotation.id %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify({
+                email_to: emailTo,
+                subject: emailSubject,
+                message: emailMessage
+            })
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.text().then(text => {
+                    throw new Error(`HTTP ${response.status}: ${text}`);
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            sendButton.disabled = false;
+            sendButton.innerHTML = originalText;
+
+            if (data.success) {
+                alert('Email başarıyla gönderildi!');
+                bootstrap.Modal.getInstance(document.getElementById('emailModal')).hide();
+            } else {
+                alert('Hata: ' + data.error);
+            }
+        })
+        .catch(error => {
+            sendButton.disabled = false;
+            sendButton.innerHTML = originalText;
+            console.error('Error:', error);
+            alert('Bir hata oluştu: ' + error.message);
+        });
+    }
+</script>
+{% endblock %}

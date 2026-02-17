@@ -14,7 +14,7 @@ import json
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
 from django.urls import reverse
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_http_methods
 from decimal import Decimal
 from .models import Siparis, UserProfile, Notification, Transaction, TransactionCategory, Event, MalzemeHareketi, MalzemeDosya, CikmaLastik, JokerSatisDosya, JokerSatisHareketi
 from .forms import SiparisForm, TransactionForm, MalzemeExcelUploadForm
@@ -1828,6 +1828,421 @@ def calendar(request):
     return render(request, 'dashboard/calendar.html', context)
 
 @login_required
+def quotations(request):
+    """Teklifler sayfası"""
+    from datetime import date
+    from .models import Quotation
+    
+    # Tüm teklifleri getir
+    quotations_list = Quotation.objects.filter(olusturan=request.user).select_related('olusturan')
+    
+    context = {
+        'page_title': 'Teklifler',
+        'today': date.today(),
+        'quotations': quotations_list,
+    }
+    return render(request, 'dashboard/quotations.html', context)
+
+@login_required
+def quotation_view(request, quotation_id):
+    """Teklif görüntüleme sayfası"""
+    from .models import Quotation
+    quotation = get_object_or_404(Quotation, id=quotation_id, olusturan=request.user)
+    
+    context = {
+        'page_title': f'Teklif - {quotation.teklif_no}',
+        'quotation': quotation,
+    }
+    return render(request, 'dashboard/quotation_view.html', context)
+
+@login_required
+def quotation_pdf(request, quotation_id):
+    """Teklifi PDF olarak indir - HTML render"""
+    from .models import Quotation
+    from django.conf import settings
+    import os
+    
+    quotation = get_object_or_404(Quotation, id=quotation_id, olusturan=request.user)
+    
+    # Logo yolunu bul
+    logo_url = request.build_absolute_uri(settings.STATIC_URL + 'images/Meslas-Otomotiv.png')
+    
+    context = {
+        'quotation': quotation,
+        'logo_url': logo_url,
+    }
+    
+    # HTML template'i render et
+    return render(request, 'dashboard/quotation_pdf_print.html', context)
+    """Teklifi PDF olarak indir"""
+    from .models import Quotation
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.lib.units import cm
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    from reportlab.lib.enums import TA_LEFT, TA_RIGHT, TA_CENTER
+    from django.conf import settings
+    import os
+    from io import BytesIO
+    
+    quotation = get_object_or_404(Quotation, id=quotation_id, olusturan=request.user)
+    
+    # PDF buffer oluştur
+    buffer = BytesIO()
+    
+    # PDF dökümanı oluştur
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=1.5*cm,
+        leftMargin=1.5*cm,
+        topMargin=1.5*cm,
+        bottomMargin=1.5*cm
+    )
+    
+    # Story (içerik) listesi
+    story = []
+    
+    # Stiller
+    styles = getSampleStyleSheet()
+    
+    # Başlık stili
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=24,
+        textColor=colors.HexColor('#dc3545'),
+        spaceAfter=5,
+        alignment=TA_LEFT
+    )
+    
+    subtitle_style = ParagraphStyle(
+        'CustomSubtitle',
+        parent=styles['Normal'],
+        fontSize=10,
+        textColor=colors.grey,
+        spaceAfter=20
+    )
+    
+    section_style = ParagraphStyle(
+        'SectionTitle',
+        parent=styles['Heading2'],
+        fontSize=11,
+        textColor=colors.HexColor('#333333'),
+        spaceAfter=10,
+        spaceBefore=10,
+        leftIndent=10,
+        borderWidth=0,
+        borderColor=colors.HexColor('#dc3545'),
+        borderPadding=5,
+        backColor=colors.HexColor('#f8f9fa')
+    )
+    
+    normal_style = ParagraphStyle(
+        'CustomNormal',
+        parent=styles['Normal'],
+        fontSize=9,
+        leading=12
+    )
+    
+    # Header - Logo ve Başlık
+    header_data = []
+    
+    # Logo yolunu bul
+    logo_path = None
+    if settings.STATIC_ROOT and os.path.exists(os.path.join(settings.STATIC_ROOT, 'images', 'Meslas-Otomotiv.png')):
+        logo_path = os.path.join(settings.STATIC_ROOT, 'images', 'Meslas-Otomotiv.png')
+    elif hasattr(settings, 'STATICFILES_DIRS') and settings.STATICFILES_DIRS:
+        for static_dir in settings.STATICFILES_DIRS:
+            test_path = os.path.join(static_dir, 'images', 'Meslas-Otomotiv.png')
+            if os.path.exists(test_path):
+                logo_path = test_path
+                break
+    if not logo_path:
+        test_path = os.path.join(settings.BASE_DIR, 'static', 'images', 'Meslas-Otomotiv.png')
+        if os.path.exists(test_path):
+            logo_path = test_path
+    
+    # Başlık tablosu
+    title_cell = [
+        Paragraph("E-TEKLİF", title_style),
+        Paragraph("Created by MesTakip", subtitle_style)
+    ]
+    
+    if logo_path and os.path.exists(logo_path):
+        logo = Image(logo_path, width=4*cm, height=2*cm)
+        header_data = [[title_cell, logo]]
+    else:
+        header_data = [[title_cell, ""]]
+    
+    header_table = Table(header_data, colWidths=[12*cm, 6*cm])
+    header_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f8f9fa')),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+        ('TOPPADDING', (0, 0), (-1, -1), 10),
+    ]))
+    story.append(header_table)
+    story.append(Spacer(1, 0.5*cm))
+    
+    # Firma ve Müşteri Bilgileri
+    info_data = [
+        [Paragraph("<b>FİRMA BİLGİLERİ</b>", section_style), Paragraph("<b>MÜŞTERİ BİLGİLERİ</b>", section_style)],
+        [
+            Paragraph(f"<b>Ünvan:</b> MESLAS OTOMOTİV - ERHAN ERYILMAZ<br/>"
+                     f"<b>Adres:</b> Abdurrahmangazi Mah. Atayolu Cad. No:187/A SANCAKTEPE / İSTANBUL<br/>"
+                     f"<b>Telefon:</b> 0216 311 60 34<br/>"
+                     f"<b>Web/E-Posta:</b> meslas.com / info@meslas.com<br/>"
+                     f"<b>Vergi Dairesi/No:</b> SULTANBEYLİ V.D. / 4485882148", normal_style),
+            Paragraph(f"<b>Cari:</b> {quotation.cari}<br/>"
+                     f"<b>İlgili Kişi:</b> {quotation.ilgili_kisi or '-'}<br/>"
+                     f"<b>Email:</b> {quotation.email or '-'}<br/>"
+                     f"<b>Ödeme Şekli:</b> {quotation.odeme_sekli or '-'}", normal_style)
+        ]
+    ]
+    
+    info_table = Table(info_data, colWidths=[9*cm, 9*cm])
+    info_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f8f9fa')),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#dee2e6')),
+        ('LEFTPADDING', (0, 0), (-1, -1), 8),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+        ('TOPPADDING', (0, 0), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+    ]))
+    story.append(info_table)
+    story.append(Spacer(1, 0.3*cm))
+    
+    # Tarih Bilgileri
+    story.append(Paragraph("<b>TARİH BİLGİLERİ</b>", section_style))
+    date_data = [
+        ["Teklif No", quotation.teklif_no],
+        ["Teklif Tarihi", quotation.teklif_tarihi.strftime('%d.%m.%Y')],
+        ["Son Geçerlilik Tarihi", quotation.gecerlilik_tarihi.strftime('%d.%m.%Y') if quotation.gecerlilik_tarihi else '-'],
+        ["Düzenleyen", quotation.olusturan.get_full_name() or quotation.olusturan.username]
+    ]
+    
+    date_table = Table(date_data, colWidths=[4*cm, 14*cm])
+    date_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#f8f9fa')),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#dee2e6')),
+        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('LEFTPADDING', (0, 0), (-1, -1), 8),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+        ('TOPPADDING', (0, 0), (-1, -1), 5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+    ]))
+    story.append(date_table)
+    story.append(Spacer(1, 0.3*cm))
+    
+    # Ürünler Tablosu
+    story.append(Paragraph("<b>ÜRÜN/HİZMET DETAYLARI</b>", section_style))
+    
+    products_data = [["MARKA", "ÜRÜN AÇIKLAMASI", "MEVSİM", "MİKTAR", "BİRİM FİYAT", "TOPLAM"]]
+    
+    for item in quotation.urunler.all():
+        mevsim_display = ""
+        if item.mevsim == 'kis':
+            mevsim_display = "Kış"
+        elif item.mevsim == 'yaz':
+            mevsim_display = "Yaz"
+        elif item.mevsim == 'dort-mevsim':
+            mevsim_display = "Dört Mevsim"
+        else:
+            mevsim_display = "-"
+        
+        products_data.append([
+            item.marka or '-',
+            item.urun_adi,
+            mevsim_display,
+            str(int(item.miktar)),
+            f"{item.birim_fiyat:.2f} TL",
+            f"{item.toplam:.2f} TL"
+        ])
+    
+    products_table = Table(products_data, colWidths=[2*cm, 7*cm, 2*cm, 2*cm, 2.5*cm, 2.5*cm])
+    products_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#dc3545')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 9),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+        ('TOPPADDING', (0, 0), (-1, 0), 8),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#dee2e6')),
+        ('FONTSIZE', (0, 1), (-1, -1), 8),
+        ('ALIGN', (0, 1), (0, -1), 'CENTER'),
+        ('ALIGN', (2, 1), (2, -1), 'CENTER'),
+        ('ALIGN', (3, 1), (3, -1), 'CENTER'),
+        ('ALIGN', (4, 1), (5, -1), 'RIGHT'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 5),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 5),
+        ('TOPPADDING', (0, 1), (-1, -1), 5),
+        ('BOTTOMPADDING', (0, 1), (-1, -1), 5),
+    ]))
+    story.append(products_table)
+    story.append(Spacer(1, 0.3*cm))
+    
+    # Açıklama ve Toplamlar
+    bottom_data = []
+    
+    if quotation.aciklama:
+        aciklama_cell = Paragraph(f"<b>GENEL AÇIKLAMALAR</b><br/>{quotation.aciklama}", normal_style)
+    else:
+        aciklama_cell = ""
+    
+    totals_data = [
+        ["TOPLAM MİKTAR", f"{quotation.toplam_adet}"],
+        ["TOPLAM TUTAR", f"{quotation.ara_toplam:.2f} TL"],
+        ["KDV %20", f"{quotation.kdv_tutari:.2f} TL"],
+    ]
+    
+    totals_table = Table(totals_data, colWidths=[5*cm, 3.5*cm])
+    totals_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f8f9fa')),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#dee2e6')),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 8),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+        ('TOPPADDING', (0, 0), (-1, -1), 5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+    ]))
+    
+    grand_total_data = [[Paragraph(f"<b>KDV DAHİL GENEL TOPLAM: {quotation.genel_toplam:.2f} TL</b>", 
+                                   ParagraphStyle('GrandTotal', parent=normal_style, fontSize=11, textColor=colors.white))]]
+    grand_total_table = Table(grand_total_data, colWidths=[8.5*cm])
+    grand_total_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#dc3545')),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 8),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+        ('TOPPADDING', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+    ]))
+    
+    totals_cell = [totals_table, Spacer(1, 0.2*cm), grand_total_table]
+    
+    bottom_data = [[aciklama_cell, totals_cell]]
+    
+    bottom_table = Table(bottom_data, colWidths=[9*cm, 9*cm])
+    bottom_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+    ]))
+    story.append(bottom_table)
+    story.append(Spacer(1, 0.3*cm))
+    
+    # Footer Note
+    footer_text = ("<b>Önemli Not:</b> Bu ileti hukuku korunmuş, gizli veya ifşa edilmemesi gereken bilgiler içerebilir. "
+                  "Sayın mesajın gönderildiği kişi değilseniz, bu iletiye çoğaltmak ve dağıtmak yasaktır. "
+                  "Bu mesajı yanlışlıkla alan kişi, bu durumu derhal gönderene telefon ya da e-posta ile bildirmeli ve bilgisayarından silmelidir.")
+    
+    footer_style = ParagraphStyle(
+        'Footer',
+        parent=normal_style,
+        fontSize=7,
+        textColor=colors.HexColor('#856404'),
+        backColor=colors.HexColor('#fff3cd'),
+        borderWidth=0,
+        borderColor=colors.HexColor('#ffc107'),
+        borderPadding=8,
+        leftIndent=8,
+        rightIndent=8,
+        spaceBefore=5,
+        spaceAfter=5
+    )
+    
+    story.append(Paragraph(footer_text, footer_style))
+    
+    # PDF oluştur
+    doc.build(story)
+    
+    # Response döndür
+    pdf = buffer.getvalue()
+    buffer.close()
+    
+    response = HttpResponse(pdf, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="Teklif_{quotation.teklif_no}.pdf"'
+    
+    return response
+
+@login_required
+def quotation_edit(request, quotation_id):
+    """Teklif düzenleme sayfası"""
+    from .models import Quotation
+    quotation = get_object_or_404(Quotation, id=quotation_id, olusturan=request.user)
+    
+    context = {
+        'page_title': f'Teklif Düzenle - {quotation.teklif_no}',
+        'quotation': quotation,
+    }
+    return render(request, 'dashboard/quotation_edit.html', context)
+
+@login_required
+@require_POST
+def update_quotation(request, quotation_id):
+    """Teklif güncelleme API endpoint'i"""
+    try:
+        data = json.loads(request.body)
+        from .models import Quotation, QuotationItem
+        from datetime import datetime
+        
+        quotation = get_object_or_404(Quotation, id=quotation_id, olusturan=request.user)
+        
+        # Teklif bilgilerini güncelle
+        quotation.cari = data.get('cari', '')
+        quotation.ilgili_kisi = data.get('ilgili_kisi', '')
+        quotation.email = data.get('email', '')
+        quotation.odeme_sekli = data.get('odeme_sekli', '')
+        quotation.aciklama = data.get('aciklama', '')
+        quotation.teklif_tarihi = datetime.strptime(data.get('teklif_tarihi'), '%Y-%m-%d').date()
+        quotation.gecerlilik_tarihi = datetime.strptime(data.get('gecerlilik_tarihi'), '%Y-%m-%d').date() if data.get('gecerlilik_tarihi') else None
+        quotation.durum = data.get('durum', 'acik')
+        quotation.ara_toplam = Decimal(str(data.get('ara_toplam', 0)))
+        quotation.kdv_tutari = Decimal(str(data.get('kdv_tutari', 0)))
+        quotation.genel_toplam = Decimal(str(data.get('genel_toplam', 0)))
+        quotation.rezerve = data.get('rezerve', False)
+        quotation.proforma = data.get('proforma', False)
+        quotation.save()
+        
+        # Mevcut ürünleri sil ve yenilerini ekle
+        quotation.urunler.all().delete()
+        
+        for idx, item in enumerate(data.get('items', [])):
+            QuotationItem.objects.create(
+                teklif=quotation,
+                marka=item.get('marka', ''),
+                urun_adi=item.get('urun_adi', ''),
+                mevsim=item.get('mevsim', ''),
+                miktar=Decimal(str(item.get('miktar', 1))),
+                birim_fiyat=Decimal(str(item.get('birim_fiyat', 0))),
+                toplam=Decimal(str(item.get('toplam', 0))),
+                sira=idx
+            )
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Teklif başarıyla güncellendi!'
+        })
+        
+    except Exception as e:
+        import traceback
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }, status=500)
+
+@login_required
 def create_event(request):
     """Etkinlik oluşturma API endpoint'i"""
     if request.method == 'POST':
@@ -1898,6 +2313,141 @@ def create_event(request):
         'success': False,
         'error': 'Sadece POST istekleri kabul edilir'
     }, status=405)
+
+@login_required
+@login_required
+@require_POST
+def save_quotation(request):
+    """Teklif kaydetme API endpoint'i"""
+    try:
+        data = json.loads(request.body)
+        from .models import Quotation, QuotationItem
+        from datetime import datetime
+        
+        # Teklif numarası oluştur
+        last_quotation = Quotation.objects.order_by('-id').first()
+        if last_quotation and last_quotation.teklif_no.isdigit():
+            teklif_no = str(int(last_quotation.teklif_no) + 1)
+        else:
+            teklif_no = "1000"
+        
+        # Teklif oluştur
+        quotation = Quotation.objects.create(
+            teklif_no=teklif_no,
+            cari=data.get('cari', ''),
+            ilgili_kisi=data.get('ilgili_kisi', ''),
+            email=data.get('email', ''),
+            odeme_sekli=data.get('odeme_sekli', ''),
+            aciklama=data.get('aciklama', ''),
+            teklif_tarihi=datetime.strptime(data.get('teklif_tarihi'), '%Y-%m-%d').date(),
+            gecerlilik_tarihi=datetime.strptime(data.get('gecerlilik_tarihi'), '%Y-%m-%d').date() if data.get('gecerlilik_tarihi') else None,
+            durum=data.get('durum', 'acik'),
+            ara_toplam=Decimal(str(data.get('ara_toplam', 0))),
+            kdv_tutari=Decimal(str(data.get('kdv_tutari', 0))),
+            genel_toplam=Decimal(str(data.get('genel_toplam', 0))),
+            rezerve=data.get('rezerve', False),
+            proforma=data.get('proforma', False),
+            olusturan=request.user
+        )
+        
+        # Ürünleri kaydet
+        for idx, item in enumerate(data.get('items', [])):
+            QuotationItem.objects.create(
+                teklif=quotation,
+                marka=item.get('marka', ''),
+                urun_adi=item.get('urun_adi', ''),
+                mevsim=item.get('mevsim', ''),
+                miktar=Decimal(str(item.get('miktar', 1))),
+                birim_fiyat=Decimal(str(item.get('birim_fiyat', 0))),
+                toplam=Decimal(str(item.get('toplam', 0))),
+                sira=idx
+            )
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Teklif başarıyla kaydedildi!',
+            'teklif_no': teklif_no
+        })
+        
+    except Exception as e:
+        import traceback
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }, status=500)
+
+@login_required
+@require_POST
+def delete_quotation(request, quotation_id):
+    """Teklif silme API endpoint'i"""
+    try:
+        from .models import Quotation
+        quotation = get_object_or_404(Quotation, id=quotation_id, olusturan=request.user)
+        teklif_no = quotation.teklif_no
+        quotation.delete()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'{teklif_no} numaralı teklif silindi!'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+@login_required
+@require_POST
+def send_quotation_email(request, quotation_id):
+    """Teklifi email ile gönderme API endpoint'i"""
+    try:
+        from .models import Quotation
+        from django.core.mail import EmailMessage
+        from django.template.loader import render_to_string
+        
+        data = json.loads(request.body)
+        quotation = get_object_or_404(Quotation, id=quotation_id, olusturan=request.user)
+        
+        email_to = data.get('email_to')
+        subject = data.get('subject')
+        message = data.get('message')
+        
+        if not email_to or not subject:
+            return JsonResponse({
+                'success': False,
+                'error': 'Email ve konu alanları gereklidir'
+            }, status=400)
+        
+        # HTML email içeriği oluştur
+        html_content = render_to_string('dashboard/quotation_email.html', {
+            'quotation': quotation,
+            'message': message
+        })
+        
+        # Email gönder
+        email = EmailMessage(
+            subject=subject,
+            body=html_content,
+            from_email=None,  # DEFAULT_FROM_EMAIL kullanılacak
+            to=[email_to],
+        )
+        email.content_subtype = 'html'
+        email.send()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Email {email_to} adresine gönderildi!'
+        })
+        
+    except Exception as e:
+        import traceback
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }, status=500)
 
 @login_required
 def get_events(request):
@@ -3304,6 +3854,10 @@ def cikma_lastikler(request):
             # Satış bilgileri - sadece durum "satildi" ise
             satis_fiyati = None
             satis_tarihi = None
+            mehmet_havale = False
+            canta = False
+            cari = False
+            
             if durum == 'satildi':
                 satis_fiyati_str = request.POST.get('satis_fiyati', '')
                 if satis_fiyati_str:
@@ -3321,6 +3875,11 @@ def cikma_lastikler(request):
                         satis_tarihi = timezone.now().date()
                 else:
                     satis_tarihi = timezone.now().date()
+                
+                # Ödeme seçeneklerini al
+                mehmet_havale = request.POST.get('mehmet_havale') == 'on'
+                canta = request.POST.get('canta') == 'on'
+                cari = request.POST.get('cari') == 'on'
             
             # Yeni kayıt oluştur
             yeni_kayit = CikmaLastik.objects.create(
@@ -3338,9 +3897,42 @@ def cikma_lastikler(request):
                 kalite_notu=kalite_notu,
                 satis_fiyati=satis_fiyati,
                 satis_tarihi=satis_tarihi,
+                mehmet_havale=mehmet_havale,
+                canta=canta,
+                cari=cari,
                 depo_konumu=depo_konumu,
                 aciklama=aciklama
             )
+            
+            # Eğer durum "satıldı" ise ve ödeme seçenekleri varsa Transaction kaydı oluştur
+            if durum == 'satildi' and satis_fiyati and (mehmet_havale or canta or cari):
+                from .models import Transaction
+                
+                # Açıklama oluştur
+                transaction_aciklama = f"Çıkma Lastik Satışı - {marka} {ebat} ({adet} adet)"
+                if aciklama:
+                    transaction_aciklama += f" - {aciklama}"
+                
+                # Ödeme seçeneklerine göre transaction oluştur
+                if mehmet_havale:
+                    Transaction.objects.create(
+                        hareket_tipi='gelir',
+                        tarih=satis_tarihi,
+                        kasa_adi='servis',
+                        mehmet_havale=satis_fiyati,
+                        aciklama=transaction_aciklama,
+                        created_by=request.user
+                    )
+                
+                if canta:
+                    Transaction.objects.create(
+                        hareket_tipi='gelir',
+                        tarih=satis_tarihi,
+                        kasa_adi='servis',
+                        nakit=satis_fiyati,
+                        aciklama=transaction_aciklama + " (Çanta)",
+                        created_by=request.user
+                    )
             
             print(f"DEBUG: Yeni kayıt oluşturuldu - ID: {yeni_kayit.id}, Kullanıcı: {request.user.username}")
             
@@ -3582,10 +4174,18 @@ def cikma_lastik_duzenle(request, lastik_id):
                         lastik.satis_tarihi = timezone.now().date()
                 else:
                     lastik.satis_tarihi = timezone.now().date()
+                
+                # Ödeme seçeneklerini güncelle
+                lastik.mehmet_havale = request.POST.get('mehmet_havale') == 'on'
+                lastik.canta = request.POST.get('canta') == 'on'
+                lastik.cari = request.POST.get('cari') == 'on'
             else:
                 # Depolandı durumunda satış bilgilerini temizle
                 lastik.satis_fiyati = None
                 lastik.satis_tarihi = None
+                lastik.mehmet_havale = False
+                lastik.canta = False
+                lastik.cari = False
             
             # Çıkış tarihini güncelle
             cikis_tarihi = request.POST.get('cikis_tarihi', '')
@@ -3665,6 +4265,11 @@ def cikma_lastik_sat(request, lastik_id):
             satis_tarihi = request.POST.get('satis_tarihi', '')
             satis_aciklama = request.POST.get('satis_aciklama', '')
             
+            # Ödeme seçeneklerini al
+            mehmet_havale = request.POST.get('mehmet_havale') == 'on'
+            canta = request.POST.get('canta') == 'on'
+            cari = request.POST.get('cari') == 'on'
+            
             # Satış fiyatını decimal'e çevir
             if satis_fiyati:
                 try:
@@ -3695,9 +4300,41 @@ def cikma_lastik_sat(request, lastik_id):
                 lastik.durum = 'satildi'
                 lastik.satis_fiyati = satis_fiyati
                 lastik.satis_tarihi = satis_tarihi
+                lastik.mehmet_havale = mehmet_havale
+                lastik.canta = canta
+                lastik.cari = cari
                 if satis_aciklama:
                     lastik.aciklama = f"{lastik.aciklama or ''}\n\nSatış: {satis_aciklama}".strip()
                 lastik.save()
+                
+                # Transaction kaydı oluştur
+                from .models import Transaction
+                
+                # Açıklama oluştur
+                transaction_aciklama = f"Çıkma Lastik Satışı - {lastik.marka} {lastik.ebat} ({satis_adet} adet)"
+                if satis_aciklama:
+                    transaction_aciklama += f" - {satis_aciklama}"
+                
+                # Ödeme seçeneklerine göre transaction oluştur
+                if mehmet_havale:
+                    Transaction.objects.create(
+                        hareket_tipi='gelir',
+                        tarih=satis_tarihi,
+                        kasa_adi='servis',
+                        mehmet_havale=satis_fiyati,
+                        aciklama=transaction_aciklama,
+                        created_by=request.user
+                    )
+                
+                if canta:
+                    Transaction.objects.create(
+                        hareket_tipi='gelir',
+                        tarih=satis_tarihi,
+                        kasa_adi='servis',
+                        nakit=satis_fiyati,
+                        aciklama=transaction_aciklama + " (Çanta)",
+                        created_by=request.user
+                    )
                 
                 messages.success(request, f'{lastik.marka} {lastik.ebat} ({satis_adet} adet) başarıyla satıldı!')
             
@@ -3719,9 +4356,41 @@ def cikma_lastik_sat(request, lastik_id):
                     kalite_notu=lastik.kalite_notu,
                     satis_fiyati=satis_fiyati,
                     satis_tarihi=satis_tarihi,
+                    mehmet_havale=mehmet_havale,
+                    canta=canta,
+                    cari=cari,
                     depo_konumu=lastik.depo_konumu,
                     aciklama=f"{lastik.aciklama or ''}\n\nSatış: {satis_aciklama}".strip() if satis_aciklama else lastik.aciklama
                 )
+                
+                # Transaction kaydı oluştur
+                from .models import Transaction
+                
+                # Açıklama oluştur
+                transaction_aciklama = f"Çıkma Lastik Satışı - {lastik.marka} {lastik.ebat} ({satis_adet} adet)"
+                if satis_aciklama:
+                    transaction_aciklama += f" - {satis_aciklama}"
+                
+                # Ödeme seçeneklerine göre transaction oluştur
+                if mehmet_havale:
+                    Transaction.objects.create(
+                        hareket_tipi='gelir',
+                        tarih=satis_tarihi,
+                        kasa_adi='servis',
+                        mehmet_havale=satis_fiyati,
+                        aciklama=transaction_aciklama,
+                        created_by=request.user
+                    )
+                
+                if canta:
+                    Transaction.objects.create(
+                        hareket_tipi='gelir',
+                        tarih=satis_tarihi,
+                        kasa_adi='servis',
+                        nakit=satis_fiyati,
+                        aciklama=transaction_aciklama + " (Çanta)",
+                        created_by=request.user
+                    )
                 
                 # Mevcut kayıttan satılan adedi çıkar
                 lastik.adet -= satis_adet
@@ -5339,3 +6008,202 @@ def excel_dosya_sil(request, dosya_id):
     # Geri yönlendirme
     next_url = request.POST.get('next', reverse('dashboard:products'))
     return redirect(next_url)
+
+
+@login_required
+@misafir_forbidden
+def garanti_belgeleri(request):
+    """Garanti Belgeleri Listesi"""
+    from .models import GarantiBelgesi
+    from datetime import date
+    
+    belgeler = GarantiBelgesi.objects.filter(olusturan=request.user).order_by('-olusturma_tarihi')
+    
+    context = {
+        'belgeler': belgeler,
+        'today': date.today(),
+    }
+    
+    return render(request, 'dashboard/garanti_belgeleri.html', context)
+
+
+@login_required
+@misafir_forbidden
+def garanti_belgesi_view(request, belge_id):
+    """Garanti Belgesi Görüntüleme/Yazdırma"""
+    from .models import GarantiBelgesi
+    
+    belge = get_object_or_404(GarantiBelgesi, id=belge_id, olusturan=request.user)
+    
+    context = {
+        'belge': belge,
+    }
+    
+    return render(request, 'dashboard/garanti_belgesi.html', context)
+
+
+@login_required
+@misafir_forbidden
+def garanti_belgesi_edit(request, belge_id):
+    """Garanti Belgesi Düzenleme"""
+    from .models import GarantiBelgesi
+    
+    belge = get_object_or_404(GarantiBelgesi, id=belge_id, olusturan=request.user)
+    
+    context = {
+        'belge': belge,
+    }
+    
+    return render(request, 'dashboard/garanti_belgesi_edit.html', context)
+
+
+@login_required
+@login_required
+@misafir_forbidden
+@require_http_methods(["POST"])
+def save_garanti_belgesi(request):
+    """Yeni Garanti Belgesi Kaydet"""
+    from .models import GarantiBelgesi, GarantiBelgesiLastik
+    from datetime import datetime
+    import json
+    import traceback
+    
+    try:
+        # Debug log
+        print("save_garanti_belgesi called")
+        print("Request method:", request.method)
+        print("Request body:", request.body[:200] if request.body else "Empty")
+        
+        data = json.loads(request.body)
+        
+        # Belge numarası oluştur
+        today = datetime.now()
+        prefix = f"GB{today.strftime('%Y%m')}"
+        
+        # Son belge numarasını bul
+        last_belge = GarantiBelgesi.objects.filter(
+            belge_no__startswith=prefix
+        ).order_by('-belge_no').first()
+        
+        if last_belge:
+            last_number = int(last_belge.belge_no[-4:])
+            new_number = last_number + 1
+        else:
+            new_number = 1
+        
+        belge_no = f"{prefix}{new_number:04d}"
+        
+        # Garanti belgesi oluştur
+        belge = GarantiBelgesi.objects.create(
+            belge_no=belge_no,
+            musteri_adi=data['musteri_adi'],
+            musteri_telefon=data['musteri_telefon'],
+            arac_plaka=data['arac_plaka'],
+            arac_marka_model=data['arac_marka_model'],
+            arac_yil=data.get('arac_yil', ''),
+            arac_km=data.get('arac_km', ''),
+            montaj_tarihi=data['montaj_tarihi'],
+            notlar=data.get('notlar', ''),
+            olusturan=request.user
+        )
+        
+        # Lastikleri ekle
+        for idx, lastik_data in enumerate(data['lastikler']):
+            GarantiBelgesiLastik.objects.create(
+                belge=belge,
+                marka=lastik_data['marka'],
+                ebat=lastik_data['ebat'],
+                adet=lastik_data['adet'],
+                fiyat=lastik_data.get('fiyat', 0),
+                sira=idx
+            )
+        
+        return JsonResponse({
+            'success': True,
+            'belge_no': belge_no,
+            'belge_id': belge.id,
+            'view_url': reverse('dashboard:garanti_belgesi_view', args=[belge.id])
+        })
+        
+    except Exception as e:
+        print("Error in save_garanti_belgesi:", str(e))
+        print("Traceback:", traceback.format_exc())
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=400)
+
+
+@login_required
+@login_required
+@misafir_forbidden
+@require_http_methods(["POST"])
+def update_garanti_belgesi(request, belge_id):
+    """Garanti Belgesi Güncelle"""
+    from .models import GarantiBelgesi, GarantiBelgesiLastik
+    import json
+    
+    try:
+        belge = get_object_or_404(GarantiBelgesi, id=belge_id, olusturan=request.user)
+        data = json.loads(request.body)
+        
+        # Belge bilgilerini güncelle
+        belge.musteri_adi = data['musteri_adi']
+        belge.musteri_telefon = data['musteri_telefon']
+        belge.arac_plaka = data['arac_plaka']
+        belge.arac_marka_model = data['arac_marka_model']
+        belge.arac_yil = data.get('arac_yil', '')
+        belge.arac_km = data.get('arac_km', '')
+        belge.montaj_tarihi = data['montaj_tarihi']
+        belge.notlar = data.get('notlar', '')
+        belge.save()
+        
+        # Mevcut lastikleri sil
+        belge.lastikler.all().delete()
+        
+        # Yeni lastikleri ekle
+        for idx, lastik_data in enumerate(data['lastikler']):
+            GarantiBelgesiLastik.objects.create(
+                belge=belge,
+                marka=lastik_data['marka'],
+                ebat=lastik_data['ebat'],
+                adet=lastik_data['adet'],
+                fiyat=lastik_data.get('fiyat', 0),
+                sira=idx
+            )
+        
+        return JsonResponse({
+            'success': True,
+            'belge_no': belge.belge_no
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=400)
+
+
+@login_required
+@login_required
+@misafir_forbidden
+@require_http_methods(["POST"])
+def delete_garanti_belgesi(request, belge_id):
+    """Garanti Belgesi Sil"""
+    from .models import GarantiBelgesi
+    
+    try:
+        belge = get_object_or_404(GarantiBelgesi, id=belge_id, olusturan=request.user)
+        belge_no = belge.belge_no
+        belge.delete()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'{belge_no} numaralı garanti belgesi silindi.'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=400)

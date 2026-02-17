@@ -1,0 +1,380 @@
+{% load static %}
+{% load turkish_format %}
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Teklif - {{ quotation.teklif_no }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 0.8cm;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: "DejaVu Sans", Arial, Helvetica, sans-serif;
+            font-size: 9pt;
+            line-height: 1.3;
+            color: #333;
+        }
+        
+        .quotation-header {
+            background: #f8f9fa;
+            border-bottom: 3px solid #dc3545;
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+        
+        .header-table {
+            width: 100%;
+        }
+        
+        .header-table td {
+            vertical-align: top;
+        }
+        
+        .company-logo {
+            max-width: 150px;
+            height: auto;
+        }
+        
+        .quotation-title {
+            font-size: 22px;
+            font-weight: bold;
+            color: #dc3545;
+            margin-bottom: 3px;
+        }
+        
+        .quotation-subtitle {
+            color: #666;
+            font-size: 10px;
+        }
+        
+        .section-title {
+            background: #f8f9fa;
+            padding: 5px 10px;
+            border-left: 3px solid #dc3545;
+            font-weight: 600;
+            color: #333;
+            margin: 8px 0 5px 0;
+            font-size: 10px;
+            text-transform: uppercase;
+        }
+        
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 8px;
+        }
+        
+        .info-table td {
+            padding: 4px 8px;
+            border-bottom: 1px solid #e9ecef;
+            font-size: 8pt;
+        }
+        
+        .info-table td:first-child {
+            font-weight: 600;
+            color: #333;
+            width: 120px;
+            background: #f8f9fa;
+        }
+        
+        .info-table td:last-child {
+            color: #666;
+        }
+        
+        .products-table {
+            width: 100%;
+            margin: 8px 0;
+            border-collapse: collapse;
+        }
+        
+        .products-table th {
+            background: #dc3545;
+            color: white;
+            font-weight: 600;
+            padding: 6px 4px;
+            text-align: center;
+            font-size: 8pt;
+            text-transform: uppercase;
+            border: 1px solid #dc3545;
+        }
+        
+        .products-table td {
+            padding: 5px 4px;
+            border: 1px solid #dee2e6;
+            font-size: 8pt;
+        }
+        
+        .products-table tbody tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+        
+        .text-center {
+            text-align: center;
+        }
+        
+        .text-end {
+            text-align: right;
+        }
+        
+        .fw-bold {
+            font-weight: bold;
+        }
+        
+        .notes-box {
+            background: #f8f9fa;
+            padding: 8px;
+            border: 1px solid #dee2e6;
+            margin-bottom: 8px;
+        }
+        
+        .notes-box p {
+            font-size: 8pt;
+            color: #666;
+            margin: 0;
+        }
+        
+        .totals-box {
+            background: #f8f9fa;
+            border: 2px solid #dee2e6;
+            padding: 10px;
+            margin-top: 8px;
+        }
+        
+        .total-row {
+            padding: 5px 0;
+            font-size: 9pt;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .total-row table {
+            width: 100%;
+        }
+        
+        .total-row.grand-total {
+            background: #dc3545;
+            color: white;
+            padding: 8px 10px;
+            margin: 8px -10px -10px -10px;
+            font-size: 11pt;
+            font-weight: bold;
+            border: none;
+        }
+        
+        .footer-note {
+            margin-top: 10px;
+            padding: 8px;
+            background: #fff3cd;
+            border-left: 3px solid #ffc107;
+            font-size: 7pt;
+            color: #856404;
+            line-height: 1.4;
+        }
+        
+        .footer-note strong {
+            display: block;
+            margin-bottom: 3px;
+        }
+        
+        .two-column {
+            width: 100%;
+        }
+        
+        .two-column td {
+            width: 50%;
+            vertical-align: top;
+            padding: 0 5px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="quotation-header">
+        <table class="header-table">
+            <tr>
+                <td style="width: 60%;">
+                    <div class="quotation-title">E-TEKLİF</div>
+                    <div class="quotation-subtitle">Created by MesTakip</div>
+                </td>
+                <td style="width: 40%; text-align: right;">
+                    {% if logo_path %}
+                    <img src="{{ logo_path }}" alt="MESLAS OTOMOTİV" class="company-logo">
+                    {% endif %}
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Company & Customer Info in 2 columns -->
+    <table class="two-column">
+        <tr>
+            <td>
+                <div class="section-title">Firma Bilgileri</div>
+                <table class="info-table">
+                    <tr>
+                        <td>Ünvan</td>
+                        <td>MESLAS OTOMOTİV - ERHAN ERYILMAZ</td>
+                    </tr>
+                    <tr>
+                        <td>Adres</td>
+                        <td>Abdurrahmangazi Mah. Atayolu Cad. No:187/A SANCAKTEPE / İSTANBUL</td>
+                    </tr>
+                    <tr>
+                        <td>Telefon/Faks</td>
+                        <td>0216 311 60 34</td>
+                    </tr>
+                    <tr>
+                        <td>Web/E-Posta</td>
+                        <td>meslas.com / info@meslas.com</td>
+                    </tr>
+                    <tr>
+                        <td>Vergi Dairesi/No</td>
+                        <td>SULTANBEYLİ V.D. / 4485882148</td>
+                    </tr>
+                </table>
+            </td>
+            <td>
+                <div class="section-title">Müşteri Bilgileri</div>
+                <table class="info-table">
+                    <tr>
+                        <td>Cari</td>
+                        <td><strong>{{ quotation.cari }}</strong></td>
+                    </tr>
+                    <tr>
+                        <td>İlgili Kişi</td>
+                        <td>{{ quotation.ilgili_kisi|default:'-' }}</td>
+                    </tr>
+                    <tr>
+                        <td>Email</td>
+                        <td>{{ quotation.email|default:'-' }}</td>
+                    </tr>
+                    <tr>
+                        <td>Ödeme Şekli</td>
+                        <td>{{ quotation.odeme_sekli|default:'-' }}</td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+
+    <!-- Quotation Details -->
+    <div class="section-title">Tarih Bilgileri</div>
+    <table class="info-table">
+        <tr>
+            <td>Teklif No</td>
+            <td><strong>{{ quotation.teklif_no }}</strong></td>
+        </tr>
+        <tr>
+            <td>Teklif Tarihi</td>
+            <td>{{ quotation.teklif_tarihi|date:'d.m.Y' }}</td>
+        </tr>
+        <tr>
+            <td>Son Geçerlilik Tarihi</td>
+            <td>{{ quotation.gecerlilik_tarihi|date:'d.m.Y'|default:'-' }}</td>
+        </tr>
+        <tr>
+            <td>Düzenleyen</td>
+            <td>{{ quotation.olusturan.get_full_name|default:quotation.olusturan.username }}</td>
+        </tr>
+    </table>
+
+    <!-- Products Table -->
+    <div class="section-title">Ürün/Hizmet Detayları</div>
+    <table class="products-table">
+        <thead>
+            <tr>
+                <th style="width: 12%">MARKA</th>
+                <th style="width: 38%">ÜRÜN AÇIKLAMASI</th>
+                <th style="width: 10%">MEVSİM</th>
+                <th style="width: 10%">MİKTAR</th>
+                <th style="width: 15%">BİRİM FİYAT</th>
+                <th style="width: 15%">TOPLAM TUTAR</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in quotation.urunler.all %}
+            <tr>
+                <td class="text-center">{{ item.marka|default:'-' }}</td>
+                <td>{{ item.urun_adi }}</td>
+                <td class="text-center">
+                    {% if item.mevsim == 'kis' %}Kış
+                    {% elif item.mevsim == 'yaz' %}Yaz
+                    {% elif item.mevsim == 'dort-mevsim' %}Dört Mevsim
+                    {% else %}-{% endif %}
+                </td>
+                <td class="text-center">{{ item.miktar|floatformat:0 }}</td>
+                <td class="text-end">{{ item.birim_fiyat|floatformat:2 }} TL</td>
+                <td class="text-end fw-bold">{{ item.toplam|floatformat:2 }} TL</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Notes and Totals in 2 columns -->
+    <table class="two-column">
+        <tr>
+            <td>
+                {% if quotation.aciklama %}
+                <div class="section-title">Genel Açıklamalar</div>
+                <div class="notes-box">
+                    <p>{{ quotation.aciklama }}</p>
+                </div>
+                {% endif %}
+            </td>
+            <td>
+                <div class="totals-box">
+                    <div class="total-row">
+                        <table>
+                            <tr>
+                                <td>TOPLAM MİKTAR</td>
+                                <td style="text-align: right;"><strong>{{ quotation.toplam_adet }}</strong></td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="total-row">
+                        <table>
+                            <tr>
+                                <td>TOPLAM TUTAR</td>
+                                <td style="text-align: right;"><strong>{{ quotation.ara_toplam|floatformat:2 }} TL</strong></td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="total-row">
+                        <table>
+                            <tr>
+                                <td>KDV %20</td>
+                                <td style="text-align: right;"><strong>{{ quotation.kdv_tutari|floatformat:2 }} TL</strong></td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="total-row grand-total">
+                        <table>
+                            <tr>
+                                <td>KDV DAHİL GENEL TOPLAM</td>
+                                <td style="text-align: right;"><strong>{{ quotation.genel_toplam|floatformat:2 }} TL</strong></td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <!-- Footer Note -->
+    <div class="footer-note">
+        <strong>Önemli Not:</strong>
+        Bu ileti hukuku korunmuş, gizli veya ifşa edilmemesi gereken bilgiler içerebilir. 
+        Sayın mesajın gönderildiği kişi değilseniz, bu iletiye çoğaltmak ve dağıtmak yasaktır. 
+        Bu mesajı yanlışlıkla alan kişi, bu durumu derhal gönderene telefon ya da e-posta ile bildirmeli ve bilgisayarından silmelidir.
+    </div>
+</body>
+</html>

@@ -1,0 +1,366 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load turkish_format %}
+
+{% block title %}Teklif Düzenle - {{ quotation.teklif_no }} - Mestakip{% endblock %}
+{% block page_name %}quotation-edit{% endblock %}
+
+{% block extra_css %}
+<style>
+    .quotation-form-section {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 15px;
+    }
+    
+    [data-bs-theme=dark] .quotation-form-section {
+        background: #1a2332;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Header -->
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h4 class="mb-1">
+                    <i class="bi bi-pencil-square me-2"></i>Teklif Düzenle - {{ quotation.teklif_no }}
+                </h4>
+                <p class="text-muted mb-0">Teklif bilgilerini güncelleyin</p>
+            </div>
+            <a href="{% url 'dashboard:quotations' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Geri Dön
+            </a>
+        </div>
+    </div>
+
+    <!-- Edit Form -->
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <form id="editQuotationForm">
+                    {% csrf_token %}
+                    
+                    <!-- Cari Bilgileri -->
+                    <div class="quotation-form-section">
+                        <h6 class="mb-3 text-primary">
+                            <i class="bi bi-building me-2"></i>Cari Bilgileri
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Cari</label>
+                                <input type="text" class="form-control" id="cari" value="{{ quotation.cari }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">İlgili Kişi</label>
+                                <input type="text" class="form-control" id="ilgili_kisi" value="{{ quotation.ilgili_kisi|default:'' }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Email Adresi</label>
+                                <input type="email" class="form-control" id="email" value="{{ quotation.email|default:'' }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Ödeme Şekli</label>
+                                <input type="text" class="form-control" id="odeme_sekli" value="{{ quotation.odeme_sekli|default:'' }}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Teklif Detayları -->
+                    <div class="quotation-form-section">
+                        <h6 class="mb-3 text-primary">
+                            <i class="bi bi-card-text me-2"></i>Teklif Detayları
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-12">
+                                <label class="form-label">Teklif Açıklaması</label>
+                                <textarea class="form-control" id="aciklama" rows="3">{{ quotation.aciklama|default:'' }}</textarea>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Teklif Tarihi</label>
+                                <input type="date" class="form-control" id="teklif_tarihi" value="{{ quotation.teklif_tarihi|date:'Y-m-d' }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Son Geçerlilik Tarihi</label>
+                                <input type="date" class="form-control" id="gecerlilik_tarihi" value="{{ quotation.gecerlilik_tarihi|date:'Y-m-d'|default:'' }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Teklif Numarası</label>
+                                <input type="text" class="form-control" value="{{ quotation.teklif_no }}" readonly>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Durum</label>
+                                <select class="form-select" id="durum">
+                                    <option value="acik" {% if quotation.durum == 'acik' %}selected{% endif %}>Açık Teklif</option>
+                                    <option value="onaylandi" {% if quotation.durum == 'onaylandi' %}selected{% endif %}>Onaylı</option>
+                                    <option value="reddedildi" {% if quotation.durum == 'reddedildi' %}selected{% endif %}>Reddedildi</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ürün/Hizmet Bilgileri -->
+                    <div class="quotation-form-section">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="mb-0 text-primary">
+                                <i class="bi bi-box-seam me-2"></i>Ürün/Hizmet Bilgileri
+                            </h6>
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="addProductRow()">
+                                <i class="bi bi-plus-circle me-1"></i>Satır Ekle
+                            </button>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-bordered" id="productsTable">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 15%">Marka</th>
+                                        <th style="width: 30%">Ürün/Hizmet</th>
+                                        <th style="width: 10%">Mevsim</th>
+                                        <th style="width: 10%">Miktar</th>
+                                        <th style="width: 15%">Birim Fiyat (KDV Dahil)</th>
+                                        <th style="width: 12%">Toplam</th>
+                                        <th style="width: 8%">İşlem</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in quotation.urunler.all %}
+                                    <tr>
+                                        <td>
+                                            <input type="text" class="form-control form-control-sm marka-input" value="{{ item.marka|default:'' }}">
+                                        </td>
+                                        <td>
+                                            <input type="text" class="form-control form-control-sm urun-input" value="{{ item.urun_adi }}">
+                                        </td>
+                                        <td>
+                                            <select class="form-select form-select-sm mevsim-input">
+                                                <option value="">-</option>
+                                                <option value="kis" {% if item.mevsim == 'kis' %}selected{% endif %}>Kış</option>
+                                                <option value="yaz" {% if item.mevsim == 'yaz' %}selected{% endif %}>Yaz</option>
+                                                <option value="dort-mevsim" {% if item.mevsim == 'dort-mevsim' %}selected{% endif %}>4 Mevsim</option>
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <input type="number" class="form-control form-control-sm quantity-input" value="{{ item.miktar|floatformat:0 }}" min="1">
+                                        </td>
+                                        <td>
+                                            <input type="number" class="form-control form-control-sm price-input" value="{{ item.birim_fiyat|floatformat:2 }}" step="0.01">
+                                        </td>
+                                        <td>
+                                            <input type="text" class="form-control form-control-sm total-input" readonly value="{{ item.toplam|floatformat:2 }}">
+                                        </td>
+                                        <td class="text-center">
+                                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeProductRow(this)">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                                <tfoot class="table-light">
+                                    <tr>
+                                        <td colspan="5" class="text-end fw-bold">Ara Toplam (KDV Hariç):</td>
+                                        <td colspan="2" class="fw-bold" id="subtotalAmount">{{ quotation.ara_toplam|floatformat:2 }} TL</td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="5" class="text-end fw-bold">KDV (%20):</td>
+                                        <td colspan="2" class="fw-bold" id="vatAmount">{{ quotation.kdv_tutari|floatformat:2 }} TL</td>
+                                    </tr>
+                                    <tr class="table-primary">
+                                        <td colspan="5" class="text-end fw-bold">Genel Toplam:</td>
+                                        <td colspan="2" class="fw-bold fs-5" id="grandTotalAmount">{{ quotation.genel_toplam|floatformat:2 }} TL</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Rezerve ve Proforma -->
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="rezerve" {% if quotation.rezerve %}checked{% endif %}>
+                                <label class="form-check-label" for="rezerve">
+                                    <i class="bi bi-bookmark-check me-1"></i>Rezerve
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="proforma" {% if quotation.proforma %}checked{% endif %}>
+                                <label class="form-check-label" for="proforma">
+                                    <i class="bi bi-file-earmark-pdf me-1"></i>Proforma
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <a href="{% url 'dashboard:quotations' %}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle me-1"></i>İptal
+                        </a>
+                        <button type="button" class="btn btn-success" onclick="updateQuotation()">
+                            <i class="bi bi-check-circle me-1"></i>Güncelle
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const QUOTATION_ID = parseInt('{{ quotation.id }}');
+    const VAT_RATE = 0.20;
+
+    // Add new product row
+    function addProductRow() {
+        const tbody = document.querySelector('#productsTable tbody');
+        const newRow = tbody.querySelector('tr').cloneNode(true);
+        
+        newRow.querySelectorAll('input').forEach(input => {
+            if (input.classList.contains('quantity-input')) {
+                input.value = '1';
+            } else if (!input.readOnly) {
+                input.value = '';
+            } else {
+                input.value = '0.00';
+            }
+        });
+        
+        tbody.appendChild(newRow);
+        calculateTotals();
+    }
+
+    // Remove product row
+    function removeProductRow(button) {
+        const tbody = document.querySelector('#productsTable tbody');
+        if (tbody.querySelectorAll('tr').length > 1) {
+            button.closest('tr').remove();
+            calculateTotals();
+        } else {
+            alert('En az bir ürün satırı olmalıdır!');
+        }
+    }
+
+    // Calculate totals
+    function calculateTotals() {
+        let grandTotal = 0;
+        
+        document.querySelectorAll('#productsTable tbody tr').forEach(row => {
+            const quantity = parseFloat(row.querySelector('.quantity-input').value) || 0;
+            const unitPriceWithVAT = parseFloat(row.querySelector('.price-input').value) || 0;
+            
+            const lineTotal = quantity * unitPriceWithVAT;
+            row.querySelector('.total-input').value = lineTotal.toFixed(2);
+            
+            grandTotal += lineTotal;
+        });
+        
+        const subtotal = grandTotal / (1 + VAT_RATE);
+        const totalVAT = grandTotal - subtotal;
+        
+        document.getElementById('subtotalAmount').textContent = subtotal.toFixed(2) + ' TL';
+        document.getElementById('vatAmount').textContent = totalVAT.toFixed(2) + ' TL';
+        document.getElementById('grandTotalAmount').textContent = grandTotal.toFixed(2) + ' TL';
+    }
+
+    // Add event listeners
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelector('#productsTable').addEventListener('input', calculateTotals);
+        document.querySelector('#productsTable').addEventListener('change', calculateTotals);
+    });
+
+    // Update quotation
+    function updateQuotation() {
+        const formData = {
+            cari: document.getElementById('cari').value,
+            ilgili_kisi: document.getElementById('ilgili_kisi').value,
+            email: document.getElementById('email').value,
+            odeme_sekli: document.getElementById('odeme_sekli').value,
+            aciklama: document.getElementById('aciklama').value,
+            teklif_tarihi: document.getElementById('teklif_tarihi').value,
+            gecerlilik_tarihi: document.getElementById('gecerlilik_tarihi').value,
+            durum: document.getElementById('durum').value,
+            rezerve: document.getElementById('rezerve').checked,
+            proforma: document.getElementById('proforma').checked,
+            items: []
+        };
+        
+        if (!formData.cari) {
+            alert('Lütfen Cari bilgisini giriniz!');
+            return;
+        }
+        
+        if (!formData.teklif_tarihi) {
+            alert('Lütfen Teklif Tarihi giriniz!');
+            return;
+        }
+        
+        let hasValidProduct = false;
+        document.querySelectorAll('#productsTable tbody tr').forEach(row => {
+            const marka = row.querySelector('.marka-input').value;
+            const urunAdi = row.querySelector('.urun-input').value;
+            const mevsim = row.querySelector('.mevsim-input').value;
+            const miktar = parseFloat(row.querySelector('.quantity-input').value) || 0;
+            const birimFiyat = parseFloat(row.querySelector('.price-input').value) || 0;
+            const toplam = parseFloat(row.querySelector('.total-input').value) || 0;
+            
+            if (urunAdi && miktar > 0 && birimFiyat > 0) {
+                hasValidProduct = true;
+                formData.items.push({
+                    marka: marka,
+                    urun_adi: urunAdi,
+                    mevsim: mevsim,
+                    miktar: miktar,
+                    birim_fiyat: birimFiyat,
+                    toplam: toplam
+                });
+            }
+        });
+        
+        if (!hasValidProduct) {
+            alert('Lütfen en az bir ürün ekleyiniz!');
+            return;
+        }
+        
+        const grandTotal = parseFloat(document.getElementById('grandTotalAmount').textContent.replace(' TL', '')) || 0;
+        const subtotal = grandTotal / 1.20;
+        const vat = grandTotal - subtotal;
+        
+        formData.ara_toplam = subtotal.toFixed(2);
+        formData.kdv_tutari = vat.toFixed(2);
+        formData.genel_toplam = grandTotal.toFixed(2);
+        
+        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        
+        fetch(`{% url 'dashboard:quotations' %}`.replace('quotations/', '') + `api/quotations/${QUOTATION_ID}/update/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Teklif başarıyla güncellendi!');
+                window.location.href = '{% url "dashboard:quotations" %}';
+            } else {
+                alert('Hata: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Bir hata oluştu: ' + error.message);
+        });
+    }
+</script>
+{% endblock %}

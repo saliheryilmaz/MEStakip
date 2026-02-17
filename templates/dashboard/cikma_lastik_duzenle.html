@@ -90,6 +90,31 @@
                     <input type="date" class="form-control" id="satis_tarihi" name="satis_tarihi" value="{{ lastik.satis_tarihi|date:'Y-m-d' }}">
                 </div>
                 
+                <!-- Ödeme Seçenekleri - Sadece durum "satildi" ise göster -->
+                <div class="col-12" id="odeme_secenekleri_field" style="display: none;">
+                    <label class="form-label">Ödeme Seçenekleri</label>
+                    <div class="d-flex gap-3 flex-wrap">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="mehmet_havale" name="mehmet_havale" {% if lastik.mehmet_havale %}checked{% endif %}>
+                            <label class="form-check-label" for="mehmet_havale">
+                                Mehmet Havale
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="canta" name="canta" {% if lastik.canta %}checked{% endif %}>
+                            <label class="form-check-label" for="canta">
+                                Çanta
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="cari" name="cari" {% if lastik.cari %}checked{% endif %}>
+                            <label class="form-check-label" for="cari">
+                                Cari
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
                 <!-- Açıklama -->
                 <div class="col-12">
                     <label for="aciklama" class="form-label">Açıklama</label>
@@ -118,12 +143,14 @@
 document.addEventListener('DOMContentLoaded', function() {
     const durumSelect = document.getElementById('durum');
     const satisFiyatiField = document.getElementById('satis_fiyati_field');
+    const odemeSecenekleriField = document.getElementById('odeme_secenekleri_field');
     const satisTarihiField = document.getElementById('satis_tarihi_field');
     const satisTarihiInput = document.getElementById('satis_tarihi');
     
     function toggleSatisFields() {
         if (durumSelect.value === 'satildi') {
             satisFiyatiField.style.display = 'block';
+            odemeSecenekleriField.style.display = 'block';
             satisTarihiField.style.display = 'block';
             
             // Satış tarihi boşsa bugünün tarihini set et
@@ -133,6 +160,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         } else {
             satisFiyatiField.style.display = 'none';
+            odemeSecenekleriField.style.display = 'none';
             satisTarihiField.style.display = 'none';
         }
     }

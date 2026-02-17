@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teklif - {{ quotation.teklif_no }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .email-container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: #f8f9fa;
+            border-bottom: 4px solid #dc3545;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .header h1 {
+            color: #dc3545;
+            margin: 0 0 5px 0;
+            font-size: 28px;
+        }
+        .header p {
+            color: #666;
+            margin: 0;
+            font-size: 14px;
+        }
+        .message {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            white-space: pre-line;
+        }
+        .section-title {
+            background: #f8f9fa;
+            padding: 10px 15px;
+            border-left: 4px solid #dc3545;
+            font-weight: 600;
+            color: #333;
+            margin: 20px 0 10px 0;
+            font-size: 14px;
+            text-transform: uppercase;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+        .info-table td {
+            padding: 8px 12px;
+            border-bottom: 1px solid #e9ecef;
+            font-size: 13px;
+        }
+        .info-table td:first-child {
+            font-weight: 600;
+            color: #333;
+            width: 180px;
+            background: #f8f9fa;
+        }
+        .products-table {
+            margin: 20px 0;
+        }
+        .products-table th {
+            background: #dc3545;
+            color: white;
+            font-weight: 600;
+            padding: 12px 8px;
+            text-align: center;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+        .products-table td {
+            padding: 10px 8px;
+            border: 1px solid #dee2e6;
+            font-size: 13px;
+        }
+        .totals-box {
+            background: #f8f9fa;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            font-size: 15px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .total-row.grand-total {
+            background: #dc3545;
+            color: white;
+            padding: 15px 20px;
+            margin: 15px -20px -20px -20px;
+            border-radius: 0 0 6px 6px;
+            font-size: 18px;
+            font-weight: bold;
+            border: none;
+        }
+        .footer {
+            margin-top: 30px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-top: 2px solid #dee2e6;
+            font-size: 11px;
+            color: #666;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <!-- Header -->
+        <div class="header">
+            <h1>E-TEKLİF</h1>
+            <p>MESLAS OTOMOTİV - ERHAN ERYILMAZ</p>
+        </div>
+
+        <!-- Message -->
+        {% if message %}
+        <div class="message">{{ message }}</div>
+        {% endif %}
+
+        <!-- Company Info -->
+        <div class="section-title">Firma Bilgileri</div>
+        <table class="info-table">
+            <tr>
+                <td>Ünvan</td>
+                <td>MESLAS OTOMOTİV - ERHAN ERYILMAZ</td>
+            </tr>
+            <tr>
+                <td>Adres</td>
+                <td>Abdurrahmangazi Mah. Atayolu Cad. No:187/A SANCAKTEPE / İSTANBUL</td>
+            </tr>
+            <tr>
+                <td>Telefon</td>
+                <td>0216 311 60 34</td>
+            </tr>
+            <tr>
+                <td>Email</td>
+                <td>info@meslas.com</td>
+            </tr>
+        </table>
+
+        <!-- Quotation Info -->
+        <div class="section-title">Teklif Bilgileri</div>
+        <table class="info-table">
+            <tr>
+                <td>Teklif No</td>
+                <td><strong>{{ quotation.teklif_no }}</strong></td>
+            </tr>
+            <tr>
+                <td>Teklif Tarihi</td>
+                <td>{{ quotation.teklif_tarihi|date:'d.m.Y' }}</td>
+            </tr>
+            <tr>
+                <td>Son Geçerlilik Tarihi</td>
+                <td>{{ quotation.gecerlilik_tarihi|date:'d.m.Y'|default:'-' }}</td>
+            </tr>
+            <tr>
+                <td>Cari</td>
+                <td><strong>{{ quotation.cari }}</strong></td>
+            </tr>
+        </table>
+
+        <!-- Products -->
+        <div class="section-title">Ürün/Hizmet Detayları</div>
+        <table class="products-table">
+            <thead>
+                <tr>
+                    <th>MARKA</th>
+                    <th>ÜRÜN AÇIKLAMASI</th>
+                    <th>MEVSİM</th>
+                    <th>MİKTAR</th>
+                    <th>BİRİM FİYAT</th>
+                    <th>TOPLAM</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in quotation.urunler.all %}
+                <tr>
+                    <td style="text-align: center;">{{ item.marka|default:'-' }}</td>
+                    <td>{{ item.urun_adi }}</td>
+                    <td style="text-align: center;">
+                        {% if item.mevsim %}
+                            {{ item.get_mevsim_display }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td style="text-align: center;">{{ item.miktar|floatformat:0 }}</td>
+                    <td style="text-align: right;">{{ item.birim_fiyat|floatformat:2 }} TL</td>
+                    <td style="text-align: right; font-weight: bold;">{{ item.toplam|floatformat:2 }} TL</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Totals -->
+        <div class="totals-box">
+            <div class="total-row">
+                <span>TOPLAM MİKTAR</span>
+                <strong>{{ quotation.toplam_adet|floatformat:0 }}</strong>
+            </div>
+            <div class="total-row">
+                <span>TOPLAM TUTAR (KDV Hariç)</span>
+                <strong>{{ quotation.ara_toplam|floatformat:2 }} TL</strong>
+            </div>
+            <div class="total-row">
+                <span>KDV (%20)</span>
+                <strong>{{ quotation.kdv_tutari|floatformat:2 }} TL</strong>
+            </div>
+            <div class="total-row grand-total">
+                <span>KDV DAHİL GENEL TOPLAM</span>
+                <strong>{{ quotation.genel_toplam|floatformat:2 }} TL</strong>
+            </div>
+        </div>
+
+        {% if quotation.aciklama %}
+        <div class="section-title">Açıklama</div>
+        <div style="padding: 15px; background: #f8f9fa; border-radius: 4px;">
+            {{ quotation.aciklama }}
+        </div>
+        {% endif %}
+
+        <!-- Footer -->
+        <div class="footer">
+            <p><strong>MESLAS OTOMOTİV</strong></p>
+            <p>Abdurrahmangazi Mah. Atayolu Cad. No:187/A SANCAKTEPE / İSTANBUL</p>
+            <p>Tel: 0216 311 60 34 | Email: info@meslas.com | Web: meslas.com</p>
+            <p style="margin-top: 15px; font-size: 10px;">
+                Bu email otomatik olarak oluşturulmuştur. Lütfen yanıtlamayın.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

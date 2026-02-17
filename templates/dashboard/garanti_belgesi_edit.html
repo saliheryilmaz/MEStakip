@@ -1,0 +1,306 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Garanti Belgesi Düzenle - {{ belge.belge_no }} - Mestakip{% endblock %}
+{% block page_name %}garanti-belgesi-edit{% endblock %}
+
+{% block extra_css %}
+<style>
+    .garanti-form-section {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 15px;
+    }
+    
+    [data-bs-theme=dark] .garanti-form-section {
+        background: #1a2332;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Header -->
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h4 class="mb-1">
+                    <i class="bi bi-pencil-square me-2"></i>Garanti Belgesi Düzenle - {{ belge.belge_no }}
+                </h4>
+                <p class="text-muted mb-0">Garanti belgesi bilgilerini güncelleyin</p>
+            </div>
+            <a href="{% url 'dashboard:garanti_belgeleri' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Geri Dön
+            </a>
+        </div>
+    </div>
+
+    <!-- Edit Form -->
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <form id="editGarantiForm">
+                    {% csrf_token %}
+                    
+                    <!-- Müşteri Bilgileri -->
+                    <div class="garanti-form-section">
+                        <h6 class="mb-3 text-success">
+                            <i class="bi bi-person me-2"></i>Müşteri Bilgileri
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Müşteri Adı / Ünvan</label>
+                                <input type="text" class="form-control" id="musteri_adi" value="{{ belge.musteri_adi }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Telefon</label>
+                                <input type="text" class="form-control" id="musteri_telefon" value="{{ belge.musteri_telefon }}" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Araç Bilgileri -->
+                    <div class="garanti-form-section">
+                        <h6 class="mb-3 text-success">
+                            <i class="bi bi-car-front me-2"></i>Araç Bilgileri
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Plaka</label>
+                                <input type="text" class="form-control" id="arac_plaka" value="{{ belge.arac_plaka }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Marka / Model</label>
+                                <input type="text" class="form-control" id="arac_marka_model" value="{{ belge.arac_marka_model }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Yıl</label>
+                                <input type="text" class="form-control" id="arac_yil" value="{{ belge.arac_yil|default:'' }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Kilometre</label>
+                                <input type="text" class="form-control" id="arac_km" value="{{ belge.arac_km|default:'' }}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Lastik Bilgileri -->
+                    <div class="garanti-form-section">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="mb-0 text-success">
+                                <i class="bi bi-circle me-2"></i>Lastik Bilgileri
+                            </h6>
+                            <button type="button" class="btn btn-sm btn-outline-success" onclick="addLastikRow()">
+                                <i class="bi bi-plus-circle me-1"></i>Satır Ekle
+                            </button>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-bordered" id="lastiklerTable">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 25%">Marka</th>
+                                        <th style="width: 35%">Ebat</th>
+                                        <th style="width: 12%">Adet</th>
+                                        <th style="width: 15%">Fiyat</th>
+                                        <th style="width: 8%">Toplam</th>
+                                        <th style="width: 5%">İşlem</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for lastik in belge.lastikler.all %}
+                                    <tr>
+                                        <td>
+                                            <input type="text" class="form-control form-control-sm marka-input" value="{{ lastik.marka }}">
+                                        </td>
+                                        <td>
+                                            <input type="text" class="form-control form-control-sm ebat-input" value="{{ lastik.ebat }}">
+                                        </td>
+                                        <td>
+                                            <input type="number" class="form-control form-control-sm adet-input" value="{{ lastik.adet }}" min="1">
+                                        </td>
+                                        <td>
+                                            <input type="number" class="form-control form-control-sm fiyat-input" value="{{ lastik.fiyat|floatformat:2 }}" step="0.01">
+                                        </td>
+                                        <td>
+                                            <input type="text" class="form-control form-control-sm toplam-input" readonly value="{{ lastik.toplam_fiyat|floatformat:2 }}">
+                                        </td>
+                                        <td class="text-center">
+                                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeLastikRow(this)">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                                <tfoot class="table-light">
+                                    <tr>
+                                        <td colspan="2" class="text-end fw-bold">Toplam:</td>
+                                        <td class="fw-bold" id="toplamAdet">{{ belge.toplam_adet }}</td>
+                                        <td colspan="3" class="fw-bold" id="toplamTutar">{{ belge.toplam_tutar|floatformat:2 }} TL</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Montaj Tarihi ve Notlar -->
+                    <div class="garanti-form-section">
+                        <h6 class="mb-3 text-success">
+                            <i class="bi bi-calendar-check me-2"></i>Montaj ve Notlar
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Montaj Tarihi</label>
+                                <input type="date" class="form-control" id="montaj_tarihi" value="{{ belge.montaj_tarihi|date:'Y-m-d' }}" required>
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label">Notlar</label>
+                                <textarea class="form-control" id="notlar" rows="2">{{ belge.notlar|default:'' }}</textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <a href="{% url 'dashboard:garanti_belgeleri' %}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle me-1"></i>İptal
+                        </a>
+                        <button type="button" class="btn btn-success" onclick="updateGaranti()">
+                            <i class="bi bi-check-circle me-1"></i>Güncelle
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const BELGE_ID = {{ belge.id }};
+
+    // Add new lastik row
+    function addLastikRow() {
+        const tbody = document.querySelector('#lastiklerTable tbody');
+        const newRow = tbody.querySelector('tr').cloneNode(true);
+        
+        newRow.querySelectorAll('input').forEach(input => {
+            if (input.classList.contains('adet-input')) {
+                input.value = '4';
+            } else if (input.classList.contains('toplam-input')) {
+                input.value = '0.00';
+            } else {
+                input.value = '';
+            }
+        });
+        
+        tbody.appendChild(newRow);
+        calculateTotals();
+    }
+
+    // Remove lastik row
+    function removeLastikRow(button) {
+        const tbody = document.querySelector('#lastiklerTable tbody');
+        if (tbody.querySelectorAll('tr').length > 1) {
+            button.closest('tr').remove();
+            calculateTotals();
+        } else {
+            alert('En az bir lastik satırı olmalıdır!');
+        }
+    }
+
+    // Calculate totals
+    function calculateTotals() {
+        let totalAdet = 0;
+        let totalTutar = 0;
+        
+        document.querySelectorAll('#lastiklerTable tbody tr').forEach(row => {
+            const adet = parseInt(row.querySelector('.adet-input').value) || 0;
+            const fiyat = parseFloat(row.querySelector('.fiyat-input').value) || 0;
+            const toplam = adet * fiyat;
+            
+            row.querySelector('.toplam-input').value = toplam.toFixed(2);
+            totalAdet += adet;
+            totalTutar += toplam;
+        });
+        
+        document.getElementById('toplamAdet').textContent = totalAdet;
+        document.getElementById('toplamTutar').textContent = totalTutar.toFixed(2) + ' TL';
+    }
+
+    // Add event listeners
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelector('#lastiklerTable').addEventListener('input', calculateTotals);
+    });
+
+    // Update garanti
+    function updateGaranti() {
+        const formData = {
+            musteri_adi: document.getElementById('musteri_adi').value,
+            musteri_telefon: document.getElementById('musteri_telefon').value,
+            arac_plaka: document.getElementById('arac_plaka').value,
+            arac_marka_model: document.getElementById('arac_marka_model').value,
+            arac_yil: document.getElementById('arac_yil').value,
+            arac_km: document.getElementById('arac_km').value,
+            montaj_tarihi: document.getElementById('montaj_tarihi').value,
+            notlar: document.getElementById('notlar').value,
+            lastikler: []
+        };
+        
+        if (!formData.musteri_adi || !formData.musteri_telefon || !formData.arac_plaka || !formData.arac_marka_model || !formData.montaj_tarihi) {
+            alert('Lütfen zorunlu alanları doldurunuz!');
+            return;
+        }
+        
+        let hasValidLastik = false;
+        document.querySelectorAll('#lastiklerTable tbody tr').forEach(row => {
+            const marka = row.querySelector('.marka-input').value;
+            const ebat = row.querySelector('.ebat-input').value;
+            const adet = parseInt(row.querySelector('.adet-input').value) || 0;
+            const fiyat = parseFloat(row.querySelector('.fiyat-input').value) || 0;
+            
+            if (marka && ebat && adet > 0) {
+                hasValidLastik = true;
+                formData.lastikler.push({
+                    marka: marka,
+                    ebat: ebat,
+                    adet: adet,
+                    fiyat: fiyat
+                });
+            }
+        });
+        
+        if (!hasValidLastik) {
+            alert('Lütfen en az bir lastik ekleyiniz!');
+            return;
+        }
+        
+        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        
+        fetch(`/api/garanti-belgesi/${BELGE_ID}/update/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Garanti belgesi başarıyla güncellendi!');
+                window.location.href = '{% url "dashboard:garanti_belgeleri" %}';
+            } else {
+                alert('Hata: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Bir hata oluştu: ' + error.message);
+        });
+    }
+</script>
+{% endblock %}

@@ -552,6 +552,11 @@ class CikmaLastik(models.Model):
     tahmini_deger = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, verbose_name="Tahmini Değer")
     satis_fiyati = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, verbose_name="Satış Fiyatı")
     
+    # Ödeme Seçenekleri
+    mehmet_havale = models.BooleanField(default=False, verbose_name="Mehmet Havale")
+    canta = models.BooleanField(default=False, verbose_name="Çanta")
+    cari = models.BooleanField(default=False, verbose_name="Cari")
+    
     # Ek Bilgiler
     aciklama = models.TextField(blank=True, null=True, verbose_name="Açıklama")
     depo_konumu = models.CharField(max_length=100, blank=True, null=True, verbose_name="Depo Konumu")
@@ -692,3 +697,166 @@ class JokerSatisHareketi(models.Model):
     
     def __str__(self):
         return f'{self.tarih.strftime("%d.%m.%Y")} - {self.cari} - {self.urun} - Kar: {self.kar_tutari} TL'
+
+
+class Quotation(models.Model):
+    """Teklif modeli"""
+    
+    STATUS_CHOICES = [
+        ('acik', 'Açık Teklif'),
+        ('onaylandi', 'Onaylı'),
+        ('reddedildi', 'Reddedildi'),
+    ]
+    
+    # Teklif Bilgileri
+    teklif_no = models.CharField(max_length=50, unique=True, verbose_name="Teklif No")
+    durum = models.CharField(max_length=20, choices=STATUS_CHOICES, default='acik', verbose_name="Durum")
+    
+    # Cari Bilgileri
+    cari = models.CharField(max_length=200, verbose_name="Cari")
+    ilgili_kisi = models.CharField(max_length=200, blank=True, null=True, verbose_name="İlgili Kişi")
+    email = models.EmailField(blank=True, null=True, verbose_name="Email")
+    odeme_sekli = models.CharField(max_length=100, blank=True, null=True, verbose_name="Ödeme Şekli")
+    
+    # Teklif Detayları
+    aciklama = models.TextField(blank=True, null=True, verbose_name="Açıklama")
+    teklif_tarihi = models.DateField(verbose_name="Teklif Tarihi")
+    gecerlilik_tarihi = models.DateField(blank=True, null=True, verbose_name="Son Geçerlilik Tarihi")
+    
+    # Finansal Bilgiler
+    ara_toplam = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="Ara Toplam (KDV Hariç)")
+    kdv_tutari = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="KDV Tutarı")
+    genel_toplam = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="Genel Toplam")
+    
+    # Ek Bilgiler
+    rezerve = models.BooleanField(default=False, verbose_name="Rezerve")
+    proforma = models.BooleanField(default=False, verbose_name="Proforma")
+    
+    # Sistem Bilgileri
+    olusturan = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='olusturulan_teklifler', verbose_name="Oluşturan")
+    olusturma_tarihi = models.DateTimeField(auto_now_add=True, verbose_name="Oluşturma Tarihi")
+    guncelleme_tarihi = models.DateTimeField(auto_now=True, verbose_name="Güncellenme Tarihi")
+    
+    class Meta:
+        verbose_name = "Teklif"
+        verbose_name_plural = "Teklifler"
+        ordering = ['-olusturma_tarihi']
+    
+    def __str__(self):
+        return f"{self.teklif_no} - {self.cari}"
+    
+    def kalan_gun(self):
+        """Geçerlilik tarihine kalan gün sayısı"""
+        if self.gecerlilik_tarihi:
+            from datetime import date
+            delta = self.gecerlilik_tarihi - date.today()
+            return delta.days
+        return None
+    
+    def toplam_adet(self):
+        """Toplam ürün adedi"""
+        return sum(item.miktar for item in self.urunler.all())
+
+
+class QuotationItem(models.Model):
+    """Teklif ürün/hizmet kalemleri"""
+    
+    MEVSIM_CHOICES = [
+        ('kis', 'Kış'),
+        ('yaz', 'Yaz'),
+        ('dort-mevsim', '4 Mevsim'),
+    ]
+    
+    teklif = models.ForeignKey(Quotation, on_delete=models.CASCADE, related_name='urunler', verbose_name="Teklif")
+    marka = models.CharField(max_length=100, blank=True, null=True, verbose_name="Marka")
+    urun_adi = models.CharField(max_length=300, verbose_name="Ürün/Hizmet Adı")
+    mevsim = models.CharField(max_length=20, choices=MEVSIM_CHOICES, blank=True, null=True, verbose_name="Mevsim")
+    miktar = models.DecimalField(max_digits=10, decimal_places=2, default=1, verbose_name="Miktar")
+    birim_fiyat = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Birim Fiyat (KDV Dahil)")
+    toplam = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Toplam")
+    sira = models.PositiveIntegerField(default=0, verbose_name="Sıra")
+    
+    class Meta:
+        verbose_name = "Teklif Kalemi"
+        verbose_name_plural = "Teklif Kalemleri"
+        ordering = ['sira']
+    
+    def __str__(self):
+        return f"{self.urun_adi} - {self.miktar} adet"
+    
+    def save(self, *args, **kwargs):
+        # Toplam hesaplama
+        self.toplam = self.miktar * self.birim_fiyat
+        super().save(*args, **kwargs)
+
+
+class GarantiBelgesi(models.Model):
+    """Lastik Satış Garanti Belgesi modeli"""
+    
+    # Belge Bilgileri
+    belge_no = models.CharField(max_length=50, unique=True, verbose_name="Belge No")
+    
+    # Müşteri Bilgileri
+    musteri_adi = models.CharField(max_length=200, verbose_name="Müşteri Adı/Ünvan")
+    musteri_telefon = models.CharField(max_length=20, verbose_name="Müşteri Telefon")
+    
+    # Araç Bilgileri
+    arac_plaka = models.CharField(max_length=20, verbose_name="Araç Plaka")
+    arac_marka_model = models.CharField(max_length=200, verbose_name="Araç Marka/Model")
+    arac_yil = models.CharField(max_length=10, blank=True, null=True, verbose_name="Araç Yıl")
+    arac_km = models.CharField(max_length=20, blank=True, null=True, verbose_name="Araç Km")
+    
+    # Montaj Bilgileri
+    montaj_tarihi = models.DateField(verbose_name="Montaj Tarihi")
+    
+    # Notlar
+    notlar = models.TextField(blank=True, null=True, verbose_name="Notlar")
+    
+    # Sistem Bilgileri
+    olusturan = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='olusturulan_garanti_belgeleri', verbose_name="Oluşturan")
+    olusturma_tarihi = models.DateTimeField(auto_now_add=True, verbose_name="Oluşturma Tarihi")
+    guncelleme_tarihi = models.DateTimeField(auto_now=True, verbose_name="Güncellenme Tarihi")
+    
+    class Meta:
+        verbose_name = "Garanti Belgesi"
+        verbose_name_plural = "Garanti Belgeleri"
+        ordering = ['-olusturma_tarihi']
+    
+    def __str__(self):
+        return f"{self.belge_no} - {self.musteri_adi}"
+    
+    def toplam_adet(self):
+        """Toplam lastik adedi"""
+        return sum(item.adet for item in self.lastikler.all())
+    
+    def toplam_tutar(self):
+        """Toplam tutar"""
+        return sum(item.toplam_fiyat() for item in self.lastikler.all())
+    
+    def garanti_bitis_tarihi(self):
+        """Garanti bitiş tarihi (2 yıl)"""
+        from datetime import timedelta
+        return self.montaj_tarihi + timedelta(days=730)  # 2 yıl = 730 gün
+
+
+class GarantiBelgesiLastik(models.Model):
+    """Garanti Belgesi Lastik Kalemleri"""
+    
+    belge = models.ForeignKey(GarantiBelgesi, on_delete=models.CASCADE, related_name='lastikler', verbose_name="Garanti Belgesi")
+    marka = models.CharField(max_length=100, verbose_name="Marka")
+    ebat = models.CharField(max_length=100, verbose_name="Ebat")
+    adet = models.PositiveIntegerField(default=1, verbose_name="Adet")
+    fiyat = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Fiyat")
+    sira = models.PositiveIntegerField(default=0, verbose_name="Sıra")
+    
+    class Meta:
+        verbose_name = "Garanti Belgesi Lastik"
+        verbose_name_plural = "Garanti Belgesi Lastikler"
+        ordering = ['sira']
+    
+    def __str__(self):
+        return f"{self.marka} {self.ebat} - {self.adet} adet"
+    
+    def toplam_fiyat(self):
+        """Toplam fiyat hesaplama"""
+        return self.adet * self.fiyat

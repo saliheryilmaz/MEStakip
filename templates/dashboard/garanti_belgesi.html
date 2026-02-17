@@ -1,0 +1,399 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Lastik Satış Garanti Belgesi</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 0.8cm;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: "DejaVu Sans", Arial, Helvetica, sans-serif;
+            font-size: 8pt;
+            line-height: 1.2;
+            color: #000;
+        }
+        
+        .container {
+            max-width: 21cm;
+            margin: 0 auto;
+            padding: 8px;
+        }
+        
+        /* Header */
+        .document-header {
+            text-align: center;
+            border: 2px solid #000;
+            padding: 8px;
+            margin-bottom: 10px;
+            background: #f8f9fa;
+        }
+        
+        .document-title {
+            font-size: 14pt;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+            margin-bottom: 2px;
+        }
+        
+        /* Section Headers */
+        .section-header {
+            background: #000;
+            color: white;
+            padding: 4px 8px;
+            font-size: 8pt;
+            font-weight: bold;
+            margin-top: 8px;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+        }
+        
+        /* Info Table */
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 6px;
+        }
+        
+        .info-table td {
+            padding: 4px 6px;
+            border: 1px solid #333;
+            font-size: 7.5pt;
+        }
+        
+        .info-table td:first-child {
+            font-weight: 600;
+            width: 28%;
+            background: #f8f9fa;
+        }
+        
+        .info-table td:last-child {
+            width: 72%;
+        }
+        
+        /* Products Table */
+        .products-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 6px;
+        }
+        
+        .products-table th {
+            background: #333;
+            color: white;
+            font-weight: 600;
+            padding: 4px 4px;
+            text-align: center;
+            font-size: 7.5pt;
+            border: 1px solid #333;
+        }
+        
+        .products-table td {
+            padding: 4px 4px;
+            border: 1px solid #333;
+            font-size: 7.5pt;
+            text-align: center;
+        }
+        
+        .products-table tbody tr {
+            background: #fff;
+        }
+        
+        .products-table tbody tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+        
+        .products-table .total-row {
+            background: #e9ecef;
+            font-weight: bold;
+        }
+        
+        /* Warranty Terms */
+        .warranty-terms {
+            border: 1px solid #333;
+            padding: 6px;
+            margin-bottom: 8px;
+            background: #fff;
+        }
+        
+        .warranty-terms ol {
+            margin-left: 15px;
+            margin-top: 4px;
+        }
+        
+        .warranty-terms li {
+            margin-bottom: 3px;
+            line-height: 1.3;
+            font-size: 7pt;
+        }
+        
+        .warranty-terms ul {
+            margin-left: 15px;
+            margin-top: 2px;
+            list-style-type: disc;
+        }
+        
+        .warranty-terms ul li {
+            margin-bottom: 2px;
+            font-size: 6.5pt;
+        }
+        
+        .warranty-highlight {
+            font-weight: bold;
+            text-decoration: underline;
+        }
+        
+        /* Signature Section */
+        .signature-section {
+            display: table;
+            width: 100%;
+            margin-top: 10px;
+            border-collapse: collapse;
+        }
+        
+        .signature-box {
+            display: table-cell;
+            width: 48%;
+            border: 1px solid #333;
+            padding: 8px;
+            vertical-align: top;
+            min-height: 60px;
+        }
+        
+        .signature-box:first-child {
+            margin-right: 4%;
+        }
+        
+        .signature-label {
+            font-weight: bold;
+            margin-bottom: 35px;
+            display: block;
+            font-size: 7.5pt;
+        }
+        
+        .text-center {
+            text-align: center;
+        }
+        
+        .text-right {
+            text-align: right;
+        }
+        
+        .fw-bold {
+            font-weight: bold;
+        }
+        
+        /* Print Button */
+        .print-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+        
+        .print-button:hover {
+            background: #c82333;
+        }
+        
+        @media print {
+            .print-button {
+                display: none;
+            }
+            
+            body {
+                margin: 0;
+                padding: 0;
+            }
+            
+            @page {
+                margin: 1.5cm;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="print-button" onclick="window.print()">🖨️ PDF İndir / Yazdır</button>
+    
+    <div class="container">
+        <!-- Document Header -->
+        <div class="document-header">
+            <div class="document-title">LASTİK SATIŞI GARANTİ BELGESİ</div>
+        </div>
+
+        <!-- 1. Satıcı Firma Bilgileri -->
+        <div class="section-header">1. SATICI FİRMA BİLGİLERİ</div>
+        <table class="info-table">
+            <tr>
+                <td>Firma Ünvanı</td>
+                <td>MESLAS OTOMOTİV - ERHAN ERYILMAZ</td>
+            </tr>
+            <tr>
+                <td>Adres</td>
+                <td>Abdurrahmangazi Mah. Atayolu Cad. No:187/A SANCAKTEPE / İSTANBUL</td>
+            </tr>
+            <tr>
+                <td>Telefon</td>
+                <td>0216 311 60 34</td>
+            </tr>
+            <tr>
+                <td>E-posta</td>
+                <td>info@meslas.com</td>
+            </tr>
+            <tr>
+                <td>Vergi Dairesi / No</td>
+                <td>SULTANBEYLİ V.D. / 4485882148</td>
+            </tr>
+        </table>
+
+        <!-- 2. Müşteri Bilgileri -->
+        <div class="section-header">2. MÜŞTERİ BİLGİLERİ</div>
+        <table class="info-table">
+            <tr>
+                <td>Adı Soyadı / Ünvan</td>
+                <td>{{ belge.musteri_adi|default:'_______________________________________________' }}</td>
+            </tr>
+            <tr>
+                <td>Telefon</td>
+                <td>{{ belge.musteri_telefon|default:'_______________________________________________' }}</td>
+            </tr>
+        </table>
+
+        <!-- 3. Ürün Bilgileri -->
+        <div class="section-header">3. ÜRÜN BİLGİLERİ</div>
+        <table class="products-table">
+            <thead>
+                <tr>
+                    <th style="width: 20%">MARKA</th>
+                    <th style="width: 35%">EBAT</th>
+                    <th style="width: 15%">ADET</th>
+                    <th style="width: 15%">FİYAT</th>
+                    <th style="width: 15%">TOPLAM</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if belge.lastikler.all %}
+                    {% for lastik in belge.lastikler.all %}
+                    <tr>
+                        <td>{{ lastik.marka }}</td>
+                        <td>{{ lastik.ebat }}</td>
+                        <td>{{ lastik.adet }}</td>
+                        <td>{{ lastik.fiyat|floatformat:2 }} TL</td>
+                        <td>{{ lastik.toplam_fiyat|floatformat:2 }} TL</td>
+                    </tr>
+                    {% endfor %}
+                    <tr class="total-row">
+                        <td colspan="2" class="text-right">TOPLAM:</td>
+                        <td>{{ belge.toplam_adet }}</td>
+                        <td colspan="2">{{ belge.toplam_tutar|floatformat:2 }} TL</td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                    </tr>
+                    <tr class="total-row">
+                        <td colspan="2" class="text-right">TOPLAM:</td>
+                        <td>&nbsp;</td>
+                        <td colspan="2">&nbsp;</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+
+        <!-- 4. Araç Bilgileri -->
+        <div class="section-header">4. ARAÇ BİLGİLERİ</div>
+        <table class="info-table">
+            <tr>
+                <td>Plaka</td>
+                <td>{{ belge.arac_plaka|default:'_______________________________________________' }}</td>
+            </tr>
+            <tr>
+                <td>Marka / Model</td>
+                <td>{{ belge.arac_marka_model|default:'_______________________________________________' }}</td>
+            </tr>
+            <tr>
+                <td>Yıl</td>
+                <td>{{ belge.arac_yil|default:'_______________________________________________' }}</td>
+            </tr>
+            <tr>
+                <td>Km</td>
+                <td>{{ belge.arac_km|default:'_______________________________________________' }}</td>
+            </tr>
+        </table>
+
+        <!-- 5. Garanti Şartları -->
+        <div class="section-header">5. GARANTİ ŞARTLARI</div>
+        <div class="warranty-terms">
+            <ol>
+                <li>Satışı yapılan lastik/lastikler, takıldığı tarihinden itibaren <span class="warranty-highlight">2 (iki) yıl</span> üretim hatalarına karşı garantilidir.</li>
+                
+                <li>Garanti, yalnızca <span class="warranty-highlight">imalat ve malzeme hatalarını</span> kapsar.</li>
+                
+                <li>Aşağıdaki durumlar garanti kapsamı dışındadır:
+                    <ul>
+                        <li>Hatalı kullanım, yanlış hava basıncı, aşırı yükleme ve yanlış depolama</li>
+                        <li>Kesilme, delinme, darbe, yanak yarılması ve dış etken kaynaklı hasarlar</li>
+                        <li>Jant kusuru, balans ayarsızlığı ve mekanik sorunlardan kaynaklanan aşınmalar</li>
+                        <li>Yarış, drift, hatalı montaj veya sökme işlemleri sonucu oluşan hasarlar</li>
+                    </ul>
+                </li>
+                
+                <li>Garanti talebinde, ürün incelemeye alınır ve üretim hatası tespit edilirse <span class="warranty-highlight">onarım, değişim veya bedel iadesi</span> uygulanır.</li>
+                
+                <li>Garanti, yalnızca ürünü satın alan müşteri için geçerlidir ve devredilemez.</li>
+                
+                <li>Garanti belgesi ibraz edilmeden işlem yapılmaz.</li>
+            </ol>
+        </div>
+
+        <!-- 6. Montaj ve Teslim Bilgisi -->
+        <div class="section-header">6. MONTAJ VE TESLİM BİLGİSİ</div>
+        <table class="info-table">
+            <tr>
+                <td>Montaj Tarihi</td>
+                <td>{{ belge.montaj_tarihi|date:'d.m.Y'|default:'_______________________________________________' }}</td>
+            </tr>
+        </table>
+
+        <!-- 7. Kaşe / İmza -->
+        <div class="section-header">7. KAŞE / İMZA</div>
+        <div class="signature-section">
+            <div class="signature-box">
+                <span class="signature-label">Satıcı Firma Kaşe & İmza:</span>
+            </div>
+            <div class="signature-box" style="margin-left: 4%;">
+                <span class="signature-label">Müşteri İmza:</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

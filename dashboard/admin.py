@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Siparis, UserProfile, Notification, Transaction, TransactionCategory, Event, MalzemeHareketi, MalzemeDosya, CikmaLastik, JokerSatisDosya, JokerSatisHareketi
+from .models import Siparis, UserProfile, Notification, Transaction, TransactionCategory, Event, MalzemeHareketi, MalzemeDosya, CikmaLastik, JokerSatisDosya, JokerSatisHareketi, Quotation, QuotationItem, GarantiBelgesi, GarantiBelgesiLastik
 
 @admin.register(Siparis)
 class SiparisAdmin(admin.ModelAdmin):
@@ -366,3 +366,132 @@ class JokerSatisHareketiAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+
+
+
+class QuotationItemInline(admin.TabularInline):
+    """Teklif kalemleri inline admin"""
+    model = QuotationItem
+    extra = 1
+    fields = ['urun_adi', 'miktar', 'birim_fiyat', 'toplam', 'sira']
+    readonly_fields = ['toplam']
+
+
+@admin.register(Quotation)
+class QuotationAdmin(admin.ModelAdmin):
+    """Teklif admin paneli"""
+    
+    list_display = [
+        'teklif_no', 'cari', 'ilgili_kisi', 'durum', 
+        'teklif_tarihi', 'gecerlilik_tarihi', 'genel_toplam',
+        'rezerve', 'proforma', 'olusturan', 'olusturma_tarihi'
+    ]
+    
+    list_filter = [
+        'durum', 'rezerve', 'proforma', 'teklif_tarihi', 
+        'gecerlilik_tarihi', 'olusturan', 'olusturma_tarihi'
+    ]
+    
+    search_fields = [
+        'teklif_no', 'cari', 'ilgili_kisi', 'email', 'aciklama'
+    ]
+    
+    list_editable = [
+        'durum'
+    ]
+    
+    readonly_fields = [
+        'teklif_no', 'olusturan', 'olusturma_tarihi', 'guncelleme_tarihi',
+        'ara_toplam', 'kdv_tutari', 'genel_toplam'
+    ]
+    
+    fieldsets = (
+        ('Teklif Bilgileri', {
+            'fields': ('teklif_no', 'durum', 'teklif_tarihi', 'gecerlilik_tarihi')
+        }),
+        ('Cari Bilgileri', {
+            'fields': ('cari', 'ilgili_kisi', 'email', 'odeme_sekli')
+        }),
+        ('Açıklama', {
+            'fields': ('aciklama',)
+        }),
+        ('Finansal Bilgiler', {
+            'fields': ('ara_toplam', 'kdv_tutari', 'genel_toplam')
+        }),
+        ('Ek Bilgiler', {
+            'fields': ('rezerve', 'proforma')
+        }),
+        ('Sistem Bilgileri', {
+            'fields': ('olusturan', 'olusturma_tarihi', 'guncelleme_tarihi'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    inlines = [QuotationItemInline]
+    
+    ordering = ['-olusturma_tarihi']
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('olusturan')
+    
+    def save_model(self, request, obj, form, change):
+        if not change:  # Yeni kayıt ise
+            obj.olusturan = request.user
+        super().save_model(request, obj, form, change)
+
+
+
+class GarantiBelgesiLastikInline(admin.TabularInline):
+    """Garanti Belgesi Lastik kalemleri inline admin"""
+    model = GarantiBelgesiLastik
+    extra = 1
+    fields = ['marka', 'ebat', 'adet', 'fiyat', 'sira']
+
+
+@admin.register(GarantiBelgesi)
+class GarantiBelgesiAdmin(admin.ModelAdmin):
+    """Garanti Belgesi admin paneli"""
+    
+    list_display = [
+        'belge_no', 'musteri_adi', 'musteri_telefon', 'arac_plaka',
+        'arac_marka_model', 'montaj_tarihi', 'olusturan', 'olusturma_tarihi'
+    ]
+    
+    list_filter = [
+        'montaj_tarihi', 'olusturan', 'olusturma_tarihi'
+    ]
+    
+    search_fields = [
+        'belge_no', 'musteri_adi', 'musteri_telefon', 'arac_plaka',
+        'arac_marka_model', 'notlar'
+    ]
+    
+    readonly_fields = [
+        'belge_no', 'olusturan', 'olusturma_tarihi', 'guncelleme_tarihi'
+    ]
+    
+    fieldsets = (
+        ('Belge Bilgileri', {
+            'fields': ('belge_no', 'montaj_tarihi')
+        }),
+        ('Müşteri Bilgileri', {
+            'fields': ('musteri_adi', 'musteri_telefon')
+        }),
+        ('Araç Bilgileri', {
+            'fields': ('arac_plaka', 'arac_marka_model', 'arac_yil', 'arac_km')
+        }),
+        ('Notlar', {
+            'fields': ('notlar',)
+        }),
+        ('Sistem Bilgileri', {
+            'fields': ('olusturan', 'olusturma_tarihi', 'guncelleme_tarihi'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    inlines = [GarantiBelgesiLastikInline]
+    
+    def save_model(self, request, obj, form, change):
+        if not change:  # Yeni kayıt
+            obj.olusturan = request.user
+        super().save_model(request, obj, form, change)

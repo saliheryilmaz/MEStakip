@@ -32,6 +32,7 @@
     border-right: 1px solid #e2e8f0;
     padding: 1.5rem;
     overflow-y: auto;
+    max-height: calc(100vh - 200px);
 }
 
 .calendar-sidebar-header {
@@ -95,6 +96,7 @@
     cursor: pointer;
     border-radius: 4px;
     transition: all 0.2s;
+    position: relative;
 }
 
 .mini-calendar-day:hover {
@@ -125,150 +127,6 @@
     height: 4px;
     background: #3b82f6;
     border-radius: 50%;
-}
-
-/* Event Categories */
-.event-categories {
-    margin-bottom: 1.5rem;
-}
-
-.category-title {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: #374151;
-    margin-bottom: 0.75rem;
-}
-
-.category-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-.category-item {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.5rem;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: background 0.2s;
-}
-
-.category-item:hover {
-    background: #f1f5f9;
-}
-
-.category-color {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    flex-shrink: 0;
-}
-
-.category-name {
-    font-size: 0.875rem;
-    color: #374151;
-    flex: 1;
-}
-
-.category-count {
-    font-size: 0.75rem;
-    color: #6b7280;
-    background: #e2e8f0;
-    padding: 0.125rem 0.375rem;
-    border-radius: 12px;
-}
-
-/* Upcoming Events */
-.upcoming-events {
-    margin-bottom: 1.5rem;
-}
-
-.upcoming-title {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: #374151;
-    margin-bottom: 0.75rem;
-}
-
-.upcoming-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-}
-
-.upcoming-item {
-    display: flex;
-    gap: 0.75rem;
-    padding: 0.75rem;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
-    cursor: pointer;
-    transition: all 0.2s;
-    position: relative;
-}
-
-.upcoming-item:hover {
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    transform: translateY(-1px);
-}
-
-.upcoming-time {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    min-width: 50px;
-}
-
-.upcoming-time .time {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: #3b82f6;
-}
-
-.upcoming-time .date {
-    font-size: 0.625rem;
-    color: #6b7280;
-}
-
-.upcoming-content {
-    flex: 1;
-}
-
-.upcoming-event-title {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: #1e293b;
-    margin-bottom: 0.25rem;
-}
-
-.upcoming-description {
-    font-size: 0.75rem;
-    color: #6b7280;
-    margin: 0;
-}
-
-.upcoming-indicator {
-    position: absolute;
-    right: 0.75rem;
-    top: 0.75rem;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-}
-
-.upcoming-empty {
-    text-align: center;
-    padding: 2rem;
-    color: #6b7280;
-}
-
-.upcoming-empty i {
-    font-size: 2rem;
-    margin-bottom: 0.5rem;
-    display: block;
 }
 
 /* Calendar Main Area */
@@ -337,15 +195,19 @@
 .month-view {
     background: white;
     border-radius: 8px;
-    overflow: hidden;
+    overflow: auto;
     box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    max-height: calc(100vh - 250px);
 }
 
 .month-header {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
     background: #f8fafc;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 2px solid #e2e8f0;
+    position: sticky;
+    top: 0;
+    z-index: 10;
 }
 
 .month-header-day {
@@ -355,6 +217,7 @@
     font-weight: 600;
     color: #374151;
     border-right: 1px solid #e2e8f0;
+    background: #f8fafc;
 }
 
 .month-header-day:last-child {
@@ -364,16 +227,20 @@
 .month-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    grid-template-rows: repeat(6, 120px);
+    grid-auto-rows: minmax(120px, auto);
 }
 
 .month-day {
     border-right: 1px solid #e2e8f0;
     border-bottom: 1px solid #e2e8f0;
-    padding: 0.75rem;
+    padding: 0.5rem;
     cursor: pointer;
     transition: background 0.2s;
     position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 120px;
+    background: white;
 }
 
 .month-day:hover {
@@ -386,32 +253,40 @@
 
 .month-day.other-month {
     background: #f9fafb;
+}
+
+.month-day.other-month .day-number {
     color: #9ca3af;
 }
 
 .month-day.selected {
     background: #dbeafe;
+    border: 2px solid #3b82f6;
 }
 
 .month-day.has-events {
-    border-left: 3px solid #3b82f6;
+    border-left: 3px solid #8b5cf6;
 }
 
 .day-number {
     font-size: 0.875rem;
-    font-weight: 500;
+    font-weight: 600;
     color: #374151;
     margin-bottom: 0.5rem;
+    flex-shrink: 0;
+    line-height: 1;
 }
 
 .day-events {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
+    width: 100%;
+    flex: 1;
 }
 
 .day-event {
-    padding: 0.25rem 0.5rem;
+    padding: 0.375rem 0.5rem;
     border-radius: 4px;
     font-size: 0.75rem;
     font-weight: 500;
@@ -421,17 +296,21 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    width: 100%;
+    box-sizing: border-box;
+    background: #8b5cf6;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .day-event:hover {
-    transform: scale(1.02);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+    z-index: 5;
 }
 
-.event-event { background: #3b82f6; }
-.event-meeting { background: #10b981; }
-.event-task { background: #f59e0b; }
-.event-reminder { background: #8b5cf6; }
-.event-deadline { background: #ef4444; }
+.event-reminder { 
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+}
 
 .more-events {
     font-size: 0.625rem;
@@ -439,11 +318,15 @@
     text-align: center;
     padding: 0.25rem;
     cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s;
+    font-weight: 500;
+    margin-top: 0.25rem;
 }
 
 .more-events:hover {
     background: #f1f5f9;
-    border-radius: 4px;
+    color: #3b82f6;
 }
 
 /* Week View */
@@ -656,6 +539,11 @@
         height: 100vh;
         z-index: 1000;
         overflow-y: auto;
+        box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .month-view {
+        max-height: calc(100vh - 200px);
     }
 }
 
@@ -698,11 +586,12 @@
     
     /* Month View Mobile */
     .month-grid {
-        grid-template-rows: repeat(6, 100px);
+        grid-auto-rows: minmax(100px, auto);
     }
     
     .month-day {
         padding: 0.5rem;
+        min-height: 100px;
     }
     
     .day-number {
@@ -710,9 +599,14 @@
         margin-bottom: 0.25rem;
     }
     
+    .day-events {
+        width: 100%;
+    }
+    
     .day-event {
         font-size: 0.7rem;
-        padding: 0.2rem 0.4rem;
+        padding: 0.3rem 0.4rem;
+        width: 100%;
     }
     
     /* Week View Mobile */
@@ -774,22 +668,6 @@
     .mini-calendar-day {
         font-size: 0.8rem;
     }
-    
-    .category-item {
-        padding: 0.75rem 0.5rem;
-    }
-    
-    .upcoming-item {
-        padding: 0.5rem;
-    }
-    
-    .upcoming-event-title {
-        font-size: 0.8rem;
-    }
-    
-    .upcoming-description {
-        font-size: 0.7rem;
-    }
 }
 
 /* Extra Small Mobile */
@@ -797,6 +675,7 @@
     /* Calendar Container */
     .calendar-container {
         margin: 0 -0.5rem;
+        border-radius: 8px;
     }
     
     .calendar-main {
@@ -815,7 +694,7 @@
     
     /* Month View Extra Small */
     .month-grid {
-        grid-template-rows: repeat(6, 80px);
+        grid-auto-rows: minmax(80px, auto);
     }
     
     .month-header-day {
@@ -825,15 +704,21 @@
     
     .month-day {
         padding: 0.25rem;
+        min-height: 80px;
     }
     
     .day-number {
         font-size: 0.75rem;
     }
     
+    .day-events {
+        width: 100%;
+    }
+    
     .day-event {
         font-size: 0.65rem;
-        padding: 0.15rem 0.3rem;
+        padding: 0.25rem 0.3rem;
+        width: 100%;
     }
     
     /* Week View Extra Small */
@@ -927,20 +812,27 @@
     right: 2rem;
     width: 56px;
     height: 56px;
-    background: #3b82f6;
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
     color: white;
     border: none;
     border-radius: 50%;
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
     cursor: pointer;
     transition: all 0.3s;
     z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .add-event-btn:hover {
-    background: #2563eb;
+    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
     transform: scale(1.1);
-    box-shadow: 0 6px 16px rgba(59, 130, 246, 0.5);
+    box-shadow: 0 6px 16px rgba(139, 92, 246, 0.5);
+}
+
+.add-event-btn:active {
+    transform: scale(1.05);
 }
 
 /* Reminders and Recurring Styles */
@@ -1096,69 +988,6 @@
                                  @click="selectDate(day.date)"
                                  x-text="day.day"></div>
                         </template>
-                    </div>
-                </div>
-
-                <!-- Event Categories -->
-                <div class="event-categories">
-                    <h6 class="category-title">Etkinlik Kategorileri</h6>
-                    <div class="category-list">
-                        <label class="category-item">
-                            <input type="checkbox" x-model="visibleTypes" value="event" class="form-check-input">
-                            <span class="category-color" style="background: var(--bs-primary);"></span>
-                            <span class="category-name">Etkinlikler</span>
-                            <span class="category-count" x-text="getCategoryCount('event')"></span>
-                        </label>
-                        <label class="category-item">
-                            <input type="checkbox" x-model="visibleTypes" value="meeting" class="form-check-input">
-                            <span class="category-color" style="background: var(--bs-success);"></span>
-                            <span class="category-name">Toplantılar</span>
-                            <span class="category-count" x-text="getCategoryCount('meeting')"></span>
-                        </label>
-                        <label class="category-item">
-                            <input type="checkbox" x-model="visibleTypes" value="task" class="form-check-input">
-                            <span class="category-color" style="background: var(--bs-warning);"></span>
-                            <span class="category-name">Görevler</span>
-                            <span class="category-count" x-text="getCategoryCount('task')"></span>
-                        </label>
-                        <label class="category-item">
-                            <input type="checkbox" x-model="visibleTypes" value="reminder" class="form-check-input">
-                            <span class="category-color" style="background: #8b5cf6;"></span>
-                            <span class="category-name">Hatırlatıcılar</span>
-                            <span class="category-count" x-text="getCategoryCount('reminder')"></span>
-                        </label>
-                        <label class="category-item">
-                            <input type="checkbox" x-model="visibleTypes" value="deadline" class="form-check-input">
-                            <span class="category-color" style="background: var(--bs-danger);"></span>
-                            <span class="category-name">Son Tarihler</span>
-                            <span class="category-count" x-text="getCategoryCount('deadline')"></span>
-                        </label>
-                    </div>
-                </div>
-
-                <!-- Upcoming Events -->
-                <div class="upcoming-events">
-                    <h6 class="upcoming-title">Yaklaşan Etkinlikler</h6>
-                    <div class="upcoming-list">
-                        <template x-for="event in upcomingEvents.slice(0, 5)" :key="event.id">
-                            <div class="upcoming-item" @click="viewEvent(event)">
-                                <div class="upcoming-time">
-                                    <span class="time" x-text="event.timeStr"></span>
-                                    <span class="date" x-text="event.dateStr"></span>
-                                </div>
-                                <div class="upcoming-content">
-                                    <h6 class="upcoming-event-title" x-text="event.title"></h6>
-                                    <p class="upcoming-description" x-text="event.description"></p>
-                                </div>
-                                <div class="upcoming-indicator" :style="`background: ${getCategoryColor(event.type)}`"></div>
-                            </div>
-                        </template>
-                        
-                        <!-- Empty state -->
-                        <div x-show="upcomingEvents.length === 0" class="upcoming-empty">
-                            <i class="bi bi-calendar-check"></i>
-                            <p>Yaklaşan etkinlik yok</p>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -1368,11 +1197,7 @@
                                 <i class="bi bi-tag me-1"></i>Etkinlik Türü
                             </label>
                             <select class="form-select" id="eventType" x-model="eventData.type">
-                                <option value="event">📅 Etkinlik</option>
-                                <option value="meeting">🤝 Toplantı</option>
-                                <option value="task">✅ Görev</option>
                                 <option value="reminder">🔔 Hatırlatıcı</option>
-                                <option value="deadline">⚠️ Son Tarih</option>
                             </select>
                         </div>
                     </div>

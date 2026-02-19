@@ -1324,12 +1324,32 @@
         .notification-actions {
             display: flex;
             gap: 8px;
-            margin-top: 8px;
+            margin-top: 12px;
+            flex-wrap: wrap;
         }
 
         .notification-actions .btn {
-            font-size: 11px;
-            padding: 2px 8px;
+            font-size: 12px;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-weight: 500;
+        }
+        
+        .notification-actions .btn-group {
+            display: inline-flex;
+        }
+        
+        .notification-actions .dropdown-menu {
+            min-width: 150px;
+        }
+        
+        .notification-actions .dropdown-item {
+            padding: 8px 16px;
+            font-size: 13px;
+        }
+        
+        .notification-actions .dropdown-item:hover {
+            background-color: #f1f5f9;
         }
 
         [data-bs-theme="dark"] .notification-item {
@@ -1533,15 +1553,9 @@
                 const listContainer = document.getElementById('notificationList');
                 if (!listContainer) return;
 
+                // Sadece okunmamış bildirimleri göster (pending veya sent)
                 const displayNotifications = this.notifications.filter(notification => {
-                    // Sadece kullanıcıya gösterilmiş (shown) veya artık pending olmayan bildirimleri göster
-                    if (notification.shown) {
-                        return true;
-                    }
-                    if (notification.status && notification.status !== 'pending') {
-                        return true;
-                    }
-                    return false;
+                    return notification.status === 'pending' || notification.status === 'sent';
                 });
 
                 if (displayNotifications.length === 0) {
@@ -1556,11 +1570,11 @@
 
                 let html = '';
                 displayNotifications.forEach(notification => {
-                    const isUnread = notification.status === 'pending' || notification.status === 'sent';
+                    const isUnread = true; // Zaten sadece okunmamışları gösteriyoruz
                     const timeAgo = this.getTimeAgo(notification.scheduled_time);
 
                     html += `
-                    <div class="notification-item ${isUnread ? 'unread' : ''}" 
+                    <div class="notification-item unread" 
                         data-notification-id="${notification.id}">
                         <div class="d-flex">
                             <div class="notification-icon" style="background-color: ${notification.color}">
@@ -1570,16 +1584,20 @@
                                 <div class="notification-title">${notification.title}</div>
                                 <div class="notification-message">${notification.message}</div>
                                 <div class="notification-time">${timeAgo}</div>
-                                ${isUnread ? `
-                                    <div class="notification-actions">
-                                        <button class="btn btn-sm btn-primary" onclick="notificationSystem.markAsRead(${notification.id})">
-                                            Okundu İşaretle
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-secondary" onclick="notificationSystem.dismiss(${notification.id})">
-                                            Kapat
-                                        </button>
-                                    </div>
-                                ` : ''}
+                                <div class="notification-actions">
+                                    <button class="btn btn-sm btn-primary" onclick="notificationSystem.markAsRead(${notification.id}); event.stopPropagation();">
+                                        <i class="bi bi-check2"></i> Okundu
+                                    </button>
+                                    <button class="btn btn-sm btn-warning" onclick="notificationSystem.snooze(${notification.id}, 15); event.stopPropagation();">
+                                        <i class="bi bi-clock"></i> 15dk
+                                    </button>
+                                    <button class="btn btn-sm btn-warning" onclick="notificationSystem.snooze(${notification.id}, 60); event.stopPropagation();">
+                                        <i class="bi bi-clock"></i> 1 saat
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="notificationSystem.dismiss(${notification.id}); event.stopPropagation();">
+                                        <i class="bi bi-x"></i> Kapat
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1643,6 +1661,27 @@
                     if (data.success) {
                         this.loadNotifications();
                         this.showToast('Bildirim kapatıldı', 'success');
+                    }
+                } catch (error) {
+                    this.showToast('Bir hata oluştu', 'error');
+                }
+            }
+
+            async snooze(notificationId, minutes) {
+                try {
+                    const response = await fetch(`/dashboard/api/notifications/${notificationId}/snooze/`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': this.getCSRFToken(),
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ minutes: minutes })
+                    });
+
+                    const data = await response.json();
+                    if (data.success) {
+                        this.loadNotifications();
+                        this.showToast(data.message, 'success');
                     }
                 } catch (error) {
                     this.showToast('Bir hata oluştu', 'error');

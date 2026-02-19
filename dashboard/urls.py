@@ -67,6 +67,7 @@ urlpatterns = [
     path('api/notifications/read-all/', views.mark_all_notifications_read, name='mark_all_notifications_read'),
     path('api/notifications/<int:notification_id>/dismiss/', views.dismiss_notification, name='dismiss_notification'),
     path('api/notifications/<int:notification_id>/mark-sent/', views.mark_notification_sent, name='mark_notification_sent'),
+    path('api/notifications/<int:notification_id>/snooze/', views.snooze_notification, name='snooze_notification'),
     path('kategoriler/', views.kategoriler, name='kategoriler'),
     path('kategoriler/<int:kategori_id>/sil/', views.kategori_sil, name='kategori_sil'),
     path('kategoriler/<int:kategori_id>/duzenle/', views.kategori_duzenle, name='kategori_duzenle'),

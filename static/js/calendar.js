@@ -12,16 +12,17 @@ document.addEventListener('alpine:init', () => {
     miniCalendarDate: new Date(),
 
     // Event Types and Filters
-    visibleTypes: ['event', 'meeting', 'task', 'reminder', 'deadline'],
+    visibleTypes: ['reminder'],
 
     // Sample Events Data
     events: [],
 
     // Time slots for week/day view
     hours: [
-      '6:00', '7:00', '8:00', '9:00', '10:00', '11:00',
+      '00:00', '01:00', '02:00', '03:00', '04:00', '05:00',
+      '06:00', '07:00', '08:00', '09:00', '10:00', '11:00',
       '12:00', '13:00', '14:00', '15:00', '16:00', '17:00',
-      '18:00', '19:00', '20:00', '21:00', '22:00'
+      '18:00', '19:00', '20:00', '21:00', '22:00', '23:00'
     ],
 
     init() {
@@ -446,18 +447,44 @@ document.addEventListener('alpine:init', () => {
 
     getCategoryColor(type) {
       const colors = {
-        event: 'var(--bs-primary)',
-        meeting: 'var(--bs-success)',
-        task: 'var(--bs-warning)',
-        reminder: '#8b5cf6',
-        deadline: 'var(--bs-danger)'
+        reminder: '#8b5cf6'
       };
-      return colors[type] || 'var(--bs-secondary)';
+      return colors[type] || '#8b5cf6';
     },
 
     // Event Actions
     viewEvent(event) {
-      this.showNotification(`Etkinlik görüntüleniyor: ${event.title}`, 'info');
+      if (typeof Swal !== 'undefined') {
+        const remindersList = event.reminders ? JSON.parse(event.reminders || '[]') : [];
+        const remindersText = remindersList.length > 0 
+          ? remindersList.map(m => {
+              if (m == 0) return 'Etkinlik zamanında';
+              if (m < 60) return `${m} dakika önce`;
+              if (m < 1440) return `${m / 60} saat önce`;
+              return `${m / 1440} gün önce`;
+            }).join(', ')
+          : 'Hatırlatıcı yok';
+
+        Swal.fire({
+          title: event.title,
+          html: `
+            <div style="text-align: left;">
+              <p><strong>📅 Tarih:</strong> ${event.date}</p>
+              <p><strong>🕐 Saat:</strong> ${event.time}</p>
+              ${event.description ? `<p><strong>📝 Açıklama:</strong> ${event.description}</p>` : ''}
+              ${event.location ? `<p><strong>📍 Konum:</strong> ${event.location}</p>` : ''}
+              <p><strong>🔔 Hatırlatıcılar:</strong> ${remindersText}</p>
+              ${event.recurring ? `<p><strong>🔄 Tekrar:</strong> ${event.recurrence}</p>` : ''}
+            </div>
+          `,
+          icon: 'info',
+          confirmButtonText: 'Tamam',
+          confirmButtonColor: '#8b5cf6',
+          showCancelButton: true,
+          cancelButtonText: 'Kapat',
+          cancelButtonColor: '#6b7280'
+        });
+      }
     },
 
     addEvent() {
@@ -737,13 +764,9 @@ document.addEventListener('alpine:init', () => {
 
     getTypeDisplayName(type) {
       const typeNames = {
-        'event': 'Etkinlik',
-        'meeting': 'Toplantı',
-        'task': 'Görev',
-        'reminder': 'Hatırlatıcı',
-        'deadline': 'Son Tarih'
+        'reminder': 'Hatırlatıcı'
       };
-      return typeNames[type] || type;
+      return typeNames[type] || 'Hatırlatıcı';
     },
 
     getDurationLabel(duration) {
@@ -806,13 +829,9 @@ document.addEventListener('alpine:init', () => {
 
     getTypeColor(type) {
       const colors = {
-        event: 'var(--bs-primary)',
-        meeting: 'var(--bs-success)',
-        task: 'var(--bs-warning)',
-        reminder: '#8b5cf6',
-        deadline: 'var(--bs-danger)'
+        reminder: '#8b5cf6'
       };
-      return colors[type] || 'var(--bs-secondary)';
+      return colors[type] || '#8b5cf6';
     }
   }));
 });

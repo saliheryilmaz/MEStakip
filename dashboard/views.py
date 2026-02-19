@@ -3086,6 +3086,9 @@ def get_notifications(request):
         
         notifications_data = []
         for notification in notifications:
+            # Ertelenmiş bildirimleri kontrol et
+            is_snoozed = notification.is_snoozed()
+            
             notifications_data.append({
                 'id': notification.id,
                 'title': notification.title,
@@ -3097,12 +3100,15 @@ def get_notifications(request):
                 'scheduled_time': notification.scheduled_time.isoformat(),
                 'sent_time': notification.sent_time.isoformat() if notification.sent_time else None,
                 'read_time': notification.read_time.isoformat() if notification.read_time else None,
+                'snoozed_until': notification.snoozed_until.isoformat() if notification.snoozed_until else None,
+                'snooze_count': notification.snooze_count,
+                'is_snoozed': is_snoozed,
                 'event_id': None,  # Event geçici olarak devre dışı
                 'is_overdue': notification.is_overdue(),
                 'extra_data': notification.get_extra_data_dict()
             })
         
-        # Okunmamış bildirim sayısı
+        # Okunmamış bildirim sayısı (ertelenmiş olanları dahil etme)
         unread_count = Notification.objects.filter(
             user=request.user, 
             status__in=['pending', 'sent']
@@ -3201,6 +3207,29 @@ def mark_notification_sent(request, notification_id):
             'error': str(e)
         }, status=500)
 
+@login_required
+@require_POST
+def snooze_notification(request, notification_id):
+    """Bildirimi ertele"""
+    try:
+        data = json.loads(request.body)
+        minutes = int(data.get('minutes', 5))
+        
+        notification = get_object_or_404(Notification, id=notification_id, user=request.user)
+        notification.snooze(minutes)
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Bildirim {minutes} dakika ertelendi',
+            'snoozed_until': notification.snoozed_until.isoformat() if notification.snoozed_until else None
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
 def create_event_notifications(event):
     """Etkinlik için bildirimler oluştur"""
     from datetime import datetime, timedelta
@@ -3261,39 +3290,6 @@ def create_event_notifications(event):
                     )
             except (ValueError, TypeError):
                 continue
-        
-        # Etkinlik başlangıç bildirimi
-        if event_datetime > now:
-            Notification.objects.create(
-                title=f"Etkinlik Başlıyor: {event.title}",
-                message=f"'{event.title}' etkinliği şimdi başlıyor! Süre: {event.get_duration_display()}" + (f" Konum: {event.location}" if event.location else ""),
-                type='event_start',
-                user=event.created_by,
-                scheduled_time=event_datetime,
-                status='pending',
-                extra_data=json.dumps({
-                    'event_id': event.id,
-                    'event_type': event.type,
-                    'event_priority': event.priority,
-                    'duration': event.duration
-                })
-            )
-        
-        # Hemen bir bildirim de oluştur (etkinlik oluşturuldu) - hemen gösterilmek için
-        Notification.objects.create(
-            title=f"Yeni Etkinlik Oluşturuldu",
-            message=f"'{event.title}' etkinliği {event.date.strftime('%d.%m.%Y')} tarihinde {event.time.strftime('%H:%M')} saatinde oluşturuldu." + (f" Hatırlatıcılar ayarlandı." if reminders else ""),
-            type='event_created',
-            user=event.created_by,
-            scheduled_time=now,  # Hemen gösterilmek için şimdiki zaman
-            status='sent',  # Hemen gönderildi olarak işaretle
-            sent_time=now,  # Gönderilme zamanını da ayarla
-            extra_data=json.dumps({
-                'event_id': event.id,
-                'event_type': event.type,
-                'event_priority': event.priority
-            })
-        )
             
     except Exception as e:
         # Hata logla

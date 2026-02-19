@@ -203,11 +203,7 @@ class Event(models.Model):
     """Takvim etkinlikleri modeli"""
     
     TYPE_CHOICES = [
-        ('event', 'Etkinlik'),
-        ('meeting', 'Toplantı'),
-        ('task', 'Görev'),
         ('reminder', 'Hatırlatıcı'),
-        ('deadline', 'Son Tarih'),
     ]
     
     PRIORITY_CHOICES = [
@@ -228,7 +224,7 @@ class Event(models.Model):
     # Temel Bilgiler
     title = models.CharField(max_length=200, verbose_name="Başlık")
     description = models.TextField(blank=True, null=True, verbose_name="Açıklama")
-    type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='event', verbose_name="Tür")
+    type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='reminder', verbose_name="Tür")
     priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='medium', verbose_name="Öncelik")
     
     # Tarih ve Zaman
@@ -265,13 +261,9 @@ class Event(models.Model):
     def get_type_color(self):
         """Etkinlik türü için renk döndür"""
         colors = {
-            'event': '#3b82f6',
-            'meeting': '#10b981',
-            'task': '#f59e0b',
-            'reminder': '#8b5cf6',
-            'deadline': '#ef4444'
+            'reminder': '#8b5cf6'
         }
-        return colors.get(self.type, '#6b7280')
+        return colors.get(self.type, '#8b5cf6')
     
     def get_priority_color(self):
         """Öncelik için renk döndür"""
@@ -314,6 +306,7 @@ class Notification(models.Model):
         ('sent', 'Gönderildi'),
         ('read', 'Okundu'),
         ('dismissed', 'Kapatıldı'),
+        ('snoozed', 'Ertelendi'),
     ]
     
     # Temel Bilgiler
@@ -332,6 +325,10 @@ class Notification(models.Model):
     scheduled_time = models.DateTimeField(verbose_name="Planlanmış Zaman")
     sent_time = models.DateTimeField(blank=True, null=True, verbose_name="Gönderilme Zamanı")
     read_time = models.DateTimeField(blank=True, null=True, verbose_name="Okunma Zamanı")
+    
+    # Erteleme (Snooze)
+    snoozed_until = models.DateTimeField(blank=True, null=True, verbose_name="Ertelenme Zamanı")
+    snooze_count = models.IntegerField(default=0, verbose_name="Erteleme Sayısı")
     
     # Ek Veriler (JSON formatında)
     extra_data = models.TextField(blank=True, null=True, verbose_name="Ek Veriler")
@@ -391,6 +388,26 @@ class Notification(models.Model):
     def is_overdue(self):
         """Bildirimin zamanı geçmiş mi kontrol et"""
         return timezone.now() > self.scheduled_time and self.status == 'pending'
+    
+    def snooze(self, minutes):
+        """Bildirimi belirtilen dakika kadar ertele"""
+        from datetime import timedelta
+        self.status = 'snoozed'
+        self.snoozed_until = timezone.now() + timedelta(minutes=minutes)
+        self.snooze_count += 1
+        self.save()
+    
+    def is_snoozed(self):
+        """Bildirim ertelenmiş mi kontrol et"""
+        if self.status == 'snoozed' and self.snoozed_until:
+            if timezone.now() >= self.snoozed_until:
+                # Erteleme süresi doldu, tekrar pending yap
+                self.status = 'pending'
+                self.snoozed_until = None
+                self.save()
+                return False
+            return True
+        return False
     
     def get_extra_data_dict(self):
         """Ek verileri dict olarak döndür"""

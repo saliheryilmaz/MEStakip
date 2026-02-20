@@ -479,14 +479,33 @@
         if (confirm(`${belgeNo} numaralı garanti belgesini silmek istediğinize emin misiniz?`)) {
             const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
             
-            fetch(`/api/garanti-belgesi/${id}/delete/`, {
+            console.log('Deleting garanti:', id, belgeNo);
+            console.log('CSRF Token:', csrftoken);
+            
+            fetch(`/dashboard/api/garanti-belgesi/${id}/delete/`, {
                 method: 'POST',
                 headers: {
-                    'X-CSRFToken': csrftoken
+                    'X-CSRFToken': csrftoken,
+                    'Content-Type': 'application/json'
                 }
             })
-            .then(response => response.json())
+            .then(response => {
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+                
+                // Önce response'un content-type'ını kontrol et
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    return response.text().then(text => {
+                        console.error('Non-JSON response:', text.substring(0, 200));
+                        throw new Error('Sunucu JSON yerine HTML döndürdü. Lütfen giriş yapıp yapmadığınızı kontrol edin.');
+                    });
+                }
+                
+                return response.json();
+            })
             .then(data => {
+                console.log('Response data:', data);
                 if (data.success) {
                     alert('Garanti belgesi başarıyla silindi!');
                     window.location.reload();

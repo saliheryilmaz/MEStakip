@@ -1649,7 +1649,7 @@ def messages_view(request):
     mehmet_havale_field_net = float(gelir_mehmet_havale - gider_mehmet_havale)
     banka_havale_field_net = float(gelir_banka_havale - gider_banka_havale)
     
-    # Excel'den LASTİK + NAKİT kayıtlarını al ve çanta toplamına ekle
+    # Excel'den LASTİK + NAKİT ve HİZMET + NAKİT kayıtlarını al ve çanta toplamına ekle
     excel_lastik_nakit_qs = MalzemeHareketi.objects.filter(kullanici=request.user)
     
     # Tarih filtrelerini uygula
@@ -1658,9 +1658,10 @@ def messages_view(request):
     if end_date:
         excel_lastik_nakit_qs = excel_lastik_nakit_qs.filter(tarih__lte=end_date)
     
-    # LASTİK kategorisi ve NAKİT ödeme şekli olanları filtrele
+    # LASTİK veya HİZMET kategorisi ve NAKİT ödeme şekli olanları filtrele
     excel_lastik_nakit_qs = excel_lastik_nakit_qs.filter(
-        Q(kategori__icontains='LASTİK') | Q(kategori__icontains='LASTIK')
+        Q(kategori__icontains='LASTİK') | Q(kategori__icontains='LASTIK') |
+        Q(kategori__icontains='HİZMET') | Q(kategori__icontains='HIZMET')
     ).filter(
         Q(odeme_sekli__icontains='NAKİT') | Q(odeme_sekli__icontains='NAKIT')
     )
@@ -1680,7 +1681,7 @@ def messages_view(request):
     # Kart modal verileri
     canta_entries = build_entries(qs.filter(Q(kasa_adi='canta') | ~Q(nakit=0)), lambda tx: tx.nakit)
     
-    # Excel'den LASTİK + NAKİT kayıtlarını canta_entries'e ekle
+    # Excel'den LASTİK + NAKİT ve HİZMET + NAKİT kayıtlarını canta_entries'e ekle
     for hareket in excel_lastik_nakit_qs.order_by('-tarih', '-id'):
         canta_entries.append({
             'id': f'excel_{hareket.id}',
@@ -1711,7 +1712,7 @@ def messages_view(request):
     # Genel entries: Sadece Nakit ve Mehmet Havale olan işlemler (Çanta + Mehmet Havale)
     genel_entries = build_entries(qs.filter(Q(nakit__gt=0) | Q(mehmet_havale__gt=0)), lambda tx: (tx.nakit or 0) + (tx.mehmet_havale or 0))
     
-    # Excel'den LASTİK + NAKİT kayıtlarını genel_entries'e de ekle
+    # Excel'den LASTİK + NAKİT ve HİZMET + NAKİT kayıtlarını genel_entries'e de ekle
     for hareket in excel_lastik_nakit_qs.order_by('-tarih', '-id'):
         genel_entries.append({
             'id': f'excel_{hareket.id}',
@@ -2314,7 +2315,6 @@ def create_event(request):
         'error': 'Sadece POST istekleri kabul edilir'
     }, status=405)
 
-@login_required
 @login_required
 @require_POST
 def save_quotation(request):
@@ -5276,7 +5276,6 @@ def export_income_expense_excel(request):
 
 
 @login_required
-@login_required
 @misafir_forbidden
 def joker_satis(request):
     """Joker Satış Toplamları sayfası"""
@@ -5351,7 +5350,6 @@ def joker_satis(request):
     
     return render(request, 'dashboard/joker_satis.html', context)
 
-@login_required
 @login_required
 @misafir_forbidden
 def joker_satis_excel_upload(request):
@@ -6054,8 +6052,6 @@ def garanti_belgesi_edit(request, belge_id):
 
 
 @login_required
-@login_required
-@misafir_forbidden
 @require_http_methods(["POST"])
 def save_garanti_belgesi(request):
     """Yeni Garanti Belgesi Kaydet"""
@@ -6063,6 +6059,13 @@ def save_garanti_belgesi(request):
     from datetime import datetime
     import json
     import traceback
+    
+    # Misafir kontrolü - JSON response döndür
+    if hasattr(request.user, 'userprofile') and request.user.userprofile.is_misafir():
+        return JsonResponse({
+            'success': False,
+            'error': 'Bu işlem için yetkiniz yok.'
+        }, status=403)
     
     try:
         # Debug log
@@ -6131,13 +6134,18 @@ def save_garanti_belgesi(request):
 
 
 @login_required
-@login_required
-@misafir_forbidden
 @require_http_methods(["POST"])
 def update_garanti_belgesi(request, belge_id):
     """Garanti Belgesi Güncelle"""
     from .models import GarantiBelgesi, GarantiBelgesiLastik
     import json
+    
+    # Misafir kontrolü - JSON response döndür
+    if hasattr(request.user, 'userprofile') and request.user.userprofile.is_misafir():
+        return JsonResponse({
+            'success': False,
+            'error': 'Bu işlem için yetkiniz yok.'
+        }, status=403)
     
     try:
         belge = get_object_or_404(GarantiBelgesi, id=belge_id, olusturan=request.user)
@@ -6181,15 +6189,29 @@ def update_garanti_belgesi(request, belge_id):
 
 
 @login_required
-@login_required
-@misafir_forbidden
 @require_http_methods(["POST"])
 def delete_garanti_belgesi(request, belge_id):
     """Garanti Belgesi Sil"""
     from .models import GarantiBelgesi
+    from django.http import Http404
+    
+    # Misafir kontrolü - JSON response döndür
+    if hasattr(request.user, 'userprofile') and request.user.userprofile.is_misafir():
+        return JsonResponse({
+            'success': False,
+            'error': 'Bu işlem için yetkiniz yok.'
+        }, status=403)
     
     try:
-        belge = get_object_or_404(GarantiBelgesi, id=belge_id, olusturan=request.user)
+        # get_object_or_404 yerine try-except kullan
+        try:
+            belge = GarantiBelgesi.objects.get(id=belge_id, olusturan=request.user)
+        except GarantiBelgesi.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Garanti belgesi bulunamadı veya bu belgeyi silme yetkiniz yok.'
+            }, status=404)
+        
         belge_no = belge.belge_no
         belge.delete()
         
@@ -6199,6 +6221,9 @@ def delete_garanti_belgesi(request, belge_id):
         })
         
     except Exception as e:
+        import traceback
+        print(f"Delete garanti belgesi error: {e}")
+        print(traceback.format_exc())
         return JsonResponse({
             'success': False,
             'error': str(e)

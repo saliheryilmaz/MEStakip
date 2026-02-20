@@ -280,7 +280,7 @@
         
         const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
         
-        fetch(`/api/garanti-belgesi/${BELGE_ID}/update/`, {
+        fetch(`/dashboard/api/garanti-belgesi/${BELGE_ID}/update/`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

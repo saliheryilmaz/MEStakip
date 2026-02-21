@@ -9,7 +9,7 @@ Expecting variables:
 - color_class: optional bootstrap color keyword used in header background
 {% endcomment %}
 <div class="modal fade" id="{{ modal_id }}" tabindex="-1" aria-labelledby="{{ modal_id }}Label" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header bg-{{ color_class|default:'primary' }}">
                 <h5 class="modal-title text-white" id="{{ modal_id }}Label">{{ title }}</h5>

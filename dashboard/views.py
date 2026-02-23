@@ -535,13 +535,13 @@ def products(request):
     ).aggregate(total=Sum('tutar', default=0))['total'] or 0
     
     # Excel hizmet tutarlarını ödeme yöntemlerine göre dağıt (SADECE HİZMET KATEGORİSİ)
-    # Sadece gelir tutarlarını göster (gider tutarlarını dahil etme)
-    gun_ozeti['nakit_toplam'] = gelir_nakit + excel_nakit_toplam  # Sadece hizmet nakit tutarları
-    gun_ozeti['kredi_karti_toplam'] = gelir_kredi_karti + excel_kart  # Sadece hizmet kart tutarları
-    gun_ozeti['cari_toplam'] = gelir_cari + excel_cari  # Sadece hizmet cari tutarları
-    gun_ozeti['sanal_pos_toplam'] = gelir_sanal_pos + excel_sanal_pos  # Transaction + hizmet sanal pos tutarları
-    gun_ozeti['mehmet_havale_toplam'] = gelir_mehmet_havale + excel_havale + excel_lastik_mhavale  # Hizmet havale + LASTİK M.HAVALE tutarları
-    gun_ozeti['banka_havale_toplam'] = gelir_banka_havale
+    # Net tutarları göster (gelir - gider)
+    gun_ozeti['nakit_toplam'] = (gelir_nakit - gider_nakit) + excel_nakit_toplam  # Sadece hizmet nakit tutarları (net)
+    gun_ozeti['kredi_karti_toplam'] = (gelir_kredi_karti - gider_kredi_karti) + excel_kart  # Sadece hizmet kart tutarları (net)
+    gun_ozeti['cari_toplam'] = (gelir_cari - gider_cari) + excel_cari  # Sadece hizmet cari tutarları (net)
+    gun_ozeti['sanal_pos_toplam'] = (gelir_sanal_pos - gider_sanal_pos) + excel_sanal_pos  # Transaction + hizmet sanal pos tutarları (net)
+    gun_ozeti['mehmet_havale_toplam'] = (gelir_mehmet_havale - gider_mehmet_havale) + excel_havale + excel_lastik_mhavale  # Hizmet havale + LASTİK M.HAVALE tutarları (net)
+    gun_ozeti['banka_havale_toplam'] = gelir_banka_havale - gider_banka_havale  # Net
     
     # Servis ve Merkez Satış kasaları için Nakit, Kredi Kartı ve M.Havale toplamları
     servis_merkez_qs = qs.filter(kasa_adi__in=['servis', 'merkez-satis'])
@@ -747,20 +747,27 @@ def products(request):
             # Eğer eşleşme yoksa, varsayılan olarak hiçbir şeye eklenmez
             pass
     
-    # Merkez Satış kasasındaki işlemleri de Excel toplamlarına ekle
-    merkez_satis_islemler = qs.filter(Q(kasa_adi='merkez-satis') & Q(hareket_tipi='gelir'))
+    # Merkez Satış kasasındaki işlemleri de Excel toplamlarına ekle (Gelir - Gider)
+    merkez_satis_gelir = qs.filter(Q(kasa_adi='merkez-satis') & Q(hareket_tipi='gelir'))
+    merkez_satis_gider = qs.filter(Q(kasa_adi='merkez-satis') & Q(hareket_tipi='gider'))
     
-    # Merkez Satış işlemlerini ödeme şekillerine göre grupla
-    for islem in merkez_satis_islemler:
-        # Sadece gelir işlemlerini hesapla
-        if islem.hareket_tipi == 'gelir':
-            # Her ödeme şeklini ayrı ayrı topla
-            excel_odeme_dict['Nakit'] += parse_decimal_value(islem.nakit)
-            excel_odeme_dict['Kredi_Karti'] += parse_decimal_value(islem.kredi_karti)
-            excel_odeme_dict['Cari'] += parse_decimal_value(islem.cari)
-            excel_odeme_dict['Sanal_Pos'] += parse_decimal_value(islem.sanal_pos)
-            excel_odeme_dict['Mehmet_Havale'] += parse_decimal_value(islem.mehmet_havale)
-            excel_odeme_dict['Banka_Havale'] += parse_decimal_value(islem.banka_havale)
+    # Merkez Satış Gelir işlemlerini ödeme şekillerine göre topla
+    for islem in merkez_satis_gelir:
+        excel_odeme_dict['Nakit'] += parse_decimal_value(islem.nakit)
+        excel_odeme_dict['Kredi_Karti'] += parse_decimal_value(islem.kredi_karti)
+        excel_odeme_dict['Cari'] += parse_decimal_value(islem.cari)
+        excel_odeme_dict['Sanal_Pos'] += parse_decimal_value(islem.sanal_pos)
+        excel_odeme_dict['Mehmet_Havale'] += parse_decimal_value(islem.mehmet_havale)
+        excel_odeme_dict['Banka_Havale'] += parse_decimal_value(islem.banka_havale)
+    
+    # Merkez Satış Gider işlemlerini ödeme şekillerine göre düş
+    for islem in merkez_satis_gider:
+        excel_odeme_dict['Nakit'] -= parse_decimal_value(islem.nakit)
+        excel_odeme_dict['Kredi_Karti'] -= parse_decimal_value(islem.kredi_karti)
+        excel_odeme_dict['Cari'] -= parse_decimal_value(islem.cari)
+        excel_odeme_dict['Sanal_Pos'] -= parse_decimal_value(islem.sanal_pos)
+        excel_odeme_dict['Mehmet_Havale'] -= parse_decimal_value(islem.mehmet_havale)
+        excel_odeme_dict['Banka_Havale'] -= parse_decimal_value(islem.banka_havale)
     
     # Dictionary'yi context'e gönder - Merkez Satış Excel değerleri zaten döngüde hesaplandı
     # excel_odeme_dict zaten doğru değerleri içeriyor, tekrar eklemeye gerek yok

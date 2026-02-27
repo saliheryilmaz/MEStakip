@@ -354,7 +354,7 @@ def products(request):
     gider_cari = qs.filter(hareket_tipi='gider').exclude(kasa_adi__in=['merkez-satis', 'virman']).aggregate(total=Sum('cari', default=0))['total'] or 0
     gider_sanal_pos = qs.filter(hareket_tipi='gider').exclude(kasa_adi__in=['merkez-satis', 'virman']).aggregate(total=Sum('sanal_pos', default=0))['total'] or 0
     gider_mehmet_havale = qs.filter(hareket_tipi='gider').exclude(kasa_adi__in=['merkez-satis', 'virman']).aggregate(total=Sum('mehmet_havale', default=0))['total'] or 0
-    gider_banka_havale = qs.filter(hareket_tipi='gider').exclude(kasa_adi__in=['merkez-satis', 'virman']).aggregate(total=Sum('banka_havale', default=0))['total'] or 0
+    gider_banka_havale = 0  # Banka Havale gider gösterilmiyor
     gider_canta_cikis = qs.filter(hareket_tipi='gider').exclude(kasa_adi__in=['merkez-satis', 'virman']).aggregate(total=Sum('canta_cikis', default=0))['total'] or 0
     
     # Excel verileri için tarih filtrelemesi (Servis toplamları için)
@@ -582,7 +582,7 @@ def products(request):
     # Banka Havale toplamları (Excel Merkez banka havale tutarlarını da ekle)
     servis_merkez_banka_havale_gelir = servis_merkez_qs.filter(hareket_tipi='gelir').aggregate(total=Sum('banka_havale', default=0))['total'] or 0
     servis_merkez_banka_havale_gelir += excel_merkez_havale  # Excel'den gelen merkez banka havale tutarlarını ekle
-    servis_merkez_banka_havale_gider = servis_merkez_qs.filter(hareket_tipi='gider').aggregate(total=Sum('banka_havale', default=0))['total'] or 0
+    servis_merkez_banka_havale_gider = 0  # Banka Havale gider gösterilmiyor
     servis_merkez_banka_havale_net = servis_merkez_banka_havale_gelir - servis_merkez_banka_havale_gider
     
     # Çanta Çıkış toplamları
@@ -608,7 +608,7 @@ def products(request):
     
     # Toplam (Nakit + Kredi Kartı + Cari + Sanal Pos + M.Havale + Banka Havale + Çanta Çıkış + Excel Hizmet)
     servis_merkez_toplam_gelir = servis_merkez_nakit_gelir + servis_merkez_kredi_gelir + servis_merkez_cari_gelir + servis_merkez_sanal_pos_gelir + servis_merkez_mhavale_gelir + servis_merkez_banka_havale_gelir + servis_merkez_canta_cikis_gelir + excel_servis_toplam
-    servis_merkez_toplam_gider = servis_merkez_nakit_gider + servis_merkez_kredi_gider + servis_merkez_cari_gider + servis_merkez_sanal_pos_gider + servis_merkez_mhavale_gider + servis_merkez_banka_havale_gider + servis_merkez_canta_cikis_gider
+    servis_merkez_toplam_gider = servis_merkez_nakit_gider + servis_merkez_kredi_gider + servis_merkez_cari_gider + servis_merkez_sanal_pos_gider + servis_merkez_mhavale_gider + servis_merkez_canta_cikis_gider  # Banka Havale gider dahil değil
     servis_merkez_toplam_net = servis_merkez_toplam_gelir - servis_merkez_toplam_gider
     
     gun_ozeti['servis_merkez_toplam'] = {
@@ -780,14 +780,14 @@ def products(request):
         excel_odeme_dict['Mehmet_Havale'] += parse_decimal_value(islem.mehmet_havale)
         excel_odeme_dict['Banka_Havale'] += parse_decimal_value(islem.banka_havale)
     
-    # Merkez Satış Gider işlemlerini ödeme şekillerine göre düş
+    # Merkez Satış Gider işlemlerini ödeme şekillerine göre düş (Banka Havale hariç)
     for islem in merkez_satis_gider:
         excel_odeme_dict['Nakit'] -= parse_decimal_value(islem.nakit)
         excel_odeme_dict['Kredi_Karti'] -= parse_decimal_value(islem.kredi_karti)
         excel_odeme_dict['Cari'] -= parse_decimal_value(islem.cari)
         excel_odeme_dict['Sanal_Pos'] -= parse_decimal_value(islem.sanal_pos)
         excel_odeme_dict['Mehmet_Havale'] -= parse_decimal_value(islem.mehmet_havale)
-        excel_odeme_dict['Banka_Havale'] -= parse_decimal_value(islem.banka_havale)
+        # Banka Havale gider düşülmüyor
     
     # Dictionary'yi context'e gönder - Merkez Satış Excel değerleri zaten döngüde hesaplandı
     # excel_odeme_dict zaten doğru değerleri içeriyor, tekrar eklemeye gerek yok
@@ -1667,7 +1667,7 @@ def messages_view(request):
     gider_cari = qs.filter(hareket_tipi='gider').aggregate(total=Sum('cari', default=0))['total'] or 0
     gider_sanal_pos = qs.filter(hareket_tipi='gider').aggregate(total=Sum('sanal_pos', default=0))['total'] or 0
     gider_mehmet_havale = qs.filter(hareket_tipi='gider').aggregate(total=Sum('mehmet_havale', default=0))['total'] or 0
-    gider_banka_havale = qs.filter(hareket_tipi='gider').aggregate(total=Sum('banka_havale', default=0))['total'] or 0
+    gider_banka_havale = 0  # Banka Havale gider gösterilmiyor
     
     # Çanta Çıkış toplamları
     gelir_canta_cikis = qs.filter(hareket_tipi='gelir').aggregate(total=Sum('canta_cikis', default=0))['total'] or 0

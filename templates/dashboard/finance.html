@@ -108,6 +108,10 @@
                         <label class="form-label">🏦 Pafgo</label>
                         {{ form.pafgo }}
                     </div>
+                    <div class="col-md-3">
+                        <label class="form-label">👜 Çanta Çıkış</label>
+                        {{ form.canta_cikis }}
+                    </div>
 
                     <div class="col-12">
                         <label class="form-label">Açıklama</label>
@@ -308,7 +312,7 @@
         }
 
         // Ödeme alanları yönetimi - Sadece bir ödeme türü seçilebilsin
-        const paymentFields = ['nakit', 'kredi_karti', 'cari', 'sanal_pos', 'mehmet_havale', 'banka_havale', 'pafgo'];
+        const paymentFields = ['nakit', 'kredi_karti', 'cari', 'sanal_pos', 'mehmet_havale', 'banka_havale', 'pafgo', 'canta_cikis'];
         const paymentInputs = {};
         const paymentInfo = document.getElementById('payment-info');
         const paymentInfoText = document.getElementById('payment-info-text');
@@ -377,7 +381,8 @@
                         'sanal_pos': '💳 Sanal Pos',
                         'mehmet_havale': '🏦 Mehmet Havale',
                         'banka_havale': '🏦 Banka Havale',
-                        'pafgo': '🏦 Pafgo'
+                        'pafgo': '🏦 Pafgo',
+                        'canta_cikis': '👜 Çanta Çıkış'
                     };
                     
                     paymentInfoText.textContent = `${fieldLabels[fieldName]} seçildi: ${value.toFixed(2)} ₺`;

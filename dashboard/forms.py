@@ -11,7 +11,7 @@ class TransactionForm(forms.ModelForm):
         fields = [
             'hareket_tipi', 'tarih', 'kasa_adi',
             'nakit', 'kredi_karti', 'cari', 'sanal_pos',
-            'mehmet_havale', 'banka_havale', 'pafgo',
+            'mehmet_havale', 'banka_havale', 'pafgo', 'canta_cikis',
             'aciklama', 'kategori1'
         ]
         widgets = {
@@ -25,6 +25,7 @@ class TransactionForm(forms.ModelForm):
             'mehmet_havale': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'value': '0'}),
             'banka_havale': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'value': '0'}),
             'pafgo': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'value': '0'}),
+            'canta_cikis': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'value': '0'}),
             'aciklama': forms.TextInput(attrs={'class': 'form-control'}),
             'kategori1': forms.Select(attrs={'class': 'form-select'}),
         }
@@ -67,11 +68,12 @@ class TransactionForm(forms.ModelForm):
         mehmet = cleaned.get('mehmet_havale') or 0
         banka = cleaned.get('banka_havale') or 0
         pafgo = cleaned.get('pafgo') or 0
+        canta_cikis = cleaned.get('canta_cikis') or 0
         
         # En az bir ödeme alanı dolu olmalı
-        if nakit + kredi + cari + sanal + mehmet + banka + pafgo <= 0:
+        if nakit + kredi + cari + sanal + mehmet + banka + pafgo + canta_cikis <= 0:
             raise forms.ValidationError(
-                'En az bir ödeme alanı (Nakit, Kredi Kartı, Sanal Pos, Cari, Mehmet Havale, Banka Havale veya Pafgo) doldurulmalıdır.'
+                'En az bir ödeme alanı (Nakit, Kredi Kartı, Sanal Pos, Cari, Mehmet Havale, Banka Havale, Pafgo veya Çanta Çıkış) doldurulmalıdır.'
             )
         
         # Sadece bir ödeme türü seçilmeli
@@ -90,6 +92,8 @@ class TransactionForm(forms.ModelForm):
             filled_fields.append('Banka Havale')
         if pafgo > 0:
             filled_fields.append('Pafgo')
+        if canta_cikis > 0:
+            filled_fields.append('Çanta Çıkış')
             
         if len(filled_fields) > 1:
             raise forms.ValidationError(f'Sadece bir ödeme türü seçilmelidir. Şu anda seçili: {", ".join(filled_fields)}')

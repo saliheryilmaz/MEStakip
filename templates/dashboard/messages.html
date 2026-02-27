@@ -168,7 +168,7 @@
 </div>
 
 <!-- Modals -->
-{% include 'dashboard/partials/finance-modal.html' with modal_id='modalCanta' title='Çanta İşlemleri (Nakit)' entries=canta_islemleri total=canta_toplam color_class='danger' selected_range=date_range_label %}
+{% include 'dashboard/partials/finance-modal.html' with modal_id='modalCanta' title='Çanta İşlemleri (Nakit + Çanta Çıkış)' entries=canta_islemleri total=canta_toplam color_class='danger' selected_range=date_range_label %}
 {% include 'dashboard/partials/finance-modal.html' with modal_id='modalMehmetHavale' title='Mehmet Havale İşlemleri' entries=mehmet_havale_islemleri total=mehmet_havale_toplam color_class='secondary' selected_range=date_range_label %}
 {% include 'dashboard/partials/finance-modal.html' with modal_id='modalGenel' title='Toplam İşlemler' entries=genel_islemleri total=genel_toplam color_class='success' selected_range=date_range_label %}
 {% endblock %}

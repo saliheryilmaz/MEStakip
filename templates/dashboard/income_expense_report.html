@@ -196,6 +196,7 @@
                         <th class="text-end">M.HAVALE</th>
                         <th class="text-end">B.HAVALE</th>
                         <th class="text-end">PAFGO</th>
+                        <th class="text-end">ÇANTA ÇIKIŞ</th>
                         <th class="text-end">TOPLAM</th>
                         <th class="text-end">AÇIKLAMA</th>
                         <th class="text-end">İŞLEM</th>
@@ -276,6 +277,13 @@
                             {% if islem.pafgo > 0 %}
                                 <span class="badge bg-{% if islem.hareket_tipi == 'gelir' %}success{% else %}danger{% endif %}">
                                     {{ islem.pafgo|floatformat:0 }}
+                                </span>
+                            {% else %}-{% endif %}
+                        </td>
+                        <td class="text-end">
+                            {% if islem.canta_cikis|default:0 > 0 %}
+                                <span class="badge bg-{% if islem.hareket_tipi == 'gelir' %}success{% else %}danger{% endif %}">
+                                    {{ islem.canta_cikis|floatformat:0 }}
                                 </span>
                             {% else %}-{% endif %}
                         </td>

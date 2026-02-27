@@ -256,6 +256,7 @@
                                 <th>Sanal Pos</th>
                                 <th>M.Havale</th>
                                 <th>B.Havale</th>
+                                <th>Çanta Çıkış</th>
                                 <th>Kategori</th>
                                 <th>Açıklama</th>
                                 <th class="text-end">İşlem</th>
@@ -278,6 +279,7 @@
                                 <td>{% if tx.sanal_pos > 0 %}{{ tx.sanal_pos|turkish_lira }}{% else %}-{% endif %}</td>
                                 <td>{% if tx.mehmet_havale > 0 %}{{ tx.mehmet_havale|turkish_lira }}{% else %}-{% endif %}</td>
                                 <td>{% if tx.banka_havale > 0 %}{{ tx.banka_havale|turkish_lira }}{% else %}-{% endif %}</td>
+                                <td>{% if tx.canta_cikis|default:0 > 0 %}{{ tx.canta_cikis|turkish_lira }}{% else %}-{% endif %}</td>
                                 <td>
                                     {% if tx.kategori1 %}
                                         <span class="badge bg-primary">
@@ -627,6 +629,7 @@
                                     <th>Sanal Pos</th>
                                     <th>M.Havale</th>
                                     <th>B.Havale</th>
+                                    <th>Çanta Çıkış</th>
                                     <th>Kategori</th>
                                     <th>Açıklama</th>
                                     <th class="text-end">İşlem</th>
@@ -652,6 +655,7 @@
                                     <td>{% if tx.sanal_pos > 0 %}{{ tx.sanal_pos|turkish_lira }}{% else %}-{% endif %}</td>
                                     <td>{% if tx.mehmet_havale > 0 %}{{ tx.mehmet_havale|turkish_lira }}{% else %}-{% endif %}</td>
                                     <td>{% if tx.banka_havale > 0 %}{{ tx.banka_havale|turkish_lira }}{% else %}-{% endif %}</td>
+                                    <td>{% if tx.canta_cikis|default:0 > 0 %}{{ tx.canta_cikis|turkish_lira }}{% else %}-{% endif %}</td>
                                     <td>
                                         {% if tx.kategori1 %}
                                             <span class="badge bg-primary">

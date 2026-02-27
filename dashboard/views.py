@@ -325,7 +325,7 @@ def products(request):
     # Özet bilgileri (Sanal Pos ve Banka Havale hariç, Kredi Kartı dahil)
     # Merkez Satış ve Virman kasalarını hariç tut
     # Kredi kartı giderleri zaten sorguda filtrelendi
-    toplam_ifade = (F('nakit') + F('kredi_karti') + F('cari') + F('mehmet_havale'))
+    toplam_ifade = (F('nakit') + F('kredi_karti') + F('cari') + F('mehmet_havale') + F('canta_cikis'))
     
     gun_ozeti = qs.exclude(kasa_adi__in=['merkez-satis', 'virman']).aggregate(
         gelir=Sum(Case(When(hareket_tipi='gelir', then=toplam_ifade), default=0, output_field=DecimalField(max_digits=12, decimal_places=2))),
@@ -346,6 +346,7 @@ def products(request):
     gelir_sanal_pos = qs.filter(hareket_tipi='gelir').exclude(kasa_adi__in=['merkez-satis', 'virman']).aggregate(total=Sum('sanal_pos', default=0))['total'] or 0
     gelir_mehmet_havale = qs.filter(hareket_tipi='gelir').exclude(kasa_adi__in=['merkez-satis', 'virman']).aggregate(total=Sum('mehmet_havale', default=0))['total'] or 0
     gelir_banka_havale = qs.filter(hareket_tipi='gelir').exclude(kasa_adi__in=['merkez-satis', 'virman']).aggregate(total=Sum('banka_havale', default=0))['total'] or 0
+    gelir_canta_cikis = qs.filter(hareket_tipi='gelir').exclude(kasa_adi__in=['merkez-satis', 'virman']).aggregate(total=Sum('canta_cikis', default=0))['total'] or 0
     
     # Gider toplamları
     gider_nakit = qs.filter(hareket_tipi='gider').exclude(kasa_adi__in=['merkez-satis', 'virman']).aggregate(total=Sum('nakit', default=0))['total'] or 0
@@ -354,6 +355,7 @@ def products(request):
     gider_sanal_pos = qs.filter(hareket_tipi='gider').exclude(kasa_adi__in=['merkez-satis', 'virman']).aggregate(total=Sum('sanal_pos', default=0))['total'] or 0
     gider_mehmet_havale = qs.filter(hareket_tipi='gider').exclude(kasa_adi__in=['merkez-satis', 'virman']).aggregate(total=Sum('mehmet_havale', default=0))['total'] or 0
     gider_banka_havale = qs.filter(hareket_tipi='gider').exclude(kasa_adi__in=['merkez-satis', 'virman']).aggregate(total=Sum('banka_havale', default=0))['total'] or 0
+    gider_canta_cikis = qs.filter(hareket_tipi='gider').exclude(kasa_adi__in=['merkez-satis', 'virman']).aggregate(total=Sum('canta_cikis', default=0))['total'] or 0
     
     # Excel verileri için tarih filtrelemesi (Servis toplamları için)
     excel_hareketler = MalzemeHareketi.objects.filter(kullanici=request.user)
@@ -542,6 +544,7 @@ def products(request):
     gun_ozeti['sanal_pos_toplam'] = (gelir_sanal_pos - gider_sanal_pos) + excel_sanal_pos  # Transaction + hizmet sanal pos tutarları (net)
     gun_ozeti['mehmet_havale_toplam'] = (gelir_mehmet_havale - gider_mehmet_havale) + excel_havale + excel_lastik_mhavale  # Hizmet havale + LASTİK M.HAVALE tutarları (net)
     gun_ozeti['banka_havale_toplam'] = gelir_banka_havale - gider_banka_havale  # Net
+    gun_ozeti['canta_cikis_toplam'] = gelir_canta_cikis - gider_canta_cikis  # Net
     
     # Servis ve Merkez Satış kasaları için Nakit, Kredi Kartı ve M.Havale toplamları
     servis_merkez_qs = qs.filter(kasa_adi__in=['servis', 'merkez-satis'])
@@ -570,6 +573,23 @@ def products(request):
     servis_merkez_cari_gider = servis_merkez_qs.filter(hareket_tipi='gider').aggregate(total=Sum('cari', default=0))['total'] or 0
     servis_merkez_cari_net = servis_merkez_cari_gelir - servis_merkez_cari_gider
     
+    # Sanal Pos toplamları (Excel Merkez sanal pos tutarlarını da ekle)
+    servis_merkez_sanal_pos_gelir = servis_merkez_qs.filter(hareket_tipi='gelir').aggregate(total=Sum('sanal_pos', default=0))['total'] or 0
+    servis_merkez_sanal_pos_gelir += excel_merkez_sanal_pos  # Excel'den gelen merkez sanal pos tutarlarını ekle
+    servis_merkez_sanal_pos_gider = servis_merkez_qs.filter(hareket_tipi='gider').aggregate(total=Sum('sanal_pos', default=0))['total'] or 0
+    servis_merkez_sanal_pos_net = servis_merkez_sanal_pos_gelir - servis_merkez_sanal_pos_gider
+    
+    # Banka Havale toplamları (Excel Merkez banka havale tutarlarını da ekle)
+    servis_merkez_banka_havale_gelir = servis_merkez_qs.filter(hareket_tipi='gelir').aggregate(total=Sum('banka_havale', default=0))['total'] or 0
+    servis_merkez_banka_havale_gelir += excel_merkez_havale  # Excel'den gelen merkez banka havale tutarlarını ekle
+    servis_merkez_banka_havale_gider = servis_merkez_qs.filter(hareket_tipi='gider').aggregate(total=Sum('banka_havale', default=0))['total'] or 0
+    servis_merkez_banka_havale_net = servis_merkez_banka_havale_gelir - servis_merkez_banka_havale_gider
+    
+    # Çanta Çıkış toplamları
+    servis_merkez_canta_cikis_gelir = servis_merkez_qs.filter(hareket_tipi='gelir').aggregate(total=Sum('canta_cikis', default=0))['total'] or 0
+    servis_merkez_canta_cikis_gider = servis_merkez_qs.filter(hareket_tipi='gider').aggregate(total=Sum('canta_cikis', default=0))['total'] or 0
+    servis_merkez_canta_cikis_net = servis_merkez_canta_cikis_gelir - servis_merkez_canta_cikis_gider
+    
     # Excel verileri için tarih filtrelemesi (Servis toplamları için)
     excel_hareketler = MalzemeHareketi.objects.filter(kullanici=request.user)
     
@@ -586,9 +606,9 @@ def products(request):
         Q(kategori__icontains='hizmet') | Q(kategori__icontains='HİZMET')
     ).aggregate(total=Sum('tutar', default=0))['total'] or 0
     
-    # Toplam (Nakit + Kredi Kartı + Cari + M.Havale + Excel Hizmet)
-    servis_merkez_toplam_gelir = servis_merkez_nakit_gelir + servis_merkez_kredi_gelir + servis_merkez_cari_gelir + servis_merkez_mhavale_gelir + excel_servis_toplam
-    servis_merkez_toplam_gider = servis_merkez_nakit_gider + servis_merkez_kredi_gider + servis_merkez_cari_gider + servis_merkez_mhavale_gider
+    # Toplam (Nakit + Kredi Kartı + Cari + Sanal Pos + M.Havale + Banka Havale + Çanta Çıkış + Excel Hizmet)
+    servis_merkez_toplam_gelir = servis_merkez_nakit_gelir + servis_merkez_kredi_gelir + servis_merkez_cari_gelir + servis_merkez_sanal_pos_gelir + servis_merkez_mhavale_gelir + servis_merkez_banka_havale_gelir + servis_merkez_canta_cikis_gelir + excel_servis_toplam
+    servis_merkez_toplam_gider = servis_merkez_nakit_gider + servis_merkez_kredi_gider + servis_merkez_cari_gider + servis_merkez_sanal_pos_gider + servis_merkez_mhavale_gider + servis_merkez_banka_havale_gider + servis_merkez_canta_cikis_gider
     servis_merkez_toplam_net = servis_merkez_toplam_gelir - servis_merkez_toplam_gider
     
     gun_ozeti['servis_merkez_toplam'] = {
@@ -1553,6 +1573,7 @@ def messages_view(request):
             entries.append({
                 'id': tx.id,
                 'tarih': tx.tarih.strftime('%d.%m.%Y'),
+                'tarih_sort': tx.tarih,  # Sıralama için datetime objesi
                 'kasa_adi': tx.get_kasa_adi_display() if tx.kasa_adi else '-',
                 'hareket': tx.get_hareket_tipi_display(),
                 'ana_kategori': ana_kategori,
@@ -1648,6 +1669,11 @@ def messages_view(request):
     gider_mehmet_havale = qs.filter(hareket_tipi='gider').aggregate(total=Sum('mehmet_havale', default=0))['total'] or 0
     gider_banka_havale = qs.filter(hareket_tipi='gider').aggregate(total=Sum('banka_havale', default=0))['total'] or 0
     
+    # Çanta Çıkış toplamları
+    gelir_canta_cikis = qs.filter(hareket_tipi='gelir').aggregate(total=Sum('canta_cikis', default=0))['total'] or 0
+    gider_canta_cikis = qs.filter(hareket_tipi='gider').aggregate(total=Sum('canta_cikis', default=0))['total'] or 0
+    canta_cikis_net = float(gelir_canta_cikis - gider_canta_cikis)
+    
     # Net toplamlar (gelir - gider)
     nakit_net = float(gelir_nakit - gider_nakit)
     kredi_karti_net = float(gelir_kredi_karti - gider_kredi_karti)
@@ -1682,17 +1708,25 @@ def messages_view(request):
     # Nakit → Çanta'ya ekle
     canta_toplam += nakit_net
     
+    # Çanta Çıkış → Çanta'ya ekle
+    canta_toplam += canta_cikis_net
+    
     # Genel Toplam: Çanta + Mehmet Havale
     genel_toplam = canta_toplam + mehmet_havale_toplam
     
     # Kart modal verileri
     canta_entries = build_entries(qs.filter(Q(kasa_adi='canta') | ~Q(nakit=0)), lambda tx: tx.nakit)
     
+    # Çanta Çıkış işlemlerini canta_entries'e ekle
+    canta_cikis_entries = build_entries(qs.filter(~Q(canta_cikis=0)), lambda tx: tx.canta_cikis)
+    canta_entries.extend(canta_cikis_entries)
+    
     # Excel'den LASTİK + NAKİT ve HİZMET + NAKİT kayıtlarını canta_entries'e ekle
     for hareket in excel_lastik_nakit_qs.order_by('-tarih', '-id'):
         canta_entries.append({
             'id': f'excel_{hareket.id}',
             'tarih': hareket.tarih.strftime('%d.%m.%Y'),
+            'tarih_sort': hareket.tarih,  # Sıralama için datetime objesi
             'kasa_adi': 'Merkez Satış İş Akışı - (Excel)',
             'hareket': 'Gelir',
             'ana_kategori': hareket.kategori or '-',
@@ -1700,6 +1734,20 @@ def messages_view(request):
             'aciklama': f'{hareket.urun} - {hareket.musteri}',
             'amount': float(hareket.tutar),
         })
+    
+    # Çanta işlemlerini tarihe göre sırala (yeniden eskiye)
+    # Önce tarih_sort alanını ekle (eğer yoksa tarih string'inden parse et)
+    for entry in canta_entries:
+        if 'tarih_sort' not in entry:
+            try:
+                # dd.mm.yyyy formatından datetime'a çevir
+                entry['tarih_sort'] = datetime.strptime(entry['tarih'], '%d.%m.%Y').date()
+            except:
+                entry['tarih_sort'] = datetime.now().date()
+    
+    # Tarihe göre sırala (yeniden eskiye)
+    canta_entries.sort(key=lambda x: x['tarih_sort'], reverse=True)
+    
     mehmet_havale_entries = build_entries(qs.filter(~Q(mehmet_havale=0)), lambda tx: tx.mehmet_havale)
     
     # Excel'den LASTİK + M.HAVALE kayıtlarını mehmet_havale_entries'e ekle
@@ -1707,6 +1755,7 @@ def messages_view(request):
         mehmet_havale_entries.append({
             'id': f'excel_{hareket.id}',
             'tarih': hareket.tarih.strftime('%d.%m.%Y'),
+            'tarih_sort': hareket.tarih,  # Sıralama için datetime objesi
             'kasa_adi': 'Merkez Satış İş Akışı - (Excel)',
             'hareket': 'Gelir',
             'ana_kategori': hareket.kategori or '-',
@@ -1715,15 +1764,25 @@ def messages_view(request):
             'amount': float(hareket.tutar),
         })
     
+    # Mehmet Havale işlemlerini tarihe göre sırala (yeniden eskiye)
+    for entry in mehmet_havale_entries:
+        if 'tarih_sort' not in entry:
+            try:
+                entry['tarih_sort'] = datetime.strptime(entry['tarih'], '%d.%m.%Y').date()
+            except:
+                entry['tarih_sort'] = datetime.now().date()
+    mehmet_havale_entries.sort(key=lambda x: x['tarih_sort'], reverse=True)
+    
     banka_havale_entries = build_entries(qs.filter(~Q(banka_havale=0)), lambda tx: tx.banka_havale)
-    # Genel entries: Sadece Nakit ve Mehmet Havale olan işlemler (Çanta + Mehmet Havale)
-    genel_entries = build_entries(qs.filter(Q(nakit__gt=0) | Q(mehmet_havale__gt=0)), lambda tx: (tx.nakit or 0) + (tx.mehmet_havale or 0))
+    # Genel entries: Nakit, Mehmet Havale ve Çanta Çıkış olan işlemler (Çanta + Mehmet Havale)
+    genel_entries = build_entries(qs.filter(Q(nakit__gt=0) | Q(mehmet_havale__gt=0) | Q(canta_cikis__gt=0)), lambda tx: (tx.nakit or 0) + (tx.mehmet_havale or 0) + (tx.canta_cikis or 0))
     
     # Excel'den LASTİK + NAKİT ve HİZMET + NAKİT kayıtlarını genel_entries'e de ekle
     for hareket in excel_lastik_nakit_qs.order_by('-tarih', '-id'):
         genel_entries.append({
             'id': f'excel_{hareket.id}',
             'tarih': hareket.tarih.strftime('%d.%m.%Y'),
+            'tarih_sort': hareket.tarih,  # Sıralama için datetime objesi
             'kasa_adi': 'Merkez Satış İş Akışı - (Excel)',
             'hareket': 'Gelir',
             'ana_kategori': hareket.kategori or '-',
@@ -1737,6 +1796,7 @@ def messages_view(request):
         genel_entries.append({
             'id': f'excel_{hareket.id}',
             'tarih': hareket.tarih.strftime('%d.%m.%Y'),
+            'tarih_sort': hareket.tarih,  # Sıralama için datetime objesi
             'kasa_adi': 'Merkez Satış İş Akışı - (Excel)',
             'hareket': 'Gelir',
             'ana_kategori': hareket.kategori or '-',
@@ -1744,6 +1804,15 @@ def messages_view(request):
             'aciklama': f'{hareket.urun} - {hareket.musteri}',
             'amount': float(hareket.tutar),
         })
+    
+    # Genel işlemleri tarihe göre sırala (yeniden eskiye)
+    for entry in genel_entries:
+        if 'tarih_sort' not in entry:
+            try:
+                entry['tarih_sort'] = datetime.strptime(entry['tarih'], '%d.%m.%Y').date()
+            except:
+                entry['tarih_sort'] = datetime.now().date()
+    genel_entries.sort(key=lambda x: x['tarih_sort'], reverse=True)
 
     if start_date and end_date:
         date_range_label = f"{start_date.strftime('%d.%m.%Y')} - {end_date.strftime('%d.%m.%Y')}"
@@ -1773,6 +1842,7 @@ def messages_view(request):
             'cari': cari_net,
             'mehmet_havale': mehmet_havale_field_net,
             'banka_havale': banka_havale_field_net,
+            'canta_cikis': canta_cikis_net,
         },
         'filters': {
             'start_date': start_date_str,
@@ -4843,6 +4913,20 @@ def income_expense_report(request):
                 'ana_kategori': ana_kategori,
                 'alt_kategori': alt_kategori,
                 'aciklama': islem.aciklama or '-',
+                'amount': amount,
+            })
+        
+        # Çanta Çıkış işlemleri - Nakit işlemleri modalında göster (sadece Transaction objelerinde)
+        if hasattr(islem, 'canta_cikis') and islem.canta_cikis and float(islem.canta_cikis) > 0:
+            amount = float(islem.canta_cikis) * multiplier
+            summary['nakit'] += amount
+            odeme_detaylari['nakit'].append({
+                'tarih': islem.tarih.strftime('%d.%m.%Y'),
+                'kasa_adi': islem.get_kasa_adi_display() if islem.kasa_adi else '-',
+                'hareket': islem.get_hareket_tipi_display(),
+                'ana_kategori': ana_kategori,
+                'alt_kategori': alt_kategori,
+                'aciklama': (islem.aciklama or '-') + ' [Çanta Çıkış]',
                 'amount': amount,
             })
         

@@ -425,6 +425,12 @@ def products(request):
         Q(odeme_sekli__icontains='havale') |
         Q(odeme_sekli__iexact='havale') |
         Q(odeme_sekli__icontains='garanti havale')
+    ).exclude(
+        Q(odeme_sekli__icontains='m.havale') |
+        Q(odeme_sekli__icontains='m havale') |
+        Q(odeme_sekli__icontains='mhavale') |
+        Q(odeme_sekli__icontains='mehmet havale') |
+        Q(odeme_sekli__iexact='M.HAVALE')
     ).aggregate(total=Sum('tutar', default=0))['total'] or 0
     
     # Diğer ödeme şekilleri (belirtilmemiş olanlar) nakit olarak kabul et
@@ -498,6 +504,12 @@ def products(request):
     excel_merkez_havale = excel_merkez_hareketler.filter(
         Q(odeme_sekli__icontains='havale') |
         Q(odeme_sekli__icontains='garanti havale')
+    ).exclude(
+        Q(odeme_sekli__icontains='m.havale') |
+        Q(odeme_sekli__icontains='m havale') |
+        Q(odeme_sekli__icontains='mhavale') |
+        Q(odeme_sekli__icontains='mehmet havale') |
+        Q(odeme_sekli__iexact='M.HAVALE')
     ).aggregate(total=Sum('tutar', default=0))['total'] or 0
     
     # Hizmet olmayan kategorilerdeki diğer ödeme şekilleri (belirtilmemiş olanlar)
@@ -525,10 +537,8 @@ def products(request):
     
     excel_merkez_nakit_toplam = excel_merkez_nakit + excel_merkez_diger
     
-    # LASTİK kategorisindeki sadece M.HAVALE ödeme şekilli tutarları M.Havale'ye ekle
-    excel_lastik_mhavale = excel_hareketler.filter(
-        kategori='LASTİK'
-    ).filter(
+    # Tüm kategorilerdeki M.HAVALE ödeme şekilli tutarları M.Havale'ye ekle
+    excel_mhavale = excel_hareketler.filter(
         Q(odeme_sekli__icontains='m.havale') |
         Q(odeme_sekli__icontains='m havale') |
         Q(odeme_sekli__icontains='mhavale') |
@@ -542,9 +552,16 @@ def products(request):
     gun_ozeti['kredi_karti_toplam'] = (gelir_kredi_karti - gider_kredi_karti) + excel_kart  # Sadece hizmet kart tutarları (net)
     gun_ozeti['cari_toplam'] = (gelir_cari - gider_cari) + excel_cari  # Sadece hizmet cari tutarları (net)
     gun_ozeti['sanal_pos_toplam'] = (gelir_sanal_pos - gider_sanal_pos) + excel_sanal_pos  # Transaction + hizmet sanal pos tutarları (net)
-    gun_ozeti['mehmet_havale_toplam'] = (gelir_mehmet_havale - gider_mehmet_havale) + excel_havale + excel_lastik_mhavale  # Hizmet havale + LASTİK M.HAVALE tutarları (net)
+    gun_ozeti['mehmet_havale_toplam'] = (gelir_mehmet_havale - gider_mehmet_havale) + excel_mhavale  # Transaction + tüm kategorilerdeki M.HAVALE tutarları (net)
     gun_ozeti['banka_havale_toplam'] = gelir_banka_havale - gider_banka_havale  # Net
     gun_ozeti['canta_cikis_toplam'] = gelir_canta_cikis - gider_canta_cikis  # Net
+    
+    # Merkez Satış toplamını hesapla ve Toplam Gelir'e ekle
+    merkez_satis_toplam = (excel_merkez_nakit_toplam + excel_merkez_kart + 
+                          excel_merkez_cari + excel_merkez_sanal_pos + excel_merkez_havale)
+    gun_ozeti['merkez_satis_toplam'] = merkez_satis_toplam  # Debug için
+    gun_ozeti['gelir'] = gun_ozeti['gelir'] + merkez_satis_toplam
+    gun_ozeti['net'] = gun_ozeti['gelir'] - gun_ozeti['gider']
     
     # Servis ve Merkez Satış kasaları için Nakit, Kredi Kartı ve M.Havale toplamları
     servis_merkez_qs = qs.filter(kasa_adi__in=['servis', 'merkez-satis'])
@@ -561,9 +578,9 @@ def products(request):
     servis_merkez_kredi_gider = servis_merkez_qs.filter(hareket_tipi='gider').aggregate(total=Sum('kredi_karti', default=0))['total'] or 0
     servis_merkez_kredi_net = servis_merkez_kredi_gelir - servis_merkez_kredi_gider
     
-    # M.Havale toplamları (Excel Merkez havale tutarlarını da ekle)
+    # M.Havale toplamları (Excel'den gelen M.HAVALE tutarlarını ekle - tüm kategoriler)
     servis_merkez_mhavale_gelir = servis_merkez_qs.filter(hareket_tipi='gelir').aggregate(total=Sum('mehmet_havale', default=0))['total'] or 0
-    servis_merkez_mhavale_gelir += excel_merkez_havale  # Excel'den gelen merkez havale tutarlarını ekle
+    servis_merkez_mhavale_gelir += excel_mhavale  # Excel'den gelen tüm kategorilerdeki M.HAVALE tutarlarını ekle
     servis_merkez_mhavale_gider = servis_merkez_qs.filter(hareket_tipi='gider').aggregate(total=Sum('mehmet_havale', default=0))['total'] or 0
     servis_merkez_mhavale_net = servis_merkez_mhavale_gelir - servis_merkez_mhavale_gider
     
@@ -606,8 +623,8 @@ def products(request):
         Q(kategori__icontains='hizmet') | Q(kategori__icontains='HİZMET')
     ).aggregate(total=Sum('tutar', default=0))['total'] or 0
     
-    # Toplam (Nakit + Kredi Kartı + Cari + Sanal Pos + M.Havale + Banka Havale + Çanta Çıkış + Excel Hizmet)
-    servis_merkez_toplam_gelir = servis_merkez_nakit_gelir + servis_merkez_kredi_gelir + servis_merkez_cari_gelir + servis_merkez_sanal_pos_gelir + servis_merkez_mhavale_gelir + servis_merkez_banka_havale_gelir + servis_merkez_canta_cikis_gelir + excel_servis_toplam
+    # Toplam (Nakit + Kredi Kartı + Cari + Sanal Pos + M.Havale + Banka Havale + Çanta Çıkış + Excel Hizmet + Excel Merkez Satış)
+    servis_merkez_toplam_gelir = servis_merkez_nakit_gelir + servis_merkez_kredi_gelir + servis_merkez_cari_gelir + servis_merkez_sanal_pos_gelir + servis_merkez_mhavale_gelir + servis_merkez_banka_havale_gelir + servis_merkez_canta_cikis_gelir + excel_servis_toplam + merkez_satis_toplam
     servis_merkez_toplam_gider = servis_merkez_nakit_gider + servis_merkez_kredi_gider + servis_merkez_cari_gider + servis_merkez_sanal_pos_gider + servis_merkez_mhavale_gider + servis_merkez_canta_cikis_gider  # Banka Havale gider dahil değil
     servis_merkez_toplam_net = servis_merkez_toplam_gelir - servis_merkez_toplam_gider
     
@@ -859,6 +876,9 @@ def products(request):
         'debug_gunluk_excel_keys': list(gunluk_excel_sorted.keys()),
         'debug_toplam_dosya': len(dosyalar),
         'excel_odeme_toplamlari': excel_odeme_toplamlari,
+        'debug_merkez_satis_toplam': merkez_satis_toplam,
+        'debug_excel_merkez_nakit': excel_merkez_nakit_toplam,
+        'debug_excel_merkez_kart': excel_merkez_kart,
     }
     return render(request, 'dashboard/products.html', context)
 
@@ -4201,6 +4221,13 @@ def cikma_lastik_duzenle(request, lastik_id):
     
     if request.method == 'POST':
         try:
+            # Eski ödeme seçeneklerini sakla (Transaction oluşturmak için)
+            eski_cari = lastik.cari
+            eski_mehmet_havale = lastik.mehmet_havale
+            eski_canta = lastik.canta
+            eski_satis_fiyati = lastik.satis_fiyati
+            eski_durum = lastik.durum
+            
             # Form verilerini al ve güncelle
             lastik.marka = request.POST.get('marka', lastik.marka)
             lastik.model = request.POST.get('model', lastik.model)
@@ -4252,6 +4279,38 @@ def cikma_lastik_duzenle(request, lastik_id):
                 lastik.mehmet_havale = request.POST.get('mehmet_havale') == 'on'
                 lastik.canta = request.POST.get('canta') == 'on'
                 lastik.cari = request.POST.get('cari') == 'on'
+                
+                # Eğer Cari kapatılıp Mehmet Havale veya Çanta seçildiyse Transaction oluştur
+                if eski_durum == 'satildi' and eski_cari and not lastik.cari:
+                    if (lastik.mehmet_havale or lastik.canta) and lastik.satis_fiyati:
+                        # Transaction oluştur
+                        from .models import Transaction
+                        
+                        # Açıklama oluştur
+                        aciklama = f"Çıkma Lastik Satışı - {lastik.marka}"
+                        if lastik.model:
+                            aciklama += f" {lastik.model}"
+                        aciklama += f" {lastik.ebat} ({lastik.adet} adet)"
+                        if lastik.musteri_adi:
+                            aciklama += f" - {lastik.musteri_adi}"
+                        
+                        # Transaction oluştur
+                        transaction = Transaction(
+                            created_by=request.user,
+                            tarih=lastik.satis_tarihi or timezone.now().date(),
+                            hareket_tipi='gelir',
+                            kasa_adi='cikma-lastik',
+                            aciklama=aciklama,
+                            mehmet_havale=lastik.satis_fiyati if lastik.mehmet_havale else Decimal('0'),
+                            canta_cikis=lastik.satis_fiyati if lastik.canta else Decimal('0'),
+                            nakit=Decimal('0'),
+                            kredi_karti=Decimal('0'),
+                            cari=Decimal('0'),
+                            sanal_pos=Decimal('0'),
+                            banka_havale=Decimal('0'),
+                        )
+                        transaction.save()
+                        messages.success(request, 'Ödeme kaydı oluşturuldu ve işlem sayfalarında görünecek!')
             else:
                 # Depolandı durumunda satış bilgilerini temizle
                 lastik.satis_fiyati = None

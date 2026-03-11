@@ -404,9 +404,9 @@
                         </td>
                         <td><code style="font-size: 1.1em; font-weight: 600;">{{ lastik.ebat }}</code></td>
                         <td>
-                            <strong>{{ lastik.marka }}</strong>
+                            <strong class="{% if lastik.cari %}text-danger{% endif %}">{{ lastik.marka }}</strong>
                             {% if lastik.model %}
-                                <br><small class="text-muted">{{ lastik.model }}</small>
+                                <br><small class="{% if lastik.cari %}text-danger{% else %}text-muted{% endif %}">{{ lastik.model }}</small>
                             {% endif %}
                         </td>
                         <td class="text-center">
@@ -493,9 +493,9 @@
                 <div class="lastik-card-header">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <strong class="text-success">{{ lastik.marka }}</strong>
+                            <strong class="{% if lastik.cari %}text-danger{% else %}text-success{% endif %}">{{ lastik.marka }}</strong>
                             {% if lastik.model %}
-                                <small class="text-muted d-block">{{ lastik.model }}</small>
+                                <small class="{% if lastik.cari %}text-danger{% else %}text-muted{% endif %} d-block">{{ lastik.model }}</small>
                             {% endif %}
                         </div>
                         <div class="text-end">
@@ -695,10 +695,12 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <strong>Marka/Model:</strong><br>
+                                <span class="{% if lastik.cari %}text-danger{% endif %}">
                                 {{ lastik.marka }}
                                 {% if lastik.model %}
-                                    <small class="text-muted">{{ lastik.model }}</small>
+                                    <small class="{% if lastik.cari %}text-danger{% else %}text-muted{% endif %}">{{ lastik.model }}</small>
                                 {% endif %}
+                                </span>
                             </div>
                             <div class="col-md-6">
                                 <strong>Ebat:</strong><br>

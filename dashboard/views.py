@@ -376,9 +376,12 @@ def products(request):
     
     # Excel hizmet tutarlarını ödeme şekline göre dağıt
     # Nakit hesaplamasından vade içeren kayıtları (GÜN) hariç tut
+    # NAKİT (Türkçe İ) - Excel'de "NAKİT" yazılırsa eşleşsin
     excel_nakit = excel_hizmet_hareketler.filter(
         Q(odeme_sekli__icontains='nakit') |
-        Q(odeme_sekli__iexact='nakit')
+        Q(odeme_sekli__icontains='NAKİT') |
+        Q(odeme_sekli__iexact='nakit') |
+        Q(odeme_sekli__iexact='NAKİT')
     ).exclude(
         Q(odeme_sekli__icontains='gün') |
         Q(odeme_sekli__iregex=r'\d+\s*gün') |
@@ -424,7 +427,9 @@ def products(request):
     excel_havale = excel_hizmet_hareketler.filter(
         Q(odeme_sekli__icontains='havale') |
         Q(odeme_sekli__iexact='havale') |
-        Q(odeme_sekli__icontains='garanti havale')
+        Q(odeme_sekli__icontains='garanti havale') |
+        Q(odeme_sekli__icontains='GARANTİ') |
+        Q(odeme_sekli__icontains='garantı')
     ).exclude(
         Q(odeme_sekli__icontains='m.havale') |
         Q(odeme_sekli__icontains='m havale') |
@@ -467,8 +472,12 @@ def products(request):
     )
     
     # Merkez Satış nakit hesaplamasından vade içeren kayıtları (GÜN) hariç tut
+    # NAKİT (Türkçe İ) için icontains ekle - Excel'de "NAKİT" yazılırsa eşleşsin
     excel_merkez_nakit = excel_merkez_hareketler.filter(
-        odeme_sekli__icontains='nakit'
+        Q(odeme_sekli__icontains='nakit') |
+        Q(odeme_sekli__icontains='NAKİT') |
+        Q(odeme_sekli__iexact='nakit') |
+        Q(odeme_sekli__iexact='NAKİT')
     ).exclude(
         Q(odeme_sekli__icontains='gün') |
         Q(odeme_sekli__iregex=r'\d+\s*gün') |
@@ -501,10 +510,8 @@ def products(request):
         Q(odeme_sekli__icontains='sanalpos')
     ).aggregate(total=Sum('tutar', default=0))['total'] or 0
     
-    excel_merkez_havale = excel_merkez_hareketler.filter(
-        Q(odeme_sekli__icontains='havale') |
-        Q(odeme_sekli__icontains='garanti havale')
-    ).exclude(
+    # M.Havale: sadece m.havale, m havale, mhavale, mehmet havale, M.HAVALE kalıpları (merkez)
+    excel_merkez_mhavale = excel_merkez_hareketler.filter(
         Q(odeme_sekli__icontains='m.havale') |
         Q(odeme_sekli__icontains='m havale') |
         Q(odeme_sekli__icontains='mhavale') |
@@ -512,10 +519,30 @@ def products(request):
         Q(odeme_sekli__iexact='M.HAVALE')
     ).aggregate(total=Sum('tutar', default=0))['total'] or 0
     
+    # Garanti/Banka Havale: garanti havale, GARANTİ HAVALE (Türkçe İ), banka havale, toplam havale, b.havale, b havale kalıpları (merkez)
+    excel_merkez_garanti_havale = excel_merkez_hareketler.filter(
+        Q(odeme_sekli__icontains='garanti havale') |
+        Q(odeme_sekli__icontains='GARANTİ') |
+        Q(odeme_sekli__icontains='garantı') |
+        Q(odeme_sekli__icontains='banka havale') |
+        Q(odeme_sekli__icontains='toplam havale') |
+        Q(odeme_sekli__icontains='b.havale') |
+        Q(odeme_sekli__icontains='b havale') |
+        Q(odeme_sekli__icontains='garantihavale') |
+        Q(odeme_sekli__icontains='bankahavale')
+    ).aggregate(total=Sum('tutar', default=0))['total'] or 0
+    
+    # Toplam (debug dict için)
+    excel_merkez_havale = excel_merkez_mhavale + excel_merkez_garanti_havale
+    
     # Hizmet olmayan kategorilerdeki diğer ödeme şekilleri (belirtilmemiş olanlar)
     # Ancak vade içeren kayıtları (GÜN) hariç tut
+    # NAKİT (Türkçe İ) hariç - nakit/diger çift sayımını önle
     excel_merkez_diger = excel_merkez_hareketler.exclude(
-        odeme_sekli__icontains='nakit'
+        Q(odeme_sekli__icontains='nakit') |
+        Q(odeme_sekli__icontains='NAKİT') |
+        Q(odeme_sekli__iexact='nakit') |
+        Q(odeme_sekli__iexact='NAKİT')
     ).exclude(
         Q(odeme_sekli__icontains='kart') | 
         Q(odeme_sekli__icontains='pos') |
@@ -553,7 +580,7 @@ def products(request):
     gun_ozeti['cari_toplam'] = (gelir_cari - gider_cari) + excel_cari  # Sadece hizmet cari tutarları (net)
     gun_ozeti['sanal_pos_toplam'] = (gelir_sanal_pos - gider_sanal_pos) + excel_sanal_pos  # Transaction + hizmet sanal pos tutarları (net)
     gun_ozeti['mehmet_havale_toplam'] = (gelir_mehmet_havale - gider_mehmet_havale) + excel_mhavale  # Transaction + tüm kategorilerdeki M.HAVALE tutarları (net)
-    gun_ozeti['banka_havale_toplam'] = gelir_banka_havale - gider_banka_havale  # Net
+    gun_ozeti['banka_havale_toplam'] = (gelir_banka_havale - gider_banka_havale) + excel_havale  # Transaction + Excel hizmet Garanti/Banka Havale
     gun_ozeti['canta_cikis_toplam'] = gelir_canta_cikis - gider_canta_cikis  # Net
     
     # Merkez Satış toplamını hesapla ve Toplam Gelir'e ekle
@@ -566,9 +593,9 @@ def products(request):
     # Servis ve Merkez Satış kasaları için Nakit, Kredi Kartı ve M.Havale toplamları
     servis_merkez_qs = qs.filter(kasa_adi__in=['servis', 'merkez-satis'])
     
-    # Nakit toplamları (Excel Merkez nakit tutarlarını da ekle)
+    # Nakit toplamları (Excel Merkez nakit + diğer tutarlarını ekle)
     servis_merkez_nakit_gelir = servis_merkez_qs.filter(hareket_tipi='gelir').aggregate(total=Sum('nakit', default=0))['total'] or 0
-    servis_merkez_nakit_gelir += excel_merkez_nakit  # Excel'den gelen merkez nakit tutarlarını ekle
+    servis_merkez_nakit_gelir += excel_merkez_nakit_toplam  # excel_merkez_nakit + excel_merkez_diger (diger: belirtilmemiş, NAKİT hariç)
     servis_merkez_nakit_gider = servis_merkez_qs.filter(hareket_tipi='gider').aggregate(total=Sum('nakit', default=0))['total'] or 0
     servis_merkez_nakit_net = servis_merkez_nakit_gelir - servis_merkez_nakit_gider
     
@@ -598,7 +625,7 @@ def products(request):
     
     # Banka Havale toplamları (Excel Merkez banka havale tutarlarını da ekle)
     servis_merkez_banka_havale_gelir = servis_merkez_qs.filter(hareket_tipi='gelir').aggregate(total=Sum('banka_havale', default=0))['total'] or 0
-    servis_merkez_banka_havale_gelir += excel_merkez_havale  # Excel'den gelen merkez banka havale tutarlarını ekle
+    servis_merkez_banka_havale_gelir += excel_merkez_garanti_havale  # Excel'den gelen merkez garanti/banka havale tutarlarını ekle
     servis_merkez_banka_havale_gider = 0  # Banka Havale gider gösterilmiyor
     servis_merkez_banka_havale_net = servis_merkez_banka_havale_gelir - servis_merkez_banka_havale_gider
     
@@ -623,8 +650,9 @@ def products(request):
         Q(kategori__icontains='hizmet') | Q(kategori__icontains='HİZMET')
     ).aggregate(total=Sum('tutar', default=0))['total'] or 0
     
-    # Toplam (Nakit + Kredi Kartı + Cari + Sanal Pos + M.Havale + Banka Havale + Çanta Çıkış + Excel Hizmet + Excel Merkez Satış)
-    servis_merkez_toplam_gelir = servis_merkez_nakit_gelir + servis_merkez_kredi_gelir + servis_merkez_cari_gelir + servis_merkez_sanal_pos_gelir + servis_merkez_mhavale_gelir + servis_merkez_banka_havale_gelir + servis_merkez_canta_cikis_gelir + excel_servis_toplam + merkez_satis_toplam
+    # Toplam (Nakit + Kredi Kartı + Cari + Sanal Pos + M.Havale + Banka Havale + Çanta Çıkış + Excel Hizmet)
+    # NOT: merkez_satis_toplam eklenmez - Excel merkez tutarları zaten servis_merkez_*_gelir değişkenlerine eklendi (çift sayım önlendi)
+    servis_merkez_toplam_gelir = servis_merkez_nakit_gelir + servis_merkez_kredi_gelir + servis_merkez_cari_gelir + servis_merkez_sanal_pos_gelir + servis_merkez_mhavale_gelir + servis_merkez_banka_havale_gelir + servis_merkez_canta_cikis_gelir + excel_servis_toplam
     servis_merkez_toplam_gider = servis_merkez_nakit_gider + servis_merkez_kredi_gider + servis_merkez_cari_gider + servis_merkez_sanal_pos_gider + servis_merkez_mhavale_gider + servis_merkez_canta_cikis_gider  # Banka Havale gider dahil değil
     servis_merkez_toplam_net = servis_merkez_toplam_gelir - servis_merkez_toplam_gider
     
@@ -644,6 +672,8 @@ def products(request):
             'excel_merkez_kart': excel_merkez_kart,
             'excel_merkez_cari': excel_merkez_cari,
             'excel_merkez_havale': excel_merkez_havale,
+            'excel_merkez_mhavale': excel_merkez_mhavale,
+            'excel_merkez_garanti_havale': excel_merkez_garanti_havale,
         }
     }
 
@@ -757,12 +787,15 @@ def products(request):
               odeme_sekli_original.upper() == 'SANAL POS'):
             excel_odeme_dict['Sanal_Pos'] += amount
         # Banka Havale kontrolü (Mehmet Havale'den önce kontrol edilmeli)
+        # GARANTİ HAVALE: Türkçe İ karakteri için normalize + orijinal kontrol
         elif ('banka' in odeme_sekli_normalized or 
               'bankahavale' in odeme_sekli_normalized or
               'bhavale' in odeme_sekli_normalized or
               'garanti' in odeme_sekli_normalized or
               'garantihavale' in odeme_sekli_normalized or
-              odeme_sekli_original.lower() in ['b.havale', 'b havale', 'bhavale', 'banka havale', 'banka havalesi', 'garanti havale']):
+              'GARANTİ' in (odeme_sekli_original or '') or
+              'garantı' in odeme_sekli_normalized or
+              odeme_sekli_original.replace('İ', 'i').replace('I', 'ı').lower() in ['b.havale', 'b havale', 'bhavale', 'banka havale', 'banka havalesi', 'garanti havale', 'toplam havale']):
             excel_odeme_dict['Banka_Havale'] += amount
         # Mehmet Havale kontrolü
         elif ('mehmet' in odeme_sekli_normalized or 
@@ -3704,6 +3737,16 @@ def malzeme_excel_upload(request):
         form = MalzemeExcelUploadForm()
     return render(request, 'dashboard/malzeme_excel_upload.html', {'form': form})
 
+def _safe_print(*args, **kwargs):
+    """Windows charmap encoding hatasını önlemek için güvenli print (₺ vb. Unicode karakterler için)"""
+    import sys
+    s = ' '.join(str(a) for a in args)
+    try:
+        print(*args, **kwargs)
+    except UnicodeEncodeError:
+        sys.stdout.buffer.write((s + '\n').encode('utf-8', errors='replace'))
+
+
 @csrf_exempt
 @login_required
 def malzeme_excel_kaydet(request):
@@ -3719,13 +3762,13 @@ def malzeme_excel_kaydet(request):
         filename = data.get('filename')
         rows = data.get('rows', [])
         
-        # Debug: Gelen veriyi kontrol et
-        print(f"Gelen dosya: {filename}")
-        print(f"Gelen satır sayısı: {len(rows)}")
-        print(f"Request body boyutu: {len(request.body)} bytes")
+        # Debug: Gelen veriyi kontrol et (Unicode güvenli)
+        _safe_print(f"Gelen dosya: {filename}")
+        _safe_print(f"Gelen satır sayısı: {len(rows)}")
+        _safe_print(f"Request body boyutu: {len(request.body)} bytes")
         if rows:
-            print(f"İlk satır örneği: {rows[0]}")
-            print(f"İlk satır keys: {list(rows[0].keys()) if isinstance(rows[0], dict) else 'Not dict'}")
+            _safe_print(f"İlk satır örneği: {rows[0]}")
+            _safe_print(f"İlk satır keys: {list(rows[0].keys()) if isinstance(rows[0], dict) else 'Not dict'}")
         
         if not filename:
             return JsonResponse({'success': False, 'error': 'Dosya adı eksik.'}, status=400)
@@ -3735,18 +3778,18 @@ def malzeme_excel_kaydet(request):
             return JsonResponse({'success': False, 'error': 'Excel dosyasında veri bulunamadı.'}, status=400)
             
         dosya = MalzemeDosya.objects.create(dosya_adi=filename, kullanici=request.user)
-        print(f"Dosya oluşturuldu: ID={dosya.id}")
+        _safe_print(f"Dosya oluşturuldu: ID={dosya.id}")
         
         eklenen = 0
         hatalar = []
         
         for i, row in enumerate(rows):
             try:
-                # Debug: Satır verilerini kontrol et
-                print(f"Satır {i+1}: {row}")
+                # Debug: Satır verilerini kontrol et (Unicode güvenli)
+                _safe_print(f"Satır {i+1}: {row}")
                 
                 if not row or not isinstance(row, dict):
-                    print(f"Satır {i+1} geçersiz: {row}")
+                    _safe_print(f"Satır {i+1} geçersiz: {row}")
                     continue
                 
                 # Tarih işleme - daha esnek
@@ -3777,12 +3820,12 @@ def malzeme_excel_kaydet(request):
                             # Excel serial date
                             tarih = datetime.fromordinal(date(1900,1,1).toordinal() + int(tarih_raw) - 2).date()
                     except Exception as e:
-                        print(f"Tarih parse hatası: {e}, raw: {tarih_raw}")
+                        _safe_print(f"Tarih parse hatası: {e}, raw: {tarih_raw}")
                         tarih = date.today()
                 
                 # Tüm sütun adlarını kontrol et ve esnek eşleştirme yap
                 row_keys = list(row.keys())
-                print(f"Satır {i+1} sütunları: {row_keys}")
+                _safe_print(f"Satır {i+1} sütunları: {row_keys}")
                 
                 # Esnek sütun eşleştirmesi - daha geniş arama
                 faturano = ''
@@ -3842,7 +3885,7 @@ def malzeme_excel_kaydet(request):
                 
                 tutar = parse_decimal_value(tutar_raw)
                 
-                print(f"İşlenmiş veri: TARİH={tarih}, FATURANO='{faturano}', MÜŞTERİ='{musteri}', ÜRÜN='{urun}', TUTAR={tutar}, ÖDEME='{odeme_sekli}'")
+                _safe_print(f"İşlenmiş veri: TARİH={tarih}, FATURANO='{faturano}', MÜŞTERİ='{musteri}', ÜRÜN='{urun}', TUTAR={tutar}, ÖDEME='{odeme_sekli}'")
                 
                 # Daha esnek kontrol - en az bir anlamlı veri olsun
                 has_meaningful_data = any([
@@ -3854,7 +3897,7 @@ def malzeme_excel_kaydet(request):
                 ])
                 
                 if not has_meaningful_data:
-                    print(f"Satır {i+1} anlamlı veri yok, atlanıyor")
+                    _safe_print(f"Satır {i+1} anlamlı veri yok, atlanıyor")
                     continue
                 
                 # Kayıt oluştur - boş alanları varsayılan değerlerle doldur
@@ -3871,21 +3914,21 @@ def malzeme_excel_kaydet(request):
                         ref=(ref or '')[:100],
                         kullanici=request.user,
                     )
-                    print(f"Kayıt başarılı: ID={hareket.id}")
+                    _safe_print(f"Kayıt başarılı: ID={hareket.id}")
                     eklenen += 1
                 except Exception as db_error:
                     error_msg = f"Satır {i+1} DB hatası: {db_error}"
-                    print(error_msg)
+                    _safe_print(error_msg)
                     hatalar.append(error_msg)
                     continue
                 
             except Exception as e:
                 error_msg = f"Satır {i+1} işlem hatası: {e}"
-                print(error_msg)
+                _safe_print(error_msg)
                 hatalar.append(error_msg)
                 continue
-        print(f"Toplam eklenen kayıt: {eklenen}")
-        print(f"Toplam hata sayısı: {len(hatalar)}")
+        _safe_print(f"Toplam eklenen kayıt: {eklenen}")
+        _safe_print(f"Toplam hata sayısı: {len(hatalar)}")
         
         if eklenen == 0:
             error_detail = f"Hiçbir kayıt eklenemedi. Toplam {len(rows)} satır işlendi."
@@ -3901,9 +3944,13 @@ def malzeme_excel_kaydet(request):
         
         return JsonResponse(result)
     except Exception as e:
-        print(f"Genel hata: {e}")
+        _safe_print(f"Genel hata: {e}")
         import traceback
-        traceback.print_exc()
+        import sys
+        try:
+            traceback.print_exc()
+        except UnicodeEncodeError:
+            sys.stderr.buffer.write(traceback.format_exc().encode('utf-8', errors='replace'))
         return JsonResponse({'success': False, 'error': f'Sunucu hatası: {str(e)}'}, status=500)
 
 def health_check(request):
@@ -4810,8 +4857,11 @@ def get_excel_hizmet_transactions(user, **filters):
         elif 'sanal' in odeme_sekli:
             sanal_pos = hareket.tutar
         elif 'havale' in odeme_sekli:
-            # M.HAVALE, M HAVALE, MEHMET HAVALE kontrolü
-            if any(x in odeme_sekli for x in ['m.havale', 'm havale', 'mhavale', 'mehmet havale', 'garanti']):
+            # Garanti/Banka Havale (M.Havale'den önce kontrol edilmeli)
+            if any(x in odeme_sekli for x in ['garanti', 'garantı', 'GARANTİ', 'banka', 'b.havale', 'b havale', 'toplam havale']):
+                banka_havale = hareket.tutar
+            # M.HAVALE, M HAVALE, MEHMET HAVALE
+            elif any(x in odeme_sekli for x in ['m.havale', 'm havale', 'mhavale', 'mehmet havale']):
                 mehmet_havale = hareket.tutar
             else:
                 banka_havale = hareket.tutar

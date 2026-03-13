@@ -590,8 +590,8 @@ def products(request):
     gun_ozeti['gelir'] = gun_ozeti['gelir'] + merkez_satis_toplam
     gun_ozeti['net'] = gun_ozeti['gelir'] - gun_ozeti['gider']
     
-    # Servis ve Merkez Satış kasaları için Nakit, Kredi Kartı ve M.Havale toplamları
-    servis_merkez_qs = qs.filter(kasa_adi__in=['servis', 'merkez-satis'])
+    # Servis, Merkez Satış ve Çıkma Lastik kasaları için Nakit, Kredi Kartı ve M.Havale toplamları
+    servis_merkez_qs = qs.filter(kasa_adi__in=['servis', 'merkez-satis', 'cikma-lastik'])
     
     # Nakit toplamları (Excel Merkez nakit + diğer tutarlarını ekle)
     servis_merkez_nakit_gelir = servis_merkez_qs.filter(hareket_tipi='gelir').aggregate(total=Sum('nakit', default=0))['total'] or 0

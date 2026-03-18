@@ -1658,8 +1658,8 @@ def messages_view(request):
     for row in kasa_ozet:
         kasa = row['kasa_adi']
         net = float(row['net'] or 0)
-        # Virman kasasını listeden hariç tut
-        if kasa != 'virman':
+        # Virman ve Çıkma Lastik kasalarını listeden hariç tut
+        if kasa not in ('virman', 'cikma-lastik'):
             rows.append({'kasa_adi': kasa, 'bakiye': net})
         if kasa == 'canta':
             canta_toplam = net
@@ -1744,10 +1744,12 @@ def messages_view(request):
     if end_date:
         excel_lastik_nakit_qs = excel_lastik_nakit_qs.filter(tarih__lte=end_date)
     
-    # LASTİK veya HİZMET kategorisi ve NAKİT ödeme şekli olanları filtrele
+    # LASTİK, HİZMET, JANT veya AKÜ kategorisi ve NAKİT ödeme şekli olanları filtrele
     excel_lastik_nakit_qs = excel_lastik_nakit_qs.filter(
         Q(kategori__icontains='LASTİK') | Q(kategori__icontains='LASTIK') |
-        Q(kategori__icontains='HİZMET') | Q(kategori__icontains='HIZMET')
+        Q(kategori__icontains='HİZMET') | Q(kategori__icontains='HIZMET') |
+        Q(kategori__icontains='JANT') |
+        Q(kategori__icontains='AKÜ') | Q(kategori__icontains='AKU')
     ).filter(
         Q(odeme_sekli__icontains='NAKİT') | Q(odeme_sekli__icontains='NAKIT')
     )

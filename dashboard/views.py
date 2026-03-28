@@ -3862,6 +3862,14 @@ def malzeme_excel_kaydet(request):
                         kategori = str(val).strip() if val is not None else ''
                         break
                 
+                marka = ''
+                for key in row_keys:
+                    key_upper = key.upper().strip()
+                    if any(x in key_upper for x in ['MARKA', 'BRAND', 'MAKE']):
+                        val = row[key]
+                        marka = str(val).strip() if val is not None else ''
+                        break
+                
                 tutar_raw = 0
                 for key in row_keys:
                     key_upper = key.upper().strip()
@@ -3909,7 +3917,8 @@ def malzeme_excel_kaydet(request):
                         tarih=tarih,
                         faturano=(faturano or f'AUTO-{i+1}')[:100],  # Boşsa otomatik numara
                         musteri=(musteri or 'Belirtilmemiş')[:255],
-                        kategori=(kategori or '')[:255],  # Kategori alanı eklendi
+                        kategori=(kategori or '')[:255],
+                        marka=(marka or '')[:255],
                         urun=(urun or 'Belirtilmemiş')[:255],
                         tutar=tutar,
                         odeme_sekli=(odeme_sekli or 'Belirtilmemiş')[:100],

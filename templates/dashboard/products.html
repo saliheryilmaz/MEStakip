@@ -502,6 +502,7 @@
                                                 <th>Fatura No</th>
                                                 <th>Müşteri</th>
                                                 <th>Kategori</th>
+                                                <th>Marka</th>
                                                 <th>Ürün</th>
                                                 <th>Tutar</th>
                                                 <th>Ödeme Şekli</th>
@@ -532,6 +533,7 @@
                                                     <span class="text-muted">-</span>
                                                     {% endif %}
                                                 </td>
+                                                <td>{{ satir.marka|default:"-" }}</td>
                                                 <td>{{ satir.urun|truncatechars:30 }}</td>
                                                 <td>
                                                     <span class="text-warning fw-bold">{{ satir.tutar|turkish_lira }}</span>

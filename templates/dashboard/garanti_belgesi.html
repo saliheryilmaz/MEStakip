@@ -167,7 +167,7 @@
             border: 1px solid #333;
             padding: 8px;
             vertical-align: top;
-            min-height: 60px;
+            height: 120px;
         }
         
         .signature-box:first-child {
@@ -176,9 +176,17 @@
         
         .signature-label {
             font-weight: bold;
-            margin-bottom: 35px;
             display: block;
             font-size: 7.5pt;
+            margin-bottom: 4px;
+        }
+        
+        .signature-box img {
+            display: block;
+            width: 100%;
+            height: 90px;
+            object-fit: contain;
+            object-position: left center;
         }
         
         .text-center {
@@ -372,6 +380,8 @@
                 <li>Garanti, yalnızca ürünü satın alan müşteri için geçerlidir ve devredilemez.</li>
                 
                 <li>Garanti belgesi ibraz edilmeden işlem yapılmaz.</li>
+                
+                <li>Bu belge <span class="warranty-highlight">MESLAS OTOMOTİV</span> tarafından verilmektedir. İlgili ürünün garanti süreci, öncelikli olarak firmamızda incelenmek üzere yürütülmektedir. Ürünle ilgili şikayet ve taleplerinizi ilk olarak firmamıza bildirmeniz önemle rica olunur.</li>
             </ol>
         </div>
 
@@ -389,6 +399,7 @@
         <div class="signature-section">
             <div class="signature-box">
                 <span class="signature-label">Satıcı Firma Kaşe & İmza:</span>
+                <img src="{% static 'images/Kase1.png' %}" alt="Kaşe">
             </div>
             <div class="signature-box" style="margin-left: 4%;">
                 <span class="signature-label">Müşteri İmza:</span>

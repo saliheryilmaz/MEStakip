@@ -416,6 +416,7 @@
             { source: "FATURANO", label: "FATURANO" },
             { source: "MÜŞTERİ", label: "MÜŞTERİ" },
             { source: "KATEGORİ", label: "KATEGORİ" },
+            { source: "MARKA", label: "MARKA" },
             { source: "ÜRÜN", label: "ÜRÜN" },
             { source: "TUTAR", label: "TUTAR" },
             { source: "ÖDEME PLANI", label: "ÖDEME PLANI" },
@@ -612,6 +613,8 @@
                                 normalizedKey = 'MÜŞTERİ';
                             } else if (normalizedKey.includes('KATEGORİ') || normalizedKey.includes('KATEGORI')) {
                                 normalizedKey = 'KATEGORİ';
+                            } else if (normalizedKey === 'MARKA' || normalizedKey.includes('MARKA') || normalizedKey.includes('BRAND')) {
+                                normalizedKey = 'MARKA';
                             } else if (normalizedKey.includes('ÜRÜN') || normalizedKey.includes('URUN')) {
                                 normalizedKey = 'ÜRÜN';
                             } else if (normalizedKey === 'TUTAR' || normalizedKey === 'MIKTAR') {

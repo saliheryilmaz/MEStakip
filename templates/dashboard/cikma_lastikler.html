@@ -125,6 +125,26 @@
         margin-top: auto;
     }
     
+    /* Mobilde modal tam ekran + footer her zaman görünür */
+    @media (max-width: 575.98px) {
+        .modal-fullscreen-sm-down .modal-content {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        .modal-fullscreen-sm-down .modal-body {
+            flex: 1 1 auto;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .modal-fullscreen-sm-down .modal-footer {
+            flex-shrink: 0;
+            position: sticky;
+            bottom: 0;
+            z-index: 10;
+        }
+    }
+    
     .modal-footer .btn {
         font-size: 0.95rem;
         padding: 11px 18px;
@@ -164,6 +184,9 @@
     .modal-footer .btn-success:active {
         transform: scale(0.98);
         box-shadow: 0 1px 4px rgba(40, 167, 69, 0.3);
+    }
+    @media (min-width: 576px) {
+        .w-sm-auto { width: auto !important; }
     }
     
     /* Input animasyonları */
@@ -649,6 +672,10 @@
                                         data-edit-url="{% url 'dashboard:cikma_lastik_duzenle' lastik.id %}">
                                     <i class="bi bi-pencil"></i>
                                 </button>
+                                <button type="button" class="btn btn-secondary btn-sm" title="Yazdır"
+                                        onclick="yazdir({{ lastik.id }}, '{{ lastik.ebat|escapejs }}', '{{ lastik.marka|escapejs }}', '{{ lastik.model|default:''|escapejs }}', '{{ lastik.get_mevsim_display|escapejs }}', '{{ lastik.aciklama|default:''|escapejs }}', '{{ lastik.diş_derinligi|default:''|escapejs }}')">
+                                    <i class="bi bi-printer"></i>
+                                </button>
                                 <button type="button" class="btn btn-danger btn-sm" title="Sil" 
                                         data-delete-url="{% url 'dashboard:cikma_lastik_sil' lastik.id %}"
                                         data-confirm-message="Bu kaydı silmek istediğinizden emin misiniz?">
@@ -746,6 +773,10 @@
                         <button type="button" class="btn btn-warning btn-sm"
                                 data-edit-url="{% url 'dashboard:cikma_lastik_duzenle' lastik.id %}">
                             <i class="bi bi-pencil"></i> Düzenle
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm"
+                                onclick="yazdir({{ lastik.id }}, '{{ lastik.ebat|escapejs }}', '{{ lastik.marka|escapejs }}', '{{ lastik.model|default:''|escapejs }}', '{{ lastik.get_mevsim_display|escapejs }}', '{{ lastik.aciklama|default:''|escapejs }}', '{{ lastik.diş_derinligi|default:''|escapejs }}')">
+                            <i class="bi bi-printer"></i> Yazdır
                         </button>
                         <button type="button" class="btn btn-danger btn-sm" 
                                 data-delete-url="{% url 'dashboard:cikma_lastik_sil' lastik.id %}"
@@ -944,7 +975,7 @@
 <!-- Satış Modalları -->
 {% for lastik in cikma_lastikler %}
 <div class="modal fade" id="satisModal{{ lastik.id }}" tabindex="-1" aria-labelledby="satisModalLabel{{ lastik.id }}" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-scrollable">
+    <div class="modal-dialog modal-dialog-scrollable modal-fullscreen-sm-down">
         <div class="modal-content">
             <div class="modal-header bg-success text-white">
                 <h5 class="modal-title" id="satisModalLabel{{ lastik.id }}">
@@ -1048,8 +1079,10 @@
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <div class="modal-footer gap-2">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg me-1"></i>İptal
+                    </button>
                     <button type="submit" class="btn btn-success">
                         <i class="bi bi-check-lg me-1"></i>
                         Satışı Tamamla
@@ -1064,6 +1097,40 @@
 {% endblock %}
 
 {% block extra_js %}
+<script>
+function yazdir(id, ebat, marka, model, mevsim, aciklama, disDerinligi) {
+    var markaModel = marka + (model ? ' ' + model : '');
+    var satirlar = '<div class="satir">' + ebat + '</div>' +
+        '<div class="ayrac"></div>' +
+        '<div class="satir">' + markaModel + '</div>' +
+        '<div class="ayrac"></div>' +
+        '<div class="satir">' + mevsim + '</div>' +
+        (aciklama ? '<div class="ayrac"></div><div class="satir kucuk">' + aciklama + '</div>' : '') +
+        (disDerinligi ? '<div class="ayrac"></div><div class="satir kucuk">' + disDerinligi + ' MM</div>' : '');
+    var icerik = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Lastik Etiketi</title><style>' +
+        '*{box-sizing:border-box;margin:0;padding:0;}' +
+        'body{font-family:Arial,sans-serif;background:#fff;}' +
+        '@page{size:A4 portrait;margin:10mm;}' +
+        '.sayfa{width:100%;height:100vh;display:flex;flex-direction:column;justify-content:space-around;}' +
+        '.etiket{text-align:center;padding:20px 40px;flex:1;display:flex;flex-direction:column;justify-content:center;border:1px dashed #ccc;}' +
+        '.etiket:first-child{border-bottom:2px dashed #999;}' +
+        '.satir{font-size:38px;font-weight:bold;margin:12px 0;line-height:1.2;}' +
+        '.satir.kucuk{font-size:28px;}' +
+        '.ayrac{border-top:2px solid #ccc;margin:8px 0;}' +
+        '@media print{body{margin:0;}.sayfa{height:100vh;page-break-after:avoid;}}' +
+        '</style></head><body>' +
+        '<div class="sayfa">' +
+        '<div class="etiket">' + satirlar + '</div>' +
+        '<div class="etiket">' + satirlar + '</div>' +
+        '</div>' +
+        '</body></html>';
+    var pencere = window.open('', '_blank', 'width=700,height=900');
+    pencere.document.write(icerik);
+    pencere.document.close();
+    pencere.focus();
+    setTimeout(function() { pencere.print(); }, 300);
+}
+</script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Çıkma Lastikler sayfası yüklendi');

@@ -55,7 +55,7 @@
                     <select class="form-select" id="durum" name="durum">
                         <option value="">Tümü</option>
                         <option value="yolda" {% if filters.durum == 'yolda' %}selected{% endif %}>Yolda</option>
-                        <option value="islemde" {% if filters.durum == 'islemde' %}selected{% endif %}>İşlem Beklemede</option>
+                        <option value="islemde" {% if filters.durum == 'islemde' %}selected{% endif %}>Takıldı-Faturası gelmedi</option>
                         <option value="teslim" {% if filters.durum == 'teslim' %}selected{% endif %}>Teslim Edildi</option>
                         <option value="yolda-fatura-islendi" {% if filters.durum == 'yolda-fatura-islendi' %}selected{% endif %}>Yolda/Fatura İşlendi</option>
                         <option value="takilacak-faturasi-islendi" {% if filters.durum == 'takilacak-faturasi-islendi' %}selected{% endif %}>Takılacak/Faturası İşlendi</option>

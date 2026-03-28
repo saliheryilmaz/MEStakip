@@ -56,7 +56,7 @@ class Siparis(models.Model):
     
     DURUM_CHOICES = [
         ('yolda', 'Yolda'),
-        ('islemde', 'İşlem Beklemede'),
+        ('islemde', 'Takıldı-Faturası gelmedi'),
         ('teslim', 'Teslim Edildi'),
         ('kontrol', 'Kontrol Edildi'),
         ('iptal', 'İptal Edildi'),
@@ -658,6 +658,7 @@ class MalzemeHareketi(models.Model):
     faturano = models.CharField(max_length=100)
     musteri = models.CharField(max_length=255)
     kategori = models.CharField(max_length=255, blank=True, null=True)
+    marka = models.CharField(max_length=255, blank=True, null=True)
     urun = models.CharField(max_length=255)
     tutar = models.DecimalField(max_digits=14, decimal_places=2)
     odeme_sekli = models.CharField(max_length=100)

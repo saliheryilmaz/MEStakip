@@ -56,6 +56,7 @@ class Siparis(models.Model):
     
     DURUM_CHOICES = [
         ('yolda', 'Yolda'),
+        ('takildi-ft-islendi-islem-devam', 'Takıldı FT İşlendi / İşlem Devam..'),
         ('islemde', 'Takıldı-Faturası gelmedi'),
         ('teslim', 'Teslim Edildi'),
         ('kontrol', 'Kontrol Edildi'),
@@ -63,6 +64,7 @@ class Siparis(models.Model):
         ('yolda-fatura-islendi', 'Yolda/Fatura İşlendi'),
         ('takilacak-faturasi-islendi', 'Takılacak/Faturası İşlendi'),
         ('islemde-faturasi-islendi', 'İşlem devam ediyor/Faturası İşlendi'),
+        
     ]
     
     ODEME_CHOICES = [
@@ -167,6 +169,8 @@ class Siparis(models.Model):
             'iptal': 'danger',
             'yolda-fatura-islendi': 'danger',
             'takilacak-faturasi-islendi': 'warning',
+            'islemde-faturasi-islendi': 'info',
+            'takildi-ft-islendi-islem-devam': 'success',
         }
         return colors.get(self.durum, 'secondary')
     
@@ -751,6 +755,7 @@ class Quotation(models.Model):
     # Ek Bilgiler
     rezerve = models.BooleanField(default=False, verbose_name="Rezerve")
     proforma = models.BooleanField(default=False, verbose_name="Proforma")
+    ic_not = models.TextField(blank=True, null=True, verbose_name="İç Not")
     
     # Sistem Bilgileri
     olusturan = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='olusturulan_teklifler', verbose_name="Oluşturan")

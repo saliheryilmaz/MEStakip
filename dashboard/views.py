@@ -429,7 +429,9 @@ def products(request):
         Q(odeme_sekli__iexact='havale') |
         Q(odeme_sekli__icontains='garanti havale') |
         Q(odeme_sekli__icontains='GARANTİ') |
-        Q(odeme_sekli__icontains='garantı')
+        Q(odeme_sekli__icontains='garantı') |
+        Q(odeme_sekli__icontains='vakif') |
+        Q(odeme_sekli__icontains='vakıf')
     ).exclude(
         Q(odeme_sekli__icontains='m.havale') |
         Q(odeme_sekli__icontains='m havale') |
@@ -519,7 +521,7 @@ def products(request):
         Q(odeme_sekli__iexact='M.HAVALE')
     ).aggregate(total=Sum('tutar', default=0))['total'] or 0
     
-    # Garanti/Banka Havale: garanti havale, GARANTİ HAVALE (Türkçe İ), banka havale, toplam havale, b.havale, b havale kalıpları (merkez)
+    # Garanti/Banka Havale: garanti havale, GARANTİ HAVALE (Türkçe İ), banka havale, toplam havale, b.havale, b havale, vakif havale kalıpları (merkez)
     excel_merkez_garanti_havale = excel_merkez_hareketler.filter(
         Q(odeme_sekli__icontains='garanti havale') |
         Q(odeme_sekli__icontains='GARANTİ') |
@@ -529,7 +531,9 @@ def products(request):
         Q(odeme_sekli__icontains='b.havale') |
         Q(odeme_sekli__icontains='b havale') |
         Q(odeme_sekli__icontains='garantihavale') |
-        Q(odeme_sekli__icontains='bankahavale')
+        Q(odeme_sekli__icontains='bankahavale') |
+        Q(odeme_sekli__icontains='vakif') |
+        Q(odeme_sekli__icontains='vakıf')
     ).aggregate(total=Sum('tutar', default=0))['total'] or 0
     
     # Toplam (debug dict için)
@@ -787,7 +791,7 @@ def products(request):
               odeme_sekli_original.upper() == 'SANAL POS'):
             excel_odeme_dict['Sanal_Pos'] += amount
         # Banka Havale kontrolü (Mehmet Havale'den önce kontrol edilmeli)
-        # GARANTİ HAVALE: Türkçe İ karakteri için normalize + orijinal kontrol
+        # GARANTİ HAVALE / VAKIF HAVALE: Türkçe İ karakteri için normalize + orijinal kontrol
         elif ('banka' in odeme_sekli_normalized or 
               'bankahavale' in odeme_sekli_normalized or
               'bhavale' in odeme_sekli_normalized or
@@ -795,7 +799,11 @@ def products(request):
               'garantihavale' in odeme_sekli_normalized or
               'GARANTİ' in (odeme_sekli_original or '') or
               'garantı' in odeme_sekli_normalized or
-              odeme_sekli_original.replace('İ', 'i').replace('I', 'ı').lower() in ['b.havale', 'b havale', 'bhavale', 'banka havale', 'banka havalesi', 'garanti havale', 'toplam havale']):
+              'vakif' in odeme_sekli_normalized or
+              'vakıf' in odeme_sekli_normalized or
+              'VAKIF' in (odeme_sekli_original or '') or
+              'VAKIF HAVALE' in (odeme_sekli_original or '').upper() or
+              odeme_sekli_original.replace('İ', 'i').replace('I', 'ı').lower() in ['b.havale', 'b havale', 'bhavale', 'banka havale', 'banka havalesi', 'garanti havale', 'toplam havale', 'vakif havale', 'vakıf havale']):
             excel_odeme_dict['Banka_Havale'] += amount
         # Mehmet Havale kontrolü
         elif ('mehmet' in odeme_sekli_normalized or 
@@ -2345,6 +2353,7 @@ def update_quotation(request, quotation_id):
         quotation.genel_toplam = Decimal(str(data.get('genel_toplam', 0)))
         quotation.rezerve = data.get('rezerve', False)
         quotation.proforma = data.get('proforma', False)
+        quotation.ic_not = data.get('ic_not', '')
         quotation.save()
         
         # Mevcut ürünleri sil ve yenilerini ekle
@@ -2479,6 +2488,7 @@ def save_quotation(request):
             genel_toplam=Decimal(str(data.get('genel_toplam', 0))),
             rezerve=data.get('rezerve', False),
             proforma=data.get('proforma', False),
+            ic_not=data.get('ic_not', ''),
             olusturan=request.user
         )
         

@@ -241,6 +241,14 @@
                                     <option value="reddedildi">Reddedildi</option>
                                 </select>
                             </div>
+                            <!-- İç Not: Sadece kullanıcıya görünür, PDF/Email'e dahil edilmez -->
+                            <div class="col-md-12">
+                                <label class="form-label">
+                                    <i class="bi bi-lock me-1 text-warning"></i>İç Not
+                                    <small class="text-muted ms-1">(Sadece sizin görebileceğiniz not — PDF ve e-postada görünmez)</small>
+                                </label>
+                                <textarea class="form-control border-warning" id="icNotInput" rows="2" placeholder="Örn: Bridgestone 205/55R16 → 1.850 TL, Michelin → 2.100 TL..."></textarea>
+                            </div>
                         </div>
                     </div>
 
@@ -439,6 +447,7 @@
             durum: document.getElementById('durumSelect').value,
             rezerve: document.getElementById('reserveCheck').checked,
             proforma: document.getElementById('proformaCheck').checked,
+            ic_not: document.getElementById('icNotInput').value,
             items: []
         };
         

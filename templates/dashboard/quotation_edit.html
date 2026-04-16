@@ -99,6 +99,14 @@
                                     <option value="reddedildi" {% if quotation.durum == 'reddedildi' %}selected{% endif %}>Reddedildi</option>
                                 </select>
                             </div>
+                            <!-- İç Not: Sadece kullanıcıya görünür, PDF/Email'e dahil edilmez -->
+                            <div class="col-md-12">
+                                <label class="form-label">
+                                    <i class="bi bi-lock me-1 text-warning"></i>İç Not
+                                    <small class="text-muted ms-1">(Sadece sizin görebileceğiniz not — PDF ve e-postada görünmez)</small>
+                                </label>
+                                <textarea class="form-control border-warning" id="ic_not" rows="2" placeholder="Bu not PDF'e veya e-postaya eklenmez...">{{ quotation.ic_not|default:'' }}</textarea>
+                            </div>
                         </div>
                     </div>
 
@@ -290,6 +298,7 @@
             durum: document.getElementById('durum').value,
             rezerve: document.getElementById('rezerve').checked,
             proforma: document.getElementById('proforma').checked,
+            ic_not: document.getElementById('ic_not').value,
             items: []
         };
         
@@ -325,10 +334,7 @@
             }
         });
         
-        if (!hasValidProduct) {
-            alert('Lütfen en az bir ürün ekleyiniz!');
-            return;
-        }
+        // Ürün eklenmesi zorunlu değil, boş teklif de kaydedilebilir
         
         const grandTotal = parseFloat(document.getElementById('grandTotalAmount').textContent.replace(' TL', '')) || 0;
         const subtotal = grandTotal / 1.20;

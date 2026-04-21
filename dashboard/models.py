@@ -56,14 +56,15 @@ class Siparis(models.Model):
     
     DURUM_CHOICES = [
         ('yolda', 'Yolda'),
-        ('takildi-ft-islendi-islem-devam', 'Takıldı FT İşlendi / İşlem Devam..'),
+        ('takildi-ft-islendi-islem-devam', 'Takıldı / FT İşlendi / İşlem Devam...'),
         ('islemde', 'Takıldı-Faturası gelmedi'),
         ('teslim', 'Teslim Edildi'),
         ('kontrol', 'Kontrol Edildi'),
         ('iptal', 'İptal Edildi'),
         ('yolda-fatura-islendi', 'Yolda/Fatura İşlendi'),
         ('takilacak-faturasi-islendi', 'Takılacak/Faturası İşlendi'),
-        ('islemde-faturasi-islendi', 'İşlem devam ediyor/Faturası İşlendi'),
+        ('islemde-faturasi-islendi', 'İşlem devam.../Faturası İşlendi'),
+        
         
     ]
     

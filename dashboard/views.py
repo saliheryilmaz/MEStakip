@@ -1240,8 +1240,9 @@ def elements(request):
         When(durum='yolda-fatura-islendi', then=2),
         When(durum='islemde-faturasi-islendi', then=3),
         When(durum='islemde', then=4),
-        When(durum='yolda', then=5),
-        default=6,
+        When(durum='yolda', then=6),
+        When(durum='takildi-ft-islendi-islem-devam', then=5),
+        default=7,
         output_field=IntegerField(),
     )
     siparisler = siparisler.annotate(durum_sira=durum_sira).order_by('durum_sira', '-olusturma_tarihi')
@@ -4687,8 +4688,8 @@ def satilan_cikma_lastikler(request):
         except ValueError:
             pass
     
-    # Sıralama - en yeni satışlar üstte
-    satilan_lastikler = satilan_lastikler.order_by('-satis_tarihi', '-guncelleme_tarihi')
+    # Sıralama - önce cari olanlar (kırmızılar), sonra en yeni satışlar
+    satilan_lastikler = satilan_lastikler.order_by('-cari', '-satis_tarihi', '-guncelleme_tarihi')
     
     # Sayfalama
     paginator = Paginator(satilan_lastikler, 50)  # Sayfa başına 50 kayıt

@@ -214,6 +214,12 @@
                         <td>{{ siparis.get_odeme_display }}</td>
                         <td>
                             <div class="btn-group btn-group-sm" role="group">
+                                {% if siparis.durum != 'teslim' and siparis.durum != 'kontrol' %}
+                                <button type="button" class="btn btn-secondary btn-sm" title="Teslim Edildi"
+                                        onclick="teslimEdildi({{ siparis.id }})">
+                                    <i class="bi bi-box-seam"></i>
+                                </button>
+                                {% endif %}
                                 {% if siparis.durum != 'kontrol' %}
                                 <button type="button" class="btn btn-success btn-sm" title="Kontrol Edildi" 
                                         onclick="kontrolEdildi({{ siparis.id }})">
@@ -703,6 +709,33 @@ function kontrolEdildi(siparisId) {
                 // Başarılı mesaj göster
                 alert('Sipariş başarıyla kontrol edildi olarak işaretlendi!');
                 // Sayfayı yenile
+                location.reload();
+            } else {
+                alert('Hata: ' + (data.error || 'Bilinmeyen bir hata oluştu'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Bir hata oluştu. Lütfen tekrar deneyin.');
+        });
+    }
+}
+
+function teslimEdildi(siparisId) {
+    if (confirm('Bu siparişi teslim edildi olarak işaretlemek istediğinizden emin misiniz?')) {
+        fetch(`/dashboard/siparis/${siparisId}/teslim-edildi/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+                              document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
+                              getCookie('csrftoken')
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Sipariş başarıyla teslim edildi olarak işaretlendi!');
                 location.reload();
             } else {
                 alert('Hata: ' + (data.error || 'Bilinmeyen bir hata oluştu'));

@@ -1457,6 +1457,24 @@ def siparis_kontrol_edildi(request, siparis_id):
     }, status=405)
 
 @login_required
+def siparis_teslim_edildi(request, siparis_id):
+    """Siparişi teslim edildi olarak işaretle"""
+    if request.method == 'POST':
+        try:
+            siparis = get_object_or_404(Siparis, id=siparis_id, user=request.user)
+            siparis.durum = 'teslim'
+            siparis.save()
+            return JsonResponse({
+                'success': True,
+                'message': 'Sipariş başarıyla teslim edildi olarak işaretlendi.'
+            })
+        except Siparis.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Sipariş bulunamadı.'}, status=404)
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    return JsonResponse({'success': False, 'error': 'Sadece POST istekleri kabul edilir.'}, status=405)
+
+@login_required
 def reports(request):
     """İptal Edilen Siparişler Raporu"""
     # Filtreleme parametreleri
@@ -5372,8 +5390,8 @@ def export_income_expense_excel(request):
     # Başlık satırı
     headers = [
         'TARİH', 'KASA', 'ANA KATEGORİ', 'ALT KATEGORİ', 'NAKİT', 
-        'KREDİ KARTI', 'CARİ', 'SANAL POS', 'M.HAVALE', 'B.HAVALE', 
-        'KOMİSYON (%20)', 'TOPLAM', 'AÇIKLAMA', 'İŞLEM TİPİ'
+        'KREDİ KARTI', 'CARİ', 'SANAL POS', 'M.HAVALE', 'B.HAVALE',
+        'ÇANTA ÇIKIŞ', 'KOMİSYON (%20)', 'TOPLAM', 'AÇIKLAMA', 'İŞLEM TİPİ'
     ]
     
     # Başlık stilini ayarla
@@ -5448,7 +5466,8 @@ def export_income_expense_excel(request):
             cari_value + 
             sanal_pos_value + 
             float(islem.mehmet_havale or 0) + 
-            banka_havale_value
+            banka_havale_value +
+            float(islem.canta_cikis or 0)
         )
         
         ws.cell(row=row, column=1, value=islem.tarih.strftime('%d.%m.%Y'))
@@ -5461,13 +5480,14 @@ def export_income_expense_excel(request):
         ws.cell(row=row, column=8, value=sanal_pos_value)
         ws.cell(row=row, column=9, value=float(islem.mehmet_havale or 0))
         ws.cell(row=row, column=10, value=banka_havale_value)
-        ws.cell(row=row, column=11, value=komisyon)
-        ws.cell(row=row, column=12, value=toplam)
-        ws.cell(row=row, column=13, value=islem.aciklama or '-')
-        ws.cell(row=row, column=14, value=islem.get_hareket_tipi_display())
+        ws.cell(row=row, column=11, value=float(islem.canta_cikis or 0))
+        ws.cell(row=row, column=12, value=komisyon)
+        ws.cell(row=row, column=13, value=toplam)
+        ws.cell(row=row, column=14, value=islem.aciklama or '-')
+        ws.cell(row=row, column=15, value=islem.get_hareket_tipi_display())
     
     # Sütun genişliklerini ayarla
-    column_widths = [12, 15, 20, 20, 12, 12, 12, 12, 12, 12, 15, 12, 30, 12]
+    column_widths = [12, 15, 20, 20, 12, 12, 12, 12, 12, 12, 12, 15, 12, 30, 12]
     for col, width in enumerate(column_widths, 1):
         ws.column_dimensions[ws.cell(row=1, column=col).column_letter].width = width
     

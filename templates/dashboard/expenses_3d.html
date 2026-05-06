@@ -1,0 +1,191 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Gider Analizi - Mestakip{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h1 class="h3 mb-0">Gider Analizi</h1>
+    <p class="text-muted mb-0">Son 12 ay giderlerinizin kategori bazlı dağılımı ve Groq destekli yorum.</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'dashboard:income_expense_report' %}?hareket_tipi=gider" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-table me-1"></i>
+      Detaylı Liste
+    </a>
+    <button class="btn btn-outline-primary btn-sm" id="btn-ai">
+      <i class="bi bi-stars me-1"></i>
+      Groq ile Yorumla
+    </button>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">Gider Dağılımı (Aylık, Kategori Bazlı)</h5>
+        <small class="text-muted">En çok harcanan {{ top_n }} kategori</small>
+      </div>
+      <div class="card-body">
+        <div style="position: relative; width: 100%; height: 560px;">
+          <canvas id="expensesChart"></canvas>
+        </div>
+        <small class="text-muted d-block mt-2">İpucu: Legend’dan kategori gizleyip gösterebilirsin.</small>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="card-title mb-0">Özet</h5>
+      </div>
+      <div class="card-body">
+        <div class="d-flex justify-content-between mb-2">
+          <span class="text-muted">Toplam gider (12 ay)</span>
+          <strong>{{ total_12m|floatformat:0 }}</strong>
+        </div>
+        <hr />
+        <div class="mb-2 text-muted">En çok gider (kategori)</div>
+        {% if top_categories %}
+          <ol class="mb-0 ps-3">
+            {% for row in top_categories %}
+              <li class="mb-1">
+                <strong>{{ row.name }}</strong>
+                <span class="text-muted">({{ row.total|floatformat:0 }})</span>
+              </li>
+            {% endfor %}
+          </ol>
+        {% else %}
+          <div class="text-muted">Veri bulunamadı.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">Groq Yorum</h5>
+        <span class="badge bg-secondary" id="ai-status">Hazır</span>
+      </div>
+      <div class="card-body">
+        <pre id="ai-box" class="text-muted mb-0" style="white-space: pre-wrap; font-family: inherit;">
+          “Groq ile Yorumla” butonuna basınca gider trendi, öne çıkan kategoriler ve olası anomali hakkında kısa bir özet üretir.
+        </pre>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+  const months = {{ months_json|safe }};
+  const categories = {{ categories_json|safe }};
+  const zMatrix = {{ z_json|safe }};
+
+  function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return '';
+  }
+
+  function palette(i) {
+    const colors = [
+      '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
+      '#06b6d4', '#ec4899', '#84cc16', '#f97316', '#14b8a6'
+    ];
+    return colors[i % colors.length];
+  }
+
+  function renderChart() {
+    const datasets = categories.map((cat, i) => ({
+      label: cat,
+      data: (zMatrix[i] || []).map(v => Number(v || 0)),
+      backgroundColor: palette(i),
+      borderColor: palette(i),
+      borderWidth: 1,
+      stack: 'expenses'
+    }));
+
+    const ctx = document.getElementById('expensesChart');
+    if (!ctx) return;
+
+    new Chart(ctx, {
+      type: 'bar',
+      data: { labels: months, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom' },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => `${ctx.dataset.label}: ${Number(ctx.parsed.y || 0).toLocaleString('tr-TR')}`
+            }
+          }
+        },
+        scales: {
+          x: { stacked: true, ticks: { maxRotation: 0 } },
+          y: {
+            stacked: true,
+            beginAtZero: true,
+            ticks: {
+              callback: (v) => Number(v).toLocaleString('tr-TR')
+            }
+          }
+        }
+      }
+    });
+  }
+
+  async function fetchInsights() {
+    const btn = document.getElementById('btn-ai');
+    const status = document.getElementById('ai-status');
+    const box = document.getElementById('ai-box');
+
+    btn.disabled = true;
+    status.className = 'badge bg-warning';
+    status.textContent = 'Çalışıyor';
+    box.textContent = 'Groq analiz ediyor...';
+    box.className = 'text-muted';
+
+    try {
+      const resp = await fetch("{% url 'dashboard:expenses_3d_insights' %}", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({ months })
+      });
+
+      const data = await resp.json();
+      if (!resp.ok) {
+        throw new Error(data.error || 'İstek başarısız');
+      }
+
+      status.className = 'badge bg-success';
+      status.textContent = 'Tamam';
+      box.className = '';
+      box.textContent = data.text || 'Yanıt boş geldi.';
+    } catch (e) {
+      status.className = 'badge bg-danger';
+      status.textContent = 'Hata';
+      box.className = 'text-danger';
+      box.textContent = String(e.message || e);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    renderChart();
+    document.getElementById('btn-ai').addEventListener('click', fetchInsights);
+  });
+</script>
+{% endblock %}
+

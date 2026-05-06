@@ -103,8 +103,20 @@
                     <div class="row g-3">
                         <!-- MEVSIM -->
                         <div class="col-12" id="mevsim-field">
-                            <label for="{{ form.mevsim.id_for_label }}" class="form-label">{{ form.mevsim.label }}</label>
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <label for="{{ form.mevsim.id_for_label }}" class="form-label mb-0">{{ form.mevsim.label }}</label>
+                                <span id="mevsim-ai-badge" class="badge bg-primary d-none" style="font-size:0.7rem;">
+                                    <i class="bi bi-stars me-1"></i>AI
+                                </span>
+                                <span id="mevsim-ai-spinner" class="d-none">
+                                    <span class="spinner-border spinner-border-sm text-primary" style="width:0.8rem;height:0.8rem;"></span>
+                                </span>
+                            </div>
                             {{ form.mevsim }}
+                            <div id="mevsim-ai-info" class="text-muted d-none" style="font-size:0.75rem;margin-top:3px;">
+                                <i class="bi bi-stars me-1 text-primary"></i>
+                                <span id="mevsim-ai-info-text"></span>
+                            </div>
                             {% if form.mevsim.errors %}
                                 <div class="text-danger">{{ form.mevsim.errors.0 }}</div>
                             {% endif %}
@@ -366,6 +378,118 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('Mevsim alanı gösterildi - Grup:', selectedGrup);
         }
     }
+
+    // --- Groq AI Mevsim Tespiti ---
+    const mevsimSelect = document.getElementById('id_mevsim');
+    const mevsimAiBadge = document.getElementById('mevsim-ai-badge');
+    const mevsimAiSpinner = document.getElementById('mevsim-ai-spinner');
+    const mevsimAiInfo = document.getElementById('mevsim-ai-info');
+    const mevsimAiInfoText = document.getElementById('mevsim-ai-info-text');
+
+    const MEVSIM_LABELS = {
+        'yaz': '☀️ Yazlık',
+        'kis': '❄️ Kışlık',
+        'dort-mevsim': '🔄 Dört Mevsim',
+        'bilinmiyor': '❓ Bilinmiyor'
+    };
+
+    // Mevsim seçimi manuel değişirse işaretle
+    if (mevsimSelect) {
+        mevsimSelect.addEventListener('change', () => {
+            if (document.activeElement === mevsimSelect) {
+                mevsimSelect.dataset.manual = '1';
+                // Manuel seçimde badge'i gizle
+                mevsimAiBadge.classList.add('d-none');
+                mevsimAiInfo.classList.add('d-none');
+            }
+        });
+    }
+
+    function setMevsimFromAI(mevsim, kaynak) {
+        if (!mevsimSelect) return;
+        if (mevsimSelect.dataset.manual === '1') return; // Manuel seçimi koru
+
+        // Mevsim alanı gizliyse (akü/jant) çalışma
+        if (mevsimField && mevsimField.style.display === 'none') return;
+
+        if (mevsim && mevsim !== 'bilinmiyor') {
+            mevsimSelect.value = mevsim;
+            mevsimSelect.dispatchEvent(new Event('change', { bubbles: true }));
+
+            // Badge göster
+            mevsimAiBadge.classList.remove('d-none');
+            if (kaynak === 'groq') {
+                mevsimAiBadge.className = 'badge bg-primary d-flex align-items-center gap-1';
+                mevsimAiBadge.innerHTML = '<i class="bi bi-stars"></i> AI';
+                mevsimAiInfoText.textContent = `Groq AI tarafından "${MEVSIM_LABELS[mevsim] || mevsim}" olarak algılandı`;
+            } else if (kaynak === 'veritabani') {
+                mevsimAiBadge.className = 'badge bg-success d-flex align-items-center gap-1';
+                mevsimAiBadge.innerHTML = '<i class="bi bi-database-check"></i> Öğrenildi';
+                mevsimAiInfoText.textContent = `Daha önce girilen kayıtlardan "${MEVSIM_LABELS[mevsim] || mevsim}" olarak öğrenildi`;
+            } else {
+                mevsimAiBadge.className = 'badge bg-secondary d-flex align-items-center gap-1';
+                mevsimAiBadge.innerHTML = '<i class="bi bi-cpu"></i> Otomatik';
+                mevsimAiInfoText.textContent = `Kural tabanlı olarak "${MEVSIM_LABELS[mevsim] || mevsim}" olarak algılandı`;
+            }
+            mevsimAiInfo.classList.remove('d-none');
+        } else {
+            mevsimAiBadge.classList.add('d-none');
+            mevsimAiInfo.classList.add('d-none');
+        }
+    }
+
+    async function groqMevsimTespiti() {
+        // Mevsim alanı gizliyse (akü/jant grubu) çalışma
+        if (mevsimField && mevsimField.style.display === 'none') return;
+        if (mevsimSelect && mevsimSelect.dataset.manual === '1') return;
+
+        const urunText = (urunInput ? urunInput.value : '').trim();
+        const markaEl = document.getElementById('id_marka');
+        const markaText = (markaEl ? markaEl.value : '').trim();
+
+        if (!urunText && !markaText) return;
+
+        // Spinner göster
+        mevsimAiSpinner.classList.remove('d-none');
+        mevsimAiBadge.classList.add('d-none');
+        mevsimAiInfo.classList.add('d-none');
+
+        try {
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            const resp = await fetch('{% url "dashboard:lastik_mevsim_ai" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({ urun: urunText, marka: markaText })
+            });
+            if (!resp.ok) throw new Error('Sunucu hatası');
+            const data = await resp.json();
+            setMevsimFromAI(data.mevsim, data.kaynak);
+            console.log('Mevsim AI tespiti:', data);
+        } catch (err) {
+            console.warn('Groq mevsim tespiti başarısız:', err);
+        } finally {
+            mevsimAiSpinner.classList.add('d-none');
+        }
+    }
+
+    // Ürün veya Marka yazıldıkça Groq'a sor (debounce: 600ms)
+    let urunDebounce = null;
+    function tetikleAiTespiti() {
+        clearTimeout(urunDebounce);
+        urunDebounce = setTimeout(groqMevsimTespiti, 600);
+    }
+
+    if (urunInput) {
+        urunInput.addEventListener('input', tetikleAiTespiti);
+        urunInput.addEventListener('blur', groqMevsimTespiti);
+    }
+    const markaInputEl = document.getElementById('id_marka');
+    if (markaInputEl) {
+        markaInputEl.addEventListener('input', tetikleAiTespiti);
+    }
     
     // Akıllı hesaplama event listener'ları
     adetInput.addEventListener('input', function() {
@@ -387,8 +511,12 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('Toplam fiyat alanı readonly mu?', toplamFiyatInput.readOnly);
     console.log('Toplam fiyat alanı disabled mı?', toplamFiyatInput.disabled);
     
-    // Grup seçimi değiştiğinde mevsim alanını kontrol et
-    grupSelect.addEventListener('change', toggleMevsimField);
+    // Grup seçimi değiştiğinde mevsim alanını kontrol et + AI'ı yeniden tetikle
+    grupSelect.addEventListener('change', () => {
+        toggleMevsimField();
+        // Grup değiştiğinde ürün/marka varsa mevsimi AI ile tespit et
+        groqMevsimTespiti();
+    });
     
     // Öne çıkar checkbox değişikliği
     oneCikarCheckbox.addEventListener('change', function() {

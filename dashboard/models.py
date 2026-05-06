@@ -886,3 +886,37 @@ class GarantiBelgesiLastik(models.Model):
     def toplam_fiyat(self):
         """Toplam fiyat hesaplama"""
         return self.adet * self.fiyat
+
+
+class LastikModelBilgisi(models.Model):
+    """
+    Lastik model adı → mevsim eşleştirmesi.
+    AI yanlış tahmin ettiğinde kullanıcı düzeltirse buraya kaydedilir.
+    Bir sonraki girişte veritabanından doğrudan gelir.
+    """
+    MEVSIM_CHOICES = [
+        ('kis', 'Kış'),
+        ('yaz', 'Yaz'),
+        ('dort-mevsim', '4 Mevsim'),
+    ]
+
+    # Model adı (örn: "TS870", "Turanza T005", "Alpin 5")
+    model_adi = models.CharField(max_length=200, unique=True, verbose_name="Model Adı")
+    mevsim = models.CharField(max_length=20, choices=MEVSIM_CHOICES, verbose_name="Mevsim")
+
+    # Kim ekledi / güncelledi
+    guncelleme_sayisi = models.PositiveIntegerField(default=1, verbose_name="Güncelleme Sayısı")
+    son_guncelleyen = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        verbose_name="Son Güncelleyen"
+    )
+    olusturma_tarihi = models.DateTimeField(auto_now_add=True, verbose_name="Oluşturma Tarihi")
+    guncelleme_tarihi = models.DateTimeField(auto_now=True, verbose_name="Güncelleme Tarihi")
+
+    class Meta:
+        verbose_name = "Lastik Model Bilgisi"
+        verbose_name_plural = "Lastik Model Bilgileri"
+        ordering = ['model_adi']
+
+    def __str__(self):
+        return f"{self.model_adi} → {self.get_mevsim_display()}"

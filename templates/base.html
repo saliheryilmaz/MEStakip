@@ -500,8 +500,8 @@
         <header class="admin-header">
             <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom" style="overflow: visible !important;">
                 <div class="container-fluid">
-                    <!-- Mobile Sidebar Toggle (sadece mobilde görünür) -->
-                    <button class="btn btn-outline-primary d-lg-none me-2" type="button" onclick="toggleMobileSidebar()"
+                    <!-- Mobile Sidebar Toggle (sadece mobilde görünür - Artık Bottom Nav'da olduğu için mobilde gizliyoruz) -->
+                    <button class="btn btn-outline-primary d-none d-lg-none me-2" type="button" onclick="toggleMobileSidebar()"
                         aria-label="Toggle sidebar">
                         <i class="bi bi-list"></i>
                     </button>
@@ -513,31 +513,25 @@
                        
                     </a>
 
-                    <!-- Search Bar -->
-                    <div class="search-container flex-grow-1 mx-4">
-                        <div class="position-relative">
-                            <input type="search" class="form-control" placeholder="Search... (Ctrl+K)" data-search-input
-                                aria-label="Search">
-                            <i class="bi bi-search position-absolute top-50 end-0 translate-middle-y me-3"></i>
-                        </div>
-                    </div>
+                    
+                    
 
                     <!-- Right Side Icons -->
-                    <div class="navbar-nav flex-row">
+                    <div class="navbar-nav flex-row align-items-center ms-auto">
                         <!-- Theme Toggle -->
-                        <button class="btn btn-outline-secondary me-2" type="button" data-theme-toggle
+                        <button class="btn btn-outline-secondary me-2 border-0" type="button" data-theme-toggle
                             data-bs-toggle="tooltip" data-bs-placement="bottom" title="Toggle theme">
                             <i class="bi bi-sun-fill"></i>
                         </button>
 
-                        <!-- Fullscreen Toggle -->
-                        <button class="btn btn-outline-secondary me-2" type="button" data-fullscreen-toggle
+                        <!-- Fullscreen Toggle (Gizli mobilde) -->
+                        <button class="btn btn-outline-secondary me-2 border-0 d-none d-md-block" type="button" data-fullscreen-toggle
                             data-bs-toggle="tooltip" data-bs-placement="bottom" title="Toggle fullscreen">
                             <i class="bi bi-arrows-fullscreen icon-hover"></i>
                         </button>
 
                         <!-- Notifications -->
-                        <button class="btn btn-outline-secondary me-2 position-relative" type="button" data-bs-toggle="modal" data-bs-target="#notificationModal">
+                        <button class="btn btn-outline-secondary me-2 position-relative border-0" type="button" data-bs-toggle="modal" data-bs-target="#notificationModal">
                             <i class="bi bi-bell"></i>
                             <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="notificationBadge" style="display: none;">
                                 0
@@ -546,7 +540,7 @@
 
                         <!-- User Info & Logout -->
                         {% if user.is_authenticated %}
-                        <div class="d-flex align-items-center gap-2">
+                        <div class="d-none d-md-flex align-items-center gap-2">
                             <span class="text-white">{{ user.username }}</span>
                             <a href="{% url 'dashboard:logout' %}" class="btn btn-outline-light btn-sm">
                                 <i class="bi bi-box-arrow-right me-1"></i>
@@ -554,7 +548,7 @@
                             </a>
                         </div>
                         {% else %}
-                        <a href="{% url 'dashboard:login' %}" class="btn btn-primary">
+                        <a href="{% url 'dashboard:login' %}" class="btn btn-primary d-none d-md-flex">
                             <i class="bi bi-box-arrow-in-right me-1"></i>
                             Giriş Yap
                         </a>
@@ -607,6 +601,13 @@
                                 <span>Dashboard</span>
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'manager_assistant' %}active{% endif %}"
+                                href="{% url 'dashboard:manager_assistant' %}">
+                                <i class="bi bi-robot"></i>
+                                <span>Yönetici Asistanı</span>
+                            </a>
+                        </li>
                        
 
                         <!-- Siparişler -->
@@ -645,6 +646,7 @@
                                     <li class="nav-item"><a class="nav-link" href="{% url 'dashboard:products' %}"><span>Günlük Kasa Hareketleri</span></a></li>
                                     <li class="nav-item"><a class="nav-link" href="{% url 'dashboard:messages' %}"><span>Kasa Toplamları</span></a></li>
                                     <li class="nav-item"><a class="nav-link" href="{% url 'dashboard:income_expense_report' %}"><span>Gelir/Gider Raporu</span></a></li>
+                                    <li class="nav-item"><a class="nav-link" href="{% url 'dashboard:expenses_3d' %}"><span>Gider Analizi</span></a></li>
                                     <li class="nav-item"><a class="nav-link" href="{% url 'dashboard:kategoriler' %}"><span>Kategoriler</span></a></li>
                                     <li class="nav-item"><a class="nav-link" href="{% url 'dashboard:joker_satis' %}"><span>Joker Satış Toplamları</span></a></li>
                                 </ul>
@@ -2081,29 +2083,34 @@
             console.log('Dropdowns should work now with data-bs-toggle');
         });
     </script>
-</body>
 
-</html> <!- - Mobile Sidebar Toggle Function -->
+    <!-- Mobile Sidebar Toggle Function & Backdrop Management -->
     <script>
         function toggleMobileSidebar() {
             const sidebar = document.getElementById('admin-sidebar');
 
             if (sidebar) {
-                // Sidebar'ı göster/gizle
                 sidebar.classList.toggle('mobile-show');
 
-                // Backdrop ekle/kaldır
                 let backdrop = document.querySelector('.mobile-sidebar-backdrop');
                 if (sidebar.classList.contains('mobile-show')) {
                     if (!backdrop) {
                         backdrop = document.createElement('div');
                         backdrop.className = 'mobile-sidebar-backdrop';
-                        backdrop.onclick = toggleMobileSidebar;
                         document.body.appendChild(backdrop);
+                        
+                        // Trigger reflow for transition
+                        void backdrop.offsetWidth;
+                        backdrop.classList.add('show');
+                        
+                        backdrop.onclick = toggleMobileSidebar;
                     }
                 } else {
                     if (backdrop) {
-                        backdrop.remove();
+                        backdrop.classList.remove('show');
+                        setTimeout(() => {
+                            backdrop.remove();
+                        }, 300); // Wait for transition
                     }
                 }
             }
@@ -2120,17 +2127,25 @@
         });
     </script>
 
-    <!-- Mobile Sidebar Backdrop Styles -->
+    <!-- Mobile App-like Optimizations -->
     <style>
+        /* Mobile Sidebar Backdrop Styles */
         .mobile-sidebar-backdrop {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(4px);
             z-index: 1040;
             display: block;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .mobile-sidebar-backdrop.show {
+            opacity: 1;
         }
 
         @media (min-width: 769px) {
@@ -2142,12 +2157,219 @@
         /* Mobile Sidebar Show Animation */
         .admin-sidebar.mobile-show {
             transform: translateX(0) !important;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 0 25px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Assistant FAB */
+        .assistant-fab {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+            z-index: 999;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            text-decoration: none;
+        }
+
+        .assistant-fab:hover, .assistant-fab:focus {
+            transform: scale(1.1) translateY(-5px);
+            color: white;
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.6);
+        }
+
+        .assistant-tooltip {
+            position: absolute;
+            right: 75px;
+            background: #1e293b;
+            color: white;
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s, transform 0.3s;
+            transform: translateX(10px);
+            white-space: nowrap;
+        }
+
+        .assistant-fab:hover .assistant-tooltip {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        /* Mobile Bottom Navigation */
+        .mobile-bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 65px;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 1030;
+            border-top: 1px solid rgba(226, 232, 240, 0.8);
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        [data-bs-theme="dark"] .mobile-bottom-nav {
+            background: rgba(30, 41, 59, 0.9);
+            border-top: 1px solid rgba(51, 65, 85, 0.8);
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .bottom-nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #64748b;
+            text-decoration: none;
+            flex: 1;
+            height: 100%;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+
+        [data-bs-theme="dark"] .bottom-nav-item {
+            color: #94a3b8;
+        }
+
+        .bottom-nav-item.active {
+            color: #6366f1;
+        }
+
+        [data-bs-theme="dark"] .bottom-nav-item.active {
+            color: #818cf8;
+        }
+
+        .bottom-nav-item i {
+            font-size: 1.25rem;
+            margin-bottom: 2px;
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .bottom-nav-item:hover i, .bottom-nav-item:focus i {
+            transform: translateY(-2px);
+        }
+        
+        .bottom-nav-item.active i {
+            font-size: 1.4rem;
+            font-weight: bold;
+        }
+
+        .bottom-nav-item span {
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+
+        /* Middle FAB in Bottom Nav */
+        .bottom-nav-fab-container {
+            position: relative;
+            top: -20px;
+        }
+
+        .bottom-nav-fab {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
+            border: 4px solid #ffffff;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            text-decoration: none;
+        }
+        
+        [data-bs-theme="dark"] .bottom-nav-fab {
+            border-color: #1e293b;
+        }
+
+        .bottom-nav-fab i {
+            font-size: 1.8rem;
+            margin-bottom: 0;
+        }
+
+        .bottom-nav-fab:hover, .bottom-nav-fab:active {
+            transform: scale(1.1);
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.6);
+        }
+
+        /* Mobile specific spacing */
+        @media (max-width: 768px) {
+            .admin-wrapper {
+                padding-bottom: 80px !important; /* Space for bottom nav */
+            }
+            
+            .assistant-fab {
+                bottom: 85px; /* Above bottom nav */
+                right: 1.2rem;
+                width: 50px;
+                height: 50px;
+                font-size: 1.5rem;
+            }
+            
+            .assistant-tooltip {
+                display: none; /* Hide tooltip on mobile */
+            }
         }
     </style>
 
-    <!-- Dropdown Manuel Başlatma -->
+    {% if user.userprofile.role != 'misafir' %}
+    <!-- Floating Assistant Button -->
+    <a href="{% url 'dashboard:manager_assistant' %}" class="assistant-fab" aria-label="Yönetici Asistanı">
+        <i class="bi bi-robot"></i>
+        <span class="assistant-tooltip">Asistan</span>
+    </a>
+    {% endif %}
 
-    </body>
+    <!-- Mobile Bottom Navigation -->
+    <nav class="mobile-bottom-nav d-md-none">
+        {% if user.userprofile.role != 'misafir' %}
+        <a href="{% url 'dashboard:index' %}" class="bottom-nav-item {% if request.resolver_match.url_name == 'index' %}active{% endif %}">
+            <i class="bi bi-house-door"></i>
+            <span>Ana Sayfa</span>
+        </a>
+        <a href="{% url 'dashboard:finance' %}" class="bottom-nav-item {% if request.resolver_match.url_name == 'finance' %}active{% endif %}">
+            <i class="bi bi-cash-coin"></i>
+            <span>Finans</span>
+        </a>
+        
+        <div class="bottom-nav-item bottom-nav-fab-container">
+            <a href="{% url 'dashboard:yeni_lastik' %}" class="bottom-nav-fab">
+                <i class="bi bi-plus-lg"></i>
+            </a>
+        </div>
+        
+        <a href="{% url 'dashboard:elements' %}" class="bottom-nav-item {% if request.resolver_match.url_name == 'elements' %}active{% endif %}">
+            <i class="bi bi-box-seam"></i>
+            <span>Siparişler</span>
+        </a>
+        {% endif %}
+        
+        <a href="#" class="bottom-nav-item" onclick="toggleMobileSidebar(); return false;">
+            <i class="bi bi-list"></i>
+            <span>Menü</span>
+        </a>
+    </nav>
 
-    </html>
+</body>
+</html>

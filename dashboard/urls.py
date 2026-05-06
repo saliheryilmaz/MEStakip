@@ -62,6 +62,10 @@ urlpatterns = [
     path('api/events/create/', views.create_event, name='create_event'),
     path('api/events/', views.get_events, name='get_events'),
     path('api/finance/overview/', views.finance_overview, name='finance_overview'),
+    path('finance/expenses-3d/', views.expenses_3d, name='expenses_3d'),
+    path('api/finance/expenses-3d/insights/', views.expenses_3d_insights, name='expenses_3d_insights'),
+    path('assistant/', views.manager_assistant, name='manager_assistant'),
+    path('api/assistant/query/', views.manager_assistant_query, name='manager_assistant_query'),
     # Bildirim API'leri
     path('api/notifications/', views.get_notifications, name='get_notifications'),
     path('api/notifications/<int:notification_id>/read/', views.mark_notification_read, name='mark_notification_read'),
@@ -85,4 +89,5 @@ urlpatterns = [
     path('malzeme-excel-kaydet/', views.malzeme_excel_kaydet, name='malzeme_excel_kaydet'),
     path('excel-dosya/<int:dosya_id>/sil/', views.excel_dosya_sil, name='excel_dosya_sil'),
     path('health/', views.health_check, name='health_check'),
+    path('api/lastik-mevsim-ai/', views.lastik_mevsim_ai, name='lastik_mevsim_ai'),
 ]

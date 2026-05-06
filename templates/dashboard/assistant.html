@@ -1,0 +1,225 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Yönetici Asistanı - Mestakip{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h1 class="h3 mb-0"><i class="bi bi-robot me-2 text-primary"></i>Yönetici Asistanı</h1>
+    <p class="text-muted mb-0">Projeyle ilgili her şeyi sorabilirsin — siparişler, finans, çıkma lastikler, teklifler ve daha fazlası.</p>
+  </div>
+  <span id="groq-badge" class="badge bg-secondary d-none">
+    <i class="bi bi-stars me-1"></i>Groq AI
+  </span>
+</div>
+
+<div class="row g-4">
+  <!-- Sol: Sohbet -->
+  <div class="col-lg-8">
+    <!-- Mesaj alanı -->
+    <div class="card">
+      <div class="card-body p-0">
+        <div id="chat-messages" style="height:420px; overflow-y:auto; padding:1.25rem; display:flex; flex-direction:column; gap:0.75rem;">
+          <div class="d-flex gap-2 align-items-start">
+            <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center flex-shrink-0" style="width:32px;height:32px;">
+              <i class="bi bi-robot text-white" style="font-size:0.85rem;"></i>
+            </div>
+            <div class="rounded p-3" style="max-width:85%; background:rgba(255,255,255,0.08); color:var(--bs-body-color, #e2e8f0); border:1px solid rgba(255,255,255,0.1);">
+              <p class="mb-0">Merhaba! MEStakip asistanıyım. Sistem hakkında her şeyi sorabilirsin:</p>
+              <ul class="mb-0 mt-2 small">
+                <li>Sipariş durumları ve ciro</li>
+                <li>Gelir / gider / net finans özeti</li>
+                <li>Çıkma lastik stok ve satış</li>
+                <li>Teklifler, garanti belgeleri</li>
+                <li>Malzeme ve Joker satış verileri</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card-footer bg-white border-top p-3">
+        <div class="input-group">
+          <input id="q" type="text" class="form-control" placeholder="Soru yaz... (örn: Bu ay kaç sipariş var?)">
+          <button id="ask" class="btn btn-primary px-4">
+            <i class="bi bi-send"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sağ: Hızlı sorular -->
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-header">
+        <h6 class="card-title mb-0"><i class="bi bi-lightning-charge me-1 text-warning"></i>Hızlı Sorular</h6>
+      </div>
+      <div class="card-body p-2">
+
+        <p class="text-muted small px-2 mb-1 mt-1 fw-bold text-uppercase">📦 Siparişler</p>
+        <div class="d-flex flex-column gap-1 mb-3">
+          <button class="btn btn-outline-secondary btn-sm text-start quick" data-q="Bu ay kaç sipariş var ve toplam ciro ne kadar?">Bu ay sipariş özeti</button>
+          <button class="btn btn-outline-secondary btn-sm text-start quick" data-q="Şu an yolda kaç sipariş var?">Yoldaki siparişler</button>
+          <button class="btn btn-outline-secondary btn-sm text-start quick" data-q="En çok sipariş verilen markalar hangileri?">Top markalar</button>
+          <button class="btn btn-outline-secondary btn-sm text-start quick" data-q="İptal edilen sipariş sayısı nedir?">İptal siparişler</button>
+        </div>
+
+        <p class="text-muted small px-2 mb-1 fw-bold text-uppercase">💰 Finans</p>
+        <div class="d-flex flex-column gap-1 mb-3">
+          <button class="btn btn-outline-secondary btn-sm text-start quick" data-q="Bu ay gelir, gider ve net durumu nedir?">Bu ay finans özeti</button>
+          <button class="btn btn-outline-secondary btn-sm text-start quick" data-q="Son 30 günde gelir ve gider ne kadar?">Son 30 gün finans</button>
+          <button class="btn btn-outline-secondary btn-sm text-start quick" data-q="Bu ay hangi kasalarda işlem yapıldı?">Kasa dağılımı</button>
+        </div>
+
+        <p class="text-muted small px-2 mb-1 fw-bold text-uppercase">🔧 Çıkma Lastik</p>
+        <div class="d-flex flex-column gap-1 mb-3">
+          <button class="btn btn-outline-secondary btn-sm text-start quick" data-q="Depoda kaç çıkma lastik var?">Depodaki lastikler</button>
+          <button class="btn btn-outline-secondary btn-sm text-start quick" data-q="Çıkma lastik satış cirosu ne kadar?">Satış cirosu</button>
+        </div>
+
+        <p class="text-muted small px-2 mb-1 fw-bold text-uppercase">📋 Diğer</p>
+        <div class="d-flex flex-column gap-1">
+          <button class="btn btn-outline-secondary btn-sm text-start quick" data-q="Açık teklifler kaç tane?">Açık teklifler</button>
+          <button class="btn btn-outline-secondary btn-sm text-start quick" data-q="Malzeme hareketleri toplam tutarı nedir?">Malzeme tutarı</button>
+          <button class="btn btn-outline-secondary btn-sm text-start quick" data-q="Sistemin genel durumunu özetle.">Genel özet</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return '';
+  }
+
+  function appendMessage(role, text) {
+    const container = document.getElementById('chat-messages');
+    const wrapper = document.createElement('div');
+    wrapper.className = 'd-flex gap-2 align-items-start' + (role === 'user' ? ' flex-row-reverse' : '');
+
+    const avatar = document.createElement('div');
+    avatar.className = 'rounded-circle d-flex align-items-center justify-content-center flex-shrink-0';
+    avatar.style.cssText = 'width:32px;height:32px;';
+    if (role === 'user') {
+      avatar.classList.add('bg-success');
+      avatar.innerHTML = '<i class="bi bi-person text-white" style="font-size:0.85rem;"></i>';
+    } else {
+      avatar.classList.add('bg-primary');
+      avatar.innerHTML = '<i class="bi bi-robot text-white" style="font-size:0.85rem;"></i>';
+    }
+
+    const bubble = document.createElement('div');
+    bubble.className = 'rounded p-3';
+    bubble.style.maxWidth = '85%';
+    if (role === 'user') {
+      bubble.style.cssText += 'background:#6366f1;color:#fff;max-width:85%;';
+    } else {
+      bubble.style.cssText += 'background:rgba(255,255,255,0.08);color:var(--bs-body-color, #e2e8f0);border:1px solid rgba(255,255,255,0.1);max-width:85%;';
+    }
+    bubble.innerHTML = '<p class="mb-0" style="white-space:pre-wrap;">' + escapeHtml(text) + '</p>';
+
+    wrapper.appendChild(avatar);
+    wrapper.appendChild(bubble);
+    container.appendChild(wrapper);
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function appendTyping() {
+    const container = document.getElementById('chat-messages');
+    const wrapper = document.createElement('div');
+    wrapper.className = 'd-flex gap-2 align-items-start';
+    wrapper.id = 'typing-indicator';
+    wrapper.innerHTML = `
+      <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center flex-shrink-0" style="width:32px;height:32px;">
+        <i class="bi bi-robot text-white" style="font-size:0.85rem;"></i>
+      </div>
+      <div class="bg-light rounded p-3">
+        <span class="spinner-grow spinner-grow-sm text-primary me-1"></span>
+        <span class="spinner-grow spinner-grow-sm text-primary me-1" style="animation-delay:.15s"></span>
+        <span class="spinner-grow spinner-grow-sm text-primary" style="animation-delay:.3s"></span>
+      </div>`;
+    container.appendChild(wrapper);
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function removeTyping() {
+    const el = document.getElementById('typing-indicator');
+    if (el) el.remove();
+  }
+
+  function escapeHtml(text) {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  async function ask() {
+    const qEl = document.getElementById('q');
+    const q = (qEl.value || '').trim();
+    const btn = document.getElementById('ask');
+    const badge = document.getElementById('groq-badge');
+
+    if (!q) return;
+
+    appendMessage('user', q);
+    qEl.value = '';
+    btn.disabled = true;
+    appendTyping();
+
+    try {
+      const resp = await fetch("{% url 'dashboard:manager_assistant_query' %}", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({ q })
+      });
+      const data = await resp.json();
+      removeTyping();
+
+      if (!resp.ok) throw new Error(data.error || 'İstek başarısız');
+
+      appendMessage('assistant', data.text || 'Yanıt boş geldi.');
+
+      if (data.used_groq) {
+        badge.classList.remove('d-none');
+        badge.className = 'badge bg-success';
+        badge.innerHTML = '<i class="bi bi-stars me-1"></i>Groq AI';
+      } else {
+        badge.classList.remove('d-none');
+        badge.className = 'badge bg-secondary';
+        badge.innerHTML = '<i class="bi bi-cpu me-1"></i>Kural tabanlı';
+      }
+    } catch (e) {
+      removeTyping();
+      appendMessage('assistant', '⚠️ Hata: ' + String(e.message || e));
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('ask').addEventListener('click', ask);
+    document.getElementById('q').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') ask();
+    });
+    document.querySelectorAll('.quick').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.getElementById('q').value = btn.dataset.q;
+        ask();
+      });
+    });
+  });
+</script>
+{% endblock %}

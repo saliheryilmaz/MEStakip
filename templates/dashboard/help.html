@@ -1,25 +1,215 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Help & Support - Mestakip{% endblock %}
+{% block title %}Yardım ve Destek - MesTakip{% endblock %}
 {% block page_name %}help{% endblock %}
+
+{% block extra_css %}
+<style>
+    .official-card {
+        border-radius: 4px;
+        border: 1px solid rgba(0, 0, 0, 0.125);
+        box-shadow: none;
+        background-color: #fff;
+    }
+
+    .official-header {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+        padding: 1rem 1.25rem;
+    }
+
+    [data-bs-theme="dark"] .official-card {
+        background-color: #212529;
+        border-color: rgba(255, 255, 255, 0.125);
+    }
+
+    [data-bs-theme="dark"] .official-header {
+        background-color: #2c3034;
+        border-bottom-color: rgba(255, 255, 255, 0.125);
+    }
+
+    .nav-pills-official .nav-link {
+        color: #495057;
+        border-radius: 4px;
+        padding: 0.75rem 1rem;
+        margin-bottom: 0.5rem;
+        text-align: left;
+        border: 1px solid transparent;
+    }
+
+    .nav-pills-official .nav-link:hover {
+        background-color: #f8f9fa;
+        border-color: rgba(0,0,0,0.05);
+    }
+
+    .nav-pills-official .nav-link.active {
+        color: #0d6efd;
+        background-color: rgba(13, 110, 253, 0.05);
+        border-color: rgba(13, 110, 253, 0.2);
+        font-weight: 500;
+    }
+
+    [data-bs-theme="dark"] .nav-pills-official .nav-link {
+        color: #adb5bd;
+    }
+
+    [data-bs-theme="dark"] .nav-pills-official .nav-link:hover {
+        background-color: rgba(255,255,255,0.05);
+    }
+
+    [data-bs-theme="dark"] .nav-pills-official .nav-link.active {
+        color: #6ea8fe;
+        background-color: rgba(110, 168, 254, 0.1);
+        border-color: rgba(110, 168, 254, 0.2);
+    }
+
+    .content-section {
+        padding: 1rem 0;
+    }
+
+    .content-section h4 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        color: #212529;
+    }
+
+    [data-bs-theme="dark"] .content-section h4 {
+        color: #f8f9fa;
+    }
+
+    .contact-list dt {
+        font-weight: 600;
+        color: #495057;
+    }
+
+    .contact-list dd {
+        margin-bottom: 1rem;
+        color: #212529;
+    }
+
+    [data-bs-theme="dark"] .contact-list dt { color: #adb5bd; }
+    [data-bs-theme="dark"] .contact-list dd { color: #f8f9fa; }
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h1 class="h3 mb-0">Help & Support</h1>
-        <p class="text-muted mb-0">Get help and support for your application.</p>
+        <h1 class="h3 mb-0">Yardım ve Destek</h1>
+        <p class="text-muted mb-0">Sistem kullanım kılavuzu ve teknik destek bilgileri.</p>
     </div>
 </div>
 
-<div class="row g-4">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0">Help & Support Center</h5>
+<div class="row">
+    <!-- Sol Menü -->
+    <div class="col-md-3 mb-4">
+        <div class="card official-card">
+            <div class="card-body p-3">
+                <div class="nav flex-column nav-pills nav-pills-official" id="v-pills-tab" role="tablist" aria-orientation="vertical">
+                    <button class="nav-link active" id="v-pills-guide-tab" data-bs-toggle="pill" data-bs-target="#v-pills-guide" type="button" role="tab" aria-controls="v-pills-guide" aria-selected="true">
+                        <i class="bi bi-book me-2"></i> Kullanım Kılavuzu
+                    </button>
+                    <button class="nav-link" id="v-pills-faq-tab" data-bs-toggle="pill" data-bs-target="#v-pills-faq" type="button" role="tab" aria-controls="v-pills-faq" aria-selected="false">
+                        <i class="bi bi-question-circle me-2"></i> Sıkça Sorulan Sorular
+                    </button>
+                    <button class="nav-link" id="v-pills-contact-tab" data-bs-toggle="pill" data-bs-target="#v-pills-contact" type="button" role="tab" aria-controls="v-pills-contact" aria-selected="false">
+                        <i class="bi bi-headset me-2"></i> İletişim & Destek
+                    </button>
+                </div>
             </div>
-            <div class="card-body">
-                <p class="text-muted">Help and support content will be implemented here.</p>
+        </div>
+    </div>
+
+    <!-- Sağ İçerik -->
+    <div class="col-md-9">
+        <div class="card official-card">
+            <div class="tab-content" id="v-pills-tabContent">
+                
+                <!-- Kullanım Kılavuzu Sekmesi -->
+                <div class="tab-pane fade show active" id="v-pills-guide" role="tabpanel" aria-labelledby="v-pills-guide-tab">
+                    <div class="official-header">
+                        <h5 class="mb-0">MesTakip Kullanım Kılavuzu</h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="content-section">
+                            <h4>1. Sisteme Giriş ve Genel Bakış</h4>
+                            <p class="text-muted text-justify">MesTakip, lastik satış, sipariş takibi ve ön muhasebe işlemlerinizi tek bir ekrandan yönetmenizi sağlayan entegre bir sistemdir. Sol taraftaki menüyü kullanarak ilgili modüllere (Finans, Siparişler, Çıkma Lastikler vb.) erişim sağlayabilirsiniz.</p>
+                        </div>
+                        <hr>
+                        <div class="content-section">
+                            <h4>2. Yeni Sipariş Oluşturma</h4>
+                            <p class="text-muted text-justify">Yeni bir lastik satışı veya siparişi girmek için sistemdeki mavi <strong>"+" (Yeni Sipariş)</strong> butonunu kullanın. Formda zorunlu alanları (ürün bilgisi, müşteri cari bilgisi, adet ve tutar) eksiksiz doldurmanız raporlamalarınızın doğruluğu için önem taşır.</p>
+                        </div>
+                        <hr>
+                        <div class="content-section">
+                            <h4>3. Finans ve Kasa Yönetimi</h4>
+                            <p class="text-muted text-justify">Finans modülü üzerinden günlük nakit, kredi kartı ve havale işlemlerinizi anlık olarak görüntüleyebilirsiniz. Ekstrenizi almak için sayfanın sağ üst köşesindeki "Excel'e Aktar" seçeneğini kullanabilirsiniz.</p>
+                        </div>
+                        <hr>
+                        <div class="content-section">
+                            <h4>4. Yönetici Asistanı (Yapay Zeka)</h4>
+                            <p class="text-muted text-justify">Sayfanın sağ alt köşesinde bulunan asistan butonu aracılığıyla, şirketinizin finansal durumunu sorgulayabilir veya belirli bir güne ait özet raporları otomatik olarak talep edebilirsiniz. Asistan, mevcut veritabanınızı analiz ederek resmi bir dille yanıt vermektedir.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SSS Sekmesi -->
+                <div class="tab-pane fade" id="v-pills-faq" role="tabpanel" aria-labelledby="v-pills-faq-tab">
+                    <div class="official-header">
+                        <h5 class="mb-0">Sıkça Sorulan Sorular</h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="content-section">
+                            <h4>Müşteriye sistem üzerinden otomatik mesaj gönderebilir miyim?</h4>
+                            <p class="text-muted text-justify">Evet. Siparişler (Sipariş Hareketleri) listesindeki her bir sipariş satırında yer alan WhatsApp butonuna tıkladığınızda, müşteri için otomatik bir bilgilendirme metni oluşturularak WhatsApp uygulamasına aktarılır.</p>
+                        </div>
+                        <div class="content-section">
+                            <h4>Silinen siparişler veya finansal kayıtlar geri getirilebilir mi?</h4>
+                            <p class="text-muted text-justify">Sistem güvenliği gereği silinen verilerin geri getirilmesi doğrudan kullanıcı arayüzünden yapılamamaktadır. Hatalı işlemler için iptal sürecini kullanmanız veya destek ekibi ile iletişime geçmeniz tavsiye edilir.</p>
+                        </div>
+                        <div class="content-section">
+                            <h4>Şifremi unutursam veya değiştirmek istersem ne yapmalıyım?</h4>
+                            <p class="text-muted text-justify">Üst menüden veya doğrudan sol taraftaki panelden <strong>"Güvenlik"</strong> sayfasına giderek mevcut şifrenizi yenileyebilirsiniz. Şifrenizi tamamen unuttuysanız sistem yöneticisi ile görüşünüz.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- İletişim Sekmesi -->
+                <div class="tab-pane fade" id="v-pills-contact" role="tabpanel" aria-labelledby="v-pills-contact-tab">
+                    <div class="official-header">
+                        <h5 class="mb-0">İletişim & Destek Formu</h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <p class="text-muted mb-4">Sistemle ilgili karşılaştığınız teknik sorunlar veya talepleriniz için aşağıdaki iletişim kanallarını kullanabilirsiniz.</p>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <dl class="contact-list">
+                                    <dt>Firma Ünvanı</dt>
+                                    <dd>MESLAS OTOMOTİV - ERHAN ERYILMAZ</dd>
+                                    
+                                    <dt>Destek E-Posta Adresi</dt>
+                                    <dd><a href="mailto:info@meslas.com">info@meslas.com</a></dd>
+                                    
+                                    <dt>Telefon Numarası</dt>
+                                    <dd>0216 311 60 34</dd>
+                                </dl>
+                            </div>
+                            <div class="col-md-6">
+                                <dl class="contact-list">
+                                    <dt>Fiziksel Adres</dt>
+                                    <dd>Abdurrahmangazi Mah. Atayolu Cad. No:187/A<br>SANCAKTEPE / İSTANBUL</dd>
+                                    
+                                    <dt>Çalışma Saatleri</dt>
+                                    <dd>Pazartesi - Cuma: 09:00 - 18:00<br>Cumartesi: 09:00 - 14:00</dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>

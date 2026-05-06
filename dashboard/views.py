@@ -10,13 +10,14 @@ from django.db.models import Q, Sum, Count, F, Case, When, DecimalField, Integer
 from django.db.models.functions import TruncMonth
 from django.utils import timezone
 from datetime import datetime, timedelta, date
+import os
 import json
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
 from django.urls import reverse
 from django.views.decorators.http import require_POST, require_http_methods
 from decimal import Decimal
-from .models import Siparis, UserProfile, Notification, Transaction, TransactionCategory, Event, MalzemeHareketi, MalzemeDosya, CikmaLastik, JokerSatisDosya, JokerSatisHareketi
+from .models import Siparis, UserProfile, Notification, Transaction, TransactionCategory, Event, MalzemeHareketi, MalzemeDosya, CikmaLastik, JokerSatisDosya, JokerSatisHareketi, LastikModelBilgisi, Quotation, GarantiBelgesi
 from .forms import SiparisForm, TransactionForm, MalzemeExcelUploadForm
 # pandas removed - using openpyxl instead
 from collections import defaultdict
@@ -24,6 +25,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils.dateparse import parse_date
 from .utils import parse_decimal_value, format_tire_size, normalize_turkish_text, create_turkish_search_variants
 from functools import wraps
+from django.conf import settings
+from .groq_client import groq_chat_completion, GroqError
 
 def misafir_forbidden(view_func):
     """Misafir kullanıcılarının erişimini engelleyen decorator"""
@@ -222,6 +225,628 @@ def index(request):
         'payment_data': json.dumps(payment_data)
     }
     return render(request, 'dashboard/index.html', context)
+
+
+def _month_starts_last_12():
+    today = timezone.now().date().replace(day=1)
+    months = []
+    y = today.year
+    m = today.month
+    for i in range(11, -1, -1):
+        mm = m - i
+        yy = y
+        while mm <= 0:
+            mm += 12
+            yy -= 1
+        months.append(date(yy, mm, 1))
+    return months
+
+
+def _tx_total_expr():
+    return (
+        F('nakit')
+        + F('kredi_karti')
+        + F('sanal_pos')
+        + F('cari')
+        + F('mehmet_havale')
+        + F('banka_havale')
+        + F('pafgo')
+        + F('canta_cikis')
+    )
+
+
+def _expense_category_name(tx):
+    if tx.kategori1:
+        if tx.kategori1.parent:
+            return tx.kategori1.parent.name
+        return tx.kategori1.name
+    return "Kategorisiz"
+
+
+def _parse_period_from_text(text):
+    """
+    Very small Turkish period parser:
+    - bugun
+    - son N gun (7/30)
+    - bu ay
+    - YYYY-MM
+    """
+    t = (text or "").lower()
+    today = timezone.now().date()
+
+    if "bugün" in t or "bugun" in t:
+        start = today
+        end = today + timedelta(days=1)
+        label = "Bugün"
+        return start, end, label
+
+    import re
+    m = re.search(r"son\s+(\d+)\s*g(ü|u)n", t)
+    if m:
+        n = int(m.group(1))
+        start = today - timedelta(days=n)
+        end = today + timedelta(days=1)
+        return start, end, f"Son {n} gün"
+
+    if "bu ay" in t:
+        start = today.replace(day=1)
+        end = (start + timedelta(days=32)).replace(day=1)
+        return start, end, "Bu ay"
+
+    m2 = re.search(r"(\d{4})-(\d{2})", t)
+    if m2:
+        yy = int(m2.group(1))
+        mm = int(m2.group(2))
+        start = date(yy, mm, 1)
+        end = (start + timedelta(days=32)).replace(day=1)
+        return start, end, f"{yy}-{mm:02d}"
+
+    # default: last 30 days
+    start = today - timedelta(days=30)
+    end = today + timedelta(days=1)
+    return start, end, "Son 30 gün"
+
+
+def _sum_tx(qs):
+    total_expr = _tx_total_expr()
+    return qs.aggregate(total=Sum(total_expr))["total"] or Decimal("0")
+
+
+def _top_expense_categories(qs, limit=5):
+    totals = defaultdict(Decimal)
+    for tx in qs.select_related("kategori1", "kategori1__parent"):
+        cat = _expense_category_name(tx)
+        totals[cat] += (
+            (tx.nakit or 0)
+            + (tx.kredi_karti or 0)
+            + (tx.sanal_pos or 0)
+            + (tx.cari or 0)
+            + (tx.mehmet_havale or 0)
+            + (tx.banka_havale or 0)
+            + (tx.pafgo or 0)
+            + (tx.canta_cikis or 0)
+        )
+    return sorted(totals.items(), key=lambda x: x[1], reverse=True)[:limit]
+
+
+def _format_try(amount):
+    try:
+        amt = Decimal(amount)
+    except Exception:
+        amt = Decimal("0")
+    return f"{amt:,.0f}".replace(",", ".")
+
+
+def _parse_period_for_used_tires(text):
+    """
+    Çıkma lastikler için tarih alanı soruya göre değişebilir:
+    - 'sat'/'satıldı' geçiyorsa satış tarihi
+    - aksi halde çıkış tarihi
+    """
+    t = (text or "").lower()
+    start, end, label = _parse_period_from_text(text)
+    date_field = "satis_tarihi" if ("sat" in t or "satıldı" in t or "satildi" in t) else "cikis_tarihi"
+    return start, end, label, date_field
+
+
+def _format_count(n):
+    try:
+        return f"{int(n):,}".replace(",", ".")
+    except Exception:
+        return "0"
+
+
+def _format_money(amount):
+    return f"{_format_try(amount)} ₺"
+
+
+def _used_tires_summary_for_user(*, user, q):
+    start, end, label, date_field = _parse_period_for_used_tires(q)
+    qs = CikmaLastik.objects.filter(user=user).filter(**{f"{date_field}__gte": start, f"{date_field}__lt": end})
+
+    # totals
+    total_rows = qs.count()
+    total_adet = qs.aggregate(total=Sum("adet"))["total"] or 0
+
+    by_status = (
+        qs.values("durum")
+        .annotate(rows=Count("id"), adet=Sum("adet"))
+        .order_by("durum")
+    )
+    status_map = {d["durum"]: d for d in by_status}
+
+    sold_qs = qs.filter(durum="satildi")
+    sold_rows = sold_qs.count()
+    sold_adet = sold_qs.aggregate(total=Sum("adet"))["total"] or 0
+    sold_revenue = Decimal("0")
+    for r in sold_qs.only("adet", "satis_fiyati"):
+        if r.satis_fiyati:
+            sold_revenue += (r.satis_fiyati * Decimal(r.adet or 0))
+
+    lines = [
+        f"{label} çıkma lastik özeti ({'satış tarihi' if date_field=='satis_tarihi' else 'çıkış tarihi'}):",
+        f"- Kayıt: {_format_count(total_rows)} | Adet: {_format_count(total_adet)}",
+        f"- Satılan: {_format_count(sold_rows)} kayıt / {_format_count(sold_adet)} adet | Ciro: {_format_money(sold_revenue)}",
+        f"- Depoda (cikti+depolandi): {_format_count((status_map.get('cikti',{}).get('adet') or 0) + (status_map.get('depolandi',{}).get('adet') or 0))} adet",
+    ]
+    return "\n".join(lines)
+
+
+def _orders_summary_for_user(*, user, q):
+    start, end, label = _parse_period_from_text(q)
+    qs = Siparis.objects.filter(user=user, olusturma_tarihi__gte=start, olusturma_tarihi__lt=end)
+
+    total_rows = qs.count()
+    total_ciro = qs.aggregate(total=Sum("toplam_fiyat"))["total"] or 0
+    by_status = qs.values("durum").annotate(rows=Count("id")).order_by("-rows")
+
+    top_status = list(by_status[:5])
+    status_lines = []
+    for row in top_status:
+        status_lines.append(f"  - {row['durum']}: {_format_count(row['rows'])}")
+
+    text = (
+        f"{label} sipariş özeti (oluşturma tarihine göre):\n"
+        f"- Sipariş: {_format_count(total_rows)}\n"
+        f"- Toplam ciro: {_format_money(total_ciro)}\n"
+        f"- Durum dağılımı (ilk 5):\n" + ("\n".join(status_lines) if status_lines else "  - Kayıt yok")
+    )
+    return text
+
+
+@login_required
+@misafir_forbidden
+def manager_assistant(request):
+    return render(request, "dashboard/assistant.html", {})
+
+
+@login_required
+@misafir_forbidden
+@require_POST
+def manager_assistant_query(request):
+    """
+    Projeyle ilgili her türlü soruyu cevaplar.
+    Tüm modellerin anlık özetini Groq'a context olarak gönderir.
+    """
+    try:
+        payload = json.loads(request.body.decode("utf-8") or "{}")
+    except Exception:
+        payload = {}
+    q = (payload.get("q") or "").strip()
+    if not q:
+        return JsonResponse({"error": "Soru boş olamaz."}, status=400)
+
+    user = request.user
+    today = timezone.now().date()
+    start_30 = today - timedelta(days=30)
+    start_month = today.replace(day=1)
+
+    def safe_count(qs):
+        try: return qs.count()
+        except: return 0
+
+    def safe_sum(qs, field):
+        try: return qs.aggregate(t=Sum(field))["t"] or Decimal("0")
+        except: return Decimal("0")
+
+    def tx_total(qs):
+        try:
+            agg = qs.aggregate(
+                n=Sum("nakit"), k=Sum("kredi_karti"), s=Sum("sanal_pos"),
+                c=Sum("cari"), m=Sum("mehmet_havale"), b=Sum("banka_havale"),
+                p=Sum("pafgo"), ca=Sum("canta_cikis")
+            )
+            return sum(Decimal(str(v or 0)) for v in agg.values())
+        except:
+            return Decimal("0")
+
+    # Siparişler
+    siparis_toplam  = safe_count(Siparis.objects.filter(user=user))
+    siparis_bu_ay   = safe_count(Siparis.objects.filter(user=user, olusturma_tarihi__gte=start_month))
+    siparis_yolda   = safe_count(Siparis.objects.filter(user=user, durum="yolda"))
+    siparis_teslim  = safe_count(Siparis.objects.filter(user=user, durum="teslim"))
+    siparis_iptal   = safe_count(Siparis.objects.filter(user=user, durum="iptal"))
+    siparis_ciro_ay = safe_sum(Siparis.objects.filter(user=user, olusturma_tarihi__gte=start_month), "toplam_fiyat")
+    siparis_ciro_30 = safe_sum(Siparis.objects.filter(user=user, olusturma_tarihi__gte=start_30), "toplam_fiyat")
+    try:
+        marka_dagilim = list(
+            Siparis.objects.filter(user=user)
+            .values("marka").annotate(sayi=Count("id")).order_by("-sayi")[:5]
+        )
+    except:
+        marka_dagilim = []
+
+    # Finans
+    tx_qs = Transaction.objects.filter(created_by=user)
+    gelir_ay_tam = tx_total(tx_qs.filter(hareket_tipi="gelir", tarih__gte=start_month))
+    gider_ay_tam = tx_total(tx_qs.filter(hareket_tipi="gider", tarih__gte=start_month).exclude(kredi_karti__gt=0))
+    gelir_30_tam = tx_total(tx_qs.filter(hareket_tipi="gelir", tarih__gte=start_30))
+    gider_30_tam = tx_total(tx_qs.filter(hareket_tipi="gider", tarih__gte=start_30).exclude(kredi_karti__gt=0))
+    try:
+        kasa_dagilim = list(tx_qs.filter(tarih__gte=start_month).values("kasa_adi").annotate(sayi=Count("id")).order_by("-sayi"))
+    except:
+        kasa_dagilim = []
+
+    # Çıkma lastikler — tüm kullanıcıların verileri (liste tüm kullanıcılara açık)
+    cikma_qs       = CikmaLastik.objects.all()
+    cikma_toplam   = safe_count(cikma_qs)
+    cikma_toplam_adet = int(cikma_qs.aggregate(t=Sum("adet"))["t"] or 0)
+
+    cikma_depoda_qs   = cikma_qs.filter(durum__in=["cikti", "depolandi"])
+    cikma_depoda      = safe_count(cikma_depoda_qs)
+    cikma_depoda_adet = int(cikma_depoda_qs.aggregate(t=Sum("adet"))["t"] or 0)
+
+    cikma_satildi_qs   = cikma_qs.filter(durum="satildi")
+    cikma_satildi      = safe_count(cikma_satildi_qs)
+    cikma_satildi_adet = int(cikma_satildi_qs.aggregate(t=Sum("adet"))["t"] or 0)
+    try:
+        cikma_satis_ciro = sum(
+            (r.satis_fiyati or 0) * (r.adet or 0)
+            for r in cikma_satildi_qs.only("satis_fiyati", "adet")
+        )
+    except:
+        cikma_satis_ciro = 0
+
+    # Durum bazlı adet dağılımı
+    try:
+        cikma_durum_dagilim = list(
+            cikma_qs.values("durum").annotate(kayit=Count("id"), adet=Sum("adet")).order_by("durum")
+        )
+    except:
+        cikma_durum_dagilim = []
+
+    # Marka bazlı dağılım (top 5)
+    try:
+        cikma_marka_dagilim = list(
+            cikma_qs.values("marka").annotate(kayit=Count("id"), adet=Sum("adet")).order_by("-adet")[:5]
+        )
+    except:
+        cikma_marka_dagilim = []
+
+    # Teklifler
+    teklif_toplam = safe_count(Quotation.objects.all())
+    teklif_acik   = safe_count(Quotation.objects.filter(durum="acik"))
+    teklif_onay   = safe_count(Quotation.objects.filter(durum="onaylandi"))
+
+    # Garanti belgeleri
+    garanti_toplam = safe_count(GarantiBelgesi.objects.all())
+
+    # Malzeme hareketleri
+    malzeme_toplam = safe_count(MalzemeHareketi.objects.all())
+    try:
+        malzeme_ciro = MalzemeHareketi.objects.aggregate(t=Sum("tutar"))["t"] or 0
+    except:
+        malzeme_ciro = 0
+
+    # Joker satış
+    joker_toplam = safe_count(JokerSatisHareketi.objects.all())
+    try:
+        joker_kar = JokerSatisHareketi.objects.aggregate(t=Sum("kar_tutari"))["t"] or 0
+    except:
+        joker_kar = 0
+
+    # Öğrenilmiş lastik modelleri
+    try:
+        lastik_modeller = list(LastikModelBilgisi.objects.values("model_adi", "mevsim").order_by("model_adi")[:20])
+    except:
+        lastik_modeller = []
+
+    context_data = {
+        "tarih": str(today),
+        "kullanici": user.username,
+        "siparisler": {
+            "toplam": siparis_toplam,
+            "bu_ay": siparis_bu_ay,
+            "yolda": siparis_yolda,
+            "teslim_edildi": siparis_teslim,
+            "iptal": siparis_iptal,
+            "bu_ay_ciro_tl": float(siparis_ciro_ay),
+            "son_30_gun_ciro_tl": float(siparis_ciro_30),
+            "top_markalar": marka_dagilim,
+        },
+        "finans": {
+            "bu_ay_gelir_tl": float(gelir_ay_tam),
+            "bu_ay_gider_tl": float(gider_ay_tam),
+            "bu_ay_net_tl": float(gelir_ay_tam - gider_ay_tam),
+            "son_30_gun_gelir_tl": float(gelir_30_tam),
+            "son_30_gun_gider_tl": float(gider_30_tam),
+            "son_30_gun_net_tl": float(gelir_30_tam - gider_30_tam),
+            "kasa_dagilimi_bu_ay": kasa_dagilim,
+        },
+        "cikma_lastikler": {
+            "toplam_kayit": cikma_toplam,
+            "toplam_adet": cikma_toplam_adet,
+            "depoda_kayit": cikma_depoda,
+            "depoda_adet": cikma_depoda_adet,
+            "satildi_kayit": cikma_satildi,
+            "satildi_adet": cikma_satildi_adet,
+            "satis_cirosu_tl": float(cikma_satis_ciro),
+            "durum_dagilimi": cikma_durum_dagilim,
+            "top_markalar": cikma_marka_dagilim,
+        },
+        "teklifler": {
+            "toplam": teklif_toplam,
+            "acik": teklif_acik,
+            "onaylandi": teklif_onay,
+        },
+        "garanti_belgeleri": {"toplam": garanti_toplam},
+        "malzeme_hareketleri": {
+            "toplam_satir": malzeme_toplam,
+            "toplam_tutar_tl": float(malzeme_ciro),
+        },
+        "joker_satis": {
+            "toplam_satir": joker_toplam,
+            "toplam_kar_tl": float(joker_kar),
+        },
+        "ogrenilmis_lastik_modelleri": lastik_modeller,
+    }
+
+    # Groq
+    api_key = getattr(settings, "GROQ_API_KEY", None) or os.environ.get("GROQ_API_KEY", "")
+    if not api_key:
+        try:
+            from dotenv import load_dotenv
+            load_dotenv(getattr(settings, "BASE_DIR", None) / ".env")
+        except Exception:
+            pass
+        api_key = os.environ.get("GROQ_API_KEY", "")
+
+    used_groq = False
+    text = ""
+
+    if api_key:
+        try:
+            system_prompt = (
+                "Sen MEStakip adlı lastik/akü/jant sipariş ve finans yönetim sisteminin akıllı asistanısın.\n"
+                "Kullanıcı bu sistemle ilgili her türlü soruyu sorabilir.\n\n"
+                "Sistemdeki modüller:\n"
+                "- Siparişler: lastik/akü/jant siparişleri, durum takibi, ciro\n"
+                "- Finans: gelir/gider işlemleri, kasa yönetimi (servis, merkez satış, joker satış, virman)\n"
+                "- Çıkma Lastikler: müşterilerden çıkan lastiklerin takibi, depo, satış\n"
+                "- Teklifler: müşterilere verilen teklifler\n"
+                "- Garanti Belgeleri: satılan ürünlerin garanti takibi\n"
+                "- Malzeme Hareketleri: Excel'den yüklenen malzeme satış verileri\n"
+                "- Joker Satış: Joker firmasından gelen satış verileri\n"
+                "- Öğrenilmiş Lastik Modelleri: AI'ın mevsim tespiti için öğrendiği modeller\n\n"
+                "Aşağıdaki JSON verisi sistemin anlık durumunu gösteriyor. "
+                "Sadece bu veriye dayanarak cevap ver. "
+                "Türkçe, kısa ve net cevap ver (en fazla 10 satır). "
+                "Sayıları Türk formatında yaz (nokta ile binlik ayraç).\n\n"
+                f"VERİ:\n{json.dumps(context_data, ensure_ascii=False, default=str)}"
+            )
+            groq_text = groq_chat_completion(
+                api_key=api_key,
+                temperature=0.2,
+                max_tokens=500,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": q},
+                ],
+            )
+            groq_text = (groq_text or "").strip()
+            if groq_text:
+                used_groq = True
+                text = groq_text
+        except Exception:
+            text = ""
+
+    # Fallback kural tabanlı
+    if not text:
+        t = q.lower()
+        if "sipariş" in t or "siparis" in t:
+            text = (
+                f"Sipariş özeti:\n"
+                f"- Toplam: {siparis_toplam} | Bu ay: {siparis_bu_ay}\n"
+                f"- Yolda: {siparis_yolda} | Teslim: {siparis_teslim} | İptal: {siparis_iptal}\n"
+                f"- Bu ay ciro: {_format_try(siparis_ciro_ay)} ₺"
+            )
+        elif "finans" in t or "gelir" in t or "gider" in t or "net" in t:
+            text = (
+                f"Finans özeti (bu ay):\n"
+                f"- Gelir: {_format_try(gelir_ay_tam)} ₺\n"
+                f"- Gider: {_format_try(gider_ay_tam)} ₺\n"
+                f"- Net: {_format_try(gelir_ay_tam - gider_ay_tam)} ₺"
+            )
+        elif "çıkma" in t or "cikma" in t:
+            text = (
+                f"Çıkma lastik özeti:\n"
+                f"- Toplam: {cikma_toplam} kayıt / {cikma_toplam_adet} adet\n"
+                f"- Depoda: {cikma_depoda} kayıt / {cikma_depoda_adet} adet\n"
+                f"- Satıldı: {cikma_satildi} kayıt / {cikma_satildi_adet} adet\n"
+                f"- Satış cirosu: {_format_try(cikma_satis_ciro)} ₺"
+            )
+        elif "teklif" in t:
+            text = f"Teklifler: Toplam {teklif_toplam} | Açık: {teklif_acik} | Onaylı: {teklif_onay}"
+        elif "garanti" in t:
+            text = f"Garanti belgeleri: Toplam {garanti_toplam}"
+        elif "malzeme" in t:
+            text = f"Malzeme hareketleri: {malzeme_toplam} satır | Toplam tutar: {_format_try(malzeme_ciro)} ₺"
+        elif "joker" in t:
+            text = f"Joker satış: {joker_toplam} satır | Toplam kâr: {_format_try(joker_kar)} ₺"
+        else:
+            text = (
+                f"MEStakip genel özet ({today}):\n"
+                f"- Siparişler: {siparis_toplam} toplam, {siparis_bu_ay} bu ay\n"
+                f"- Finans bu ay: Gelir {_format_try(gelir_ay_tam)} ₺ / Gider {_format_try(gider_ay_tam)} ₺\n"
+                f"- Çıkma lastik: {cikma_toplam} kayıt, {cikma_depoda} depoda\n"
+                f"- Teklifler: {teklif_toplam} | Garanti: {garanti_toplam}\n\n"
+                "Groq erişimi olmadan daha detaylı soru cevaplanamıyor."
+            )
+
+    return JsonResponse({"text": text, "used_groq": used_groq})
+@login_required
+@misafir_forbidden
+def expenses_3d(request):
+    months = _month_starts_last_12()
+    start = months[0]
+    end = (months[-1] + timedelta(days=32)).replace(day=1)
+
+    qs = (
+        Transaction.objects.filter(
+            created_by=request.user,
+            hareket_tipi='gider',
+            tarih__gte=start,
+            tarih__lt=end,
+        )
+        .select_related('kategori1', 'kategori1__parent')
+        .exclude(Q(kredi_karti__gt=0))
+        .order_by('tarih')
+    )
+
+    month_labels = [d.strftime("%Y-%m") for d in months]
+    month_index = {d.strftime("%Y-%m"): i for i, d in enumerate(months)}
+
+    totals_by_cat = defaultdict(Decimal)
+    totals_by_month_cat = defaultdict(lambda: defaultdict(Decimal))
+    total_12m = Decimal("0")
+
+    for tx in qs:
+        label = tx.tarih.replace(day=1).strftime("%Y-%m")
+        if label not in month_index:
+            continue
+        cat = _expense_category_name(tx)
+        total = (tx.nakit or 0) + (tx.kredi_karti or 0) + (tx.sanal_pos or 0) + (tx.cari or 0) + (tx.mehmet_havale or 0) + (tx.banka_havale or 0) + (tx.pafgo or 0) + (tx.canta_cikis or 0)
+        total_12m += total
+        totals_by_cat[cat] += total
+        totals_by_month_cat[label][cat] += total
+
+    top_n = 10
+    top_categories_sorted = sorted(totals_by_cat.items(), key=lambda x: x[1], reverse=True)[:top_n]
+    categories = [name for name, _ in top_categories_sorted]
+
+    z = []
+    for cat in categories:
+        row = []
+        for ml in month_labels:
+            row.append(float(totals_by_month_cat.get(ml, {}).get(cat, 0)))
+        z.append(row)
+
+    context = {
+        "months_json": json.dumps(month_labels),
+        "categories_json": json.dumps(categories),
+        "z_json": json.dumps(z),
+        "top_n": top_n,
+        "total_12m": total_12m,
+        "top_categories": [{"name": n, "total": t} for n, t in top_categories_sorted[:5]],
+    }
+    return render(request, "dashboard/expenses_3d.html", context)
+
+
+@login_required
+@misafir_forbidden
+@require_POST
+def expenses_3d_insights(request):
+    try:
+        payload = json.loads(request.body.decode("utf-8") or "{}")
+    except Exception:
+        payload = {}
+
+    months = _month_starts_last_12()
+    start = months[0]
+    end = (months[-1] + timedelta(days=32)).replace(day=1)
+
+    qs = (
+        Transaction.objects.filter(
+            created_by=request.user,
+            hareket_tipi='gider',
+            tarih__gte=start,
+            tarih__lt=end,
+        )
+        .select_related('kategori1', 'kategori1__parent')
+        .exclude(Q(kredi_karti__gt=0))
+    )
+
+    by_month = defaultdict(Decimal)
+    by_cat = defaultdict(Decimal)
+
+    for tx in qs:
+        ml = tx.tarih.replace(day=1).strftime("%Y-%m")
+        cat = _expense_category_name(tx)
+        total = (tx.nakit or 0) + (tx.kredi_karti or 0) + (tx.sanal_pos or 0) + (tx.cari or 0) + (tx.mehmet_havale or 0) + (tx.banka_havale or 0) + (tx.pafgo or 0) + (tx.canta_cikis or 0)
+        by_month[ml] += total
+        by_cat[cat] += total
+
+    month_labels = sorted(by_month.keys())
+    month_series = [{"month": m, "total": float(by_month[m])} for m in month_labels]
+    top_cats = sorted(by_cat.items(), key=lambda x: x[1], reverse=True)[:8]
+    top_cats_payload = [{"category": n, "total": float(t)} for n, t in top_cats]
+
+    api_key = getattr(settings, "GROQ_API_KEY", None) or os.environ.get("GROQ_API_KEY", "")
+    if not api_key:
+        # Dev ortamında kullanıcı .env'yi sonradan güncellediyse,
+        # runserver restart gerekmemesi için bir kez daha yüklemeyi dene.
+        try:
+            from dotenv import load_dotenv
+            load_dotenv(getattr(settings, "BASE_DIR", None) / ".env")
+        except Exception:
+            pass
+        api_key = os.environ.get("GROQ_API_KEY", "")
+        if not api_key:
+            return JsonResponse(
+                {"error": "GROQ_API_KEY tanımlı değil. `.env` dosyasına ekleyip tekrar deneyin (gerekirse runserver'ı yeniden başlatın)."},
+                status=400,
+            )
+
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "Sen bir finans asistanısın. Türkçe, kısa, net ve düzenli yaz.\n"
+                "Sadece verilen sayılara dayan; uydurma yapma.\n"
+                "Çıktı formatı aşağıdaki gibi OLMALI ve bu sırayı korumalı:\n"
+                "1) Özet: <tek cümle>\n"
+                "2) Trend: <tek cümle>\n"
+                "3) En Yüksek Kategoriler: <en fazla 3 madde>\n"
+                "4) Risk/Anomali: <tek cümle veya 'Yok'>\n"
+                "5) Aksiyon: <en fazla 2 madde>\n"
+                "Toplam uzunluk 900 karakteri geçmesin."
+            ),
+        },
+        {
+            "role": "user",
+            "content": json.dumps(
+                {
+                    "currency": "TRY",
+                    "period": "last_12_months",
+                    "expense_monthly_totals": month_series,
+                    "top_expense_categories": top_cats_payload,
+                    "note": "Kredi kartı gider kayıtları hariç tutulmuş olabilir.",
+                    "task": "Yukarıdaki formatta, kısa çıktı üret.",
+                },
+                ensure_ascii=False,
+            ),
+        },
+    ]
+
+    try:
+        text = groq_chat_completion(messages=messages, api_key=api_key, temperature=0.2, max_tokens=300)
+    except GroqError as e:
+        return JsonResponse({"error": str(e)}, status=502)
+
+    text = (text or "").strip()
+    if len(text) > 900:
+        text = text[:900].rstrip() + "…"
+    return JsonResponse({"text": text})
 
 @misafir_forbidden
 def analytics(request):
@@ -1329,6 +1954,31 @@ def yeni_lastik(request):
             # Kullanıcıyı otomatik ata
             siparis.user = request.user
             siparis.save()
+
+            # --- Otomatik öğrenme: ürün adından model çıkar ve mevsimi kaydet ---
+            if siparis.mevsim and siparis.urun:
+                try:
+                    urun_text = siparis.urun.strip()
+                    # Ürün adından ebat bilgisini çıkar (örn: "205/55R16" gibi kısımları at)
+                    import re
+                    # Ebat pattern: sayı/sayıRsayı veya sayıxsayıRsayı
+                    model_adi = re.sub(r'\b\d{2,3}[/x]\d{2,3}[Rr]\d{2}\b', '', urun_text).strip()
+                    model_adi = re.sub(r'\s+', ' ', model_adi).strip()
+                    if model_adi and len(model_adi) >= 3:
+                        LastikModelBilgisi.objects.update_or_create(
+                            model_adi=model_adi,
+                            defaults={
+                                'mevsim': siparis.mevsim,
+                                'son_guncelleyen': request.user,
+                            }
+                        )
+                        # Güncelleme sayısını artır
+                        LastikModelBilgisi.objects.filter(model_adi=model_adi).update(
+                            guncelleme_sayisi=F('guncelleme_sayisi') + 1
+                        )
+                except Exception:
+                    pass  # Öğrenme hatası siparişi etkilemesin
+
             messages.success(request, f'Sipariş başarıyla kaydedildi! ID: {siparis.id}')
             return redirect('dashboard:elements')
         else:
@@ -6470,3 +7120,140 @@ def delete_garanti_belgesi(request, belge_id):
             'success': False,
             'error': str(e)
         }, status=400)
+
+
+@login_required
+@require_POST
+def lastik_mevsim_ai(request):
+    """
+    Lastik ürün adı + marka metninden mevsim tahmini yapar.
+    Öncelik sırası:
+      1. Veritabanı öğrenmesi (daha önce girilen aynı/benzer ürünler)
+      2. Kural tabanlı hızlı tespit
+      3. Groq AI
+    Döner: { "mevsim": "yaz"|"kis"|"dort-mevsim"|"bilinmiyor", "kaynak": "veritabani"|"kural"|"groq" }
+    """
+    try:
+        payload = json.loads(request.body.decode("utf-8") or "{}")
+    except Exception:
+        payload = {}
+
+    urun = (payload.get("urun") or "").strip()
+    marka = (payload.get("marka") or "").strip()
+
+    metin = f"{marka} {urun}".strip()
+    if not metin:
+        return JsonResponse({"mevsim": "bilinmiyor", "kaynak": "kural"})
+
+    # --- 1. LastikModelBilgisi tablosundan öğrenilmiş modellere bak ---
+    def model_tablosundan_bul(urun_text, marka_text):
+        """
+        LastikModelBilgisi tablosunda ürün adı içinde geçen kayıtlı model varsa döndür.
+        Örn: "TS870 205/55R16" yazılınca "TS870" kaydını bulur.
+        """
+        try:
+            tum_modeller = LastikModelBilgisi.objects.all().values('model_adi', 'mevsim')
+            metin_lower = f"{marka_text} {urun_text}".lower()
+            for kayit in tum_modeller:
+                if kayit['model_adi'].lower() in metin_lower:
+                    return kayit['mevsim']
+        except Exception:
+            pass
+        return None
+
+    model_sonuc = model_tablosundan_bul(urun, marka)
+    if model_sonuc:
+        return JsonResponse({"mevsim": model_sonuc, "kaynak": "veritabani"})
+
+    # --- Kural tabanlı hızlı tespit (Groq olmadan da çalışsın) ---
+    def kural_tabani(text):
+        t = text.lower()
+        for ch, rep in [("ı","i"),("ş","s"),("ğ","g"),("ü","u"),("ö","o"),("ç","c")]:
+            t = t.replace(ch, rep)
+
+        dort_mevsim = ["all season","allseason","4season","4 seasons","4 mevsim","4mevsim",
+                       "four season","dort mevsim","crossclimate","dueler a/t","a/t","at "]
+        kis = ["winter","kis","kar","snow","ice","blizzak","alpin","ultragrip",
+               "sottozero","wintercontact","winter contact","m+s","3pmsf","stud",
+               "nordicmaster","colddriving","winguard","snowresponse",
+               "ts870"]
+        yaz = ["summer","yaz","eagle sport","pilot sport","sportcontact","premiumcontact",
+               "premium contact","primacy","asymmetric","efficientgrip","energy saver",
+               "ecopia","turanza","cinturato","ventus","potenza","re50","re71","hp010",
+               "evo3","f1","ps4","sc6","elt30","sport 3","sport maxx"]
+
+        for h in dort_mevsim:
+            if h in t:
+                return "dort-mevsim"
+        for h in kis:
+            if h in t:
+                return "kis"
+        for h in yaz:
+            if h in t:
+                return "yaz"
+        return None
+
+    kural_sonuc = kural_tabani(metin)
+
+    # --- Groq ile tespit ---
+    api_key = getattr(settings, "GROQ_API_KEY", None) or os.environ.get("GROQ_API_KEY", "")
+    if not api_key:
+        try:
+            from dotenv import load_dotenv
+            load_dotenv(getattr(settings, "BASE_DIR", None) / ".env")
+        except Exception:
+            pass
+        api_key = os.environ.get("GROQ_API_KEY", "")
+
+    if api_key:
+        try:
+            groq_yanit = groq_chat_completion(
+                api_key=api_key,
+                temperature=0.0,
+                max_tokens=30,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "Sen bir lastik uzmanı AI'sın. Verilen lastik markası ve modeline bakarak mevsim türünü tahmin et.\n"
+                            "SADECE ve KESİNLİKLE JSON formatında yanıt ver. Markdown (```) veya ek metin kullanma.\n"
+                            "Kullanabileceğin 'mevsim' değerleri: 'yaz', 'kis', 'dort-mevsim', 'bilinmiyor'.\n"
+                            "İpuçları:\n"
+                            "- Sport, Primacy, Turanza, Eagle, Summer, Yaz, Eco, Premium -> yaz\n"
+                            "- Winter, Snow, Ice, Blizzak, Alpin, Kış, Grip, TS870 -> kis\n"
+                            "- All Season, 4Season, CrossClimate, 4 Mevsim, A/T -> dort-mevsim\n\n"
+                            "Örnek Yanıt:\n"
+                            "{\"mevsim\": \"yaz\"}"
+                        ),
+                    },
+                    {"role": "user", "content": metin},
+                ],
+            )
+            groq_yanit = (groq_yanit or "").strip()
+            
+            # Markdown etiketlerini temizle (Llama bazen ekliyor)
+            if groq_yanit.startswith("```json"):
+                groq_yanit = groq_yanit[7:]
+            elif groq_yanit.startswith("```"):
+                groq_yanit = groq_yanit[3:]
+            if groq_yanit.endswith("```"):
+                groq_yanit = groq_yanit[:-3]
+            
+            groq_yanit = groq_yanit.strip()
+            
+            # JSON parse
+            try:
+                parsed = json.loads(groq_yanit)
+                mevsim = parsed.get("mevsim", "bilinmiyor")
+                if mevsim in ("yaz", "kis", "dort-mevsim", "bilinmiyor"):
+                    return JsonResponse({"mevsim": mevsim, "kaynak": "groq"})
+            except Exception:
+                pass
+        except Exception:
+            pass
+
+    # Groq başarısız ya da yoksa kural sonucunu kullan
+    return JsonResponse({
+        "mevsim": kural_sonuc or "bilinmiyor",
+        "kaynak": "kural"
+    })

@@ -476,14 +476,35 @@ def manager_assistant_query(request):
     except:
         marka_dagilim = []
 
-    # Finans
-    tx_qs = Transaction.objects.filter(created_by=user)
-    gelir_ay_tam = tx_total(tx_qs.filter(hareket_tipi="gelir", tarih__gte=start_month))
-    gider_ay_tam = tx_total(tx_qs.filter(hareket_tipi="gider", tarih__gte=start_month).exclude(kredi_karti__gt=0))
-    gelir_30_tam = tx_total(tx_qs.filter(hareket_tipi="gelir", tarih__gte=start_30))
-    gider_30_tam = tx_total(tx_qs.filter(hareket_tipi="gider", tarih__gte=start_30).exclude(kredi_karti__gt=0))
+    # Finans (income_expense_report mantığı ile tam uyumlu)
+    def calc_finance(start_date):
+        f_gelir = {'hareket_tipi': 'gelir', 'baslangic_tarih': start_date.strftime('%Y-%m-%d')}
+        f_gider = {'hareket_tipi': 'gider', 'baslangic_tarih': start_date.strftime('%Y-%m-%d')}
+        
+        gelir_islemler = list(get_filtered_transactions(user, **f_gelir)) + get_excel_hizmet_transactions(user, **f_gelir)
+        gider_islemler = list(get_filtered_transactions(user, **f_gider)) + get_excel_hizmet_transactions(user, **f_gider)
+        
+        g = Decimal("0")
+        for tx in gelir_islemler:
+            g += Decimal(tx.nakit or 0) + Decimal(getattr(tx, 'canta_cikis', 0) or 0) + Decimal(tx.pafgo or 0) + Decimal(tx.mehmet_havale or 0)
+            g += Decimal(tx.kredi_karti or 0) / Decimal("1.20")
+            g += Decimal(tx.cari or 0) / Decimal("1.20")
+            g += Decimal(tx.sanal_pos or 0) / Decimal("1.20")
+            g += Decimal(tx.banka_havale or 0) / Decimal("1.20")
+            
+        d = Decimal("0")
+        for tx in gider_islemler:
+            d += Decimal(tx.nakit or 0) + Decimal(getattr(tx, 'canta_cikis', 0) or 0) + Decimal(tx.pafgo or 0) + Decimal(tx.mehmet_havale or 0)
+            d += Decimal(tx.kredi_karti or 0) + Decimal(tx.cari or 0) + Decimal(tx.sanal_pos or 0) + Decimal(tx.banka_havale or 0)
+            
+        return float(g), float(d)
+
+    gelir_ay_tam, gider_ay_tam = calc_finance(start_month)
+    gelir_30_tam, gider_30_tam = calc_finance(start_30)
+
     try:
-        kasa_dagilim = list(tx_qs.filter(tarih__gte=start_month).values("kasa_adi").annotate(sayi=Count("id")).order_by("-sayi"))
+        # Kasa dağılımı sadece gider+gelir transactions için
+        kasa_dagilim = list(Transaction.objects.filter(created_by=user, tarih__gte=start_month).values("kasa_adi").annotate(sayi=Count("id")).order_by("-sayi"))
     except:
         kasa_dagilim = []
 
@@ -611,8 +632,14 @@ def manager_assistant_query(request):
             pass
         api_key = os.environ.get("GROQ_API_KEY", "")
 
+    # Sahte/placeholder key kontrolü
+    _bad_keys = {"buraya-yeni-key-yapistir", "your-api-key-here", "sk-xxx", ""}
+    if not api_key or api_key.strip() in _bad_keys or api_key.strip().lower().startswith("buraya"):
+        api_key = ""
+
     used_groq = False
     text = ""
+    _groq_error = ""
 
     if api_key:
         try:
@@ -647,50 +674,129 @@ def manager_assistant_query(request):
             if groq_text:
                 used_groq = True
                 text = groq_text
-        except Exception:
+        except Exception as _e:
+            _groq_error = str(_e)
             text = ""
 
-    # Fallback kural tabanlı
+    # ── Akıllı Fallback: Groq yoksa/bozuksa bile gerçek veriden cevap üret ──
     if not text:
         t = q.lower()
-        if "sipariş" in t or "siparis" in t:
+        fmttl = lambda v: f"{_format_try(v)} ₺"
+
+        # Sipariş - yoldaki
+        if any(w in t for w in ["yolda"]):
             text = (
-                f"Sipariş özeti:\n"
-                f"- Toplam: {siparis_toplam} | Bu ay: {siparis_bu_ay}\n"
-                f"- Yolda: {siparis_yolda} | Teslim: {siparis_teslim} | İptal: {siparis_iptal}\n"
-                f"- Bu ay ciro: {_format_try(siparis_ciro_ay)} ₺"
+                f"🚚 Yolda olan siparişler: {siparis_yolda}\n"
+                f"• Toplam sipariş: {siparis_toplam} | Bu ay: {siparis_bu_ay}\n"
+                f"• Teslim: {siparis_teslim} | İptal: {siparis_iptal}"
             )
-        elif "finans" in t or "gelir" in t or "gider" in t or "net" in t:
+        # Sipariş - iptal
+        elif "iptal" in t and not any(w in t for w in ["finans", "gelir", "gider"]):
             text = (
-                f"Finans özeti (bu ay):\n"
-                f"- Gelir: {_format_try(gelir_ay_tam)} ₺\n"
-                f"- Gider: {_format_try(gider_ay_tam)} ₺\n"
-                f"- Net: {_format_try(gelir_ay_tam - gider_ay_tam)} ₺"
+                f"❌ İptal edilen siparişler: {siparis_iptal}\n"
+                f"• Toplam sipariş: {siparis_toplam} | Bu ay: {siparis_bu_ay}"
             )
-        elif "çıkma" in t or "cikma" in t:
+        # Sipariş - marka
+        elif any(w in t for w in ["marka", "en çok", "top"]) and not any(w in t for w in ["cikma", "çıkma", "lastik", "depo"]):
+            if marka_dagilim:
+                satirlar = [f"  {i+1}. {m['marka']}: {m['sayi']} sipariş" for i, m in enumerate(marka_dagilim)]
+                text = "🏷️ En çok sipariş verilen markalar:\n" + "\n".join(satirlar)
+            else:
+                text = "Henüz marka verisi bulunmuyor."
+        # Sipariş genel
+        elif any(w in t for w in ["sipariş", "siparis", "ciro", "kaç sipariş"]):
             text = (
-                f"Çıkma lastik özeti:\n"
-                f"- Toplam: {cikma_toplam} kayıt / {cikma_toplam_adet} adet\n"
-                f"- Depoda: {cikma_depoda} kayıt / {cikma_depoda_adet} adet\n"
-                f"- Satıldı: {cikma_satildi} kayıt / {cikma_satildi_adet} adet\n"
-                f"- Satış cirosu: {_format_try(cikma_satis_ciro)} ₺"
+                f"📦 Sipariş Özeti ({today}):\n"
+                f"• Bu ay: {siparis_bu_ay} sipariş | Ciro: {fmttl(siparis_ciro_ay)}\n"
+                f"• Son 30 gün ciro: {fmttl(siparis_ciro_30)}\n"
+                f"• Toplam: {siparis_toplam} sipariş\n"
+                f"• Yolda: {siparis_yolda} | Teslim: {siparis_teslim} | İptal: {siparis_iptal}"
             )
+            if marka_dagilim:
+                marka_str = ", ".join(f"{m['marka']} ({m['sayi']})" for m in marka_dagilim[:3])
+                text += f"\n• Top markalar: {marka_str}"
+        # Finans - kasa
+        elif "kasa" in t:
+            if kasa_dagilim:
+                satirlar = [f"  • {k['kasa_adi'] or 'Bilinmeyen'}: {k['sayi']} işlem" for k in kasa_dagilim[:8]]
+                text = "🏦 Bu ay kasa dağılımı:\n" + "\n".join(satirlar)
+            else:
+                text = "Bu ay kasa hareketi kaydı bulunamadı."
+        # Finans genel
+        elif any(w in t for w in ["gelir", "gider", "finans", "net", "son 30", "para"]):
+            net_ay = gelir_ay_tam - gider_ay_tam
+            net_30 = gelir_30_tam - gider_30_tam
+            text = (
+                f"💰 Finans Özeti ({today}):\n"
+                f"• Bu ay gelir: {fmttl(gelir_ay_tam)}\n"
+                f"• Bu ay gider: {fmttl(gider_ay_tam)}\n"
+                f"• Bu ay net: {'+'if net_ay>=0 else ''}{fmttl(net_ay)}\n"
+                f"• Son 30 gün gelir: {fmttl(gelir_30_tam)}\n"
+                f"• Son 30 gün gider: {fmttl(gider_30_tam)}\n"
+                f"• Son 30 gün net: {'+'if net_30>=0 else ''}{fmttl(net_30)}"
+            )
+        # Çıkma lastik - depo
+        elif any(w in t for w in ["depo", "stok", "depoda"]):
+            text = (
+                f"🔧 Çıkma Lastik Depo Durumu ({today}):\n"
+                f"• Depoda: {cikma_depoda_adet} adet ({cikma_depoda} kayıt)\n"
+                f"• Toplam: {cikma_toplam} kayıt / {cikma_toplam_adet} adet"
+            )
+        # Çıkma lastik genel
+        elif any(w in t for w in ["çıkma", "cikma", "lastik", "satış cirosu"]):
+            text = (
+                f"🔧 Çıkma Lastik Özeti ({today}):\n"
+                f"• Toplam: {cikma_toplam} kayıt / {cikma_toplam_adet} adet\n"
+                f"• Depoda: {cikma_depoda_adet} adet ({cikma_depoda} kayıt)\n"
+                f"• Satıldı: {cikma_satildi_adet} adet ({cikma_satildi} kayıt)\n"
+                f"• Satış cirosu: {fmttl(cikma_satis_ciro)}"
+            )
+            if cikma_durum_dagilim:
+                durum_lines = [f"  • {d['durum']}: {d['kayit']} kayıt / {d.get('adet', 0)} adet" for d in cikma_durum_dagilim]
+                text += "\n• Durum dağılımı:\n" + "\n".join(durum_lines)
+            if cikma_marka_dagilim:
+                marka_str = ", ".join(f"{m['marka']} ({m['adet']} adet)" for m in cikma_marka_dagilim[:3])
+                text += f"\n• Top markalar: {marka_str}"
+        # Teklifler
         elif "teklif" in t:
-            text = f"Teklifler: Toplam {teklif_toplam} | Açık: {teklif_acik} | Onaylı: {teklif_onay}"
-        elif "garanti" in t:
-            text = f"Garanti belgeleri: Toplam {garanti_toplam}"
-        elif "malzeme" in t:
-            text = f"Malzeme hareketleri: {malzeme_toplam} satır | Toplam tutar: {_format_try(malzeme_ciro)} ₺"
-        elif "joker" in t:
-            text = f"Joker satış: {joker_toplam} satır | Toplam kâr: {_format_try(joker_kar)} ₺"
-        else:
             text = (
-                f"MEStakip genel özet ({today}):\n"
-                f"- Siparişler: {siparis_toplam} toplam, {siparis_bu_ay} bu ay\n"
-                f"- Finans bu ay: Gelir {_format_try(gelir_ay_tam)} ₺ / Gider {_format_try(gider_ay_tam)} ₺\n"
-                f"- Çıkma lastik: {cikma_toplam} kayıt, {cikma_depoda} depoda\n"
-                f"- Teklifler: {teklif_toplam} | Garanti: {garanti_toplam}\n\n"
-                "Groq erişimi olmadan daha detaylı soru cevaplanamıyor."
+                f"📋 Teklifler ({today}):\n"
+                f"• Toplam: {teklif_toplam}\n"
+                f"• Açık: {teklif_acik}\n"
+                f"• Onaylı: {teklif_onay}"
+            )
+        # Garanti
+        elif "garanti" in t:
+            text = f"🛡️ Garanti Belgeleri: Toplam {garanti_toplam} kayıt"
+        # Malzeme
+        elif "malzeme" in t:
+            text = (
+                f"📦 Malzeme Hareketleri:\n"
+                f"• Toplam satır: {malzeme_toplam}\n"
+                f"• Toplam tutar: {fmttl(malzeme_ciro)}"
+            )
+        # Joker
+        elif "joker" in t:
+            text = (
+                f"🃏 Joker Satış:\n"
+                f"• Toplam satır: {joker_toplam}\n"
+                f"• Toplam kâr: {fmttl(joker_kar)}"
+            )
+        # Genel özet
+        else:
+            net_ay = gelir_ay_tam - gider_ay_tam
+            text = (
+                f"📊 MEStakip Genel Özet ({today}):\n\n"
+                f"📦 Siparişler:\n"
+                f"  • Bu ay: {siparis_bu_ay} adet | Ciro: {fmttl(siparis_ciro_ay)}\n"
+                f"  • Yolda: {siparis_yolda} | Teslim: {siparis_teslim} | İptal: {siparis_iptal}\n\n"
+                f"💰 Finans (bu ay):\n"
+                f"  • Gelir: {fmttl(gelir_ay_tam)} | Gider: {fmttl(gider_ay_tam)}\n"
+                f"  • Net: {'+'if net_ay>=0 else ''}{fmttl(net_ay)}\n\n"
+                f"🔧 Çıkma Lastik:\n"
+                f"  • Depoda: {cikma_depoda_adet} adet | Satış cirosu: {fmttl(cikma_satis_ciro)}\n\n"
+                f"📋 Teklifler: {teklif_toplam} toplam, {teklif_acik} açık\n"
+                f"🛡️ Garanti: {garanti_toplam} belge | 📦 Malzeme: {fmttl(malzeme_ciro)}"
             )
 
     return JsonResponse({"text": text, "used_groq": used_groq})
@@ -701,17 +807,14 @@ def expenses_3d(request):
     start = months[0]
     end = (months[-1] + timedelta(days=32)).replace(day=1)
 
-    qs = (
-        Transaction.objects.filter(
-            created_by=request.user,
-            hareket_tipi='gider',
-            tarih__gte=start,
-            tarih__lt=end,
-        )
-        .select_related('kategori1', 'kategori1__parent')
-        .exclude(Q(kredi_karti__gt=0))
-        .order_by('tarih')
-    )
+    # Grafikleri besleyen veri (income-expense-report ile aynı filtreleri kullan)
+    qs = get_filtered_transactions(
+        user=request.user,
+        hareket_tipi='gider'
+    ).filter(
+        tarih__gte=start,
+        tarih__lt=end
+    ).order_by('tarih')
 
     month_labels = [d.strftime("%Y-%m") for d in months]
     month_index = {d.strftime("%Y-%m"): i for i, d in enumerate(months)}
@@ -764,88 +867,106 @@ def expenses_3d_insights(request):
     months = _month_starts_last_12()
     start = months[0]
     end = (months[-1] + timedelta(days=32)).replace(day=1)
+    month_labels_all = [d.strftime("%Y-%m") for d in months]
 
-    qs = (
-        Transaction.objects.filter(
-            created_by=request.user,
-            hareket_tipi='gider',
-            tarih__gte=start,
-            tarih__lt=end,
-        )
-        .select_related('kategori1', 'kategori1__parent')
-        .exclude(Q(kredi_karti__gt=0))
+    # ── Gider verisi (income-expense-report ile aynı filtreleri kullan) ──
+    # get_filtered_transactions fonksiyonu bazı gelir ve virmanları hariç tutuyor,
+    # burada sadece 'gider' olanları alıyoruz.
+    expense_qs = get_filtered_transactions(
+        user=request.user,
+        hareket_tipi="gider"
+    ).filter(
+        tarih__gte=start,
+        tarih__lt=end
     )
 
     by_month = defaultdict(Decimal)
     by_cat = defaultdict(Decimal)
 
-    for tx in qs:
+    for tx in expense_qs:
         ml = tx.tarih.replace(day=1).strftime("%Y-%m")
         cat = _expense_category_name(tx)
-        total = (tx.nakit or 0) + (tx.kredi_karti or 0) + (tx.sanal_pos or 0) + (tx.cari or 0) + (tx.mehmet_havale or 0) + (tx.banka_havale or 0) + (tx.pafgo or 0) + (tx.canta_cikis or 0)
-        by_month[ml] += total
-        by_cat[cat] += total
+        amt = (
+            (tx.nakit or 0) + (tx.kredi_karti or 0) + (tx.sanal_pos or 0)
+            + (tx.cari or 0) + (tx.mehmet_havale or 0) + (tx.banka_havale or 0)
+            + (tx.pafgo or 0) + (tx.canta_cikis or 0)
+        )
+        by_month[ml] += amt
+        by_cat[cat] += amt
 
-    month_labels = sorted(by_month.keys())
-    month_series = [{"month": m, "total": float(by_month[m])} for m in month_labels]
-    top_cats = sorted(by_cat.items(), key=lambda x: x[1], reverse=True)[:8]
-    top_cats_payload = [{"category": n, "total": float(t)} for n, t in top_cats]
+    # Aylık gider serisi (tüm 12 ay, boş aylar 0)
+    monthly_expense = [
+        {"ay": ml, "gider_tl": float(by_month.get(ml, Decimal("0")))}
+        for ml in month_labels_all
+    ]
+    toplam_gider_12m = sum(by_month.values()) or Decimal("0")
 
+    # Kategori dağılımı (yüzde dahil, en fazla 8)
+    top_cats_raw = sorted(by_cat.items(), key=lambda x: x[1], reverse=True)[:8]
+    toplam_cat = sum(v for _, v in top_cats_raw) or Decimal("1")
+    kategori_dagilimi = [
+        {
+            "kategori": cat,
+            "toplam_tl": float(amt),
+            "yuzde": round(float(amt / toplam_cat * 100), 1),
+        }
+        for cat, amt in top_cats_raw
+    ]
+
+    # ── API key ──
     api_key = getattr(settings, "GROQ_API_KEY", None) or os.environ.get("GROQ_API_KEY", "")
     if not api_key:
-        # Dev ortamında kullanıcı .env'yi sonradan güncellediyse,
-        # runserver restart gerekmemesi için bir kez daha yüklemeyi dene.
         try:
             from dotenv import load_dotenv
             load_dotenv(getattr(settings, "BASE_DIR", None) / ".env")
         except Exception:
             pass
         api_key = os.environ.get("GROQ_API_KEY", "")
-        if not api_key:
-            return JsonResponse(
-                {"error": "GROQ_API_KEY tanımlı değil. `.env` dosyasına ekleyip tekrar deneyin (gerekirse runserver'ı yeniden başlatın)."},
-                status=400,
-            )
+    _bad = {"buraya-yeni-key-yapistir", "your-api-key-here", "sk-xxx", ""}
+    if not api_key or api_key.strip() in _bad or api_key.strip().lower().startswith("buraya"):
+        return JsonResponse({"error": "GROQ_API_KEY tanımlı değil veya geçersiz."}, status=400)
 
-    messages = [
+    # ── Groq prompt ──
+    system_prompt = (
+        "Sen MEStakip gider analiz asistanısın. Türkçe, kısa ve net yaz.\n"
+        "Verilen sayılar gerçek veritabanı kayıtlarından geliyor — yalnızca bu rakamlara dayan, uydurma yapma.\n\n"
+        "ÇIKTI FORMATI (bu sırayla, başka bir şey ekleme):\n"
+        "1) Özet: Son 12 aylık toplam gideri ve aylık ortalamayı tek cümlede yaz.\n"
+        "2) Trend: Aylık gider verilerindeki artış/düşüş/dalgalı trendi açıkla.\n"
+        "3) En Yüksek Kategoriler: İlk 3 kategoriyi yüzdesiyle listele.\n"
+        "4) Risk/Anomali: Anormal yüksek gider ayı veya kategori varsa belirt; yoksa 'Yok' yaz.\n"
+        "5) Öneri: Veriye dayalı en fazla 2 somut madde.\n"
+        "Toplam çıktı 900 karakteri geçmesin."
+    )
+
+    user_content = json.dumps(
         {
-            "role": "system",
-            "content": (
-                "Sen bir finans asistanısın. Türkçe, kısa, net ve düzenli yaz.\n"
-                "Sadece verilen sayılara dayan; uydurma yapma.\n"
-                "Çıktı formatı aşağıdaki gibi OLMALI ve bu sırayı korumalı:\n"
-                "1) Özet: <tek cümle>\n"
-                "2) Trend: <tek cümle>\n"
-                "3) En Yüksek Kategoriler: <en fazla 3 madde>\n"
-                "4) Risk/Anomali: <tek cümle veya 'Yok'>\n"
-                "5) Aksiyon: <en fazla 2 madde>\n"
-                "Toplam uzunluk 900 karakteri geçmesin."
-            ),
+            "para_birimi": "TRY",
+            "donem": "son_12_ay",
+            "toplam_gider_tl": float(toplam_gider_12m),
+            "aylik_ortalama_gider_tl": round(float(toplam_gider_12m) / 12, 2),
+            "aylik_gider_serisi": monthly_expense,
+            "gider_kategori_dagilimi": kategori_dagilimi,
         },
-        {
-            "role": "user",
-            "content": json.dumps(
-                {
-                    "currency": "TRY",
-                    "period": "last_12_months",
-                    "expense_monthly_totals": month_series,
-                    "top_expense_categories": top_cats_payload,
-                    "note": "Kredi kartı gider kayıtları hariç tutulmuş olabilir.",
-                    "task": "Yukarıdaki formatta, kısa çıktı üret.",
-                },
-                ensure_ascii=False,
-            ),
-        },
-    ]
+        ensure_ascii=False,
+    )
 
     try:
-        text = groq_chat_completion(messages=messages, api_key=api_key, temperature=0.2, max_tokens=300)
+        text = groq_chat_completion(
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_content},
+            ],
+            api_key=api_key,
+            temperature=0.1,
+            max_tokens=500,
+        )
     except GroqError as e:
         return JsonResponse({"error": str(e)}, status=502)
 
     text = (text or "").strip()
-    if len(text) > 900:
-        text = text[:900].rstrip() + "…"
+    if len(text) > 1100:
+        text = text[:1100].rstrip() + "…"
     return JsonResponse({"text": text})
 
 @misafir_forbidden
@@ -7176,11 +7297,12 @@ def lastik_mevsim_ai(request):
         kis = ["winter","kis","kar","snow","ice","blizzak","alpin","ultragrip",
                "sottozero","wintercontact","winter contact","m+s","3pmsf","stud",
                "nordicmaster","colddriving","winguard","snowresponse",
-               "ts870"]
+               "ts870","ts860","ts850","ug8","ug9","lm005","w330","w462"]
         yaz = ["summer","yaz","eagle sport","pilot sport","sportcontact","premiumcontact",
                "premium contact","primacy","asymmetric","efficientgrip","energy saver",
                "ecopia","turanza","cinturato","ventus","potenza","re50","re71","hp010",
-               "evo3","f1","ps4","sc6","elt30","sport 3","sport maxx"]
+               "evo3","f1","ps4","ps5","sc6","sc7","elt30","sport 3","sport maxx",
+               "pc6","pc7","ec6","ec7","cpc5","cpc6","t005","t001","k125","k435"]
 
         for h in dort_mevsim:
             if h in t:
@@ -7218,9 +7340,9 @@ def lastik_mevsim_ai(request):
                             "Sen bir lastik uzmanı AI'sın. Verilen lastik markası ve modeline bakarak mevsim türünü tahmin et.\n"
                             "SADECE ve KESİNLİKLE JSON formatında yanıt ver. Markdown (```) veya ek metin kullanma.\n"
                             "Kullanabileceğin 'mevsim' değerleri: 'yaz', 'kis', 'dort-mevsim', 'bilinmiyor'.\n"
-                            "İpuçları:\n"
-                            "- Sport, Primacy, Turanza, Eagle, Summer, Yaz, Eco, Premium -> yaz\n"
-                            "- Winter, Snow, Ice, Blizzak, Alpin, Kış, Grip, TS870 -> kis\n"
+                            "İpuçları (Kısaltmalar da geçerlidir):\n"
+                            "- Sport, Primacy, Turanza, Eagle, Yaz, Premium, PC6, PC7, SC7, T005, EC6, PS4 -> yaz\n"
+                            "- Winter, Snow, Blizzak, Alpin, Kış, TS870, TS860, LM005, UG9, W330 -> kis\n"
                             "- All Season, 4Season, CrossClimate, 4 Mevsim, A/T -> dort-mevsim\n\n"
                             "Örnek Yanıt:\n"
                             "{\"mevsim\": \"yaz\"}"

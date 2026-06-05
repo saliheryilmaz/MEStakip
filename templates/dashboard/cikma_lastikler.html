@@ -591,6 +591,7 @@
             <table class="table table-hover mb-0">
                 <thead class="table-light">
                     <tr>
+                        <th style="min-width: 50px;" class="text-center text-muted">#ID</th>
                         {% if not is_misafir %}
                         <th style="min-width: 80px;">KALİTE</th>
                         {% endif %}
@@ -611,6 +612,7 @@
                 <tbody>
                     {% for lastik in cikma_lastikler %}
                     <tr>
+                        <td class="text-center fw-bold" style="color:#d60000; font-size:0.95rem;">#{{ lastik.id }}</td>
                         {% if not is_misafir %}
                         <td>
                             {% if lastik.kalite_notu %}
@@ -710,6 +712,7 @@
                             {% if lastik.model %}
                                 <small class="text-muted d-block">{{ lastik.model }}</small>
                             {% endif %}
+                            <small class="fw-bold" style="color:#333; font-size:0.9rem;">#{{ lastik.id }}</small>
                         </div>
                         <div class="text-end">
                             <span class="ebat-code">{{ lastik.ebat }}</span>
@@ -984,7 +987,7 @@
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form method="post" action="{% url 'dashboard:cikma_lastik_sat' lastik.id %}">
+            <form method="post" action="{% url 'dashboard:cikma_lastik_sat' lastik.id %}" id="satisForm{{ lastik.id }}">
                 {% csrf_token %}
                 <div class="modal-body">
                     <!-- Ürün Bilgisi -->
@@ -1049,21 +1052,15 @@
                             <div class="d-flex gap-3 flex-wrap">
                                 <div class="form-check">
                                     <input class="form-check-input" type="checkbox" id="mehmet_havale_{{ lastik.id }}" name="mehmet_havale">
-                                    <label class="form-check-label" for="mehmet_havale_{{ lastik.id }}">
-                                        Mehmet Havale
-                                    </label>
+                                    <label class="form-check-label" for="mehmet_havale_{{ lastik.id }}">Mehmet Havale</label>
                                 </div>
                                 <div class="form-check">
                                     <input class="form-check-input" type="checkbox" id="canta_{{ lastik.id }}" name="canta">
-                                    <label class="form-check-label" for="canta_{{ lastik.id }}">
-                                        Çanta
-                                    </label>
+                                    <label class="form-check-label" for="canta_{{ lastik.id }}">Çanta</label>
                                 </div>
                                 <div class="form-check">
                                     <input class="form-check-input" type="checkbox" id="cari_{{ lastik.id }}" name="cari">
-                                    <label class="form-check-label" for="cari_{{ lastik.id }}">
-                                        Cari
-                                    </label>
+                                    <label class="form-check-label" for="cari_{{ lastik.id }}">Cari</label>
                                 </div>
                             </div>
                         </div>
@@ -1072,23 +1069,23 @@
                             <input type="date" class="form-control" id="satis_tarihi_{{ lastik.id }}" name="satis_tarihi" 
                                    value="{{ 'now'|date:'Y-m-d' }}">
                         </div>
-                        <div class="col-12">
+                        <div class="col-12 pb-2">
                             <label for="satis_aciklama_{{ lastik.id }}" class="form-label">Satış Açıklaması</label>
                             <textarea class="form-control" id="satis_aciklama_{{ lastik.id }}" name="satis_aciklama" 
-                                      rows="2" placeholder="Müşteri bilgisi, ödeme şekli vb."></textarea>
+                                      rows="3" placeholder="Müşteri bilgisi, ödeme şekli vb."></textarea>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer gap-2">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="bi bi-x-lg me-1"></i>İptal
-                    </button>
-                    <button type="submit" class="btn btn-success">
-                        <i class="bi bi-check-lg me-1"></i>
-                        Satışı Tamamla
-                    </button>
-                </div>
             </form>
+            <div class="modal-footer gap-2">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i>İptal
+                </button>
+                <button type="submit" form="satisForm{{ lastik.id }}" class="btn btn-success">
+                    <i class="bi bi-check-lg me-1"></i>
+                    Satışı Tamamla
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -1106,7 +1103,8 @@ function yazdir(id, ebat, marka, model, mevsim, aciklama, disDerinligi) {
         '<div class="ayrac"></div>' +
         '<div class="satir">' + mevsim + '</div>' +
         (aciklama ? '<div class="ayrac"></div><div class="satir kucuk">' + aciklama + '</div>' : '') +
-        (disDerinligi ? '<div class="ayrac"></div><div class="satir kucuk">' + disDerinligi + ' MM</div>' : '');
+        (disDerinligi ? '<div class="ayrac"></div><div class="satir kucuk">' + disDerinligi + ' MM</div>' : '') +
+        '<div class="ayrac"></div><div class="satir">#' + id + '</div>';
     var icerik = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Lastik Etiketi</title><style>' +
         '*{box-sizing:border-box;margin:0;padding:0;}' +
         'body{font-family:Arial,sans-serif;background:#fff;}' +

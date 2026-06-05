@@ -8,114 +8,38 @@
 <style>
     .official-card {
         border-radius: 4px;
-        border: 1px solid rgba(0, 0, 0, 0.125);
+        border: 1px solid rgba(0,0,0,0.125);
         box-shadow: none;
         background-color: #fff;
     }
-
     .official-header {
         background-color: #f8f9fa;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+        border-bottom: 1px solid rgba(0,0,0,0.125);
         padding: 1rem 1.25rem;
     }
-
-    [data-bs-theme="dark"] .official-card {
-        background-color: #212529;
-        border-color: rgba(255, 255, 255, 0.125);
-    }
-
-    [data-bs-theme="dark"] .official-header {
-        background-color: #2c3034;
-        border-bottom-color: rgba(255, 255, 255, 0.125);
-    }
-
+    [data-bs-theme="dark"] .official-card { background-color: #212529; border-color: rgba(255,255,255,0.125); }
+    [data-bs-theme="dark"] .official-header { background-color: #2c3034; border-bottom-color: rgba(255,255,255,0.125); }
     .nav-pills-official .nav-link {
-        color: #495057;
-        border-radius: 4px;
-        padding: 0.75rem 1rem;
-        margin-bottom: 0.5rem;
-        text-align: left;
-        border: 1px solid transparent;
-        display: flex;
-        align-items: center;
+        color: #495057; border-radius: 4px; padding: 0.75rem 1rem;
+        margin-bottom: 0.5rem; text-align: left; border: 1px solid transparent;
+        display: flex; align-items: center;
     }
-
-    .nav-pills-official .nav-link:hover {
-        background-color: #f8f9fa;
-        border-color: rgba(0,0,0,0.05);
-    }
-
-    .nav-pills-official .nav-link.active {
-        color: #0d6efd;
-        background-color: rgba(13, 110, 253, 0.05);
-        border-color: rgba(13, 110, 253, 0.2);
-        font-weight: 500;
-    }
-
-    [data-bs-theme="dark"] .nav-pills-official .nav-link {
-        color: #adb5bd;
-    }
-
-    [data-bs-theme="dark"] .nav-pills-official .nav-link:hover {
-        background-color: rgba(255,255,255,0.05);
-    }
-
-    [data-bs-theme="dark"] .nav-pills-official .nav-link.active {
-        color: #6ea8fe;
-        background-color: rgba(110, 168, 254, 0.1);
-        border-color: rgba(110, 168, 254, 0.2);
-    }
-
-    .form-label {
-        font-weight: 500;
-        color: #495057;
-    }
-
-    [data-bs-theme="dark"] .form-label {
-        color: #adb5bd;
-    }
-
-    .form-control:focus, .form-select:focus {
-        border-color: #86b7fe;
-        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-    }
-
-    .setting-group {
-        padding: 1.5rem 0;
-        border-bottom: 1px solid rgba(0,0,0,0.05);
-    }
-    
-    .setting-group:last-child {
-        border-bottom: none;
-    }
-
-    [data-bs-theme="dark"] .setting-group {
-        border-bottom-color: rgba(255,255,255,0.05);
-    }
-
-    .profile-avatar-wrapper {
-        position: relative;
-        display: inline-block;
-    }
-    
+    .nav-pills-official .nav-link:hover { background-color: #f8f9fa; border-color: rgba(0,0,0,0.05); }
+    .nav-pills-official .nav-link.active { color: #0d6efd; background-color: rgba(13,110,253,0.05); border-color: rgba(13,110,253,0.2); font-weight: 500; }
+    [data-bs-theme="dark"] .nav-pills-official .nav-link { color: #adb5bd; }
+    [data-bs-theme="dark"] .nav-pills-official .nav-link:hover { background-color: rgba(255,255,255,0.05); }
+    [data-bs-theme="dark"] .nav-pills-official .nav-link.active { color: #6ea8fe; background-color: rgba(110,168,254,0.1); border-color: rgba(110,168,254,0.2); }
+    .form-label { font-weight: 500; color: #495057; }
+    [data-bs-theme="dark"] .form-label { color: #adb5bd; }
+    .setting-group { padding: 1.5rem 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .setting-group:last-child { border-bottom: none; }
+    [data-bs-theme="dark"] .setting-group { border-bottom-color: rgba(255,255,255,0.05); }
     .profile-avatar {
-        width: 100px;
-        height: 100px;
-        border-radius: 50%;
-        background-color: #e9ecef;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 2.5rem;
-        color: #6c757d;
-        border: 2px solid #dee2e6;
+        width: 80px; height: 80px; border-radius: 50%;
+        background-color: #e9ecef; display: flex; align-items: center;
+        justify-content: center; font-size: 2rem; color: #6c757d; border: 2px solid #dee2e6;
     }
-
-    [data-bs-theme="dark"] .profile-avatar {
-        background-color: #343a40;
-        border-color: #495057;
-        color: #adb5bd;
-    }
+    [data-bs-theme="dark"] .profile-avatar { background-color: #343a40; border-color: #495057; color: #adb5bd; }
 </style>
 {% endblock %}
 
@@ -123,14 +47,22 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h1 class="h3 mb-0">Sistem Ayarları</h1>
-        <p class="text-muted mb-0">Profil, firma, görünüm ve bildirim tercihlerinizi yapılandırın.</p>
-    </div>
-    <div>
-        <button type="submit" form="settingsForm" class="btn btn-primary px-4">
-            <i class="bi bi-check2 me-1"></i> Değişiklikleri Kaydet
-        </button>
+        <p class="text-muted mb-0">Profil ve şifre ayarlarınızı yönetin.</p>
     </div>
 </div>
+
+{% if success_message %}
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="bi bi-check-circle me-2"></i>{{ success_message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+{% if error_message %}
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="bi bi-exclamation-circle me-2"></i>{{ error_message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
 
 <div class="row">
     <!-- Sol Menü -->
@@ -138,17 +70,14 @@
         <div class="card official-card">
             <div class="card-body p-3">
                 <div class="nav flex-column nav-pills nav-pills-official" id="v-pills-tab" role="tablist" aria-orientation="vertical">
-                    <button class="nav-link active" id="v-pills-profile-tab" data-bs-toggle="pill" data-bs-target="#v-pills-profile" type="button" role="tab" aria-controls="v-pills-profile" aria-selected="true">
+                    <button class="nav-link active" id="v-pills-profile-tab" data-bs-toggle="pill" data-bs-target="#v-pills-profile" type="button" role="tab" aria-selected="true">
                         <i class="bi bi-person me-3"></i> Profil Ayarları
                     </button>
-                    <button class="nav-link" id="v-pills-company-tab" data-bs-toggle="pill" data-bs-target="#v-pills-company" type="button" role="tab" aria-controls="v-pills-company" aria-selected="false">
-                        <i class="bi bi-building me-3"></i> Firma Bilgileri
+                    <button class="nav-link" id="v-pills-password-tab" data-bs-toggle="pill" data-bs-target="#v-pills-password" type="button" role="tab" aria-selected="false">
+                        <i class="bi bi-shield-lock me-3"></i> Şifre Değiştir
                     </button>
-                    <button class="nav-link" id="v-pills-appearance-tab" data-bs-toggle="pill" data-bs-target="#v-pills-appearance" type="button" role="tab" aria-controls="v-pills-appearance" aria-selected="false">
+                    <button class="nav-link" id="v-pills-appearance-tab" data-bs-toggle="pill" data-bs-target="#v-pills-appearance" type="button" role="tab" aria-selected="false">
                         <i class="bi bi-palette me-3"></i> Görünüm
-                    </button>
-                    <button class="nav-link" id="v-pills-notifications-tab" data-bs-toggle="pill" data-bs-target="#v-pills-notifications" type="button" role="tab" aria-controls="v-pills-notifications" aria-selected="false">
-                        <i class="bi bi-bell me-3"></i> Bildirimler
                     </button>
                 </div>
             </div>
@@ -157,210 +86,163 @@
 
     <!-- Sağ İçerik -->
     <div class="col-md-9">
-        <form id="settingsForm" action="#" method="POST">
-            {% csrf_token %}
-            <div class="card official-card">
-                <div class="tab-content" id="v-pills-tabContent">
-                    
-                    <!-- Profil Ayarları Sekmesi -->
-                    <div class="tab-pane fade show active" id="v-pills-profile" role="tabpanel" aria-labelledby="v-pills-profile-tab">
-                        <div class="official-header">
-                            <h5 class="mb-0">Kişisel Profil Bilgileri</h5>
-                        </div>
-                        <div class="card-body p-4">
-                            <div class="d-flex align-items-center mb-4">
-                                <div class="profile-avatar-wrapper me-4">
-                                    <div class="profile-avatar">
-                                        <i class="bi bi-person-fill"></i>
-                                    </div>
-                                </div>
-                                <div>
-                                    <h5 class="mb-1">{{ user.get_full_name|default:user.username }}</h5>
-                                    <p class="text-muted small mb-2">Yönetici Hesabı</p>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary">Fotoğraf Değiştir</button>
-                                </div>
+        <div class="card official-card">
+            <div class="tab-content" id="v-pills-tabContent">
+
+                <!-- Profil Ayarları -->
+                <div class="tab-pane fade show active" id="v-pills-profile" role="tabpanel">
+                    <div class="official-header">
+                        <h5 class="mb-0">Kişisel Profil Bilgileri</h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="d-flex align-items-center mb-4">
+                            <div class="profile-avatar me-3">
+                                <i class="bi bi-person-fill"></i>
                             </div>
-                            
+                            <div>
+                                <h5 class="mb-0">{{ user.get_full_name|default:user.username }}</h5>
+                                <small class="text-muted">{{ user.email|default:"E-posta girilmemiş" }}</small>
+                            </div>
+                        </div>
+                        <form method="post" action="{% url 'dashboard:settings' %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="profile">
                             <div class="row g-3">
                                 <div class="col-md-6">
                                     <label class="form-label">Kullanıcı Adı</label>
                                     <input type="text" class="form-control" value="{{ user.username }}" readonly disabled>
-                                    <div class="form-text">Kullanıcı adı güvenlik sebebiyle değiştirilemez.</div>
+                                    <div class="form-text">Kullanıcı adı değiştirilemez.</div>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label">E-Posta Adresi</label>
-                                    <input type="email" class="form-control" value="{{ user.email }}">
+                                    <input type="email" class="form-control" name="email" value="{{ user.email }}">
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label">Ad</label>
-                                    <input type="text" class="form-control" value="{{ user.first_name }}">
+                                    <input type="text" class="form-control" name="first_name" value="{{ user.first_name }}">
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label">Soyad</label>
-                                    <input type="text" class="form-control" value="{{ user.last_name }}">
+                                    <input type="text" class="form-control" name="last_name" value="{{ user.last_name }}">
                                 </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Telefon Numarası</label>
-                                    <input type="tel" class="form-control" placeholder="05XX XXX XX XX">
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Görev / Unvan</label>
-                                    <input type="text" class="form-control" value="Genel Müdür">
+                                <div class="col-12 pt-2">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="bi bi-check2 me-1"></i> Profili Kaydet
+                                    </button>
                                 </div>
                             </div>
-                        </div>
+                        </form>
                     </div>
-
-                    <!-- Firma Bilgileri Sekmesi -->
-                    <div class="tab-pane fade" id="v-pills-company" role="tabpanel" aria-labelledby="v-pills-company-tab">
-                        <div class="official-header">
-                            <h5 class="mb-0">Kurumsal Firma Detayları</h5>
-                        </div>
-                        <div class="card-body p-4">
-                            <div class="alert alert-info border-0 rounded-0" role="alert">
-                                <i class="bi bi-info-circle me-2"></i> Bu bilgiler fatura ve resmi teklif şablonlarında kullanılmaktadır.
-                            </div>
-                            
-                            <div class="row g-3">
-                                <div class="col-12">
-                                    <label class="form-label">Resmi Firma Ünvanı</label>
-                                    <input type="text" class="form-control" value="MESLAS OTOMOTİV - ERHAN ERYILMAZ">
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Vergi Dairesi</label>
-                                    <input type="text" class="form-control" value="SULTANBEYLİ V.D.">
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Vergi Numarası / TCKN</label>
-                                    <input type="text" class="form-control" value="4485882148">
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Firma Telefonu</label>
-                                    <input type="text" class="form-control" value="0216 311 60 34">
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Resmi E-Posta</label>
-                                    <input type="email" class="form-control" value="info@meslas.com">
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label">Firma Açık Adresi</label>
-                                    <textarea class="form-control" rows="3">Abdurrahmangazi Mah. Atayolu Cad. No:187/A SANCAKTEPE / İSTANBUL</textarea>
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label">Banka IBAN Bilgisi</label>
-                                    <input type="text" class="form-control" placeholder="TRXX XXXX XXXX XXXX XXXX XXXX XX">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Görünüm Sekmesi -->
-                    <div class="tab-pane fade" id="v-pills-appearance" role="tabpanel" aria-labelledby="v-pills-appearance-tab">
-                        <div class="official-header">
-                            <h5 class="mb-0">Arayüz ve Görünüm Tercihleri</h5>
-                        </div>
-                        <div class="card-body p-4">
-                            <div class="setting-group pt-0">
-                                <h6 class="fw-bold mb-3">Tema Seçimi</h6>
-                                <div class="row g-3">
-                                    <div class="col-md-4">
-                                        <div class="form-check card p-3 official-card h-100 mb-0">
-                                            <input class="form-check-input ms-0 me-2" type="radio" name="themeMode" id="themeLight" value="light" checked>
-                                            <label class="form-check-label d-flex align-items-center" for="themeLight">
-                                                <i class="bi bi-sun fs-4 me-2 text-warning"></i> Açık Tema
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="form-check card p-3 official-card h-100 mb-0">
-                                            <input class="form-check-input ms-0 me-2" type="radio" name="themeMode" id="themeDark" value="dark">
-                                            <label class="form-check-label d-flex align-items-center" for="themeDark">
-                                                <i class="bi bi-moon-stars fs-4 me-2 text-primary"></i> Koyu Tema
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="form-check card p-3 official-card h-100 mb-0">
-                                            <input class="form-check-input ms-0 me-2" type="radio" name="themeMode" id="themeAuto" value="auto">
-                                            <label class="form-check-label d-flex align-items-center" for="themeAuto">
-                                                <i class="bi bi-display fs-4 me-2 text-secondary"></i> Sistem Ayarı
-                                            </label>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="setting-group">
-                                <h6 class="fw-bold mb-3">Tablo Görünümü</h6>
-                                <div class="form-check form-switch mb-2">
-                                    <input class="form-check-input" type="checkbox" role="switch" id="compactTables" checked>
-                                    <label class="form-check-label" for="compactTables">Sıkıştırılmış (Kompakt) Tablolar</label>
-                                </div>
-                                <p class="text-muted small">Tablo satırları arasındaki boşluğu azaltarak ekrana daha fazla veri sığdırmanızı sağlar.</p>
-                            </div>
-
-                            <div class="setting-group pb-0">
-                                <h6 class="fw-bold mb-3">Sistem Dili</h6>
-                                <select class="form-select w-50">
-                                    <option value="tr" selected>Türkçe (Türkiye)</option>
-                                    <option value="en">English (US)</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Bildirimler Sekmesi -->
-                    <div class="tab-pane fade" id="v-pills-notifications" role="tabpanel" aria-labelledby="v-pills-notifications-tab">
-                        <div class="official-header">
-                            <h5 class="mb-0">Bildirim ve Uyarı Seçenekleri</h5>
-                        </div>
-                        <div class="card-body p-4">
-                            <div class="setting-group pt-0">
-                                <h6 class="fw-bold mb-3">Sistem İçi Bildirimler</h6>
-                                <div class="form-check form-switch mb-3">
-                                    <input class="form-check-input" type="checkbox" role="switch" id="notifNewOrder" checked>
-                                    <label class="form-check-label" for="notifNewOrder">Yeni bir sipariş oluşturulduğunda bildir</label>
-                                </div>
-                                <div class="form-check form-switch mb-3">
-                                    <input class="form-check-input" type="checkbox" role="switch" id="notifStockLow" checked>
-                                    <label class="form-check-label" for="notifStockLow">Kritik stok uyarısı (Yakında bitecek ürünler)</label>
-                                </div>
-                                <div class="form-check form-switch mb-3">
-                                    <input class="form-check-input" type="checkbox" role="switch" id="notifDailyReport">
-                                    <label class="form-check-label" for="notifDailyReport">Günlük finans ve özet raporu</label>
-                                </div>
-                            </div>
-
-                            <div class="setting-group">
-                                <h6 class="fw-bold mb-3">E-Posta Bildirimleri</h6>
-                                <div class="form-check mb-2">
-                                    <input class="form-check-input" type="checkbox" value="" id="emailMarketing">
-                                    <label class="form-check-label" for="emailMarketing">
-                                        Pazarlama ve sistem güncellemeleri
-                                    </label>
-                                </div>
-                                <div class="form-check mb-2">
-                                    <input class="form-check-input" type="checkbox" value="" id="emailSecurity" checked disabled>
-                                    <label class="form-check-label" for="emailSecurity">
-                                        Güvenlik uyarıları ve şifre sıfırlama (Zorunlu)
-                                    </label>
-                                </div>
-                            </div>
-                            
-                            <div class="setting-group pb-0">
-                                <h6 class="fw-bold mb-3">SMS Bildirimleri</h6>
-                                <p class="text-muted small mb-3">Müşterilere giden SMS veya WhatsApp bildirimleri bu ayardan bağımsızdır.</p>
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" role="switch" id="smsAlerts">
-                                    <label class="form-check-label" for="smsAlerts">Kritik sistem alarmlarını SMS olarak al</label>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
                 </div>
+
+                <!-- Şifre Değiştir -->
+                <div class="tab-pane fade" id="v-pills-password" role="tabpanel">
+                    <div class="official-header">
+                        <h5 class="mb-0">Şifre Değiştir</h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <form method="post" action="{% url 'dashboard:settings' %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="password">
+                            <div class="row g-3" style="max-width: 480px;">
+                                <div class="col-12">
+                                    <label class="form-label">Mevcut Şifre</label>
+                                    <input type="password" class="form-control" name="current_password" required placeholder="••••••••">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Yeni Şifre</label>
+                                    <input type="password" class="form-control" name="new_password" id="newPassword" required placeholder="••••••••" minlength="6">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Yeni Şifre (Tekrar)</label>
+                                    <input type="password" class="form-control" name="confirm_password" id="confirmPassword" required placeholder="••••••••" minlength="6">
+                                </div>
+                                <div class="col-12 pt-2">
+                                    <button type="submit" class="btn btn-warning">
+                                        <i class="bi bi-shield-lock me-1"></i> Şifreyi Değiştir
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Görünüm -->
+                <div class="tab-pane fade" id="v-pills-appearance" role="tabpanel">
+                    <div class="official-header">
+                        <h5 class="mb-0">Arayüz Tercihleri</h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="setting-group pt-0">
+                            <h6 class="fw-bold mb-3">Tema Seçimi</h6>
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <div class="form-check card p-3 official-card h-100 mb-0">
+                                        <input class="form-check-input ms-0 me-2" type="radio" name="themeMode" id="themeLight" value="light" checked>
+                                        <label class="form-check-label d-flex align-items-center" for="themeLight">
+                                            <i class="bi bi-sun fs-4 me-2 text-warning"></i> Açık Tema
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-check card p-3 official-card h-100 mb-0">
+                                        <input class="form-check-input ms-0 me-2" type="radio" name="themeMode" id="themeDark" value="dark">
+                                        <label class="form-check-label d-flex align-items-center" for="themeDark">
+                                            <i class="bi bi-moon-stars fs-4 me-2 text-primary"></i> Koyu Tema
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-check card p-3 official-card h-100 mb-0">
+                                        <input class="form-check-input ms-0 me-2" type="radio" name="themeMode" id="themeAuto" value="auto">
+                                        <label class="form-check-label d-flex align-items-center" for="themeAuto">
+                                            <i class="bi bi-display fs-4 me-2 text-secondary"></i> Sistem Ayarı
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="applyTheme()">
+                                    <i class="bi bi-palette me-1"></i> Temayı Uygula
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
-        </form>
+        </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function applyTheme() {
+    const selected = document.querySelector('input[name="themeMode"]:checked')?.value || 'light';
+    if (selected === 'auto') {
+        document.documentElement.removeAttribute('data-bs-theme');
+        localStorage.removeItem('theme');
+    } else {
+        document.documentElement.setAttribute('data-bs-theme', selected);
+        localStorage.setItem('theme', selected);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const saved = localStorage.getItem('theme');
+    if (saved) {
+        const radio = document.querySelector(`input[name="themeMode"][value="${saved}"]`);
+        if (radio) radio.checked = true;
+    }
+
+    const newPw = document.getElementById('newPassword');
+    const confirmPw = document.getElementById('confirmPassword');
+    if (newPw && confirmPw) {
+        confirmPw.addEventListener('input', function() {
+            this.setCustomValidity(this.value && this.value !== newPw.value ? 'Şifreler eşleşmiyor' : '');
+        });
+    }
+});
+</script>
 {% endblock %}

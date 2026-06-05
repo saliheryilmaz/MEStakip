@@ -3508,41 +3508,87 @@ def kategoriler(request):
     }
     return render(request, 'dashboard/kategoriler.html', context)
 
+@login_required
 def settings(request):
     """Settings sayfası"""
+    from django.contrib.auth import update_session_auth_hash
+    
+    success_message = None
+    error_message = None
+
+    if request.method == 'POST':
+        action = request.POST.get('action', 'profile')
+
+        if action == 'profile':
+            email = request.POST.get('email', '').strip()
+            first_name = request.POST.get('first_name', '').strip()
+            last_name = request.POST.get('last_name', '').strip()
+            request.user.email = email
+            request.user.first_name = first_name
+            request.user.last_name = last_name
+            request.user.save()
+            success_message = 'Profil bilgileri güncellendi.'
+
+        elif action == 'password':
+            current_password = request.POST.get('current_password', '')
+            new_password = request.POST.get('new_password', '')
+            confirm_password = request.POST.get('confirm_password', '')
+            if not request.user.check_password(current_password):
+                error_message = 'Mevcut şifre hatalı.'
+            elif new_password != confirm_password:
+                error_message = 'Yeni şifreler eşleşmiyor.'
+            elif len(new_password) < 6:
+                error_message = 'Yeni şifre en az 6 karakter olmalıdır.'
+            else:
+                request.user.set_password(new_password)
+                request.user.save()
+                update_session_auth_hash(request, request.user)
+                success_message = 'Şifre başarıyla değiştirildi.'
+
     context = {
-        'page_title': 'Settings',
+        'page_title': 'Ayarlar',
+        'success_message': success_message,
+        'error_message': error_message,
     }
     return render(request, 'dashboard/settings.html', context)
 
+@login_required
 def security(request):
     """Security sayfası"""
+    from django.contrib.auth import update_session_auth_hash
+
+    success_message = None
+    error_message = None
+
+    if request.method == 'POST':
+        current_password = request.POST.get('current_password', '')
+        new_password = request.POST.get('new_password', '')
+        confirm_password = request.POST.get('confirm_password', '')
+
+        if not request.user.check_password(current_password):
+            error_message = 'Mevcut şifre hatalı.'
+        elif new_password != confirm_password:
+            error_message = 'Yeni şifreler eşleşmiyor.'
+        elif len(new_password) < 8:
+            error_message = 'Yeni şifre en az 8 karakter olmalıdır.'
+        else:
+            request.user.set_password(new_password)
+            request.user.save()
+            update_session_auth_hash(request, request.user)
+            success_message = 'Şifre başarıyla güncellendi.'
+
+    # Son giriş bilgisi
+    last_login = request.user.last_login
+
     context = {
-        'page_title': 'Security',
+        'page_title': 'Güvenlik',
+        'success_message': success_message,
+        'error_message': error_message,
+        'last_login': last_login,
     }
     return render(request, 'dashboard/security.html', context)
 
-def help(request):
-    """Help sayfası"""
-    context = {
-        'page_title': 'Help & Support',
-    }
-    return render(request, 'dashboard/help.html', context)
-
-def settings(request):
-    """Settings sayfası"""
-    context = {
-        'page_title': 'Settings',
-    }
-    return render(request, 'dashboard/settings.html', context)
-
-def security(request):
-    """Security sayfası"""
-    context = {
-        'page_title': 'Security',
-    }
-    return render(request, 'dashboard/security.html', context)
-
+@login_required
 def help(request):
     """Help sayfası"""
     context = {
@@ -5253,7 +5299,7 @@ def cikma_lastik_sat(request, lastik_id):
             satis_adet = int(request.POST.get('satis_adet', lastik.adet))
             satis_fiyati = request.POST.get('satis_fiyati', '')
             satis_tarihi = request.POST.get('satis_tarihi', '')
-            satis_aciklama = request.POST.get('satis_aciklama', '')
+            satis_aciklama = request.POST.get('satis_aciklama', '').strip()
             
             # Ödeme seçeneklerini al
             mehmet_havale = request.POST.get('mehmet_havale') == 'on'
@@ -5293,8 +5339,13 @@ def cikma_lastik_sat(request, lastik_id):
                 lastik.mehmet_havale = mehmet_havale
                 lastik.canta = canta
                 lastik.cari = cari
+                # Satış açıklamasını kaydet
+                mevcut_aciklama = (lastik.aciklama or '').strip()
                 if satis_aciklama:
-                    lastik.aciklama = f"{lastik.aciklama or ''}\n\nSatış: {satis_aciklama}".strip()
+                    if mevcut_aciklama:
+                        lastik.aciklama = mevcut_aciklama + '\nSatış Notu: ' + satis_aciklama
+                    else:
+                        lastik.aciklama = 'Satış Notu: ' + satis_aciklama
                 lastik.save()
                 
                 # Transaction kaydı oluştur
@@ -5331,6 +5382,7 @@ def cikma_lastik_sat(request, lastik_id):
             # Eğer kısmi satış yapılıyorsa, yeni kayıt oluştur ve mevcut kaydın adetini azalt
             else:
                 # Satılan kısım için yeni kayıt oluştur
+                mevcut_aciklama_kismi = (lastik.aciklama or '').strip()
                 CikmaLastik.objects.create(
                     user=request.user,
                     musteri_adi=lastik.musteri_adi,
@@ -5350,7 +5402,7 @@ def cikma_lastik_sat(request, lastik_id):
                     canta=canta,
                     cari=cari,
                     depo_konumu=lastik.depo_konumu,
-                    aciklama=f"{lastik.aciklama or ''}\n\nSatış: {satis_aciklama}".strip() if satis_aciklama else lastik.aciklama
+                    aciklama=(mevcut_aciklama_kismi + '\nSatış Notu: ' + satis_aciklama).strip() if satis_aciklama else mevcut_aciklama_kismi or None
                 )
                 
                 # Transaction kaydı oluştur
@@ -7247,12 +7299,13 @@ def delete_garanti_belgesi(request, belge_id):
 @require_POST
 def lastik_mevsim_ai(request):
     """
-    Lastik ürün adı + marka metninden mevsim tahmini yapar.
+    Lastik ürün adı + marka metninden mevsim ve grup tahmini yapar.
     Öncelik sırası:
       1. Veritabanı öğrenmesi (daha önce girilen aynı/benzer ürünler)
       2. Kural tabanlı hızlı tespit
       3. Groq AI
-    Döner: { "mevsim": "yaz"|"kis"|"dort-mevsim"|"bilinmiyor", "kaynak": "veritabani"|"kural"|"groq" }
+    Döner: { "mevsim": "yaz"|"kis"|"dort-mevsim"|"bilinmiyor", "kaynak": "veritabani"|"kural"|"groq",
+             "grup": "binek"|"ticari"|"aku"|"jant"|"bilinmiyor" }
     """
     try:
         payload = json.loads(request.body.decode("utf-8") or "{}")
@@ -7264,14 +7317,10 @@ def lastik_mevsim_ai(request):
 
     metin = f"{marka} {urun}".strip()
     if not metin:
-        return JsonResponse({"mevsim": "bilinmiyor", "kaynak": "kural"})
+        return JsonResponse({"mevsim": "bilinmiyor", "kaynak": "kural", "grup": "bilinmiyor"})
 
     # --- 1. LastikModelBilgisi tablosundan öğrenilmiş modellere bak ---
     def model_tablosundan_bul(urun_text, marka_text):
-        """
-        LastikModelBilgisi tablosunda ürün adı içinde geçen kayıtlı model varsa döndür.
-        Örn: "TS870 205/55R16" yazılınca "TS870" kaydını bulur.
-        """
         try:
             tum_modeller = LastikModelBilgisi.objects.all().values('model_adi', 'mevsim')
             metin_lower = f"{marka_text} {urun_text}".lower()
@@ -7284,9 +7333,10 @@ def lastik_mevsim_ai(request):
 
     model_sonuc = model_tablosundan_bul(urun, marka)
     if model_sonuc:
-        return JsonResponse({"mevsim": model_sonuc, "kaynak": "veritabani"})
+        # Grup tespiti kural tabanlı yapılır (veritabanında yok)
+        pass  # grup tespiti aşağıda yapılacak
 
-    # --- Kural tabanlı hızlı tespit (Groq olmadan da çalışsın) ---
+    # --- Kural tabanlı hızlı tespit ---
     def kural_tabani(text):
         t = text.lower()
         for ch, rep in [("ı","i"),("ş","s"),("ğ","g"),("ü","u"),("ö","o"),("ç","c")]:
@@ -7315,7 +7365,34 @@ def lastik_mevsim_ai(request):
                 return "yaz"
         return None
 
-    kural_sonuc = kural_tabani(metin)
+    def kural_grup(text):
+        t = text.lower().strip()
+        import re
+        # Ebat sonunda C varsa ticari: 215/65R16C, 195/70R15C, vb.
+        if re.search(r'\d+/\d+r\d+c\b', t):
+            return "ticari"
+        # Akü ve jant anahtar kelimeleri
+        aku_kw = ["aku", "akumulator", "battery", "agm", "efb", "calcium", "start stop"]
+        jant_kw = ["jant", "alaşim", "alasim", "aluminyum", "rim", "wheel"]
+        for h in aku_kw:
+            if h in t:
+                return "aku"
+        for h in jant_kw:
+            if h in t:
+                return "jant"
+        # Standart ebat varsa (C yok) → binek
+        if re.search(r'\d+/\d+r\d+\b', t):
+            return "binek"
+        return None
+
+    kural_mevsim_sonuc = kural_tabani(metin)
+    kural_grup_sonuc = kural_grup(metin)
+
+    # Eğer veritabanında mevsim bulduysa, sadece grup için kural/AI kullan
+    if model_sonuc:
+        if kural_grup_sonuc:
+            return JsonResponse({"mevsim": model_sonuc, "kaynak": "veritabani", "grup": kural_grup_sonuc})
+        # Grup bilinmiyorsa Groq'a sor (aşağıda)
 
     # --- Groq ile tespit ---
     api_key = getattr(settings, "GROQ_API_KEY", None) or os.environ.get("GROQ_API_KEY", "")
@@ -7332,50 +7409,65 @@ def lastik_mevsim_ai(request):
             groq_yanit = groq_chat_completion(
                 api_key=api_key,
                 temperature=0.0,
-                max_tokens=30,
+                max_tokens=60,
                 messages=[
                     {
                         "role": "system",
                         "content": (
-                            "Sen bir lastik uzmanı AI'sın. Verilen lastik markası ve modeline bakarak mevsim türünü tahmin et.\n"
+                            "Sen bir lastik/akü/jant uzmanı AI'sın. Verilen ürün markası ve modeline bakarak mevsim ve grup türünü tahmin et.\n"
                             "SADECE ve KESİNLİKLE JSON formatında yanıt ver. Markdown (```) veya ek metin kullanma.\n"
-                            "Kullanabileceğin 'mevsim' değerleri: 'yaz', 'kis', 'dort-mevsim', 'bilinmiyor'.\n"
-                            "İpuçları (Kısaltmalar da geçerlidir):\n"
-                            "- Sport, Primacy, Turanza, Eagle, Yaz, Premium, PC6, PC7, SC7, T005, EC6, PS4 -> yaz\n"
-                            "- Winter, Snow, Blizzak, Alpin, Kış, TS870, TS860, LM005, UG9, W330 -> kis\n"
-                            "- All Season, 4Season, CrossClimate, 4 Mevsim, A/T -> dort-mevsim\n\n"
+                            "'mevsim' değerleri: 'yaz', 'kis', 'dort-mevsim', 'bilinmiyor'.\n"
+                            "'grup' değerleri: 'binek', 'ticari', 'aku', 'jant', 'bilinmiyor'.\n"
+                            "İpuçları:\n"
+                            "- Sport, Primacy, Turanza, Eagle, PC6, PS4 -> mevsim:yaz, grup:binek\n"
+                            "- Winter, Snow, Blizzak, TS870, LM005 -> mevsim:kis, grup:binek\n"
+                            "- All Season, CrossClimate, A/T -> mevsim:dort-mevsim\n"
+                            "- Van, Transporter, LT, C (ticari ebat: 195/70R15C gibi) -> grup:ticari\n"
+                            "- Akü, Battery, AGM, EFB -> mevsim:bilinmiyor, grup:aku\n"
+                            "- Jant, Alaşım, Rim -> mevsim:bilinmiyor, grup:jant\n\n"
                             "Örnek Yanıt:\n"
-                            "{\"mevsim\": \"yaz\"}"
+                            "{\"mevsim\": \"yaz\", \"grup\": \"binek\"}"
                         ),
                     },
                     {"role": "user", "content": metin},
                 ],
             )
             groq_yanit = (groq_yanit or "").strip()
-            
-            # Markdown etiketlerini temizle (Llama bazen ekliyor)
+
+            # Markdown etiketlerini temizle
             if groq_yanit.startswith("```json"):
                 groq_yanit = groq_yanit[7:]
             elif groq_yanit.startswith("```"):
                 groq_yanit = groq_yanit[3:]
             if groq_yanit.endswith("```"):
                 groq_yanit = groq_yanit[:-3]
-            
+
             groq_yanit = groq_yanit.strip()
-            
-            # JSON parse
+
             try:
                 parsed = json.loads(groq_yanit)
                 mevsim = parsed.get("mevsim", "bilinmiyor")
-                if mevsim in ("yaz", "kis", "dort-mevsim", "bilinmiyor"):
-                    return JsonResponse({"mevsim": mevsim, "kaynak": "groq"})
+                grup = parsed.get("grup", "bilinmiyor")
+                if mevsim not in ("yaz", "kis", "dort-mevsim", "bilinmiyor"):
+                    mevsim = "bilinmiyor"
+                if grup not in ("binek", "ticari", "aku", "jant", "bilinmiyor"):
+                    grup = "bilinmiyor"
+                # Kural tabanlı sonuçlar varsa onları öncelik ver
+                return JsonResponse({
+                    "mevsim": kural_mevsim_sonuc or mevsim,
+                    "grup": kural_grup_sonuc or ("binek" if (kural_mevsim_sonuc or mevsim) not in ("bilinmiyor",) else grup),
+                    "kaynak": "groq"
+                })
             except Exception:
                 pass
         except Exception:
             pass
 
-    # Groq başarısız ya da yoksa kural sonucunu kullan
+    # Groq başarısız ya da yoksa kural sonuçlarını kullan
+    mevsim_sonuc = kural_mevsim_sonuc or (model_sonuc or "bilinmiyor")
+    grup_sonuc = kural_grup_sonuc or ("binek" if mevsim_sonuc != "bilinmiyor" else "bilinmiyor")
     return JsonResponse({
-        "mevsim": kural_sonuc or "bilinmiyor",
-        "kaynak": "kural"
+        "mevsim": mevsim_sonuc,
+        "grup": grup_sonuc,
+        "kaynak": "kural" if not model_sonuc else "veritabani"
     })

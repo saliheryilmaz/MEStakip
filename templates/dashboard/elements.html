@@ -155,7 +155,8 @@
         </div>
     </div>
     <div class="card-body p-0">
-        <div class="table-responsive">
+        <!-- Masaüstü Tablo -->
+        <div class="table-responsive d-none d-md-block">
             <table class="table table-hover mb-0">
                 <thead class="table-light">
                     <tr>
@@ -269,6 +270,191 @@
                 </tbody>
             </table>
         </div>
+
+        <!-- Mobil Kart Görünümü -->
+        <div class="d-md-none">
+            <style>
+                .siparis-card {
+                    border: none;
+                    border-bottom: 1px solid #e9ecef;
+                    border-radius: 0;
+                    background: #fff;
+                }
+                .siparis-card:last-child { border-bottom: none; }
+                .siparis-card-header {
+                    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                    padding: 14px 16px 10px;
+                    border-bottom: 1px solid #dee2e6;
+                }
+                .siparis-card-body {
+                    padding: 0 16px 4px;
+                }
+                .siparis-info-row {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 9px 0;
+                    border-bottom: 1px solid #f1f3f5;
+                }
+                .siparis-info-row:last-child { border-bottom: none; }
+                .siparis-info-row .info-label {
+                    color: #6c757d;
+                    font-size: 0.85rem;
+                    font-weight: 500;
+                }
+                .siparis-info-row .info-value {
+                    font-size: 0.9rem;
+                    font-weight: 600;
+                    text-align: right;
+                    max-width: 70%;
+                    word-break: break-word;
+                    color: #212529;
+                }
+                .siparis-mobile-actions {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 8px;
+                    padding: 12px 16px 16px;
+                }
+                .siparis-mobile-actions .btn {
+                    border-radius: 10px;
+                    font-size: 0.85rem;
+                    font-weight: 600;
+                    padding: 10px;
+                }
+                .urun-code {
+                    font-family: monospace;
+                    font-size: 1rem;
+                    font-weight: 700;
+                    color: #3b82f6;
+                    background: #eff6ff;
+                    padding: 2px 8px;
+                    border-radius: 6px;
+                    display: inline-block;
+                }
+            </style>
+            <div class="p-2">
+            {% for siparis in siparisler %}
+            <div class="siparis-card mb-2 rounded-3 shadow-sm overflow-hidden">
+                <!-- Kart Başlık -->
+                <div class="siparis-card-header">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <strong class="text-dark" style="font-size:1rem;">{{ siparis.cari_firma }}</strong>
+                            <div class="text-muted small mt-1">{{ siparis.marka }}</div>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-{{ siparis.get_durum_display_color }} mb-1 d-block">{{ siparis.get_durum_display }}</span>
+                            <span class="badge bg-{{ siparis.get_ambar_display_color }}">{{ siparis.get_ambar_display }}</span>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <span class="urun-code">
+                            {% if siparis.one_cikar %}<span class="urun-with-ebat-highlight">{{ siparis.urun }}</span>{% else %}{{ siparis.urun }}{% endif %}
+                        </span>
+                    </div>
+                </div>
+                <!-- Kart Detay -->
+                <div class="siparis-card-body">
+                    <div class="siparis-info-row">
+                        <span class="info-label">Mevsim</span>
+                        <span class="info-value">
+                            {% if siparis.mevsim == 'yaz' %}
+                                <img src="{% static 'images/yaz.png' %}" alt="Yaz" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;"> Yaz
+                            {% elif siparis.mevsim == 'kis' %}
+                                <img src="{% static 'images/kis.png' %}" alt="Kış" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;"> Kış
+                            {% elif siparis.mevsim == 'dort-mevsim' %}
+                                <img src="{% static 'images/dörtmevsim.png' %}" alt="4 Mevsim" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;"> 4 Mevsim
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="siparis-info-row">
+                        <span class="info-label">Grup</span>
+                        <span class="info-value"><span class="badge bg-{{ siparis.get_grup_display_color }}">{{ siparis.get_grup_display }}</span></span>
+                    </div>
+                    <div class="siparis-info-row">
+                        <span class="info-label">Adet</span>
+                        <span class="info-value text-success">{{ siparis.adet }} adet</span>
+                    </div>
+                    <div class="siparis-info-row">
+                        <span class="info-label">Birim Fiyat</span>
+                        <span class="info-value" style="color:#212529;">{{ siparis.birim_fiyat|turkish_format }} ₺</span>
+                    </div>
+                    <div class="siparis-info-row">
+                        <span class="info-label">Toplam</span>
+                        <span class="info-value" style="color:#212529;"><strong>{{ siparis.toplam_fiyat|turkish_lira_symbol }}</strong></span>
+                    </div>
+                    <div class="siparis-info-row">
+                        <span class="info-label">Ödeme</span>
+                        <span class="info-value" style="color:#212529;">{{ siparis.get_odeme_display }}</span>
+                    </div>
+                    {% if siparis.aciklama %}
+                    <div class="siparis-info-row">
+                        <span class="info-label">Açıklama</span>
+                        <span class="info-value text-muted" style="font-size:0.8rem;font-weight:400;">{{ siparis.aciklama }}</span>
+                    </div>
+                    {% endif %}
+                    {% if siparis.musteri_adi %}
+                    <div class="siparis-info-row">
+                        <span class="info-label">Müşteri</span>
+                        <span class="info-value">{{ siparis.musteri_adi }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+                <!-- Aksiyon Butonları -->
+                <div class="siparis-mobile-actions">
+                    <a href="{% url 'dashboard:siparis_detay' siparis.id %}" class="btn btn-primary btn-sm">
+                        <i class="bi bi-eye me-1"></i> Detay
+                    </a>
+                    <a href="{% url 'dashboard:siparis_duzenle' siparis.id %}" class="btn btn-warning btn-sm">
+                        <i class="bi bi-pencil me-1"></i> Düzenle
+                    </a>
+                    {% if siparis.durum != 'kontrol' %}
+                    <button type="button" class="btn btn-success btn-sm" onclick="kontrolEdildi({{ siparis.id }})">
+                        <i class="bi bi-check-circle me-1"></i> Kontrol
+                    </button>
+                    {% endif %}
+                    {% if siparis.durum != 'teslim' and siparis.durum != 'kontrol' %}
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="teslimEdildi({{ siparis.id }})">
+                        <i class="bi bi-box-seam me-1"></i> Teslim
+                    </button>
+                    {% endif %}
+                    {% if siparis.musteri_telefon %}
+                    <button type="button" class="btn btn-success btn-sm"
+                            data-telefon="{{ siparis.musteri_telefon|slice:'1:' }}"
+                            data-musteri="{{ siparis.musteri_adi|default:'' }}"
+                            data-cari="{{ siparis.cari_firma|default:'' }}"
+                            data-urun="{{ siparis.urun }}"
+                            data-marka="{{ siparis.marka }}"
+                            data-adet="{{ siparis.adet }}"
+                            data-durum="{{ siparis.get_durum_display }}"
+                            data-tarih="{{ siparis.guncelleme_tarihi|date:'d.m.Y H:i' }}"
+                            onclick="whatsappGonderData(this)">
+                        <i class="bi bi-whatsapp me-1"></i> WhatsApp
+                    </button>
+                    {% endif %}
+                    {% if siparis.musteri_adi or siparis.musteri_telefon or siparis.musteri_aciklama %}
+                    <button type="button" class="btn btn-info btn-sm"
+                            data-bs-toggle="modal" data-bs-target="#musteriModal{{ siparis.id }}">
+                        <i class="bi bi-person me-1"></i> Müşteri
+                    </button>
+                    {% endif %}
+                    <a href="{% url 'dashboard:siparis_sil' siparis.id %}" class="btn btn-danger btn-sm"
+                       onclick="return confirm('Bu siparişi silmek istediğinizden emin misiniz?')">
+                        <i class="bi bi-trash me-1"></i> Sil
+                    </a>
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center text-muted py-5">
+                <i class="bi bi-inbox" style="font-size:3rem;display:block;margin-bottom:1rem;"></i>
+                <h6>Henüz sipariş bulunmuyor.</h6>
+            </div>
+            {% endfor %}
+            </div>
+            </div>
     </div>
     <div class="card-footer">
         <div class="d-flex justify-content-between align-items-center">

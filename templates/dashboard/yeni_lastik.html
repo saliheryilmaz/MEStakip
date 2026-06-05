@@ -51,10 +51,21 @@
                         <!-- ÜRÜN (LASTIK MARKA MODEL) -->
                         <div class="col-12">
                             <label for="{{ form.urun.id_for_label }}" class="form-label">{{ form.urun.label }}</label>
-                            {{ form.urun }}
-                            {% if form.urun.errors %}
-                                <div class="text-danger">{{ form.urun.errors.0 }}</div>
-                            {% endif %}
+                            <div class="d-flex gap-2 align-items-start" id="urun-satirlar">
+                                <div class="flex-grow-1">
+                                    {{ form.urun }}
+                                    {% if form.urun.errors %}
+                                        <div class="text-danger">{{ form.urun.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                <button type="button" id="urun-ekle-btn" class="btn btn-outline-primary btn-sm mt-1" title="Bir ürün daha ekle" style="white-space:nowrap;">
+                                    <i class="bi bi-plus-lg"></i>
+                                </button>
+                            </div>
+                            <div id="urun-ekstra" class="mt-2" style="display:none;">
+                                <input type="text" id="urun_ekstra_input" class="form-control" placeholder="2. ürün modeli">
+                                <small class="text-muted">Kayıt edildiğinde birinci ile birleştirilir ( / ile ayrılır)</small>
+                            </div>
                         </div>
 
                         <!-- ADET -->
@@ -124,8 +135,20 @@
 
                         <!-- GRUP -->
                         <div class="col-12">
-                            <label for="{{ form.grup.id_for_label }}" class="form-label">{{ form.grup.label }}</label>
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <label for="{{ form.grup.id_for_label }}" class="form-label mb-0">{{ form.grup.label }}</label>
+                                <span id="grup-ai-badge" class="badge bg-primary d-none" style="font-size:0.7rem;">
+                                    <i class="bi bi-stars me-1"></i>AI
+                                </span>
+                                <span id="grup-ai-spinner" class="d-none">
+                                    <span class="spinner-border spinner-border-sm text-primary" style="width:0.8rem;height:0.8rem;"></span>
+                                </span>
+                            </div>
                             {{ form.grup }}
+                            <div id="grup-ai-info" class="text-muted d-none" style="font-size:0.75rem;margin-top:3px;">
+                                <i class="bi bi-stars me-1 text-primary"></i>
+                                <span id="grup-ai-info-text"></span>
+                            </div>
                             {% if form.grup.errors %}
                                 <div class="text-danger">{{ form.grup.errors.0 }}</div>
                             {% endif %}
@@ -267,16 +290,51 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Yeni Lastik Ekle sayfası yüklendi');
-    
-    // Form elemanları
+
+    // --- Çoklu ürün satırı ---
+    const urunEkleBtn = document.getElementById('urun-ekle-btn');
+    const urunEkstra = document.getElementById('urun-ekstra');
+    const urunEkstraInput = document.getElementById('urun_ekstra_input');
+    const urunInput = document.getElementById('id_urun');
+
+    urunEkleBtn.addEventListener('click', function() {
+        if (urunEkstra.style.display === 'none') {
+            urunEkstra.style.display = 'block';
+            urunEkstraInput.focus();
+            urunEkleBtn.innerHTML = '<i class="bi bi-dash-lg"></i>';
+            urunEkleBtn.title = 'İkinci satırı kaldır';
+            urunEkleBtn.classList.replace('btn-outline-primary', 'btn-outline-danger');
+        } else {
+            urunEkstra.style.display = 'none';
+            urunEkstraInput.value = '';
+            urunEkleBtn.innerHTML = '<i class="bi bi-plus-lg"></i>';
+            urunEkleBtn.title = 'Bir ürün daha ekle';
+            urunEkleBtn.classList.replace('btn-outline-danger', 'btn-outline-primary');
+        }
+    });
+
+    // Form submit öncesi ikinci satırı birinciye birleştir
+    const form = urunEkleBtn.closest('form');
+    form.addEventListener('submit', function() {
+        if (urunEkstra.style.display !== 'none' && urunEkstraInput.value.trim()) {
+            const birinci = urunInput.value.trim();
+            const ikinci = urunEkstraInput.value.trim();
+            if (birinci && ikinci) {
+                urunInput.value = birinci + ' / ' + ikinci;
+            } else if (ikinci) {
+                urunInput.value = ikinci;
+            }
+        }
+    }, true); // capture: true — diğer submit handler'lardan önce çalışsın
+    // --- Çoklu ürün satırı sonu ---
+    // (urunInput yukarıda tanımlandı)
     const adetInput = document.getElementById('id_adet');
     const birimFiyatInput = document.getElementById('id_birim_fiyat');
     const toplamFiyatInput = document.getElementById('id_toplam_fiyat');
-    const urunInput = document.getElementById('id_urun');
     const oneCikarCheckbox = document.getElementById('id_one_cikar');
     const grupSelect = document.getElementById('id_grup');
     const mevsimField = document.getElementById('mevsim-field');
-    const form = document.getElementById('yeniLastikForm');
+    // (form yukarıda tanımlandı)
     
     // Debug: Elementleri kontrol et
     console.log('Form elemanları:', {
@@ -386,10 +444,24 @@ document.addEventListener('DOMContentLoaded', function() {
     const mevsimAiInfo = document.getElementById('mevsim-ai-info');
     const mevsimAiInfoText = document.getElementById('mevsim-ai-info-text');
 
+    // (grupSelect yukarıda tanımlandı)
+    const grupAiBadge = document.getElementById('grup-ai-badge');
+    const grupAiSpinner = document.getElementById('grup-ai-spinner');
+    const grupAiInfo = document.getElementById('grup-ai-info');
+    const grupAiInfoText = document.getElementById('grup-ai-info-text');
+
     const MEVSIM_LABELS = {
         'yaz': '☀️ Yazlık',
         'kis': '❄️ Kışlık',
         'dort-mevsim': '🔄 Dört Mevsim',
+        'bilinmiyor': '❓ Bilinmiyor'
+    };
+
+    const GRUP_LABELS = {
+        'binek': '🚗 Binek',
+        'ticari': '🚐 Ticari',
+        'aku': '🔋 Akü',
+        'jant': '⭕ Jant',
         'bilinmiyor': '❓ Bilinmiyor'
     };
 
@@ -398,25 +470,32 @@ document.addEventListener('DOMContentLoaded', function() {
         mevsimSelect.addEventListener('change', () => {
             if (document.activeElement === mevsimSelect) {
                 mevsimSelect.dataset.manual = '1';
-                // Manuel seçimde badge'i gizle
                 mevsimAiBadge.classList.add('d-none');
                 mevsimAiInfo.classList.add('d-none');
             }
         });
     }
 
+    // Grup seçimi manuel değişirse işaretle
+    if (grupSelect) {
+        grupSelect.addEventListener('change', () => {
+            if (document.activeElement === grupSelect) {
+                grupSelect.dataset.manual = '1';
+                grupAiBadge.classList.add('d-none');
+                grupAiInfo.classList.add('d-none');
+            }
+        });
+    }
+
     function setMevsimFromAI(mevsim, kaynak) {
         if (!mevsimSelect) return;
-        if (mevsimSelect.dataset.manual === '1') return; // Manuel seçimi koru
-
-        // Mevsim alanı gizliyse (akü/jant) çalışma
+        if (mevsimSelect.dataset.manual === '1') return;
         if (mevsimField && mevsimField.style.display === 'none') return;
 
         if (mevsim && mevsim !== 'bilinmiyor') {
             mevsimSelect.value = mevsim;
             mevsimSelect.dispatchEvent(new Event('change', { bubbles: true }));
 
-            // Badge göster
             mevsimAiBadge.classList.remove('d-none');
             if (kaynak === 'groq') {
                 mevsimAiBadge.className = 'badge bg-primary d-flex align-items-center gap-1';
@@ -438,10 +517,34 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    function setGrupFromAI(grup, kaynak) {
+        if (!grupSelect) return;
+        if (grupSelect.dataset.manual === '1') return;
+        if (!grup || grup === 'bilinmiyor') {
+            grupAiBadge.classList.add('d-none');
+            grupAiInfo.classList.add('d-none');
+            return;
+        }
+
+        grupSelect.value = grup;
+        grupSelect.dispatchEvent(new Event('change', { bubbles: true }));
+
+        grupAiBadge.classList.remove('d-none');
+        if (kaynak === 'groq') {
+            grupAiBadge.className = 'badge bg-primary d-flex align-items-center gap-1';
+            grupAiBadge.innerHTML = '<i class="bi bi-stars"></i> AI';
+            grupAiInfoText.textContent = `Groq AI tarafından "${GRUP_LABELS[grup] || grup}" olarak algılandı`;
+        } else {
+            grupAiBadge.className = 'badge bg-secondary d-flex align-items-center gap-1';
+            grupAiBadge.innerHTML = '<i class="bi bi-cpu"></i> Otomatik';
+            grupAiInfoText.textContent = `Kural tabanlı olarak "${GRUP_LABELS[grup] || grup}" olarak algılandı`;
+        }
+        grupAiInfo.classList.remove('d-none');
+    }
+
     async function groqMevsimTespiti() {
-        // Mevsim alanı gizliyse (akü/jant grubu) çalışma
         if (mevsimField && mevsimField.style.display === 'none') return;
-        if (mevsimSelect && mevsimSelect.dataset.manual === '1') return;
+        if (mevsimSelect && mevsimSelect.dataset.manual === '1' && grupSelect && grupSelect.dataset.manual === '1') return;
 
         const urunText = (urunInput ? urunInput.value : '').trim();
         const markaEl = document.getElementById('id_marka');
@@ -449,10 +552,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (!urunText && !markaText) return;
 
-        // Spinner göster
+        // Spinnerlar
         mevsimAiSpinner.classList.remove('d-none');
+        grupAiSpinner.classList.remove('d-none');
         mevsimAiBadge.classList.add('d-none');
+        grupAiBadge.classList.add('d-none');
         mevsimAiInfo.classList.add('d-none');
+        grupAiInfo.classList.add('d-none');
 
         try {
             const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
@@ -467,11 +573,13 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!resp.ok) throw new Error('Sunucu hatası');
             const data = await resp.json();
             setMevsimFromAI(data.mevsim, data.kaynak);
-            console.log('Mevsim AI tespiti:', data);
+            setGrupFromAI(data.grup, data.kaynak);
+            console.log('AI tespiti:', data);
         } catch (err) {
-            console.warn('Groq mevsim tespiti başarısız:', err);
+            console.warn('Groq tespiti başarısız:', err);
         } finally {
             mevsimAiSpinner.classList.add('d-none');
+            grupAiSpinner.classList.add('d-none');
         }
     }
 

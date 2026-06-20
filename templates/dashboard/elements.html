@@ -213,13 +213,13 @@
                             <div class="btn-group btn-group-sm" role="group">
                                 {% if siparis.durum != 'teslim' and siparis.durum != 'kontrol' %}
                                 <button type="button" class="btn btn-secondary btn-sm" title="Teslim Edildi"
-                                        onclick="teslimEdildi({{ siparis.id }})">
+                                        data-action="teslim" data-id="{{ siparis.id }}">
                                     <i class="bi bi-box-seam"></i>
                                 </button>
                                 {% endif %}
                                 {% if siparis.durum != 'kontrol' %}
                                 <button type="button" class="btn btn-success btn-sm" title="Kontrol Edildi" 
-                                        onclick="kontrolEdildi({{ siparis.id }})">
+                                        data-action="kontrol" data-id="{{ siparis.id }}">
                                     <i class="bi bi-check-circle"></i>
                                 </button>
                                 {% endif %}
@@ -412,12 +412,12 @@
                         <i class="bi bi-pencil me-1"></i> Düzenle
                     </a>
                     {% if siparis.durum != 'kontrol' %}
-                    <button type="button" class="btn btn-success btn-sm" onclick="kontrolEdildi({{ siparis.id }})">
+                    <button type="button" class="btn btn-success btn-sm" data-action="kontrol" data-id="{{ siparis.id }}">
                         <i class="bi bi-check-circle me-1"></i> Kontrol
                     </button>
                     {% endif %}
                     {% if siparis.durum != 'teslim' and siparis.durum != 'kontrol' %}
-                    <button type="button" class="btn btn-secondary btn-sm" onclick="teslimEdildi({{ siparis.id }})">
+                    <button type="button" class="btn btn-secondary btn-sm" data-action="teslim" data-id="{{ siparis.id }}">
                         <i class="bi bi-box-seam me-1"></i> Teslim
                     </button>
                     {% endif %}
@@ -586,7 +586,16 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Sipariş Envanteri sayfası yüklendi');
-    
+
+    // data-action butonları için event delegation
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('[data-action]');
+        if (!btn) return;
+        const action = btn.getAttribute('data-action');
+        const id = btn.getAttribute('data-id');
+        if (action === 'kontrol') kontrolEdildi(id);
+        if (action === 'teslim') teslimEdildi(id);
+    });
     // Ebat vurgulama fonksiyonu
     function highlightEbatInTable() {
         const urunElements = document.querySelectorAll('.urun-with-ebat-highlight');
@@ -829,25 +838,20 @@ function whatsappGonderDetayli(button) {
         cleanTelefon = '90' + cleanTelefon;
     }
     
-    console.log('Temizlenmiş telefon:', cleanTelefon);
-    
     // Müşteri adını düzenle
     let musteriIsim = musteriAdi ? musteriAdi.trim() : '';
     
-    // Basit mesaj şablonu (Modal için)
+    // Google değerlendirme mesajı
+    const googleLink = 'https://g.page/r/CfO7MxcPdXnGEBM/review';
     let mesaj = '';
     if (musteriIsim) {
-        mesaj = `Merhaba ${musteriIsim} Bey, lastiğiniz gelmiştir.`;
+        mesaj = `Merhaba, hizmetimizden memnun kaldıysanız Google'da değerlendirmenizi bekliyoruz \n${googleLink}`;
     } else {
-        mesaj = `Merhaba, lastiğiniz gelmiştir.`;
+        mesaj = `Merhaba, hizmetimizden memnun kaldıysanız Google'da değerlendirmenizi bekliyoruz \n${googleLink}`;
     }
-    
-    console.log('Gönderilecek basit mesaj:', mesaj);
     
     // WhatsApp URL'si oluştur
     const whatsappUrl = `https://wa.me/${cleanTelefon}?text=${encodeURIComponent(mesaj)}`;
-    
-    console.log('WhatsApp URL:', whatsappUrl);
     
     // Yeni sekmede aç
     window.open(whatsappUrl, '_blank');

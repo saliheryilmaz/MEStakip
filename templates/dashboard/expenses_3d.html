@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% load static %}
 
 {% block title %}Gider Analizi - Mestakip{% endblock %}
@@ -101,7 +101,13 @@
     return colors[i % colors.length];
   }
 
+  let chartInstance = null;
+  let activeCategory = null; // null = tümü göster
+
   function renderChart() {
+    const ctx = document.getElementById('expensesChart');
+    if (!ctx) return;
+
     const datasets = categories.map((cat, i) => ({
       label: cat,
       data: (zMatrix[i] || []).map(v => Number(v || 0)),
@@ -111,17 +117,49 @@
       stack: 'expenses'
     }));
 
-    const ctx = document.getElementById('expensesChart');
-    if (!ctx) return;
-
-    new Chart(ctx, {
+    chartInstance = new Chart(ctx, {
       type: 'bar',
       data: { labels: months, datasets },
       options: {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { position: 'bottom' },
+          legend: {
+            position: 'bottom',
+            onClick: function(e, legendItem, legend) {
+              const clickedLabel = legendItem.text;
+              const chart = legend.chart;
+
+              if (activeCategory === clickedLabel) {
+                // Aynı kategoriye tekrar basıldıysa tümünü göster
+                activeCategory = null;
+                chart.data.datasets.forEach((ds) => {
+                  chart.setDatasetVisibility(chart.data.datasets.indexOf(ds), true);
+                });
+              } else {
+                // Sadece tıklanan kategoriyi göster, diğerlerini gizle
+                activeCategory = clickedLabel;
+                chart.data.datasets.forEach((ds) => {
+                  const idx = chart.data.datasets.indexOf(ds);
+                  chart.setDatasetVisibility(idx, ds.label === clickedLabel);
+                });
+              }
+              chart.update();
+            },
+            labels: {
+              generateLabels: function(chart) {
+                const original = Chart.defaults.plugins.legend.labels.generateLabels(chart);
+                return original.map(item => {
+                  if (activeCategory !== null && item.text !== activeCategory) {
+                    item.fontColor = '#888';
+                    item.strokeStyle = '#888';
+                    item.fillStyle = '#888';
+                  }
+                  return item;
+                });
+              }
+            }
+          },
           tooltip: {
             callbacks: {
               label: (ctx) => `${ctx.dataset.label}: ${Number(ctx.parsed.y || 0).toLocaleString('tr-TR')}`

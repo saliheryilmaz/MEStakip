@@ -5622,9 +5622,9 @@ def get_filtered_transactions(user, **filters):
     )
     
     # Temel filtreler
-    # Merkez-satis kasasındaki gelir işlemlerini hariç tut, ANCAK Pafgo işlemleri dahil
+    # Merkez-satis kasasındaki gelir işlemlerini hariç tut, ANCAK Pafgo veya Mehmet Havale işlemleri dahil
     islemler = islemler.exclude(
-        Q(kasa_adi='merkez-satis') & Q(hareket_tipi='gelir') & Q(pafgo=0)
+        Q(kasa_adi='merkez-satis') & Q(hareket_tipi='gelir') & Q(pafgo=0) & Q(mehmet_havale=0)
     ).exclude(
         kasa_adi='virman'
     )
@@ -7471,3 +7471,5 @@ def lastik_mevsim_ai(request):
         "grup": grup_sonuc,
         "kaynak": "kural" if not model_sonuc else "veritabani"
     })
+
+

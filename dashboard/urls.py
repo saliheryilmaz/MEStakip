@@ -90,4 +90,5 @@ urlpatterns = [
     path('excel-dosya/<int:dosya_id>/sil/', views.excel_dosya_sil, name='excel_dosya_sil'),
     path('health/', views.health_check, name='health_check'),
     path('api/lastik-mevsim-ai/', views.lastik_mevsim_ai, name='lastik_mevsim_ai'),
+
 ]

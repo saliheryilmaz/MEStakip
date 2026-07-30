@@ -134,14 +134,18 @@ if DEBUG:
         }
     }
 else:
-    # Production - MySQL (PythonAnywhere)
+    # Production - MySQL (environment variable'lardan okunur)
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.mysql',
-            'NAME': 'wadmory$default',
-            'USER': 'wadmory',
-            'PASSWORD': 'S346020r',
-            'HOST': 'wadmory.mysql.pythonanywhere-services.com',
+            'NAME': DB_NAME,
+            'USER': DB_USER,
+            'PASSWORD': DB_PASSWORD,
+            'HOST': DB_HOST,
+            'PORT': os.environ.get('DB_PORT', '3306'),
+            'OPTIONS': {
+                'charset': 'utf8mb4',
+            },
         }
     }
 

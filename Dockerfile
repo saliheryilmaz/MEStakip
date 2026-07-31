@@ -42,4 +42,4 @@ RUN npm run build && python manage.py collectstatic --noinput
 ENV PORT=8000
 EXPOSE 8000
 
-CMD ["gunicorn", "metis_admin.wsgi:application", "-c", "gunicorn.conf.py"]
+CMD ["sh", "-c", "${START_COMMAND:-gunicorn metis_admin.wsgi:application -c gunicorn.conf.py}"]

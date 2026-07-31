@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+{% block title %}Stok Kartları — DİA ERP{% endblock %}
+{% block page_name %}stok_listesi{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="bi bi-box-seam me-2 text-success"></i>Stok Kartları</h4>
+        <p class="text-muted mb-0">DİA'dan senkronize edilen {{ toplam }} stok kartı</p>
+    </div>
+    <a href="{% url 'erp:dia_durum' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Sync Durumu
+    </a>
+</div>
+
+<!-- Filtreler -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body py-3">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-5">
+                <input type="text" name="q" value="{{ q }}" class="form-control form-control-sm"
+                    placeholder="Stok kodu, açıklama, barkod, marka...">
+            </div>
+            <div class="col-md-2">
+                <select name="durum" class="form-select form-select-sm">
+                    <option value="">Tüm durumlar</option>
+                    <option value="A" {% if secili_durum == 'A' %}selected{% endif %}>Aktif</option>
+                    <option value="P" {% if secili_durum == 'P' %}selected{% endif %}>Pasif</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="marka" class="form-select form-select-sm">
+                    <option value="">Tüm markalar</option>
+                    {% for m in markalar %}
+                    <option value="{{ m }}" {% if secili_marka == m %}selected{% endif %}>{{ m }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3 d-flex gap-1">
+                <button type="submit" class="btn btn-primary btn-sm flex-grow-1">
+                    <i class="bi bi-search"></i> Filtrele
+                </button>
+                <a href="{% url 'erp:stok_listesi' %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-x"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Tablo -->
+<div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 small">
+            <thead class="table-light">
+                <tr>
+                    <th>Stok Kodu</th>
+                    <th>Ürün</th>
+                    <th>Yıl</th>
+                    <th>Segment</th>
+                    <th>Marka</th>
+                    <th class="text-end">Gerçek Stok</th>
+                    <th class="text-end">Fiyat 1</th>
+                    <th>Sync</th>
+                    <th style="background:#1565C0;color:white;text-align:center">İstek</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for stok in sayfa %}
+                <tr>
+                    <td><code class="text-success">{{ stok.stok_kodu }}</code></td>
+                    <td class="fw-semibold">{{ stok.aciklama }}</td>
+                    <td class="text-muted">{{ stok.ozel_kod1|default:"—" }}</td>
+                    <td class="text-muted">{{ stok.ozel_kod2|default:"—" }}</td>
+                    <td class="text-muted">{{ stok.marka|default:"—" }}</td>
+                    <td class="text-end">
+                        <span class="{% if stok.gercek_stok <= 0 %}text-danger{% else %}text-success{% endif %} fw-semibold">
+                            {{ stok.gercek_stok|floatformat:0 }}
+                        </span>
+                    </td>
+                    <td class="text-end">
+                        {% if stok.fiyat1 %}
+                        <span class="fw-semibold">{{ stok.fiyat1|floatformat:0 }}₺</span>
+                        {% else %}—{% endif %}
+                    </td>
+                    <td>
+                        {% if stok.sync_durumu == 'senkron' %}<span class="text-success small">✓</span>
+                        {% elif stok.sync_durumu == 'hatali' %}<span class="text-danger small">✗</span>
+                        {% else %}<span class="text-muted small">—</span>{% endif %}
+                    </td>
+                    <td class="text-center">
+                        <button class="btn btn-istek p-0 border-0 bg-transparent"
+                                onclick="istekAc({{ stok.pk }}, '{{ stok.stok_kodu }}', '{{ stok.aciklama|escapejs }}')"
+                                title="{{ stok.aciklama }}" style="cursor:pointer">
+                            <i class="bi bi-truck" style="font-size:1.4rem;color:#1565C0"></i>
+                        </button>
+                    </td>
+                    </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="10" class="text-center text-muted py-4">
+                        <i class="bi bi-box-seam fs-4 d-block mb-2"></i>
+                        Stok kartı bulunamadı. Sync başlatın.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if sayfa.has_other_pages %}
+    <div class="card-footer bg-white border-top d-flex justify-content-between align-items-center py-2">
+        <small class="text-muted">{{ sayfa.start_index }}–{{ sayfa.end_index }} / {{ toplam }} kayıt</small>
+        <nav>
+            <ul class="pagination pagination-sm mb-0">
+                {% if sayfa.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?{% if q %}q={{ q }}&{% endif %}sayfa={{ sayfa.previous_page_number }}">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
+                {% endif %}
+                <li class="page-item active">
+                    <span class="page-link">{{ sayfa.number }} / {{ sayfa.paginator.num_pages }}</span>
+                </li>
+                {% if sayfa.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?{% if q %}q={{ q }}&{% endif %}sayfa={{ sayfa.next_page_number }}">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Depo Fişi Ekle Modal -->
+<div class="modal fade" id="depoFisiModal" tabindex="-1" aria-labelledby="depoFisiModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold" id="depoFisiModalLabel">Depo Fişi Ekle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Ürün:</label>
+                    <input type="text" id="modalUrun" class="form-control" readonly>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Code:</label>
+                    <input type="text" id="modalKod" class="form-control" readonly>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Adet:</label>
+                    <input type="number" id="modalAdet" class="form-control" value="1" min="1" max="999">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Plaka:</label>
+                    <input type="text" id="modalPlaka" class="form-control text-uppercase" placeholder="34 ABC 123" maxlength="15">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Araç Marka:</label>
+                    <input type="text" id="modalAracMarka" class="form-control" placeholder="Ör: Toyota">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Araç Model:</label>
+                    <input type="text" id="modalAracModel" class="form-control" placeholder="Ör: Corolla">
+                </div>
+            </div>
+            <div class="modal-footer border-top">
+                <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">KAPAT</button>
+                <button type="button" class="btn px-4 fw-bold text-white" id="sepeteEkleBtn"
+                        style="background:#009688">FİŞE EKLE</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast bildirimi -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index:11">
+    <div id="istekToast" class="toast align-items-center text-white border-0" role="alert"
+         style="background:#1565C0">
+        <div class="d-flex">
+            <div class="toast-body" id="istekToastBody">
+                <i class="bi bi-truck me-1"></i> Fişe eklendi.
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto"
+                    data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+</div>
+
+<script>
+let aktifStokPk = null;
+
+function istekAc(stokPk, stokKodu, aciklama) {
+    aktifStokPk = stokPk;
+    document.getElementById('modalUrun').value = aciklama;
+    document.getElementById('modalKod').value = stokKodu;
+    document.getElementById('modalAdet').value = 1;
+    document.getElementById('modalPlaka').value = '';
+    document.getElementById('modalAracMarka').value = '';
+    document.getElementById('modalAracModel').value = '';
+    new bootstrap.Modal(document.getElementById('depoFisiModal')).show();
+}
+
+document.getElementById('sepeteEkleBtn').addEventListener('click', function () {
+    if (!aktifStokPk) return;
+    const adet      = parseInt(document.getElementById('modalAdet').value) || 1;
+    const plaka     = document.getElementById('modalPlaka').value.toUpperCase();
+    const aracMarka = document.getElementById('modalAracMarka').value;
+    const aracModel = document.getElementById('modalAracModel').value;
+
+    fetch(`{% url 'erp:depo_fisi_istek' 0 %}`.replace('/0/', `/${aktifStokPk}/`), {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': '{{ csrf_token }}',
+        },
+        body: `adet=${adet}&plaka=${encodeURIComponent(plaka)}&arac_marka=${encodeURIComponent(aracMarka)}&arac_model=${encodeURIComponent(aracModel)}`
+    })
+    .then(r => r.json())
+    .then(data => {
+        bootstrap.Modal.getInstance(document.getElementById('depoFisiModal')).hide();
+        const body = document.getElementById('istekToastBody');
+        const kod = document.getElementById('modalKod').value;
+        if (data.basarili) {
+            body.innerHTML = `<i class="bi bi-truck me-1"></i> <strong>${kod}</strong> fişe eklendi — <a href="{% url 'erp:depo_fisi_listesi' %}" class="text-white fw-bold">Fişi Gör →</a>`;
+        } else {
+            body.textContent = '✗ Hata: ' + (data.hata || 'Bilinmeyen');
+        }
+        new bootstrap.Toast(document.getElementById('istekToast'), {delay: 4000}).show();
+    })
+    .catch(() => {
+        document.getElementById('istekToastBody').textContent = 'Bağlantı hatası.';
+        new bootstrap.Toast(document.getElementById('istekToast')).show();
+    });
+});
+</script>
+{% csrf_token %}
+{% endblock %}

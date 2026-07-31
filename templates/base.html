@@ -694,6 +694,73 @@
                             </a>
                         </li>
 
+                        <!-- DİA ERP Entegrasyon -->
+                        <li class="nav-item mt-3">
+                            <small class="text-muted px-3 text-uppercase fw-bold">DİA ERP</small>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="collapse" data-bs-target="#sidebarDia" href="#"
+                                role="button" aria-expanded="{% if 'erp' in request.path or 'dia' in request.path %}true{% else %}false{% endif %}"
+                                aria-controls="sidebarDia">
+                                <i class="bi bi-diagram-3"></i>
+                                <span>ERP Senkronizasyon</span>
+                                <i class="bi bi-chevron-down ms-auto collapse-icon"></i>
+                            </a>
+                            <div class="collapse {% if 'erp' in request.path or 'dia' in request.path %}show{% endif %}" id="sidebarDia">
+                                <ul class="nav flex-column ms-3 my-2">
+                                    <li class="nav-item">
+                                        <a class="nav-link {% if request.resolver_match.url_name == 'dia_durum' %}active{% endif %}"
+                                            href="{% url 'erp:dia_durum' %}">
+                                            <i class="bi bi-activity me-1"></i>
+                                            <span>Sync Durumu</span>
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link {% if request.resolver_match.url_name == 'cari_listesi' %}active{% endif %}"
+                                            href="{% url 'erp:cari_listesi' %}">
+                                            <i class="bi bi-people me-1"></i>
+                                            <span>Cariler</span>
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link {% if request.resolver_match.url_name == 'stok_listesi' %}active{% endif %}"
+                                            href="{% url 'erp:stok_listesi' %}">
+                                            <i class="bi bi-box-seam me-1"></i>
+                                            <span>Stok Kartları</span>
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link {% if request.resolver_match.url_name == 'depo_fisi_listesi' or request.resolver_match.url_name == 'depo_fisi_detay' or request.resolver_match.url_name == 'depo_fisi_sepet' %}active{% endif %}"
+                                            href="{% url 'erp:depo_fisi_listesi' %}">
+                                            <i class="bi bi-truck me-1"></i>
+                                            <span>Depo Fişleri</span>
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link {% if request.resolver_match.url_name == 'fatura_listesi' %}active{% endif %}"
+                                            href="{% url 'erp:fatura_listesi' %}">
+                                            <i class="bi bi-receipt me-1"></i>
+                                            <span>Malzeme Hareketleri</span>
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link {% if request.resolver_match.url_name == 'depo_listesi' %}active{% endif %}"
+                                            href="{% url 'erp:depo_listesi' %}">
+                                            <i class="bi bi-building me-1"></i>
+                                            <span>Depolar</span>
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link {% if request.resolver_match.url_name == 'sync_loglar' %}active{% endif %}"
+                                            href="{% url 'erp:sync_loglar' %}">
+                                            <i class="bi bi-clock-history me-1"></i>
+                                            <span>Sync Logları</span>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </li>
+
                         <li class="nav-item mt-3">
                             <small class="text-muted px-3 text-uppercase fw-bold">Admin</small>
                         </li>

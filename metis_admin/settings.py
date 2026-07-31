@@ -12,23 +12,28 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# ---------------------------------------------------------------------------
+# Yardımcı: .env'de tanımsız zorunlu değişken varsa açık hata ver
+# ---------------------------------------------------------------------------
+def _require_env(key: str) -> str:
+    value = os.environ.get(key, '').strip()
+    if not value:
+        raise RuntimeError(
+            f"Zorunlu ortam değişkeni eksik: {key}\n"
+            f".env dosyanıza {key}=<değer> satırını ekleyin."
+        )
+    return value
+
 
 # ============================================================
 # GENERAL SETTINGS
 # ============================================================
 
-# DEBUG: Environment variable yoksa True (development), varsa değerine göre
-DEBUG_ENV = os.environ.get('DEBUG', '').strip().lower()
-if DEBUG_ENV:
-    DEBUG = DEBUG_ENV == 'true'
-else:
-    # Environment variable yoksa development modu (True) - Geçici olarak True yapıldı
-    DEBUG = True
+# DEBUG: .env'de yoksa False (güvenli varsayılan — production'da asla True kalmasın)
+DEBUG = os.environ.get('DEBUG', 'False').strip().lower() == 'true'
 
-SECRET_KEY = os.environ.get(
-    'SECRET_KEY',
-    'django-insecure-8gy15^z036tfb9a%#36tgy6ssb==3+@c1)1nh6@!fdowo$%e!n'  # Production'da mutlaka değiştirin!
-)
+# SECRET_KEY zorunlu — fallback/gömülü değer yok
+SECRET_KEY = _require_env('SECRET_KEY')
 
 
 # ALLOWED_HOSTS environment variable'dan alınabilir (virgülle ayrılmış)
@@ -72,6 +77,12 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'dashboard',
+    # DİA ERP entegrasyon app'leri
+    'erp',
+    'dia_integration',
+    # Celery periyodik görevler
+    'django_celery_beat',
+    'django_celery_results',
 ]
 
 
@@ -124,24 +135,26 @@ DB_PASSWORD = os.environ.get('DB_PASSWORD', '').strip()
 DB_HOST = os.environ.get('DB_HOST', '').strip()
 
 # Eğer tüm MySQL bilgileri varsa MySQL kullan, yoksa SQLite (development)
-# Geliştirme ortamında SQLite, production'da MySQL kullan
-if DEBUG:
+if DB_NAME and DB_USER and DB_PASSWORD and DB_HOST:
+    # Production - MySQL (PythonAnywhere)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': DB_NAME,
+            'USER': DB_USER,
+            'PASSWORD': DB_PASSWORD,
+            'HOST': DB_HOST,
+            'OPTIONS': {
+                'charset': 'utf8mb4',
+            },
+        }
+    }
+else:
     # Development - SQLite
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': BASE_DIR / 'db.sqlite3',
-        }
-    }
-else:
-    # Production - MySQL (PythonAnywhere)
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.mysql',
-            'NAME': 'wadmory$default',
-            'USER': 'wadmory',
-            'PASSWORD': 'S346020r',
-            'HOST': 'wadmory.mysql.pythonanywhere-services.com',
         }
     }
 
@@ -224,4 +237,59 @@ SERVER_EMAIL = 'info@meslas.com'
 
 # Development için console backend kullanmak isterseniz:
 # EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+
+# ============================================================
+# CELERY (Görev kuyruğu ve periyodik senkronizasyon)
+# ============================================================
+
+# Broker: Redis (PythonAnywhere production) veya DB (local geliştirme)
+# Local'de Redis yoksa CELERY_BROKER_URL'yi .env'den boş bırakın → DB broker kullanılır
+_celery_broker = os.environ.get('CELERY_BROKER_URL', '').strip()
+if _celery_broker:
+    CELERY_BROKER_URL = _celery_broker
+else:
+    # Redis yoksa veritabanı broker kullan (geliştirme için)
+    # Windows'ta SQLite path için forward slash kullanılmalı
+    _broker_db_path = str(BASE_DIR / 'celery_broker.sqlite3').replace('\\', '/')
+    CELERY_BROKER_URL = f'sqla+sqlite:///{_broker_db_path}'
+
+# Sonuçlar Django veritabanında (django-celery-results)
+CELERY_RESULT_BACKEND = 'django-db'
+CELERY_RESULT_EXTENDED = True
+
+# Seri/zaman biçimleri
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'Europe/Istanbul'
+CELERY_ENABLE_UTC = True
+
+# Periyodik görevler için django-celery-beat
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+
+# Görev yeniden deneme varsayılanları
+CELERY_TASK_MAX_RETRIES = 3
+CELERY_TASK_DEFAULT_RETRY_DELAY = 60  # saniye
+
+# Uzun süren görevlerin zaman aşımı (DİA senkronu için 10 dk yeterli)
+CELERY_TASK_SOFT_TIME_LIMIT = 600   # 10 dakika — SoftTimeLimitExceeded fırlatır
+CELERY_TASK_TIME_LIMIT = 660        # 11 dakika — zorla öldürür
+
+
+# ============================================================
+# DİA ERP BAĞLANTI AYARLARI
+# ============================================================
+
+DIA_SERVER_CODE = os.environ.get('DIA_SERVER_CODE', 'diademo')
+DIA_USERNAME = os.environ.get('DIA_USERNAME', 'ws')
+DIA_PASSWORD = os.environ.get('DIA_PASSWORD', 'ws')
+DIA_FIRMA_KODU = os.environ.get('DIA_FIRMA_KODU', '34')
+DIA_DONEM_KODU = os.environ.get('DIA_DONEM_KODU', '1')
+
+# Session timeout: DİA 1 saat, biz 50 dakika ile yeniliyoruz (güvenlik payı)
+DIA_SESSION_TTL_SECONDS = int(os.environ.get('DIA_SESSION_TTL_SECONDS', '3000'))
+
+# API loglama: production'da False yapılabilir (kontör tasarrufu için)
+DIA_LOG_API_REQUESTS = os.environ.get('DIA_LOG_API_REQUESTS', 'True').lower() == 'true'
 

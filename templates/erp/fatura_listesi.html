@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+{% block title %}Malzeme Hareketleri{% endblock %}
+{% block page_name %}fatura_listesi{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="bi bi-receipt me-2 text-primary"></i>Malzeme Hareketleri</h4>
+        <p class="text-muted mb-0">DİA fatura kalemleri — alış ve satış hareketleri</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-outline-primary btn-sm" onclick="faturaSync(false, this)">
+            <i class="bi bi-arrow-repeat me-1"></i>Delta Sync
+        </button>
+        <button class="btn btn-outline-secondary btn-sm" onclick="faturaSync(true, this)">
+            <i class="bi bi-arrow-clockwise me-1"></i>Tam Sync
+        </button>
+    </div>
+</div>
+
+<!-- Özet kartlar -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm text-center py-3">
+            <div class="fs-3 fw-bold text-primary">{{ istatistik.toplam_kayit }}</div>
+            <div class="text-muted small">Toplam Kalem</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm text-center py-3">
+            <div class="fs-3 fw-bold" style="color:#00bfa5">{{ istatistik.toplam_adet|floatformat:0 }}</div>
+            <div class="text-muted small">Toplam Adet</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm text-center py-3">
+            <div class="fs-3 fw-bold text-success">{{ istatistik.satis_toplam|floatformat:0 }} ₺</div>
+            <div class="text-muted small">Satış Tutarı</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm text-center py-3">
+            <div class="fs-3 fw-bold text-danger">{{ istatistik.alis_toplam|floatformat:0 }} ₺</div>
+            <div class="text-muted small">Alış Tutarı</div>
+        </div>
+    </div>
+</div>
+
+<!-- Filtreler -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body py-3">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <input type="text" name="q" value="{{ q }}" class="form-control form-control-sm"
+                       placeholder="Ürün kodu, ürün adı, cari...">
+            </div>
+            <div class="col-md-2">
+                <select name="tur" class="form-select form-select-sm">
+                    <option value="">Tüm türler</option>
+                    {% for val, label in tur_secenekleri %}
+                    <option value="{{ val }}" {% if tur_filtre == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <input type="date" name="baslangic" value="{{ baslangic }}" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-2">
+                <input type="date" name="bitis" value="{{ bitis }}" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-3 d-flex gap-1">
+                <button type="submit" class="btn btn-primary btn-sm flex-grow-1">
+                    <i class="bi bi-play-fill me-1"></i>Çalıştır
+                </button>
+                <a href="{% url 'erp:fatura_listesi' %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-x"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Tablo -->
+<div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Tarih</th>
+                    <th>Cari</th>
+                    <th>Tür</th>
+                    <th>Ürün Kodu</th>
+                    <th>Ürün Adı</th>
+                    <th>Marka</th>
+                    <th>Kategori</th>
+                    <th>DOT</th>
+                    <th class="text-end">Adet</th>
+                    <th class="text-end">Birim Fiyat</th>
+                    <th class="text-end">Tutar</th>
+                    <th>Satış Temsilcisi</th>
+                    <th>Ödeme Planı</th>
+                    <th>Ambar</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for kalem in sayfa %}
+                <tr>
+                    <td class="text-muted small">{{ kalem.fatura.tarih|date:"d.m.Y"|default:"—" }}</td>
+                    <td>
+                        <div class="fw-semibold small">{{ kalem.fatura.cari_unvan|default:"—"|truncatechars:30 }}</div>
+                        {% if kalem.fatura.cari_kodu %}<small class="text-muted">{{ kalem.fatura.cari_kodu }}</small>{% endif %}
+                    </td>
+                    <td>
+                        {% if kalem.fatura.tur == 'S' %}<span class="badge bg-success">Satış</span>
+                        {% elif kalem.fatura.tur == 'A' %}<span class="badge bg-danger">Alış</span>
+                        {% elif kalem.fatura.tur == 'I' %}<span class="badge bg-warning text-dark">İade</span>
+                        {% else %}<span class="badge bg-secondary">{{ kalem.fatura.tur_aciklama|default:kalem.fatura.get_tur_display }}</span>{% endif %}
+                    </td>
+                    <td><code class="text-success">{{ kalem.stok_kodu|default:"—" }}</code></td>
+                    <td class="fw-semibold">{{ kalem.stok_adi|default:"—" }}</td>
+                    <td class="text-muted small">{{ kalem.marka|default:"—" }}</td>
+                    <td class="text-muted small">{{ kalem.kategori|default:"—" }}</td>
+                    <td class="text-muted small">{{ kalem.dot|default:"—" }}</td>
+                    <td class="text-end fw-bold">{{ kalem.miktar|floatformat:0 }}</td>
+                    <td class="text-end text-muted">{{ kalem.birim_fiyat|floatformat:2 }} ₺</td>
+                    <td class="text-end fw-bold {% if kalem.fatura.tur == 'S' %}text-success{% elif kalem.fatura.tur == 'A' %}text-danger{% endif %}">
+                        {{ kalem.tutar|floatformat:0 }} ₺
+                    </td>
+                    <td class="text-muted small">{{ kalem.satisci|default:"—" }}</td>
+                    <td class="text-muted small">{{ kalem.odeme_plani|default:"—" }}</td>
+                    <td class="text-muted small">{{ kalem.depo|default:"—" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="14" class="text-center text-muted py-5">
+                        <i class="bi bi-receipt fs-3 d-block mb-2"></i>
+                        Kayıt bulunamadı.<br>
+                        <button class="btn btn-primary btn-sm mt-2" onclick="faturaSync(false, this)">
+                            <i class="bi bi-arrow-repeat me-1"></i>DİA'dan Çek
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if sayfa.has_other_pages %}
+    <div class="card-footer bg-white border-top d-flex justify-content-between align-items-center py-2">
+        <small class="text-muted">{{ sayfa.start_index }}–{{ sayfa.end_index }} / {{ istatistik.toplam_kayit }} kayıt</small>
+        <nav>
+            <ul class="pagination pagination-sm mb-0">
+                {% if sayfa.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?{% if q %}q={{ q }}&{% endif %}{% if tur_filtre %}tur={{ tur_filtre }}&{% endif %}sayfa={{ sayfa.previous_page_number }}">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
+                {% endif %}
+                <li class="page-item active">
+                    <span class="page-link">{{ sayfa.number }} / {{ sayfa.paginator.num_pages }}</span>
+                </li>
+                {% if sayfa.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?{% if q %}q={{ q }}&{% endif %}{% if tur_filtre %}tur={{ tur_filtre }}&{% endif %}sayfa={{ sayfa.next_page_number }}">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Toast -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index:11">
+    <div id="syncToast" class="toast" role="alert">
+        <div class="toast-header">
+            <i class="bi bi-receipt me-2 text-primary"></i>
+            <strong class="me-auto">Fatura Sync</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body" id="syncToastBody">İşlem başlatılıyor...</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function faturaSync(tam, btn) {
+    const orijinal = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Çekiliyor...';
+
+    fetch("{% url 'erp:fatura_sync' %}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: `tam=${tam}`
+    })
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById('syncToastBody').textContent = data.mesaj || data.hata;
+        new bootstrap.Toast(document.getElementById('syncToast')).show();
+        if (data.basarili) setTimeout(() => location.reload(), 1500);
+    })
+    .catch(() => {
+        document.getElementById('syncToastBody').textContent = 'Bağlantı hatası.';
+        new bootstrap.Toast(document.getElementById('syncToast')).show();
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = orijinal;
+    });
+}
+</script>
+{% csrf_token %}
+{% endblock %}

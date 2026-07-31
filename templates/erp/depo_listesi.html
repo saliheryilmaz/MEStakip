@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Depolar — DİA ERP{% endblock %}
+{% block page_name %}depo_listesi{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="bi bi-building me-2 text-info"></i>Depolar</h4>
+        <p class="text-muted mb-0">DİA şube/depo hiyerarşisi</p>
+    </div>
+    <a href="{% url 'erp:dia_durum' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Sync Durumu
+    </a>
+</div>
+
+{% if not depolar %}
+<div class="alert alert-info">
+    <i class="bi bi-info-circle me-2"></i>
+    Henüz depo kaydı yok. <strong>Sync Durumu</strong> sayfasından "Firma/Dönem" sync'i başlatın
+    veya <code>python manage.py dia_sync_stok --depolar</code> komutunu çalıştırın.
+</div>
+{% else %}
+
+{% regroup depolar by sube_adi as sube_gruplar %}
+
+{% for grup in sube_gruplar %}
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-header bg-light border-bottom py-2">
+        <h6 class="fw-bold mb-0">
+            <i class="bi bi-diagram-2 me-2 text-info"></i>
+            Şube: <span class="text-primary">{{ grup.grouper|default:"(Şube bilgisi yok)" }}</span>
+        </h6>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 small">
+            <thead class="table-light">
+                <tr>
+                    <th>Depo Adı</th>
+                    <th>DİA Depo Key</th>
+                    <th>DİA Şube Key</th>
+                    <th>Durum</th>
+                    <th>Stok Kaydı Sayısı</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for depo in grup.list %}
+                <tr>
+                    <td class="fw-semibold">{{ depo.ad }}</td>
+                    <td><code>{{ depo.dia_key }}</code></td>
+                    <td><code class="text-muted">{{ depo.sube_dia_key|default:"—" }}</code></td>
+                    <td>
+                        {% if depo.aktif %}
+                        <span class="badge bg-success">Aktif</span>
+                        {% else %}
+                        <span class="badge bg-secondary">Pasif</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-muted">{{ depo.stok_miktarlari.count }} kayıt</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endfor %}
+{% endif %}
+{% endblock %}

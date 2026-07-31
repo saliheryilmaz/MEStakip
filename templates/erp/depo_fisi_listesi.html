@@ -1,0 +1,348 @@
+{% extends "base.html" %}
+{% block title %}Depo Fişleri{% endblock %}
+{% block page_name %}depo_fisi_listesi{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-1">
+            <i class="bi bi-truck me-2" style="color:#1565C0"></i>Depo Fişleri
+        </h4>
+        <p class="text-muted mb-0">Stok talep / istek fişleri</p>
+    </div>
+    <a href="{% url 'erp:stok_listesi' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-box-seam me-1"></i>Stok Listesi
+    </a>
+</div>
+
+<!-- Filtre -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body py-3">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-2">
+                <label class="form-label small text-muted mb-1">Başlangıç</label>
+                <input type="date" name="baslangic" value="{{ baslangic|date:'Y-m-d' }}"
+                       class="form-control form-control-sm">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-muted mb-1">Bitiş</label>
+                <input type="date" name="bitis" value="{{ bitis|date:'Y-m-d' }}"
+                       class="form-control form-control-sm">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-muted mb-1">Plaka</label>
+                <input type="text" name="plaka" value="{{ plaka }}"
+                       class="form-control form-control-sm" placeholder="Plaka ara...">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-muted mb-1">Cari</label>
+                <input type="text" name="cari" value="{{ cari }}"
+                       class="form-control form-control-sm" placeholder="Cari ara...">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-muted mb-1">Durum</label>
+                <select name="durum" class="form-select form-select-sm">
+                    <option value="">Tümü</option>
+                    <option value="bekliyor" {% if durum_filtre == 'bekliyor' %}selected{% endif %}>Bekliyor</option>
+                    <option value="onaylandi" {% if durum_filtre == 'onaylandi' %}selected{% endif %}>Onaylandı</option>
+                    <option value="iptal" {% if durum_filtre == 'iptal' %}selected{% endif %}>İptal</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex gap-1 align-items-end">
+                <button type="submit" class="btn btn-primary btn-sm flex-grow-1">
+                    <i class="bi bi-play-fill me-1"></i>Çalıştır
+                </button>
+                <a href="{% url 'erp:depo_fisi_listesi' %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-x"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Tablo -->
+<div class="card border-0 shadow-sm">
+    <div class="card-header py-2" style="background:#1565C0;color:white">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-truck me-2"></i>Depo Fişi</h6>
+    </div>
+    <table class="table table-hover mb-0">
+        <thead class="table-light">
+            <tr>
+                <th>Fiş Numarası</th>
+                <th>Tarih</th>
+                <th>Kod</th>
+                <th>Ürün</th>
+                <th>Cari</th>
+                <th>Depo</th>
+                <th class="text-center">Adet</th>
+                <th class="text-center">Onay</th>
+                <th>Fatura No</th>
+                <th>Onay Veren</th>
+                <th>İşlem Yapan</th>
+                <th>İşlem</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for fis in fisler %}
+            <tr class="{% if fis.durum == 'iptal' %}opacity-50{% endif %}" {% if fis.onaylandi %}style="border-left:3px solid #00e676"{% endif %}>
+                <td>
+                    <a href="{% url 'erp:depo_fisi_detay' fis.pk %}"
+                       class="fw-bold text-primary text-decoration-none">
+                        #{{ fis.fis_no }}
+                    </a>
+                </td>
+                <td>{{ fis.tarih|date:"d.m.Y" }}</td>
+                <td>
+                    {% for kalem in fis.kalemler.all %}
+                    <code class="text-success small d-block">{{ kalem.stok.stok_kodu }}</code>
+                    {% empty %}—{% endfor %}
+                </td>
+                <td>
+                    {% for kalem in fis.kalemler.all %}
+                    <span class="d-block small">{{ kalem.stok.aciklama|truncatechars:30 }}</span>
+                    {% empty %}
+                    <span class="text-muted">—</span>
+                    {% endfor %}
+                </td>
+                <td>{{ fis.cari|default:"—" }}</td>
+                <td class="text-muted">{{ fis.depo|default:"—" }}</td>
+                <td class="text-center fw-bold">{{ fis.toplam_adet|default:"0" }}</td>
+                <td class="text-center">
+                    {% if fis.onaylandi %}
+                    <i class="bi bi-check-circle-fill text-success fs-5"></i>
+                    {% else %}
+                    <span class="text-muted">—</span>
+                    {% endif %}
+                </td>
+                <td>{{ fis.fatura_no|default:"—" }}</td>
+                <td class="text-muted small">
+                    {% if fis.onay_veren %}
+                    {{ fis.onay_veren.get_full_name|default:fis.onay_veren.username }}
+                    {% if fis.onay_tarihi %}<br><small class="text-muted">{{ fis.onay_tarihi|date:"d.m H:i" }}</small>{% endif %}
+                    {% else %}—{% endif %}
+                </td>
+                <td class="text-muted small">
+                    {% if fis.islem_yapan %}
+                    {{ fis.islem_yapan.get_full_name|default:fis.islem_yapan.username }}
+                    {% else %}—{% endif %}
+                </td>
+                <td>
+                    <div class="d-flex gap-1 flex-wrap">
+                        <a href="{% url 'erp:depo_fisi_detay' fis.pk %}"
+                           class="btn btn-outline-primary btn-sm py-0 px-2" title="Detay">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                        {% if fis.durum == 'bekliyor' %}
+                        <button class="btn btn-outline-warning btn-sm py-0 px-2" title="Düzenle"
+                                onclick="duzenleAc({{ fis.pk }}, '{{ fis.plaka|escapejs }}', '{{ fis.cari|escapejs }}', '{{ fis.aciklama|escapejs }}')">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-outline-success btn-sm py-0 px-2" title="Onayla"
+                                onclick="onayAc({{ fis.pk }})">
+                            <i class="bi bi-check-lg"></i>
+                        </button>
+                        <button class="btn btn-outline-danger btn-sm py-0 px-2" title="Sil"
+                                onclick="fisSil({{ fis.pk }})">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="12" class="text-center text-muted py-5">
+                    <i class="bi bi-truck fs-3 d-block mb-2" style="color:#1565C0"></i>
+                    Fiş bulunamadı.<br>
+                    <a href="{% url 'erp:stok_listesi' %}" class="btn btn-primary btn-sm mt-2">
+                        <i class="bi bi-box-seam me-1"></i>Stok Listesine Git
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Onay Modal (fatura no girişi) -->
+<div class="modal fade" id="onayModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-check-circle me-2 text-success"></i>Fişi Onayla
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="onayFisNo">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Fatura No <small class="text-muted">(isteğe bağlı)</small></label>
+                    <input type="text" id="onayFaturaNo" class="form-control"
+                           placeholder="Fatura numarası...">
+                </div>
+            </div>
+            <div class="modal-footer border-top">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Kapat</button>
+                <button type="button" class="btn btn-success btn-sm px-4" id="onayKaydetBtn">
+                    <i class="bi bi-check-lg me-1"></i>Onayla
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Düzenleme Modal -->
+<div class="modal fade" id="duzenleModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-pencil me-2 text-warning"></i>Fişi Düzenle
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="duzenleFisNo">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Plaka</label>
+                    <input type="text" id="duzenlePlaka" class="form-control text-uppercase"
+                           placeholder="34 ABC 123" maxlength="15">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Cari / Müşteri</label>
+                    <input type="text" id="duzenleCari" class="form-control"
+                           placeholder="Müşteri adı...">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Açıklama / Not</label>
+                    <textarea id="duzenleAciklama" rows="3" class="form-control"
+                              placeholder="İsteğe bağlı..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer border-top">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                <button type="button" class="btn btn-primary px-4" id="duzenleKaydetBtn">
+                    <i class="bi bi-save me-1"></i>Kaydet
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index:11">
+    <div id="fisToast" class="toast" role="alert">
+        <div class="toast-header">
+            <i class="bi bi-truck me-2 text-primary"></i>
+            <strong class="me-auto">Depo Fişi</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body" id="fisToastBody">İşlem tamamlandı.</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function duzenleAc(pk, plaka, cari, aciklama) {
+    document.getElementById('duzenleFisNo').value = pk;
+    document.getElementById('duzenlePlaka').value = plaka;
+    document.getElementById('duzenleCari').value = cari;
+    document.getElementById('duzenleAciklama').value = aciklama;
+    new bootstrap.Modal(document.getElementById('duzenleModal')).show();
+}
+
+document.getElementById('duzenleKaydetBtn').addEventListener('click', function () {
+    const pk       = document.getElementById('duzenleFisNo').value;
+    const plaka    = document.getElementById('duzenlePlaka').value;
+    const cari     = document.getElementById('duzenleCari').value;
+    const aciklama = document.getElementById('duzenleAciklama').value;
+
+    fetch(`/erp/depo-fisi/${pk}/guncelle/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: new URLSearchParams({plaka, cari, aciklama}).toString()
+    })
+    .then(r => r.json())
+    .then(data => {
+        bootstrap.Modal.getInstance(document.getElementById('duzenleModal')).hide();
+        document.getElementById('fisToastBody').textContent = data.mesaj || data.hata;
+        new bootstrap.Toast(document.getElementById('fisToast')).show();
+        if (data.basarili) setTimeout(() => location.reload(), 800);
+    });
+});
+
+function fisOnayla(pk) {
+    if (!confirm('Fişi onaylamak istediğinizden emin misiniz?')) return;
+    fetch(`/erp/depo-fisi/${pk}/onayla/`, {
+        method: 'POST',
+        headers: {'X-CSRFToken': '{{ csrf_token }}'}
+    })
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById('fisToastBody').textContent = data.mesaj;
+        new bootstrap.Toast(document.getElementById('fisToast')).show();
+        setTimeout(() => location.reload(), 1000);
+    });
+}
+
+function onayAc(pk) {
+    document.getElementById('onayFisNo').value = pk;
+    document.getElementById('onayFaturaNo').value = '';
+    new bootstrap.Modal(document.getElementById('onayModal')).show();
+}
+
+document.getElementById('onayKaydetBtn').addEventListener('click', function () {
+    const pk       = document.getElementById('onayFisNo').value;
+    const faturaNo = document.getElementById('onayFaturaNo').value;
+    fetch(`/erp/depo-fisi/${pk}/onayla/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: new URLSearchParams({fatura_no: faturaNo}).toString()
+    })
+    .then(r => r.json())
+    .then(data => {
+        bootstrap.Modal.getInstance(document.getElementById('onayModal')).hide();
+        document.getElementById('fisToastBody').textContent = data.mesaj;
+        new bootstrap.Toast(document.getElementById('fisToast')).show();
+        if (data.basarili) setTimeout(() => location.reload(), 800);
+    });
+});
+
+function fisIptal(pk) {
+    if (!confirm('Fişi iptal etmek istediğinizden emin misiniz?')) return;
+    fetch(`/erp/depo-fisi/${pk}/iptal/`, {
+        method: 'POST',
+        headers: {'X-CSRFToken': '{{ csrf_token }}'}
+    })
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById('fisToastBody').textContent = data.mesaj;
+        new bootstrap.Toast(document.getElementById('fisToast')).show();
+        setTimeout(() => location.reload(), 1000);
+    });
+}
+
+function fisSil(pk) {
+    if (!confirm('Fişi kalıcı olarak silmek istediğinizden emin misiniz?')) return;
+    fetch(`/erp/depo-fisi/${pk}/sil/`, {
+        method: 'POST',
+        headers: {'X-CSRFToken': '{{ csrf_token }}'}
+    })
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById('fisToastBody').textContent = data.mesaj;
+        new bootstrap.Toast(document.getElementById('fisToast')).show();
+        setTimeout(() => location.reload(), 800);
+    });
+}
+</script>
+{% csrf_token %}
+{% endblock %}

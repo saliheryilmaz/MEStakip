@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% block title %}{{ cari.cari_kodu }} — Cari Detay{% endblock %}
+{% block page_name %}cari_listesi{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-1">
+            <i class="bi bi-person-circle me-2 text-primary"></i>{{ cari.unvan }}
+        </h4>
+        <p class="text-muted mb-0">{{ cari.cari_kodu }}</p>
+    </div>
+    <a href="{% url 'erp:cari_listesi' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Listeye Dön
+    </a>
+</div>
+
+<div class="row g-4">
+    <!-- Sol kolon -->
+    <div class="col-lg-8">
+        <!-- Temel bilgiler -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-bottom">
+                <h6 class="fw-bold mb-0"><i class="bi bi-info-circle me-2"></i>Cari Bilgileri</h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-3 small">
+                    <div class="col-md-4">
+                        <label class="text-muted d-block">Cari Kodu</label>
+                        <code class="text-primary">{{ cari.cari_kodu }}</code>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted d-block">Tip</label>
+                        {% if cari.tip == 'AL' %}<span class="badge" style="background:#2196F3">Alıcı</span>
+                        {% elif cari.tip == 'SA' %}<span class="badge" style="background:#FF9800">Satıcı</span>
+                        {% elif cari.tip == 'AS' %}<span class="badge" style="background:#9C27B0">Alıcı/Satıcı</span>
+                        {% else %}<span class="badge bg-secondary">Diğer</span>{% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted d-block">Durum</label>
+                        {% if cari.durum == 'A' %}<span class="badge bg-success">Aktif</span>
+                        {% else %}<span class="badge bg-secondary">Pasif</span>{% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted d-block">Vergi No</label>
+                        <strong>{{ cari.vergi_no|default:"—" }}</strong>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted d-block">TC Kimlik No</label>
+                        <strong>{{ cari.tc_kimlik_no|default:"—" }}</strong>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted d-block">Vergi Dairesi</label>
+                        <span>{{ cari.vergi_dairesi|default:"—" }}</span>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted d-block">Daire Kodu</label>
+                        <span>{{ cari.daire_kodu|default:"—" }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- İletişim -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-bottom">
+                <h6 class="fw-bold mb-0"><i class="bi bi-telephone me-2"></i>İletişim</h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-3 small">
+                    <div class="col-md-4">
+                        <label class="text-muted d-block">Telefon 1</label>
+                        {% if cari.telefon1 %}
+                        <a href="tel:{{ cari.telefon1 }}">{{ cari.telefon1 }}</a>
+                        {% else %}—{% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted d-block">Telefon 2</label>
+                        <span>{{ cari.telefon2|default:"—" }}</span>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted d-block">Cep Telefonu</label>
+                        {% if cari.cep_tel %}
+                        <a href="tel:{{ cari.cep_tel }}">{{ cari.cep_tel }}</a>
+                        {% else %}—{% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted d-block">E-posta</label>
+                        {% if cari.eposta %}
+                        <a href="mailto:{{ cari.eposta }}">{{ cari.eposta }}</a>
+                        {% else %}—{% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted d-block">Faks</label>
+                        <span>{{ cari.fax|default:"—" }}</span>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted d-block">Web</label>
+                        {% if cari.web_url %}
+                        <a href="{{ cari.web_url }}" target="_blank">{{ cari.web_url|truncatechars:30 }}</a>
+                        {% else %}—{% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Adres -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-bottom">
+                <h6 class="fw-bold mb-0"><i class="bi bi-geo-alt me-2"></i>Adres</h6>
+            </div>
+            <div class="card-body small">
+                <p class="mb-1">{{ cari.adres1|default:"" }}</p>
+                {% if cari.adres2 %}<p class="mb-1">{{ cari.adres2 }}</p>{% endif %}
+                <p class="mb-0 text-muted">
+                    {% if cari.ilce %}{{ cari.ilce }}, {% endif %}
+                    {% if cari.sehir %}{{ cari.sehir }}{% endif %}
+                    {% if cari.posta_kodu %} {{ cari.posta_kodu }}{% endif %}
+                    {% if cari.ulke %} / {{ cari.ulke }}{% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sağ kolon -->
+    <div class="col-lg-4">
+        <!-- Bakiye -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-bottom">
+                <h6 class="fw-bold mb-0"><i class="bi bi-cash-coin me-2"></i>Bakiye Durumu</h6>
+            </div>
+            <div class="card-body text-center">
+                <div class="fs-2 fw-bold {% if cari.bakiye > 0 %}text-danger{% elif cari.bakiye < 0 %}text-success{% else %}text-muted{% endif %}">
+                    {{ cari.bakiye|floatformat:2 }} ₺
+                </div>
+                <div class="text-muted small mb-3">Anlık Bakiye (DİA'dan)</div>
+                <hr>
+                <div class="row text-center small">
+                    <div class="col-6">
+                        <div class="text-danger fw-semibold">{{ cari.borc_toplam|floatformat:2 }} ₺</div>
+                        <div class="text-muted">Borç</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-success fw-semibold">{{ cari.alacak_toplam|floatformat:2 }} ₺</div>
+                        <div class="text-muted">Alacak</div>
+                    </div>
+                </div>
+                <hr>
+                <div class="small text-muted">
+                    Risk Limiti: <strong>{{ cari.risk_limiti|floatformat:2 }} ₺</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- DİA Sync bilgisi -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-bottom">
+                <h6 class="fw-bold mb-0"><i class="bi bi-arrow-repeat me-2"></i>Senkronizasyon</h6>
+            </div>
+            <div class="card-body small">
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">DİA Key</span>
+                    <code>{{ cari.dia_key|default:"—" }}</code>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Durum</span>
+                    <span>{{ cari.get_sync_durumu_display }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Son Sync</span>
+                    <span>{{ cari.son_sync_tarihi|date:"d.m.Y H:i"|default:"—" }}</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span class="text-muted">DİA Değişiklik</span>
+                    <span>{{ cari.dia_son_degisiklik|date:"d.m.Y H:i"|default:"—" }}</span>
+                </div>
+                {% if cari.notlar %}
+                <hr>
+                <div class="text-muted">{{ cari.notlar }}</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

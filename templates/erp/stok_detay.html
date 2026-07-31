@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{% block title %}{{ stok.stok_kodu }} — Stok Detay{% endblock %}
+{% block page_name %}stok_listesi{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-1">
+            <i class="bi bi-box-seam me-2 text-success"></i>{{ stok.stok_kodu }}
+        </h4>
+        <p class="text-muted mb-0">{{ stok.aciklama }}</p>
+    </div>
+    <a href="{% url 'erp:stok_listesi' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Listeye Dön
+    </a>
+</div>
+
+<div class="row g-4">
+    <!-- Sol kolon: Temel bilgiler -->
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-bottom">
+                <h6 class="fw-bold mb-0"><i class="bi bi-info-circle me-2"></i>Stok Bilgileri</h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-3 small">
+                    <div class="col-md-6">
+                        <label class="text-muted d-block">Stok Kodu</label>
+                        <strong>{{ stok.stok_kodu }}</strong>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted d-block">Açıklama</label>
+                        <strong>{{ stok.aciklama }}</strong>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted d-block">Tür</label>
+                        <span class="badge bg-secondary">{{ stok.get_tur_display }}</span>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted d-block">Durum</label>
+                        {% if stok.durum == 'A' %}
+                        <span class="badge bg-success">Aktif</span>
+                        {% else %}
+                        <span class="badge bg-secondary">Pasif</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted d-block">Ana Birim</label>
+                        <strong>{{ stok.ana_birim|default:"—" }}</strong>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted d-block">Marka</label>
+                        <strong>{{ stok.marka|default:"—" }}</strong>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted d-block">Ana Barkod</label>
+                        <code>{{ stok.ana_barkod|default:"—" }}</code>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted d-block">Yıl</label>
+                        <span>{{ stok.ozel_kod1|default:"—" }}</span>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted d-block">Segment</label>
+                        <span>{{ stok.ozel_kod2|default:"—" }}</span>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted d-block">KDV Alış</label>
+                        <span>%{{ stok.kdv_alis|floatformat:0 }}</span>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted d-block">KDV Satış</label>
+                        <span>%{{ stok.kdv_satis|floatformat:0 }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Fiyatlar -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-bottom">
+                <h6 class="fw-bold mb-0"><i class="bi bi-tag me-2"></i>Fiyatlar (DİA'dan)</h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-3 small">
+                    <div class="col-md-3">
+                        <label class="text-muted d-block">Fiyat 1</label>
+                        <strong class="text-primary fs-6">{{ stok.fiyat1|floatformat:2 }} ₺</strong>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="text-muted d-block">Fiyat 2</label>
+                        <strong>{{ stok.fiyat2|floatformat:2 }} ₺</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Depo Miktarları -->
+        {% if depo_miktarlari %}
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-bottom">
+                <h6 class="fw-bold mb-0"><i class="bi bi-building me-2"></i>Depo Bazlı Miktarlar</h6>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm mb-0 small">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Depo</th>
+                            <th>Şube</th>
+                            <th class="text-end">Gerçek Miktar</th>
+                            <th class="text-end">Fiili Miktar</th>
+                            <th>Son Sync</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for dm in depo_miktarlari %}
+                        <tr>
+                            <td class="fw-semibold">{{ dm.depo.ad }}</td>
+                            <td class="text-muted">{{ dm.depo.sube_adi|default:"—" }}</td>
+                            <td class="text-end {% if dm.gercek_miktar <= 0 %}text-danger{% else %}text-success{% endif %} fw-bold">
+                                {{ dm.gercek_miktar|floatformat:2 }} {{ stok.ana_birim }}
+                            </td>
+                            <td class="text-end text-muted">{{ dm.fiili_miktar|floatformat:2 }}</td>
+                            <td class="text-muted">{{ dm.son_sync|date:"d.m H:i" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Sağ kolon: Stok & Sync -->
+    <div class="col-lg-4">
+        <!-- Anlık stok -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-bottom">
+                <h6 class="fw-bold mb-0"><i class="bi bi-graph-up me-2"></i>Stok Durumu</h6>
+            </div>
+            <div class="card-body text-center">
+                <div class="fs-1 fw-bold {% if stok.gercek_stok <= 0 %}text-danger{% else %}text-success{% endif %}">
+                    {{ stok.gercek_stok|floatformat:2 }}
+                </div>
+                <div class="text-muted">{{ stok.ana_birim }} (Gerçek)</div>
+                <hr>
+                <div class="fs-4 fw-semibold text-secondary">{{ stok.fiili_stok|floatformat:2 }}</div>
+                <div class="text-muted small">{{ stok.ana_birim }} (Fiili)</div>
+            </div>
+        </div>
+
+        <!-- DİA Sync bilgisi -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-bottom">
+                <h6 class="fw-bold mb-0"><i class="bi bi-arrow-repeat me-2"></i>Senkronizasyon</h6>
+            </div>
+            <div class="card-body small">
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">DİA Key</span>
+                    <code>{{ stok.dia_key|default:"—" }}</code>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Durum</span>
+                    <span>{{ stok.get_sync_durumu_display }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Son Sync</span>
+                    <span>{{ stok.son_sync_tarihi|date:"d.m.Y H:i"|default:"—" }}</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span class="text-muted">DİA Değişiklik</span>
+                    <span>{{ stok.dia_son_degisiklik|date:"d.m.Y H:i"|default:"—" }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

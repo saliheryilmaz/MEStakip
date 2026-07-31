@@ -13,7 +13,6 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: resolve(fileURLToPath(new URL('.', import.meta.url)), 'src-modern/index.html'),
-        analytics: resolve(fileURLToPath(new URL('.', import.meta.url)), 'src-modern/analytics.html'),
         calendar: resolve(fileURLToPath(new URL('.', import.meta.url)), 'src-modern/calendar.html'),
         elements: resolve(fileURLToPath(new URL('.', import.meta.url)), 'src-modern/elements.html'),
         'elements-alerts': resolve(fileURLToPath(new URL('.', import.meta.url)), 'src-modern/elements-alerts.html'),

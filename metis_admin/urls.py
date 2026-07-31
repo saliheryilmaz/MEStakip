@@ -62,6 +62,8 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', redirect_to_login, name='home'),
     path('dashboard/', include('dashboard.urls')),
+    path('erp/', include('erp.urls', namespace='erp')),
+    path('dia/', include('dia_integration.urls', namespace='dia_integration')),
     path('health/', healthcheck, name='healthcheck'),
     path('debug/', debug_info, name='debug_info'),
 ]

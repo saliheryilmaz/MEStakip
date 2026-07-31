@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}DİA ERP Sync Durumu{% endblock %}
+{% block page_name %}dia_durum{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="bi bi-diagram-3 me-2 text-primary"></i>DİA ERP Senkronizasyon</h4>
+        <p class="text-muted mb-0">Bağlantı durumu ve son senkronizasyon özetleri</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-outline-primary btn-sm" onclick="syncBaslat('cari', false)">
+            <i class="bi bi-people me-1"></i>Cari Sync
+        </button>
+        <button class="btn btn-outline-success btn-sm" onclick="syncBaslat('stok', false)">
+            <i class="bi bi-box-seam me-1"></i>Stok Sync
+        </button>
+        <button class="btn btn-outline-info btn-sm" onclick="syncBaslat('firma_donem', false)">
+            <i class="bi bi-building me-1"></i>Firma/Dönem
+        </button>
+    </div>
+</div>
+
+<!-- Bağlantı Durumu -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="rounded-circle p-2 me-3" style="background:#e8f5e9">
+                        <i class="bi bi-plug-fill text-success fs-5"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-0 fw-bold">DİA Bağlantı</h6>
+                        <small class="text-muted">Aktif bağlantı bilgisi</small>
+                    </div>
+                </div>
+                {% if baglanti %}
+                <div class="small">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-muted">Sunucu</span>
+                        <span class="fw-semibold">{{ baglanti.sunucu_kodu }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-muted">Kullanıcı</span>
+                        <span class="fw-semibold">{{ baglanti.kullanici_adi }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-muted">Firma / Dönem</span>
+                        <span class="fw-semibold">{{ baglanti.firma_kodu }} / {{ baglanti.donem_kodu }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Session</span>
+                        {% if baglanti.session_id %}
+                        <span class="badge bg-success">Aktif</span>
+                        {% else %}
+                        <span class="badge bg-secondary">Yok</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% else %}
+                <div class="alert alert-warning mb-0 py-2 small">
+                    <i class="bi bi-exclamation-triangle me-1"></i>
+                    DiaBaglanti kaydı yok. <code>dia_baglanti_olustur</code> komutunu çalıştırın.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- İstatistikler -->
+    <div class="col-md-8">
+        <div class="row g-3 h-100">
+            <div class="col-6 col-lg-3">
+                <div class="card border-0 shadow-sm text-center h-100">
+                    <div class="card-body py-3">
+                        <div class="fs-2 fw-bold text-primary">{{ istatistik.cari_sayisi }}</div>
+                        <div class="text-muted small">Cari</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="card border-0 shadow-sm text-center h-100">
+                    <div class="card-body py-3">
+                        <div class="fs-2 fw-bold text-success">{{ istatistik.stok_sayisi }}</div>
+                        <div class="text-muted small">Stok Kartı</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="card border-0 shadow-sm text-center h-100">
+                    <div class="card-body py-3">
+                        <div class="fs-2 fw-bold text-info">{{ istatistik.depo_sayisi }}</div>
+                        <div class="text-muted small">Depo</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="card border-0 shadow-sm text-center h-100">
+                    <div class="card-body py-3">
+                        <div class="fs-2 fw-bold text-warning">{{ istatistik.bugun_api_cagri }}</div>
+                        <div class="text-muted small">Bugün API Çağrısı</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Son Sync Özeti -->
+<div class="row g-3 mb-4">
+    {% for modul, log in son_syncler.items %}
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body py-3">
+                <h6 class="fw-bold mb-2 text-capitalize">
+                    <i class="bi bi-arrow-repeat me-1"></i>{{ modul|upper }}
+                </h6>
+                {% if log %}
+                <div class="small">
+                    <div class="mb-1">
+                        {% if log.durum == 'basarili' %}
+                        <span class="badge bg-success">✓ Başarılı</span>
+                        {% elif log.durum == 'basarisiz' %}
+                        <span class="badge bg-danger">✗ Başarısız</span>
+                        {% elif log.durum == 'kismi_basarili' %}
+                        <span class="badge bg-warning text-dark">⚠ Kısmen</span>
+                        {% else %}
+                        <span class="badge bg-info">{{ log.get_durum_display }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="text-muted">{{ log.baslangic|date:"d.m.Y H:i" }}</div>
+                    <div>{{ log.basarili_kayit }}/{{ log.toplam_kayit }} kayıt</div>
+                </div>
+                {% else %}
+                <div class="text-muted small">Henüz sync yapılmadı</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Son 10 Sync Log -->
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
+        <h6 class="fw-bold mb-0"><i class="bi bi-clock-history me-2"></i>Son Sync Logları</h6>
+        <a href="{% url 'erp:sync_loglar' %}" class="btn btn-outline-secondary btn-sm">Tümünü Gör</a>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 small">
+            <thead class="table-light">
+                <tr>
+                    <th>Modül</th>
+                    <th>Başlangıç</th>
+                    <th>Durum</th>
+                    <th>Toplam</th>
+                    <th>Başarılı</th>
+                    <th>Hatalı</th>
+                    <th>Süre</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in son_sync_loglar %}
+                <tr>
+                    <td><span class="badge bg-secondary">{{ log.modul }}</span></td>
+                    <td>{{ log.baslangic|date:"d.m H:i" }}</td>
+                    <td>
+                        {% if log.durum == 'basarili' %}
+                        <span class="text-success fw-semibold">✓ Başarılı</span>
+                        {% elif log.durum == 'basarisiz' %}
+                        <span class="text-danger fw-semibold">✗ Başarısız</span>
+                        {% elif log.durum == 'calisiyor' %}
+                        <span class="text-info">⟳ Çalışıyor</span>
+                        {% else %}
+                        <span class="text-warning">{{ log.get_durum_display }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ log.toplam_kayit }}</td>
+                    <td class="text-success">{{ log.basarili_kayit }}</td>
+                    <td class="{% if log.hatali_kayit > 0 %}text-danger fw-bold{% endif %}">{{ log.hatali_kayit }}</td>
+                    <td class="text-muted">
+                        {% if log.bitis %}
+                        {{ log.baslangic|timesince:log.bitis }}
+                        {% else %}—{% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="text-center text-muted py-3">Henüz sync logu yok</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Toast bildirimi -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+    <div id="syncToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+            <i class="bi bi-info-circle me-2 text-primary"></i>
+            <strong class="me-auto">Sync</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body" id="syncToastBody">Göreve gönderildi.</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function syncBaslat(modul, tam) {
+    // Butonu devre dışı bırak
+    const butonlar = document.querySelectorAll('button[onclick]');
+    butonlar.forEach(b => b.disabled = true);
+
+    fetch("{% url 'erp:sync_baslat' %}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': '{{ csrf_token }}',
+        },
+        body: `modul=${modul}&tam=${tam}`
+    })
+    .then(r => r.json())
+    .then(data => {
+        const body = document.getElementById('syncToastBody');
+        if (data.basarili) {
+            const mod = data.mod === 'celery' ? '(Celery)' : '(Direkt)';
+            body.textContent = `✓ ${data.mesaj} ${mod}`;
+        } else {
+            body.textContent = `✗ Hata: ${data.hata}`;
+        }
+        const toast = new bootstrap.Toast(document.getElementById('syncToast'));
+        toast.show();
+        // 2 saniye sonra sayfayı yenile
+        if (data.basarili) setTimeout(() => location.reload(), 2000);
+    })
+    .catch(err => {
+        document.getElementById('syncToastBody').textContent = 'Bağlantı hatası: ' + err;
+        new bootstrap.Toast(document.getElementById('syncToast')).show();
+    })
+    .finally(() => {
+        butonlar.forEach(b => b.disabled = false);
+    });
+}
+</script>
+{% csrf_token %}
+{% endblock %}

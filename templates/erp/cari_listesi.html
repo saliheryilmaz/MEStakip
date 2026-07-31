@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block title %}Cariler — DİA ERP{% endblock %}
+{% block page_name %}cari_listesi{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="bi bi-people me-2 text-primary"></i>Cari Kartları</h4>
+        <p class="text-muted mb-0">DİA'dan senkronize edilen {{ toplam }} cari</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'erp:dia_durum' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Sync Durumu
+        </a>
+    </div>
+</div>
+
+<!-- Filtreler -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body py-3">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <input type="text" name="q" value="{{ q }}" class="form-control form-control-sm"
+                    placeholder="Kod, ünvan, vergi no, telefon...">
+            </div>
+            <div class="col-md-2">
+                <select name="tip" class="form-select form-select-sm">
+                    <option value="">Tüm tipler</option>
+                    {% for val, label in tip_secenekleri %}
+                    <option value="{{ val }}" {% if secili_tip == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="durum" class="form-select form-select-sm">
+                    <option value="">Tüm durumlar</option>
+                    <option value="A" {% if secili_durum == 'A' %}selected{% endif %}>Aktif</option>
+                    <option value="P" {% if secili_durum == 'P' %}selected{% endif %}>Pasif</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="sehir" class="form-select form-select-sm">
+                    <option value="">Tüm şehirler</option>
+                    {% for s in sehirler %}
+                    <option value="{{ s }}" {% if secili_sehir == s %}selected{% endif %}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 d-flex gap-1">
+                <button type="submit" class="btn btn-primary btn-sm flex-grow-1">
+                    <i class="bi bi-search"></i> Filtrele
+                </button>
+                <a href="{% url 'erp:cari_listesi' %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-x"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Tablo -->
+<div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 small">
+            <thead class="table-light">
+                <tr>
+                    <th>Cari Kodu</th>
+                    <th>Ünvan</th>
+                    <th>Tip</th>
+                    <th>Vergi No</th>
+                    <th>Telefon</th>
+                    <th>Şehir</th>
+                    <th class="text-end">Bakiye</th>
+                    <th>Sync</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cari in sayfa %}
+                <tr>
+                    <td><code class="text-primary">{{ cari.cari_kodu }}</code></td>
+                    <td class="fw-semibold">{{ cari.unvan }}</td>
+                    <td>
+                        {% if cari.tip == 'AL' %}<span class="badge" style="background:#2196F3">Alıcı</span>
+                        {% elif cari.tip == 'SA' %}<span class="badge" style="background:#FF9800">Satıcı</span>
+                        {% elif cari.tip == 'AS' %}<span class="badge" style="background:#9C27B0">Alıcı/Satıcı</span>
+                        {% else %}<span class="badge bg-secondary">Diğer</span>{% endif %}
+                    </td>
+                    <td class="text-muted">{{ cari.vergi_no|default:"—" }}</td>
+                    <td class="text-muted">{{ cari.telefon1|default:cari.cep_tel|default:"—" }}</td>
+                    <td class="text-muted">{{ cari.sehir|default:"—" }}</td>
+                    <td class="text-end">
+                        {% if cari.bakiye != 0 %}
+                        <span class="{% if cari.bakiye > 0 %}text-danger{% else %}text-success{% endif %} fw-semibold">
+                            {{ cari.bakiye|floatformat:2 }} ₺
+                        </span>
+                        {% else %}<span class="text-muted">0,00</span>{% endif %}
+                    </td>
+                    <td>
+                        {% if cari.sync_durumu == 'senkron' %}
+                        <span class="text-success small">✓</span>
+                        {% elif cari.sync_durumu == 'hatali' %}
+                        <span class="text-danger small">✗</span>
+                        {% else %}
+                        <span class="text-muted small">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'erp:cari_detay' cari.pk %}" class="btn btn-outline-primary btn-sm py-0 px-2">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="9" class="text-center text-muted py-4">
+                        <i class="bi bi-people fs-4 d-block mb-2"></i>
+                        Cari bulunamadı. Sync başlatın.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Sayfalama -->
+    {% if sayfa.has_other_pages %}
+    <div class="card-footer bg-white border-top d-flex justify-content-between align-items-center py-2">
+        <small class="text-muted">
+            {{ sayfa.start_index }}–{{ sayfa.end_index }} / {{ toplam }} kayıt
+        </small>
+        <nav>
+            <ul class="pagination pagination-sm mb-0">
+                {% if sayfa.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?{% if q %}q={{ q }}&{% endif %}{% if secili_tip %}tip={{ secili_tip }}&{% endif %}sayfa={{ sayfa.previous_page_number }}">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
+                {% endif %}
+                <li class="page-item active">
+                    <span class="page-link">{{ sayfa.number }} / {{ sayfa.paginator.num_pages }}</span>
+                </li>
+                {% if sayfa.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?{% if q %}q={{ q }}&{% endif %}{% if secili_tip %}tip={{ secili_tip }}&{% endif %}sayfa={{ sayfa.next_page_number }}">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

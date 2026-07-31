@@ -89,3 +89,13 @@ coverage.xml
 *.bak
 *.backup
 *.orig
+
+# Celery broker (SQLite broker - sadece local geliştirme)
+celery_broker.sqlite3
+
+# SQL backup dosyaları
+*.sql
+default_backup.sql
+
+# DİA entegrasyon analiz raporu (kişisel not)
+MEStakip-DIA-Entegrasyon-Analiz-Raporu.md

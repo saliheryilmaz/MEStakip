@@ -277,6 +277,10 @@ CELERY_TASK_SOFT_TIME_LIMIT = 600   # 10 dakika — SoftTimeLimitExceeded fırla
 CELERY_TASK_TIME_LIMIT = 660        # 11 dakika — zorla öldürür
 
 
+CELERY_BROKER_URL = os.environ.get("REDIS_URL")
+CELERY_RESULT_BACKEND = os.environ.get("REDIS_URL")
+
+
 # ============================================================
 # DİA ERP BAĞLANTI AYARLARI
 # ============================================================

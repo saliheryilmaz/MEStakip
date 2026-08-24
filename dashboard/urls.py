@@ -53,6 +53,7 @@ urlpatterns = [
     path('api/quotations/<int:quotation_id>/delete/', views.delete_quotation, name='delete_quotation'),
     path('api/quotations/<int:quotation_id>/send-email/', views.send_quotation_email, name='send_quotation_email'),
     path('cikma-lastikler/', views.cikma_lastikler, name='cikma_lastikler'),
+    path('cikma-lastikler/export-excel/', views.export_cikma_lastikler_excel, name='export_cikma_lastikler_excel'),
     path('cikma-lastikler/<int:lastik_id>/duzenle/', views.cikma_lastik_duzenle, name='cikma_lastik_duzenle'),
     path('cikma-lastikler/<int:lastik_id>/sil/', views.cikma_lastik_sil, name='cikma_lastik_sil'),
     path('cikma-lastikler/<int:lastik_id>/sat/', views.cikma_lastik_sat, name='cikma_lastik_sat'),

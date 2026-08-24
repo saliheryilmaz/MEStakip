@@ -1332,7 +1332,17 @@ def products(request):
     gun_ozeti['mehmet_havale_toplam'] = (gelir_mehmet_havale - gider_mehmet_havale) + excel_mhavale  # Transaction + tüm kategorilerdeki M.HAVALE tutarları (net)
     gun_ozeti['banka_havale_toplam'] = (gelir_banka_havale - gider_banka_havale) + excel_havale  # Transaction + Excel hizmet Garanti/Banka Havale
     gun_ozeti['canta_cikis_toplam'] = gelir_canta_cikis - gider_canta_cikis  # Net
-    
+
+    # Servis Toplamları genel toplamı
+    gun_ozeti['servis_genel_toplam'] = (
+        gun_ozeti['nakit_toplam'] +
+        gun_ozeti['kredi_karti_toplam'] +
+        gun_ozeti['cari_toplam'] +
+        gun_ozeti['sanal_pos_toplam'] +
+        gun_ozeti['mehmet_havale_toplam'] +
+        gun_ozeti['banka_havale_toplam']
+    )
+
     # Merkez Satış toplamını hesapla ve Toplam Gelir'e ekle
     merkez_satis_toplam = (excel_merkez_nakit_toplam + excel_merkez_kart + 
                           excel_merkez_cari + excel_merkez_sanal_pos + excel_merkez_havale)
@@ -5449,6 +5459,134 @@ def cikma_lastik_sat(request, lastik_id):
 
 
 @login_required
+def export_cikma_lastikler_excel(request):
+    """Çıkma Lastikler listesini Excel'e aktar"""
+    from .models import CikmaLastik
+
+    # Kullanıcı profili kontrolü
+    try:
+        user_profile = request.user.userprofile
+        is_misafir = user_profile.is_misafir()
+    except Exception:
+        is_misafir = False
+
+    # Filtreleme parametrelerini al
+    marka = request.GET.get('marka', '')
+    ebat = request.GET.get('ebat', '')
+    mevsim = request.GET.get('mevsim', '')
+    arac_tipi = request.GET.get('arac_tipi', '')
+    depo_konumu = request.GET.get('depo_konumu', '')
+    tarih_filtre = request.GET.get('tarih', '')
+    baslangic_tarihi = request.GET.get('baslangic_tarihi', '')
+    bitis_tarihi = request.GET.get('bitis_tarihi', '')
+
+    # Queryset
+    if is_misafir:
+        lastikler = CikmaLastik.objects.exclude(durum='satildi')
+    else:
+        lastikler = CikmaLastik.objects.filter(user=request.user).exclude(durum='satildi')
+
+    # Filtreler
+    if marka:
+        search_variants = create_turkish_search_variants(marka)
+        q_objects = Q()
+        for variant in search_variants:
+            q_objects |= Q(marka__icontains=variant)
+        lastikler = lastikler.filter(q_objects)
+    if ebat:
+        formatted_ebat = format_tire_size(ebat)
+        lastikler = lastikler.filter(ebat__icontains=formatted_ebat)
+    if mevsim:
+        lastikler = lastikler.filter(mevsim=mevsim)
+    if arac_tipi:
+        lastikler = lastikler.filter(arac_tipi=arac_tipi)
+    if depo_konumu:
+        lastikler = lastikler.filter(depo_konumu__icontains=depo_konumu)
+
+    # Tarih filtreleme
+    now = timezone.now()
+    if tarih_filtre:
+        if tarih_filtre == 'son-1-ay':
+            lastikler = lastikler.filter(olusturma_tarihi__gte=now - timedelta(days=30))
+        elif tarih_filtre == 'son-3-ay':
+            lastikler = lastikler.filter(olusturma_tarihi__gte=now - timedelta(days=90))
+        elif tarih_filtre == 'son-6-ay':
+            lastikler = lastikler.filter(olusturma_tarihi__gte=now - timedelta(days=180))
+        elif tarih_filtre == 'bugun':
+            lastikler = lastikler.filter(olusturma_tarihi__date=now.date())
+        elif tarih_filtre == 'bu-hafta':
+            lastikler = lastikler.filter(olusturma_tarihi__gte=now - timedelta(days=now.weekday()))
+        elif tarih_filtre == 'bu-ay':
+            lastikler = lastikler.filter(olusturma_tarihi__gte=now.replace(day=1))
+
+    if baslangic_tarihi and bitis_tarihi:
+        try:
+            start_date = datetime.strptime(baslangic_tarihi, '%Y-%m-%d').date()
+            end_date = datetime.strptime(bitis_tarihi, '%Y-%m-%d').date()
+            lastikler = lastikler.filter(olusturma_tarihi__date__range=[start_date, end_date])
+        except ValueError:
+            pass
+    elif baslangic_tarihi:
+        try:
+            start_date = datetime.strptime(baslangic_tarihi, '%Y-%m-%d').date()
+            lastikler = lastikler.filter(olusturma_tarihi__date__gte=start_date)
+        except ValueError:
+            pass
+    elif bitis_tarihi:
+        try:
+            end_date = datetime.strptime(bitis_tarihi, '%Y-%m-%d').date()
+            lastikler = lastikler.filter(olusturma_tarihi__date__lte=end_date)
+        except ValueError:
+            pass
+
+    lastikler = lastikler.order_by('-olusturma_tarihi')
+
+    # Excel dosyası oluştur
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Çıkma Lastikler"
+
+    # Başlık stili
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="1F4E79", end_color="1F4E79", fill_type="solid")
+    header_alignment = Alignment(horizontal="center", vertical="center")
+
+    headers = [
+        'EBAT', 'MARKA', 'MODEL', 'MEVSİM', 'ADET', 'AÇIKLAMA',
+    ]
+
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = header_alignment
+
+    # Veri satırları
+    for row, lastik in enumerate(lastikler, 2):
+        ws.cell(row=row, column=1, value=lastik.ebat)
+        ws.cell(row=row, column=2, value=lastik.marka)
+        ws.cell(row=row, column=3, value=lastik.model or '')
+        ws.cell(row=row, column=4, value=lastik.get_mevsim_display())
+        ws.cell(row=row, column=5, value=lastik.adet)
+        ws.cell(row=row, column=6, value=lastik.aciklama or '')
+
+    # Sütun genişlikleri
+    column_widths = [14, 18, 18, 12, 7, 40]
+    for col, width in enumerate(column_widths, 1):
+        ws.column_dimensions[ws.cell(row=1, column=col).column_letter].width = width
+
+    # Dosya adı
+    filename = f"cikma_lastikler_{now.strftime('%Y%m%d_%H%M')}.xlsx"
+
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    wb.save(response)
+    return response
+
+
+@login_required
 def satilan_cikma_lastikler(request):
     """Satılan Çıkma Lastikler sayfası"""
     from .models import CikmaLastik
@@ -5622,10 +5760,18 @@ def get_filtered_transactions(user, **filters):
     )
     
     # Temel filtreler
-    # Merkez-satis kasasındaki gelir işlemlerini hariç tut, ANCAK Pafgo veya Mehmet Havale işlemleri dahil
+    # Merkez-satis kasasındaki gelir işlemlerini hariç tut, ANCAK:
+    # - Nakit, Pafgo veya Mehmet Havale tutarı varsa dahil et
+    # - Kullanıcı açıkça kasa_adi=merkez-satis filtresi seçmişse hariç tutma
+    if filters.get('kasa_adi') != 'merkez-satis':
+        islemler = islemler.exclude(
+            Q(kasa_adi='merkez-satis') &
+            Q(hareket_tipi='gelir') &
+            Q(nakit=0) &
+            Q(pafgo=0) &
+            Q(mehmet_havale=0)
+        )
     islemler = islemler.exclude(
-        Q(kasa_adi='merkez-satis') & Q(hareket_tipi='gelir') & Q(pafgo=0) & Q(mehmet_havale=0)
-    ).exclude(
         kasa_adi='virman'
     )
     

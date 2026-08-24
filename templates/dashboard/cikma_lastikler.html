@@ -578,10 +578,11 @@
     <div class="card-header d-flex justify-content-between align-items-center">
         <h6 class="card-title mb-0">Çıkma Lastik Listesi</h6>
         <div class="d-flex gap-2">
-            <button type="button" class="btn btn-warning btn-sm d-none d-md-inline-block">
+            <a href="{% url 'dashboard:export_cikma_lastikler_excel' %}{% if filter_query_string %}?{{ filter_query_string }}{% endif %}"
+               class="btn btn-warning btn-sm d-none d-md-inline-block">
                 <i class="bi bi-file-earmark-excel me-1"></i>
                 Excel'e Aktar
-            </button>
+            </a>
         </div>
     </div>
     
@@ -675,7 +676,7 @@
                                     <i class="bi bi-pencil"></i>
                                 </button>
                                 <button type="button" class="btn btn-secondary btn-sm" title="Yazdır"
-                                        onclick="yazdir({{ lastik.id }}, '{{ lastik.ebat|escapejs }}', '{{ lastik.marka|escapejs }}', '{{ lastik.model|default:''|escapejs }}', '{{ lastik.get_mevsim_display|escapejs }}', '{{ lastik.aciklama|default:''|escapejs }}', '{{ lastik.diş_derinligi|default:''|escapejs }}')">
+                                        onclick="yazdir({{ lastik.id }}, '{{ lastik.ebat|escapejs }}', '{{ lastik.marka|escapejs }}', '{{ lastik.model|default:''|escapejs }}', '{{ lastik.get_mevsim_display|escapejs }}', '{{ lastik.aciklama|default:''|escapejs }}', '{{ lastik.diş_derinligi|default:''|escapejs }}', {{ lastik.adet }})">
                                     <i class="bi bi-printer"></i>
                                 </button>
                                 <button type="button" class="btn btn-danger btn-sm" title="Sil" 
@@ -778,7 +779,7 @@
                             <i class="bi bi-pencil"></i> Düzenle
                         </button>
                         <button type="button" class="btn btn-secondary btn-sm"
-                                onclick="yazdir({{ lastik.id }}, '{{ lastik.ebat|escapejs }}', '{{ lastik.marka|escapejs }}', '{{ lastik.model|default:''|escapejs }}', '{{ lastik.get_mevsim_display|escapejs }}', '{{ lastik.aciklama|default:''|escapejs }}', '{{ lastik.diş_derinligi|default:''|escapejs }}')">
+                                onclick="yazdir({{ lastik.id }}, '{{ lastik.ebat|escapejs }}', '{{ lastik.marka|escapejs }}', '{{ lastik.model|default:''|escapejs }}', '{{ lastik.get_mevsim_display|escapejs }}', '{{ lastik.aciklama|default:''|escapejs }}', '{{ lastik.diş_derinligi|default:''|escapejs }}', {{ lastik.adet }})">
                             <i class="bi bi-printer"></i> Yazdır
                         </button>
                         <button type="button" class="btn btn-danger btn-sm" 
@@ -1095,9 +1096,10 @@
 
 {% block extra_js %}
 <script>
-function yazdir(id, ebat, marka, model, mevsim, aciklama, disDerinligi) {
+function yazdir(id, ebat, marka, model, mevsim, aciklama, disDerinligi, adet) {
+    adet = adet || 1;
     var markaModel = marka + (model ? ' ' + model : '');
-    var satirlar = '<div class="satir">' + ebat + '</div>' +
+    var etiketIcerigi = '<div class="satir">' + ebat + '</div>' +
         '<div class="ayrac"></div>' +
         '<div class="satir">' + markaModel + '</div>' +
         '<div class="ayrac"></div>' +
@@ -1105,22 +1107,38 @@ function yazdir(id, ebat, marka, model, mevsim, aciklama, disDerinligi) {
         (aciklama ? '<div class="ayrac"></div><div class="satir kucuk">' + aciklama + '</div>' : '') +
         (disDerinligi ? '<div class="ayrac"></div><div class="satir kucuk">' + disDerinligi + ' MM</div>' : '') +
         '<div class="ayrac"></div><div class="satir">#' + id + '</div>';
+
+    // Her sayfaya 2 etiket sığar; adet kadar etiket üret
+    var tumEtiketler = '';
+    for (var i = 0; i < adet; i++) {
+        // Her 2 etikette bir yeni sayfa aç
+        if (i % 2 === 0) {
+            if (i > 0) tumEtiketler += '</div>';  // önceki sayfayı kapat
+            tumEtiketler += '<div class="sayfa">';
+        }
+        tumEtiketler += '<div class="etiket">' + etiketIcerigi + '</div>';
+        // Son etiket tek kaldıysa (çift değilse) boş etiket ekle
+        if (i === adet - 1 && adet % 2 !== 0) {
+            tumEtiketler += '<div class="etiket bos"></div>';
+        }
+    }
+    if (adet > 0) tumEtiketler += '</div>';  // son sayfayı kapat
+
     var icerik = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Lastik Etiketi</title><style>' +
         '*{box-sizing:border-box;margin:0;padding:0;}' +
         'body{font-family:Arial,sans-serif;background:#fff;}' +
         '@page{size:A4 portrait;margin:10mm;}' +
-        '.sayfa{width:100%;height:100vh;display:flex;flex-direction:column;justify-content:space-around;}' +
+        '.sayfa{width:100%;height:100vh;display:flex;flex-direction:column;justify-content:space-around;page-break-after:always;}' +
+        '.sayfa:last-child{page-break-after:avoid;}' +
         '.etiket{text-align:center;padding:20px 40px;flex:1;display:flex;flex-direction:column;justify-content:center;border:1px dashed #ccc;}' +
         '.etiket:first-child{border-bottom:2px dashed #999;}' +
+        '.etiket.bos{visibility:hidden;}' +
         '.satir{font-size:38px;font-weight:bold;margin:12px 0;line-height:1.2;}' +
         '.satir.kucuk{font-size:28px;}' +
         '.ayrac{border-top:2px solid #ccc;margin:8px 0;}' +
-        '@media print{body{margin:0;}.sayfa{height:100vh;page-break-after:avoid;}}' +
+        '@media print{body{margin:0;}}' +
         '</style></head><body>' +
-        '<div class="sayfa">' +
-        '<div class="etiket">' + satirlar + '</div>' +
-        '<div class="etiket">' + satirlar + '</div>' +
-        '</div>' +
+        tumEtiketler +
         '</body></html>';
     var pencere = window.open('', '_blank', 'width=700,height=900');
     pencere.document.write(icerik);

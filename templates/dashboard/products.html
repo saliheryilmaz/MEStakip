@@ -147,8 +147,14 @@
 <div class="row g-4 mt-1">
     <div class="col-12">
         <div class="card">
-            <div class="card-header">
+            <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">Servis Toplamları</h5>
+                <div class="text-end">
+                    <small class="text-muted d-block" style="font-size:0.75rem;">TOPLAM</small>
+                    <span class="fw-bold fs-5" style="color:#4ade80;">
+                        {{ gun_ozeti.servis_genel_toplam|turkish_lira }}
+                    </span>
+                </div>
             </div>
             <div class="card-body">
                 <div class="row g-3">
@@ -379,52 +385,62 @@
                 <div class="row g-3">
                     <div class="col-md-2">
                         {% with nakit_tutar=excel_odeme_toplamlari.Nakit|default:0 %}
-                        <div class="card {% if nakit_tutar >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10">
+                        <a href="{% url 'dashboard:income_expense_report' %}?hareket_tipi=gelir&kasa_adi=merkez-satis{% if baslangic_tarih %}&baslangic_tarih={{ baslangic_tarih|date:'Y-m-d' }}{% endif %}{% if bitis_tarih %}&bitis_tarih={{ bitis_tarih|date:'Y-m-d' }}{% endif %}" class="text-decoration-none">
+                        <div class="card {% if nakit_tutar >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10" style="cursor:pointer;" title="Merkez Satış Gelir detaylarını görüntüle">
                             <div class="card-body text-center">
                                 <h6 class="card-title {% if nakit_tutar >= 0 %}text-success{% else %}text-danger{% endif %} mb-1">💰 Nakit</h6>
                                 <h4 class="mb-0 {% if nakit_tutar >= 0 %}text-success{% else %}text-danger{% endif %}">{{ nakit_tutar|turkish_lira }}</h4>
                             </div>
                         </div>
+                        </a>
                         {% endwith %}
                     </div>
                     <div class="col-md-2">
                         {% with kredi_karti_tutar=excel_odeme_toplamlari.Kredi_Karti|default:0 %}
-                        <div class="card {% if kredi_karti_tutar >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10">
+                        <a href="{% url 'dashboard:income_expense_report' %}?hareket_tipi=gelir&kasa_adi=merkez-satis{% if baslangic_tarih %}&baslangic_tarih={{ baslangic_tarih|date:'Y-m-d' }}{% endif %}{% if bitis_tarih %}&bitis_tarih={{ bitis_tarih|date:'Y-m-d' }}{% endif %}" class="text-decoration-none">
+                        <div class="card {% if kredi_karti_tutar >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10" style="cursor:pointer;" title="Merkez Satış Gelir detaylarını görüntüle">
                             <div class="card-body text-center">
                                 <h6 class="card-title {% if kredi_karti_tutar >= 0 %}text-success{% else %}text-danger{% endif %} mb-1">💳 Kredi Kartı</h6>
                                 <h4 class="mb-0 {% if kredi_karti_tutar >= 0 %}text-success{% else %}text-danger{% endif %}">{{ kredi_karti_tutar|turkish_lira }}</h4>
                             </div>
                         </div>
+                        </a>
                         {% endwith %}
                     </div>
                     <div class="col-md-2">
                         {% with cari_tutar=excel_odeme_toplamlari.Cari|default:0 %}
-                        <div class="card {% if cari_tutar >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10">
+                        <a href="{% url 'dashboard:income_expense_report' %}?hareket_tipi=gelir&kasa_adi=merkez-satis{% if baslangic_tarih %}&baslangic_tarih={{ baslangic_tarih|date:'Y-m-d' }}{% endif %}{% if bitis_tarih %}&bitis_tarih={{ bitis_tarih|date:'Y-m-d' }}{% endif %}" class="text-decoration-none">
+                        <div class="card {% if cari_tutar >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10" style="cursor:pointer;" title="Merkez Satış Gelir detaylarını görüntüle">
                             <div class="card-body text-center">
                                 <h6 class="card-title {% if cari_tutar >= 0 %}text-success{% else %}text-danger{% endif %} mb-1">🏢 Cari</h6>
                                 <h4 class="mb-0 {% if cari_tutar >= 0 %}text-success{% else %}text-danger{% endif %}">{{ cari_tutar|turkish_lira }}</h4>
                             </div>
                         </div>
+                        </a>
                         {% endwith %}
                     </div>
                     <div class="col-md-2">
                         {% with sanal_pos_tutar=excel_odeme_toplamlari.Sanal_Pos|default:0 %}
-                        <div class="card {% if sanal_pos_tutar >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10">
+                        <a href="{% url 'dashboard:income_expense_report' %}?hareket_tipi=gelir&kasa_adi=merkez-satis{% if baslangic_tarih %}&baslangic_tarih={{ baslangic_tarih|date:'Y-m-d' }}{% endif %}{% if bitis_tarih %}&bitis_tarih={{ bitis_tarih|date:'Y-m-d' }}{% endif %}" class="text-decoration-none">
+                        <div class="card {% if sanal_pos_tutar >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10" style="cursor:pointer;" title="Merkez Satış Gelir detaylarını görüntüle">
                             <div class="card-body text-center">
                                 <h6 class="card-title {% if sanal_pos_tutar >= 0 %}text-success{% else %}text-danger{% endif %} mb-1">💳 Sanal Pos</h6>
                                 <h4 class="mb-0 {% if sanal_pos_tutar >= 0 %}text-success{% else %}text-danger{% endif %}">{{ sanal_pos_tutar|turkish_lira }}</h4>
                             </div>
                         </div>
+                        </a>
                         {% endwith %}
                     </div>
                     <div class="col-md-2">
                         {% with banka_havale_tutar=excel_odeme_toplamlari.Banka_Havale|default:0 %}
-                        <div class="card {% if banka_havale_tutar >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10">
+                        <a href="{% url 'dashboard:income_expense_report' %}?hareket_tipi=gelir&kasa_adi=merkez-satis{% if baslangic_tarih %}&baslangic_tarih={{ baslangic_tarih|date:'Y-m-d' }}{% endif %}{% if bitis_tarih %}&bitis_tarih={{ bitis_tarih|date:'Y-m-d' }}{% endif %}" class="text-decoration-none">
+                        <div class="card {% if banka_havale_tutar >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10" style="cursor:pointer;" title="Merkez Satış Gelir detaylarını görüntüle">
                             <div class="card-body text-center">
                                 <h6 class="card-title {% if banka_havale_tutar >= 0 %}text-success{% else %}text-danger{% endif %} mb-1">🏦 Banka Havale</h6>
                                 <h4 class="mb-0 {% if banka_havale_tutar >= 0 %}text-success{% else %}text-danger{% endif %}">{{ banka_havale_tutar|turkish_lira }}</h4>
                             </div>
                         </div>
+                        </a>
                         {% endwith %}
                     </div>
                 </div>

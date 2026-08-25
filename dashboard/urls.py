@@ -67,6 +67,7 @@ urlpatterns = [
     path('api/finance/expenses-3d/insights/', views.expenses_3d_insights, name='expenses_3d_insights'),
     path('assistant/', views.manager_assistant, name='manager_assistant'),
     path('api/assistant/query/', views.manager_assistant_query, name='manager_assistant_query'),
+    path('api/assistant/clear/', views.clear_chat_history, name='clear_chat_history'),
     # Bildirim API'leri
     path('api/notifications/', views.get_notifications, name='get_notifications'),
     path('api/notifications/<int:notification_id>/read/', views.mark_notification_read, name='mark_notification_read'),

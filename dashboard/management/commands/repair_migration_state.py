@@ -96,6 +96,7 @@ class Command(BaseCommand):
         repaired = 0
 
         repaired += self._repair_missing_ancestors(recorder, applied)
+        repaired += self._repair_known_schema_changes(recorder, applied, tables)
 
         for app_label, migration_name, required_tables in self.MIGRATIONS:
             key = (app_label, migration_name)
@@ -137,4 +138,37 @@ class Command(BaseCommand):
                         f'↻ Eksik önceki migration kaydı tamamlandı: {app_label}.{migration_name}'
                     )
                 )
+        return repaired
+
+    def _repair_known_schema_changes(
+        self,
+        recorder,
+        applied: set[tuple[str, str]],
+        tables: set[str],
+    ) -> int:
+        repaired = 0
+
+        key = ('django_celery_beat', '0003_auto_20161209_0049')
+        if key not in applied and 'django_celery_beat_solarschedule' in tables:
+            with connection.cursor() as cursor:
+                constraints = connection.introspection.get_constraints(
+                    cursor,
+                    'django_celery_beat_solarschedule',
+                )
+            unique_exists = any(
+                constraint.get('unique')
+                and set(constraint.get('columns', [])) == {'event', 'latitude', 'longitude'}
+                for constraint in constraints.values()
+            )
+            if unique_exists:
+                recorder.record_applied(*key)
+                applied.add(key)
+                repaired += 1
+                self.stdout.write(
+                    self.style.WARNING(
+                        '↻ Mevcut unique index için migration kaydı tamamlandı: '
+                        'django_celery_beat.0003_auto_20161209_0049'
+                    )
+                )
+
         return repaired

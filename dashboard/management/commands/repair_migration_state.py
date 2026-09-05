@@ -261,6 +261,22 @@ class Command(BaseCommand):
                 )
             )
 
+        key = ('django_celery_beat', '0014_remove_clockedschedule_enabled')
+        if (
+            key not in applied
+            and 'django_celery_beat_clockedschedule' in tables
+            and 'enabled' not in self._columns('django_celery_beat_clockedschedule')
+        ):
+            recorder.record_applied(*key)
+            applied.add(key)
+            repaired += 1
+            self.stdout.write(
+                self.style.WARNING(
+                    '↻ Mevcut kolon kaldırma için migration kaydı tamamlandı: '
+                    'django_celery_beat.0014_remove_clockedschedule_enabled'
+                )
+            )
+
         return repaired
 
     def _record_if_columns_exist(

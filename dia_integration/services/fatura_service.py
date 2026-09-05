@@ -4,6 +4,7 @@ FaturaService — DİA scf_fatura + scf_fatura_getir → erp.Fatura/FaturaKalemi
 from __future__ import annotations
 import datetime
 import logging
+import os
 from dataclasses import dataclass, field
 from decimal import Decimal, InvalidOperation
 
@@ -18,6 +19,7 @@ from dia_integration.models import SyncDurum, SyncHataKaydi, SyncLog, SyncTetikl
 from erp.models import Fatura, FaturaKalemi
 
 logger = logging.getLogger(__name__)
+_DELTA_LOOKBACK_MINUTES = int(os.environ.get('DIA_DELTA_LOOKBACK_MINUTES', '15'))
 
 
 def _dec(v, d='0') -> Decimal:
@@ -314,7 +316,8 @@ class FaturaService:
                .order_by('-bitis').first())
         if not son or not son.bitis:
             return []
-        return [{'field': '_date', 'operator': '>=', 'value': son.bitis.strftime('%Y-%m-%d %H:%M:%S')}]
+        filtre_zamani = timezone.localtime(son.bitis) - datetime.timedelta(minutes=_DELTA_LOOKBACK_MINUTES)
+        return [{'field': '_date', 'operator': '>=', 'value': filtre_zamani.strftime('%Y-%m-%d %H:%M:%S')}]
 
 
 def _tarih_filtre_degeri(value: datetime.date | str | None) -> str:

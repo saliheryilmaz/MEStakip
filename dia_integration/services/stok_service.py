@@ -5,7 +5,9 @@ StokService — DİA ↔ MEStakip stok + depo senkronizasyon servisi.
 from __future__ import annotations
 
 import logging
+import os
 from dataclasses import dataclass, field
+from datetime import timedelta
 
 from django.db import transaction
 from django.utils import timezone
@@ -23,6 +25,7 @@ from dia_integration.models import (
 from erp.models import Depo, StokDepoMiktari, StokKart
 
 logger = logging.getLogger(__name__)
+_DELTA_LOOKBACK_MINUTES = int(os.environ.get('DIA_DELTA_LOOKBACK_MINUTES', '15'))
 
 
 @dataclass
@@ -167,7 +170,8 @@ class StokService:
         son_sync = StokService._son_sync_tarihi_al()
         if not son_sync:
             return []
-        return [{'field': '_date', 'operator': '>=', 'value': son_sync.strftime('%Y-%m-%d %H:%M:%S')}]
+        filtre_zamani = timezone.localtime(son_sync) - timedelta(minutes=_DELTA_LOOKBACK_MINUTES)
+        return [{'field': '_date', 'operator': '>=', 'value': filtre_zamani.strftime('%Y-%m-%d %H:%M:%S')}]
 
     @staticmethod
     def _son_sync_tarihi_al():

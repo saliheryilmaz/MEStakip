@@ -14,6 +14,8 @@ view/task katmanı bu servisi çağırır, doğrudan DiaClient'ı çağırmaz.
 from __future__ import annotations
 
 import logging
+import os
+from datetime import timedelta
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
@@ -38,6 +40,7 @@ logger = logging.getLogger(__name__)
 
 # Delta sync için kullanılan DİA filtre operatörü
 _DATE_FILTER_OP = '>='
+_DELTA_LOOKBACK_MINUTES = int(os.environ.get('DIA_DELTA_LOOKBACK_MINUTES', '15'))
 
 
 @dataclass
@@ -215,10 +218,11 @@ class CariService:
         son_sync = CariService._son_sync_tarihi_al()
         if not son_sync:
             return []
+        filtre_zamani = timezone.localtime(son_sync) - timedelta(minutes=_DELTA_LOOKBACK_MINUTES)
         return [{
             'field': '_date',
             'operator': _DATE_FILTER_OP,
-            'value': son_sync.strftime('%Y-%m-%d %H:%M:%S'),
+            'value': filtre_zamani.strftime('%Y-%m-%d %H:%M:%S'),
         }]
 
     @staticmethod

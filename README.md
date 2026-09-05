@@ -78,6 +78,7 @@ DIA_PASSWORD=ws
 DIA_FIRMA_KODU=1
 DIA_DONEM_KODU=1
 DIA_SYNC_INTERVAL_MINUTES=1
+DIA_DELTA_LOOKBACK_MINUTES=15
 ```
 
 Canlı DİA'ya geçince sadece bu DİA değerlerini gerçek hesap bilgilerinizle değiştirmeniz yeterli olur.

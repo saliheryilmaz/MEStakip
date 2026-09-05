@@ -49,6 +49,17 @@ class Command(BaseCommand):
             '0018_improve_crontab_helptext',
             '0019_alter_periodictasks_options',
         ],
+        'erp': [
+            '0001_initial',
+            '0002_depo_stokkart_stokdepomiktari',
+            '0003_depofisi_depofisikalemi',
+            '0004_depofisi_arac_marka_depofisi_arac_model_and_more',
+            '0005_depofisi_fatura_no_depofisi_onay_tarihi_and_more',
+            '0006_fatura',
+            '0007_faturakalemi',
+            '0008_faturakalemi_dot',
+            '0009_faturakalemi_kanal_prim_maliyet_bolge',
+        ],
     }
 
     MIGRATIONS = [
@@ -86,6 +97,31 @@ class Command(BaseCommand):
             'dia_integration',
             '0001_initial',
             {'dia_integration_diabaglanti'},
+        ),
+        (
+            'erp',
+            '0001_initial',
+            {'erp_cari'},
+        ),
+        (
+            'erp',
+            '0002_depo_stokkart_stokdepomiktari',
+            {'erp_depo', 'erp_stokkart', 'erp_stokdepomiktari'},
+        ),
+        (
+            'erp',
+            '0003_depofisi_depofisikalemi',
+            {'erp_depofisi', 'erp_depofisikalemi'},
+        ),
+        (
+            'erp',
+            '0006_fatura',
+            {'erp_fatura'},
+        ),
+        (
+            'erp',
+            '0007_faturakalemi',
+            {'erp_faturakalemi'},
         ),
     ]
 
@@ -236,6 +272,38 @@ class Command(BaseCommand):
             ),
         ]
         for key, table_name, columns in results_checks:
+            repaired += self._record_if_columns_exist(
+                recorder,
+                applied,
+                tables,
+                key,
+                table_name,
+                columns,
+            )
+
+        erp_checks = [
+            (
+                ('erp', '0004_depofisi_arac_marka_depofisi_arac_model_and_more'),
+                'erp_depofisi',
+                {'arac_marka', 'arac_model', 'kilometre'},
+            ),
+            (
+                ('erp', '0005_depofisi_fatura_no_depofisi_onay_tarihi_and_more'),
+                'erp_depofisi',
+                {'fatura_no', 'onay_tarihi', 'onay_veren_id', 'onaylandi'},
+            ),
+            (
+                ('erp', '0008_faturakalemi_dot'),
+                'erp_faturakalemi',
+                {'dot'},
+            ),
+            (
+                ('erp', '0009_faturakalemi_kanal_prim_maliyet_bolge'),
+                'erp_faturakalemi',
+                {'kanal', 'prim', 'maliyet', 'bolge'},
+            ),
+        ]
+        for key, table_name, columns in erp_checks:
             repaired += self._record_if_columns_exist(
                 recorder,
                 applied,

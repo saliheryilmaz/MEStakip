@@ -14,7 +14,7 @@ from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_POST
 
 from dia_integration.models import ApiIstekLog, SyncLog, SyncDurum
-from erp.models import Cari, CariTip, Depo, StokKart, DepoFisi, DepoFisiKalemi, Fatura, FaturaTur
+from erp.models import Cari, CariTip, Depo, StokKart, DepoFisi, DepoFisiKalemi, Fatura, FaturaKalemi, FaturaTur
 
 
 # ─────────────────────────────────────────────────────────────
@@ -30,7 +30,7 @@ def dia_durum(request):
     son_sync_loglar = SyncLog.objects.order_by('-baslangic')[:10]
 
     # Modül bazında son sync
-    moduller = ['cari', 'stok', 'firma_donem', 'stok_depo_miktar']
+    moduller = ['cari', 'stok', 'firma_donem', 'stok_depo_miktar', 'fatura']
     son_syncler = {}
     for modul in moduller:
         log = SyncLog.objects.filter(modul=modul).order_by('-baslangic').first()
@@ -41,6 +41,8 @@ def dia_durum(request):
         'cari_sayisi': Cari.objects.count(),
         'stok_sayisi': StokKart.objects.count(),
         'depo_sayisi': Depo.objects.count(),
+        'fatura_sayisi': Fatura.objects.count(),
+        'fatura_kalem_sayisi': FaturaKalemi.objects.count(),
         'basarili_sync': SyncLog.objects.filter(durum=SyncDurum.BASARILI).count(),
         'hatali_sync': SyncLog.objects.filter(durum=SyncDurum.BASARISIZ).count(),
         'son_api_cagri': ApiIstekLog.objects.order_by('-istek_zamani').first(),
@@ -70,7 +72,6 @@ def sync_baslat(request):
 
     try:
         # Celery worker'ın erişilebilir olup olmadığını kontrol et
-        from celery.app.control import Inspect
         from metis_admin.celery import app as celery_app
 
         try:
@@ -91,6 +92,12 @@ def sync_baslat(request):
             elif modul == 'firma_donem':
                 from dia_integration.tasks import sync_firma_donem
                 task = sync_firma_donem.delay()
+            elif modul == 'stok_depo_miktar':
+                from dia_integration.tasks import sync_stok_depo_miktarlari
+                task = sync_stok_depo_miktarlari.delay()
+            elif modul == 'fatura':
+                from dia_integration.tasks import sync_fatura_listesi
+                task = sync_fatura_listesi.delay(delta=not tam, kalem_cek=True)
             else:
                 return JsonResponse({'basarili': False, 'hata': f'Bilinmeyen modül: {modul}'})
 
@@ -116,6 +123,20 @@ def sync_baslat(request):
                 from dia_integration.services import StokService
                 n = StokService.depolari_senkronize_et()
                 mesaj = f'Firma/dönem sync tamamlandı: {n} depo güncellendi.'
+            elif modul == 'stok_depo_miktar':
+                from dia_integration.services import StokService
+                n = StokService.depo_miktarlarini_guncelle()
+                mesaj = f'Stok depo miktarları tamamlandı: {n} kayıt güncellendi.'
+            elif modul == 'fatura':
+                from dia_integration.services import FaturaService
+                from dia_integration.models import SyncTetikleyen
+                sonuc = FaturaService.dia_dan_senkronize_et(
+                    delta=not tam,
+                    kalem_cek=True,
+                    tetikleyen=SyncTetikleyen.MANUEL,
+                    kullanici=request.user,
+                )
+                mesaj = f'Fatura sync tamamlandı: {sonuc.eklenen} eklendi, {sonuc.guncellenen} güncellendi.'
             else:
                 return JsonResponse({'basarili': False, 'hata': f'Bilinmeyen modül: {modul}'})
 
@@ -295,7 +316,7 @@ def sync_loglar(request):
         'secili_modul': modul,
         'secili_durum': durum_filtre,
         'durum_secenekleri': SyncDurum.choices,
-        'modul_listesi': ['cari', 'stok', 'firma_donem', 'stok_depo_miktar', 'baglanti_testi'],
+        'modul_listesi': ['cari', 'stok', 'firma_donem', 'stok_depo_miktar', 'fatura', 'baglanti_testi'],
         'aktif_sayfa': 'sync_loglar',
     })
 
@@ -505,11 +526,13 @@ def depo_fisi_kalem_sil(request, kalem_pk):
 @login_required
 def fatura_listesi(request):
     """Fatura kalemleri — kalem bazlı malzeme hareket görünümü."""
-    from erp.models import FaturaKalemi
     qs = FaturaKalemi.objects.select_related('fatura').order_by('-fatura__tarih', 'fatura__fis_no', 'sirano')
 
     q             = request.GET.get('q', '').strip()
     tur_filtre    = request.GET.get('tur', '')
+    kategori      = request.GET.get('kategori', '').strip()
+    marka         = request.GET.get('marka', '').strip()
+    kanal         = request.GET.get('kanal', '').strip()
     baslangic_str = request.GET.get('baslangic', '')
     bitis_str     = request.GET.get('bitis', '')
 
@@ -521,6 +544,12 @@ def fatura_listesi(request):
         )
     if tur_filtre:
         qs = qs.filter(fatura__tur=tur_filtre)
+    if kategori:
+        qs = qs.filter(kategori=kategori)
+    if marka:
+        qs = qs.filter(marka=marka)
+    if kanal:
+        qs = qs.filter(kanal=kanal)
     if baslangic_str:
         try:
             qs = qs.filter(fatura__tarih__gte=datetime.date.fromisoformat(baslangic_str))
@@ -538,18 +567,29 @@ def fatura_listesi(request):
         'satis_toplam': qs.filter(fatura__tur=FaturaTur.SATIS).aggregate(t=Sum('tutar'))['t'] or 0,
         'alis_toplam':  qs.filter(fatura__tur=FaturaTur.ALIS).aggregate(t=Sum('tutar'))['t'] or 0,
         'toplam_adet':  qs.aggregate(t=Sum('miktar'))['t'] or 0,
+        'maliyet_toplam': qs.aggregate(t=Sum('maliyet'))['t'] or 0,
     }
 
     paginator = Paginator(qs, 50)
     sayfa = paginator.get_page(request.GET.get('sayfa', 1))
+    filtre_kaynagi = FaturaKalemi.objects.all()
+    sayfa_query = request.GET.copy()
+    sayfa_query.pop('sayfa', None)
 
     return render(request, 'erp/fatura_listesi.html', {
         'sayfa': sayfa,
         'q': q,
         'tur_filtre': tur_filtre,
+        'kategori': kategori,
+        'marka': marka,
+        'kanal': kanal,
         'tur_secenekleri': FaturaTur.choices,
+        'kategoriler': filtre_kaynagi.exclude(kategori='').values_list('kategori', flat=True).distinct().order_by('kategori')[:100],
+        'markalar': filtre_kaynagi.exclude(marka='').values_list('marka', flat=True).distinct().order_by('marka')[:100],
+        'kanallar': filtre_kaynagi.exclude(kanal='').values_list('kanal', flat=True).distinct().order_by('kanal')[:50],
         'baslangic': baslangic_str,
         'bitis': bitis_str,
+        'sayfa_query': sayfa_query.urlencode(),
         'istatistik': istatistik,
         'aktif_sayfa': 'fatura_listesi',
     })
@@ -558,20 +598,28 @@ def fatura_listesi(request):
 @login_required
 @require_POST
 def fatura_sync(request):
-    """AJAX: Fatura sync başlat — başlıkları hızlıca çek (kalem_cek=False)."""
+    """AJAX: Fatura sync başlat ve Malzeme Hareket tablosu için kalemleri doldur."""
     tam = request.POST.get('tam', 'false') == 'true'
+    baslangic = request.POST.get('baslangic', '').strip() or None
+    bitis = request.POST.get('bitis', '').strip() or None
+    kalem_cek = request.POST.get('kalem_cek', 'true') == 'true'
     try:
         from dia_integration.services.fatura_service import FaturaService
         from dia_integration.models import SyncTetikleyen
         sonuc = FaturaService.dia_dan_senkronize_et(
             delta=not tam,
-            kalem_cek=False,
+            kalem_cek=kalem_cek,
+            baslangic_tarihi=baslangic,
+            bitis_tarihi=bitis,
             tetikleyen=SyncTetikleyen.MANUEL,
             kullanici=request.user,
         )
         return JsonResponse({
             'basarili': True,
-            'mesaj': f'Fatura sync tamamlandı: {sonuc.eklenen} yeni, {sonuc.guncellenen} güncellendi.',
+            'mesaj': (
+                f'Fatura sync tamamlandı: {sonuc.eklenen} yeni, '
+                f'{sonuc.guncellenen} güncellendi, {sonuc.hatali} hata.'
+            ),
         })
     except Exception as exc:
         return JsonResponse({'basarili': False, 'hata': str(exc)})

@@ -1,6 +1,6 @@
 """
 Django settings for metis_admin project.
-Production environment – PythonAnywhere deployment.
+Local, Docker and Coolify/Hetzner deployment configuration.
 """
 
 from pathlib import Path
@@ -25,22 +25,30 @@ def _require_env(key: str) -> str:
     return value
 
 
+def _bool_env(key: str, default: bool = False) -> bool:
+    return os.environ.get(key, str(default)).strip().lower() in {'1', 'true', 'yes', 'on'}
+
+
+def _csv_env(key: str, default: str = '') -> list[str]:
+    return [item.strip() for item in os.environ.get(key, default).split(',') if item.strip()]
+
+
 # ============================================================
 # GENERAL SETTINGS
 # ============================================================
 
 # DEBUG: .env'de yoksa False (güvenli varsayılan — production'da asla True kalmasın)
-DEBUG = os.environ.get('DEBUG', 'False').strip().lower() == 'true'
+DEBUG = _bool_env('DEBUG', False)
 
 # SECRET_KEY zorunlu — fallback/gömülü değer yok
 SECRET_KEY = _require_env('SECRET_KEY')
 
 
 # ALLOWED_HOSTS environment variable'dan alınabilir (virgülle ayrılmış)
-ALLOWED_HOSTS = os.environ.get(
+ALLOWED_HOSTS = _csv_env(
     'ALLOWED_HOSTS',
-    'localhost,127.0.0.1,wadmory.pythonanywhere.com,takip.meslas.com'
-).split(',')
+    'localhost,127.0.0.1,wadmory.pythonanywhere.com,takip.meslas.com',
+)
 
 
 # ============================================================
@@ -48,13 +56,13 @@ ALLOWED_HOSTS = os.environ.get(
 # ============================================================
 
 # CSRF_TRUSTED_ORIGINS environment variable'dan alınabilir (virgülle ayrılmış)
-CSRF_TRUSTED_ORIGINS = os.environ.get(
+CSRF_TRUSTED_ORIGINS = _csv_env(
     'CSRF_TRUSTED_ORIGINS',
-    'https://wadmory.pythonanywhere.com,https://takip.meslas.com'
-).split(',')
+    'https://wadmory.pythonanywhere.com,https://takip.meslas.com',
+)
 
-SESSION_COOKIE_SECURE = False
-CSRF_COOKIE_SECURE = False
+SESSION_COOKIE_SECURE = _bool_env('SESSION_COOKIE_SECURE', not DEBUG)
+CSRF_COOKIE_SECURE = _bool_env('CSRF_COOKIE_SECURE', not DEBUG)
 SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_HTTPONLY = False
 CSRF_COOKIE_SAMESITE = 'Lax'
@@ -63,6 +71,10 @@ SESSION_COOKIE_SAMESITE = 'Lax'
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_SSL_REDIRECT = _bool_env('SECURE_SSL_REDIRECT', False)
+SECURE_HSTS_SECONDS = int(os.environ.get('SECURE_HSTS_SECONDS', '0'))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = _bool_env('SECURE_HSTS_INCLUDE_SUBDOMAINS', False)
+SECURE_HSTS_PRELOAD = _bool_env('SECURE_HSTS_PRELOAD', False)
 
 
 # ============================================================
@@ -125,18 +137,30 @@ WSGI_APPLICATION = 'metis_admin.wsgi.application'
 
 
 # ============================================================
-# DATABASE (PythonAnywhere MySQL)
+# DATABASE
 # ============================================================
 
-# Database ayarları: Eğer DB_NAME environment variable'ı varsa MySQL kullan, yoksa SQLite
+# Coolify için önerilen format: DATABASE_URL=postgres://...
+DATABASE_URL = os.environ.get('DATABASE_URL', '').strip()
+
+# Alternatif olarak DB_* değişkenleri verilirse MySQL kullanılır, yoksa SQLite (development)
 DB_NAME = os.environ.get('DB_NAME', '').strip()
 DB_USER = os.environ.get('DB_USER', '').strip()
 DB_PASSWORD = os.environ.get('DB_PASSWORD', '').strip()
 DB_HOST = os.environ.get('DB_HOST', '').strip()
+DB_PORT = os.environ.get('DB_PORT', '').strip()
 
-# Eğer tüm MySQL bilgileri varsa MySQL kullan, yoksa SQLite (development)
-if DB_NAME and DB_USER and DB_PASSWORD and DB_HOST:
-    # Production - MySQL (PythonAnywhere)
+if DATABASE_URL:
+    import dj_database_url
+
+    DATABASES = {
+        'default': dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=int(os.environ.get('DB_CONN_MAX_AGE', '600')),
+        )
+    }
+elif DB_NAME and DB_USER and DB_PASSWORD and DB_HOST:
+    # Production - MySQL
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.mysql',
@@ -144,6 +168,7 @@ if DB_NAME and DB_USER and DB_PASSWORD and DB_HOST:
             'USER': DB_USER,
             'PASSWORD': DB_PASSWORD,
             'HOST': DB_HOST,
+            'PORT': DB_PORT or '3306',
             'OPTIONS': {
                 'charset': 'utf8mb4',
             },
@@ -243,9 +268,9 @@ SERVER_EMAIL = 'info@meslas.com'
 # CELERY (Görev kuyruğu ve periyodik senkronizasyon)
 # ============================================================
 
-# Broker: Redis (PythonAnywhere production) veya DB (local geliştirme)
+# Broker: Redis (Coolify production) veya DB (local geliştirme)
 # Local'de Redis yoksa CELERY_BROKER_URL'yi .env'den boş bırakın → DB broker kullanılır
-_celery_broker = os.environ.get('CELERY_BROKER_URL', '').strip()
+_celery_broker = os.environ.get('CELERY_BROKER_URL', '').strip() or os.environ.get('REDIS_URL', '').strip()
 if _celery_broker:
     CELERY_BROKER_URL = _celery_broker
 else:
@@ -255,7 +280,7 @@ else:
     CELERY_BROKER_URL = f'sqla+sqlite:///{_broker_db_path}'
 
 # Sonuçlar Django veritabanında (django-celery-results)
-CELERY_RESULT_BACKEND = 'django-db'
+CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', '').strip() or 'django-db'
 CELERY_RESULT_EXTENDED = True
 
 # Seri/zaman biçimleri
@@ -276,11 +301,6 @@ CELERY_TASK_DEFAULT_RETRY_DELAY = 60  # saniye
 CELERY_TASK_SOFT_TIME_LIMIT = 600   # 10 dakika — SoftTimeLimitExceeded fırlatır
 CELERY_TASK_TIME_LIMIT = 660        # 11 dakika — zorla öldürür
 
-
-CELERY_BROKER_URL = os.environ.get("REDIS_URL")
-CELERY_RESULT_BACKEND = os.environ.get("REDIS_URL")
-
-
 # ============================================================
 # DİA ERP BAĞLANTI AYARLARI
 # ============================================================
@@ -288,7 +308,7 @@ CELERY_RESULT_BACKEND = os.environ.get("REDIS_URL")
 DIA_SERVER_CODE = os.environ.get('DIA_SERVER_CODE', 'diademo')
 DIA_USERNAME = os.environ.get('DIA_USERNAME', 'ws')
 DIA_PASSWORD = os.environ.get('DIA_PASSWORD', 'ws')
-DIA_FIRMA_KODU = os.environ.get('DIA_FIRMA_KODU', '34')
+DIA_FIRMA_KODU = os.environ.get('DIA_FIRMA_KODU', '1')
 DIA_DONEM_KODU = os.environ.get('DIA_DONEM_KODU', '1')
 
 # Session timeout: DİA 1 saat, biz 50 dakika ile yeniliyoruz (güvenlik payı)
@@ -296,4 +316,3 @@ DIA_SESSION_TTL_SECONDS = int(os.environ.get('DIA_SESSION_TTL_SECONDS', '3000'))
 
 # API loglama: production'da False yapılabilir (kontör tasarrufu için)
 DIA_LOG_API_REQUESTS = os.environ.get('DIA_LOG_API_REQUESTS', 'True').lower() == 'true'
-

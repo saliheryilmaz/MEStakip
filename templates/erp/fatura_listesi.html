@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load turkish_format %}
 {% block title %}Malzeme Hareketleri{% endblock %}
 {% block page_name %}fatura_listesi{% endblock %}
 
@@ -10,7 +11,7 @@
     </div>
     <div class="d-flex gap-2">
         <button class="btn btn-outline-primary btn-sm" onclick="faturaSync(false, this)">
-            <i class="bi bi-arrow-repeat me-1"></i>Delta Sync
+            <i class="bi bi-arrow-repeat me-1"></i>DİA'dan Çek
         </button>
         <button class="btn btn-outline-secondary btn-sm" onclick="faturaSync(true, this)">
             <i class="bi bi-arrow-clockwise me-1"></i>Tam Sync
@@ -34,13 +35,13 @@
     </div>
     <div class="col-6 col-md-3">
         <div class="card border-0 shadow-sm text-center py-3">
-            <div class="fs-3 fw-bold text-success">{{ istatistik.satis_toplam|floatformat:0 }} ₺</div>
+            <div class="fs-3 fw-bold text-success">{{ istatistik.satis_toplam|turkish_lira_symbol }}</div>
             <div class="text-muted small">Satış Tutarı</div>
         </div>
     </div>
     <div class="col-6 col-md-3">
         <div class="card border-0 shadow-sm text-center py-3">
-            <div class="fs-3 fw-bold text-danger">{{ istatistik.alis_toplam|floatformat:0 }} ₺</div>
+            <div class="fs-3 fw-bold text-danger">{{ istatistik.alis_toplam|turkish_lira_symbol }}</div>
             <div class="text-muted small">Alış Tutarı</div>
         </div>
     </div>
@@ -50,7 +51,7 @@
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-body py-3">
         <form method="get" class="row g-2 align-items-end">
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <input type="text" name="q" value="{{ q }}" class="form-control form-control-sm"
                        placeholder="Ürün kodu, ürün adı, cari...">
             </div>
@@ -68,7 +69,31 @@
             <div class="col-md-2">
                 <input type="date" name="bitis" value="{{ bitis }}" class="form-control form-control-sm">
             </div>
-            <div class="col-md-3 d-flex gap-1">
+            <div class="col-md-1">
+                <select name="kategori" class="form-select form-select-sm">
+                    <option value="">Kategori</option>
+                    {% for item in kategoriler %}
+                    <option value="{{ item }}" {% if kategori == item %}selected{% endif %}>{{ item }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-1">
+                <select name="marka" class="form-select form-select-sm">
+                    <option value="">Marka</option>
+                    {% for item in markalar %}
+                    <option value="{{ item }}" {% if marka == item %}selected{% endif %}>{{ item }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-1">
+                <select name="kanal" class="form-select form-select-sm">
+                    <option value="">Kanal</option>
+                    {% for item in kanallar %}
+                    <option value="{{ item }}" {% if kanal == item %}selected{% endif %}>{{ item }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 d-flex gap-1">
                 <button type="submit" class="btn btn-primary btn-sm flex-grow-1">
                     <i class="bi bi-play-fill me-1"></i>Çalıştır
                 </button>
@@ -87,52 +112,55 @@
             <thead class="table-light">
                 <tr>
                     <th>Tarih</th>
+                    <th>Fatura No</th>
+                    <th>Kanal</th>
                     <th>Cari</th>
-                    <th>Tür</th>
-                    <th>Ürün Kodu</th>
-                    <th>Ürün Adı</th>
                     <th>Marka</th>
                     <th>Kategori</th>
+                    <th>Ürün Kod</th>
+                    <th>Ürün</th>
                     <th>DOT</th>
                     <th class="text-end">Adet</th>
-                    <th class="text-end">Birim Fiyat</th>
+                    <th class="text-end">Prim</th>
+                    <th class="text-end">Maliyet</th>
+                    <th>Birim</th>
+                    <th class="text-end">İskonto</th>
+                    <th class="text-end">Fiyat</th>
                     <th class="text-end">Tutar</th>
-                    <th>Satış Temsilcisi</th>
                     <th>Ödeme Planı</th>
-                    <th>Ambar</th>
+                    <th>Bölge</th>
                 </tr>
             </thead>
             <tbody>
                 {% for kalem in sayfa %}
                 <tr>
                     <td class="text-muted small">{{ kalem.fatura.tarih|date:"d.m.Y"|default:"—" }}</td>
+                    <td><code class="text-muted">{{ kalem.fatura.fis_no|default:kalem.fatura.belge_no|default:"—" }}</code></td>
+                    <td class="text-muted small">{{ kalem.kanal|default:"—" }}</td>
                     <td>
                         <div class="fw-semibold small">{{ kalem.fatura.cari_unvan|default:"—"|truncatechars:30 }}</div>
                         {% if kalem.fatura.cari_kodu %}<small class="text-muted">{{ kalem.fatura.cari_kodu }}</small>{% endif %}
                     </td>
-                    <td>
-                        {% if kalem.fatura.tur == 'S' %}<span class="badge bg-success">Satış</span>
-                        {% elif kalem.fatura.tur == 'A' %}<span class="badge bg-danger">Alış</span>
-                        {% elif kalem.fatura.tur == 'I' %}<span class="badge bg-warning text-dark">İade</span>
-                        {% else %}<span class="badge bg-secondary">{{ kalem.fatura.tur_aciklama|default:kalem.fatura.get_tur_display }}</span>{% endif %}
-                    </td>
-                    <td><code class="text-success">{{ kalem.stok_kodu|default:"—" }}</code></td>
-                    <td class="fw-semibold">{{ kalem.stok_adi|default:"—" }}</td>
                     <td class="text-muted small">{{ kalem.marka|default:"—" }}</td>
                     <td class="text-muted small">{{ kalem.kategori|default:"—" }}</td>
+                    <td><code class="text-success">{{ kalem.stok_kodu|default:"—" }}</code></td>
+                    <td class="fw-semibold">{{ kalem.stok_adi|default:"—" }}</td>
                     <td class="text-muted small">{{ kalem.dot|default:"—" }}</td>
                     <td class="text-end fw-bold">{{ kalem.miktar|floatformat:0 }}</td>
-                    <td class="text-end text-muted">{{ kalem.birim_fiyat|floatformat:2 }} ₺</td>
+                    <td class="text-end text-muted">{{ kalem.prim|turkish_format }}</td>
+                    <td class="text-end text-muted">{{ kalem.maliyet|turkish_format }}</td>
+                    <td class="text-muted small">{{ kalem.birim|default:"—" }}</td>
+                    <td class="text-end text-muted">{{ kalem.indirim|turkish_format }}</td>
+                    <td class="text-end text-muted">{{ kalem.birim_fiyat|turkish_format }}</td>
                     <td class="text-end fw-bold {% if kalem.fatura.tur == 'S' %}text-success{% elif kalem.fatura.tur == 'A' %}text-danger{% endif %}">
-                        {{ kalem.tutar|floatformat:0 }} ₺
+                        {{ kalem.tutar|turkish_format }}
                     </td>
-                    <td class="text-muted small">{{ kalem.satisci|default:"—" }}</td>
                     <td class="text-muted small">{{ kalem.odeme_plani|default:"—" }}</td>
-                    <td class="text-muted small">{{ kalem.depo|default:"—" }}</td>
+                    <td class="text-muted small">{{ kalem.bolge|default:kalem.depo|default:"—" }}</td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="14" class="text-center text-muted py-5">
+                    <td colspan="18" class="text-center text-muted py-5">
                         <i class="bi bi-receipt fs-3 d-block mb-2"></i>
                         Kayıt bulunamadı.<br>
                         <button class="btn btn-primary btn-sm mt-2" onclick="faturaSync(false, this)">
@@ -152,7 +180,7 @@
             <ul class="pagination pagination-sm mb-0">
                 {% if sayfa.has_previous %}
                 <li class="page-item">
-                    <a class="page-link" href="?{% if q %}q={{ q }}&{% endif %}{% if tur_filtre %}tur={{ tur_filtre }}&{% endif %}sayfa={{ sayfa.previous_page_number }}">
+                    <a class="page-link" href="?{% if sayfa_query %}{{ sayfa_query }}&{% endif %}sayfa={{ sayfa.previous_page_number }}">
                         <i class="bi bi-chevron-left"></i>
                     </a>
                 </li>
@@ -162,7 +190,7 @@
                 </li>
                 {% if sayfa.has_next %}
                 <li class="page-item">
-                    <a class="page-link" href="?{% if q %}q={{ q }}&{% endif %}{% if tur_filtre %}tur={{ tur_filtre }}&{% endif %}sayfa={{ sayfa.next_page_number }}">
+                    <a class="page-link" href="?{% if sayfa_query %}{{ sayfa_query }}&{% endif %}sayfa={{ sayfa.next_page_number }}">
                         <i class="bi bi-chevron-right"></i>
                     </a>
                 </li>
@@ -192,6 +220,12 @@ function faturaSync(tam, btn) {
     const orijinal = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Çekiliyor...';
+    const params = new URLSearchParams({
+        tam: tam,
+        kalem_cek: true,
+        baslangic: document.querySelector('[name="baslangic"]')?.value || '',
+        bitis: document.querySelector('[name="bitis"]')?.value || ''
+    });
 
     fetch("{% url 'erp:fatura_sync' %}", {
         method: 'POST',
@@ -199,7 +233,7 @@ function faturaSync(tam, btn) {
             'Content-Type': 'application/x-www-form-urlencoded',
             'X-CSRFToken': '{{ csrf_token }}'
         },
-        body: `tam=${tam}`
+        body: params.toString()
     })
     .then(r => r.json())
     .then(data => {

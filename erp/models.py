@@ -483,7 +483,10 @@ class FaturaKalemi(models.Model):
     stok_kodu    = models.CharField(max_length=30, blank=True, verbose_name=_('Stok Kodu'))
     stok_adi     = models.CharField(max_length=200, blank=True, verbose_name=_('Ürün Adı'))
     miktar       = models.DecimalField(max_digits=18, decimal_places=4, default=Decimal('0'), verbose_name=_('Miktar'))
+    kanal        = models.CharField(max_length=50, blank=True, verbose_name=_('Kanal'))
     birim        = models.CharField(max_length=20, blank=True, verbose_name=_('Birim'))
+    prim         = models.DecimalField(max_digits=18, decimal_places=4, default=Decimal('0'), verbose_name=_('Prim'))
+    maliyet      = models.DecimalField(max_digits=18, decimal_places=4, default=Decimal('0'), verbose_name=_('Maliyet'))
     birim_fiyat  = models.DecimalField(max_digits=18, decimal_places=4, default=Decimal('0'), verbose_name=_('Birim Fiyat'))
     indirim      = models.DecimalField(max_digits=7, decimal_places=4, default=Decimal('0'), verbose_name=_('İskonto %'))
     tutar        = models.DecimalField(max_digits=18, decimal_places=4, default=Decimal('0'), verbose_name=_('Tutar'))
@@ -494,6 +497,7 @@ class FaturaKalemi(models.Model):
     kategori     = models.CharField(max_length=100, blank=True, verbose_name=_('Kategori'))
     mevsim       = models.CharField(max_length=50, blank=True, verbose_name=_('Mevsim'))
     dot          = models.CharField(max_length=20, blank=True, verbose_name=_('DOT / Yıl'))
+    bolge        = models.CharField(max_length=100, blank=True, verbose_name=_('Bölge'))
 
     class Meta:
         verbose_name        = _('Fatura Kalemi')

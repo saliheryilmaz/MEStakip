@@ -195,6 +195,7 @@ class StokService:
                     modul='sis',
                     servis_adi='sis_yetkili_firma_donem_sube_depo',
                     data={},
+                    firma_donem_ekle=False,
                 )
             firmalar = yanit.get('result', [])
         else:
@@ -252,17 +253,17 @@ class StokService:
             with DiaClient() as client:
                 for stok_pk, stok_dia_key, stok_kodu in stoklar:
                     try:
-                        # DİA bu servis için _key integer olarak bekliyor
+                        # DİA bu serviste stok anahtarını params._key içinde bekliyor.
                         yanit = client.ozel_cagri(
                             modul='scf',
                             servis_adi='scf_stok_depo_miktarlari_listele',
-                            data={'_key': int(stok_dia_key)},
+                            data={'params': {'_key': int(stok_dia_key)}},
                         )
                         sayfa = yanit.get('result', [])
                         if not isinstance(sayfa, list):
                             sayfa = [sayfa] if sayfa else []
                         for kayit in sayfa:
-                            depo_key   = str(kayit.get('_key_sis_depo', ''))
+                            depo_key   = str(kayit.get('_key_sis_depo') or kayit.get('_key') or '')
                             gercek_mik = _to_decimal(kayit.get('gercek_stok') or kayit.get('miktar'))
                             fiili_mik  = _to_decimal(kayit.get('fiili_stok'))
                             stok_obj = StokKart.objects.filter(pk=stok_pk).first()

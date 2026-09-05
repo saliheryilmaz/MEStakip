@@ -11,6 +11,8 @@ Django admin panelinden de görüntülenip düzenlenebilir:
 
 from __future__ import annotations
 
+import os
+
 from django.core.management.base import BaseCommand
 
 
@@ -23,37 +25,76 @@ class Command(BaseCommand):
 
         self.stdout.write('Periyodik sync zamanlamaları kuruluyor...\n')
 
-        # ── Her 30 dakikada bir cari delta sync ─────────────────
-        interval_30dk, _ = IntervalSchedule.objects.get_or_create(
-            every=30,
+        genel_aralik = self._env_int('DIA_SYNC_INTERVAL_MINUTES', 1)
+        cari_aralik = self._env_int('DIA_CARI_SYNC_INTERVAL_MINUTES', genel_aralik)
+        stok_aralik = self._env_int('DIA_STOK_SYNC_INTERVAL_MINUTES', genel_aralik)
+        fatura_aralik = self._env_int('DIA_FATURA_SYNC_INTERVAL_MINUTES', genel_aralik)
+        miktar_aralik = self._env_int('DIA_STOK_MIKTAR_SYNC_INTERVAL_MINUTES', genel_aralik)
+
+        # ── Kısa aralıklarla delta sync ─────────────────────────
+        cari_interval, _ = IntervalSchedule.objects.get_or_create(
+            every=cari_aralik,
             period=IntervalSchedule.MINUTES,
         )
         gorev, olusturuldu = PeriodicTask.objects.update_or_create(
-            name='DİA Cari Delta Sync (30 dk)',
+            name='DİA Cari Delta Sync',
             defaults={
                 'task': 'dia_integration.sync_cari_listesi',
-                'interval': interval_30dk,
+                'interval': cari_interval,
+                'crontab': None,
                 'kwargs': json.dumps({'delta': True}),
                 'enabled': True,
             },
         )
-        self._yazdir('Cari delta sync (30dk)', olusturuldu)
+        self._yazdir(f'Cari delta sync ({cari_aralik} dk)', olusturuldu)
 
-        # ── Her 60 dakikada bir stok delta sync ─────────────────
-        interval_60dk, _ = IntervalSchedule.objects.get_or_create(
-            every=60,
+        stok_interval, _ = IntervalSchedule.objects.get_or_create(
+            every=stok_aralik,
             period=IntervalSchedule.MINUTES,
         )
         gorev, olusturuldu = PeriodicTask.objects.update_or_create(
-            name='DİA Stok Delta Sync (60 dk)',
+            name='DİA Stok Delta Sync',
             defaults={
                 'task': 'dia_integration.sync_stok_listesi',
-                'interval': interval_60dk,
+                'interval': stok_interval,
+                'crontab': None,
                 'kwargs': json.dumps({'delta': True}),
                 'enabled': True,
             },
         )
-        self._yazdir('Stok delta sync (60dk)', olusturuldu)
+        self._yazdir(f'Stok delta sync ({stok_aralik} dk)', olusturuldu)
+
+        fatura_interval, _ = IntervalSchedule.objects.get_or_create(
+            every=fatura_aralik,
+            period=IntervalSchedule.MINUTES,
+        )
+        gorev, olusturuldu = PeriodicTask.objects.update_or_create(
+            name='DİA Fatura Delta Sync',
+            defaults={
+                'task': 'dia_integration.sync_fatura_listesi',
+                'interval': fatura_interval,
+                'crontab': None,
+                'kwargs': json.dumps({'delta': True, 'kalem_cek': True}),
+                'enabled': True,
+            },
+        )
+        self._yazdir(f'Fatura delta sync ({fatura_aralik} dk)', olusturuldu)
+
+        miktar_interval, _ = IntervalSchedule.objects.get_or_create(
+            every=miktar_aralik,
+            period=IntervalSchedule.MINUTES,
+        )
+        gorev, olusturuldu = PeriodicTask.objects.update_or_create(
+            name='DİA Stok Depo Miktar Sync',
+            defaults={
+                'task': 'dia_integration.sync_stok_depo_miktarlari',
+                'interval': miktar_interval,
+                'crontab': None,
+                'kwargs': json.dumps({}),
+                'enabled': True,
+            },
+        )
+        self._yazdir(f'Stok depo miktar sync ({miktar_aralik} dk)', olusturuldu)
 
         # ── Her gece 02:00'de tam cari sync ─────────────────────
         gece_crontab, _ = CrontabSchedule.objects.get_or_create(
@@ -93,6 +134,25 @@ class Command(BaseCommand):
         )
         self._yazdir('Stok tam sync (gece 03:00)', olusturuldu)
 
+        # ── Her gece 04:00'te tam fatura sync ───────────────────
+        gece4_crontab, _ = CrontabSchedule.objects.get_or_create(
+            minute='0',
+            hour='4',
+            day_of_week='*',
+            day_of_month='*',
+            month_of_year='*',
+        )
+        gorev, olusturuldu = PeriodicTask.objects.update_or_create(
+            name='DİA Fatura Tam Sync (gece 04:00)',
+            defaults={
+                'task': 'dia_integration.sync_fatura_listesi',
+                'crontab': gece4_crontab,
+                'kwargs': json.dumps({'delta': False, 'kalem_cek': True}),
+                'enabled': True,
+            },
+        )
+        self._yazdir('Fatura tam sync (gece 04:00)', olusturuldu)
+
         # ── Her gün 08:00'de firma/dönem önbellek güncelle ──────
         sabah_crontab, _ = CrontabSchedule.objects.get_or_create(
             minute='0',
@@ -124,3 +184,10 @@ class Command(BaseCommand):
     def _yazdir(self, ad: str, olusturuldu: bool) -> None:
         durum = '✓ Oluşturuldu' if olusturuldu else '↻ Güncellendi'
         self.stdout.write(f'  {durum}: {ad}')
+
+    def _env_int(self, key: str, default: int) -> int:
+        try:
+            value = int(os.environ.get(key, default))
+        except (TypeError, ValueError):
+            value = default
+        return max(1, value)

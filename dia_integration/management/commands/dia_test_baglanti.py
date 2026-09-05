@@ -67,6 +67,7 @@ class Command(BaseCommand):
                 modul='sis',
                 servis_adi='sis_yetkili_firma_donem_sube_depo',
                 data={},
+                firma_donem_ekle=False,
             )
             firmalar = yanit.get('result', [])
             self.stdout.write(

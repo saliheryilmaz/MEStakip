@@ -17,6 +17,9 @@
         <button class="btn btn-outline-success btn-sm" onclick="syncBaslat('stok', false)">
             <i class="bi bi-box-seam me-1"></i>Stok Sync
         </button>
+        <button class="btn btn-outline-warning btn-sm" onclick="syncBaslat('fatura', false)">
+            <i class="bi bi-receipt me-1"></i>Fatura Sync
+        </button>
         <button class="btn btn-outline-info btn-sm" onclick="syncBaslat('firma_donem', false)">
             <i class="bi bi-building me-1"></i>Firma/Dönem
         </button>
@@ -100,8 +103,8 @@
             <div class="col-6 col-lg-3">
                 <div class="card border-0 shadow-sm text-center h-100">
                     <div class="card-body py-3">
-                        <div class="fs-2 fw-bold text-warning">{{ istatistik.bugun_api_cagri }}</div>
-                        <div class="text-muted small">Bugün API Çağrısı</div>
+                        <div class="fs-2 fw-bold text-warning">{{ istatistik.fatura_kalem_sayisi }}</div>
+                        <div class="text-muted small">Fatura Kalemi</div>
                     </div>
                 </div>
             </div>

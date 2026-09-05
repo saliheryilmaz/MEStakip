@@ -307,19 +307,26 @@ class DiaClient:
         modul: str,
         servis_adi: str,
         data: dict,
+        firma_donem_ekle: bool = True,
     ) -> dict:
         """
         Standart CRUD dışına çıkan özel servisler için.
         Örn: scf_barkod_okut, scf_carikart_hesapdurumu_getir,
              sis_yetkili_firma_donem_sube_depo
         """
-        return self._cagir(modul, servis_adi, data)
+        return self._cagir(modul, servis_adi, data, firma_donem_ekle=firma_donem_ekle)
 
     # ──────────────────────────────────────────────────────────
     # Yardımcı metodlar
     # ──────────────────────────────────────────────────────────
 
-    def _cagir(self, modul: str, servis_adi: str, data: dict) -> dict:
+    def _cagir(
+        self,
+        modul: str,
+        servis_adi: str,
+        data: dict,
+        firma_donem_ekle: bool = True,
+    ) -> dict:
         """
         Tüm API çağrılarının geçtiği merkezi metod.
 
@@ -331,10 +338,10 @@ class DiaClient:
         """
         self._session_yenile_gerekirse()
 
-        # Zorunlu ortak parametreler (login/logout hariç tüm servislerde gerekli)
         data.setdefault('session_id', self._session_id)
-        data.setdefault('firma_kodu', self.firma_kodu)
-        data.setdefault('donem_kodu', self.donem_kodu)
+        if firma_donem_ekle:
+            data.setdefault('firma_kodu', self.firma_kodu)
+            data.setdefault('donem_kodu', self.donem_kodu)
 
         url = _BASE_URL_TEMPLATE.format(server_code=self.server_code, module=modul)
         # DİA payload formatı: {servis_adi: data_dict}

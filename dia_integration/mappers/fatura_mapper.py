@@ -10,7 +10,12 @@ from dia_integration.mappers.cari_mapper import _parse_datetime
 
 def _dec(val, default='0') -> Decimal:
     try:
-        return Decimal(str(val).replace(',', '.')) if val else Decimal(default)
+        if val is None or val == '':
+            return Decimal(default)
+        raw = str(val).strip()
+        if ',' in raw:
+            raw = raw.replace('.', '').replace(',', '.')
+        return Decimal(raw)
     except InvalidOperation:
         return Decimal(default)
 
@@ -23,10 +28,10 @@ def _tur(d: dict) -> str:
     iade_kodlari = {'SI', 'RI', 'AI', 'IAD', 'RET'}        # İadeler
     satis_kodlari = {'PS', 'TS', 'SH', 'GS', 'ES', 'FS'}  # Perakende/Toptan/Hizmet Satış
 
-    if tur_kisa in alis_kodlari:
-        return FaturaTur.ALIS
     if tur_kisa in iade_kodlari:
         return FaturaTur.IADE
+    if tur_kisa in alis_kodlari:
+        return FaturaTur.ALIS
     if tur_kisa in satis_kodlari:
         return FaturaTur.SATIS
 
@@ -69,7 +74,18 @@ class FaturaMapper:
 def _parse_tarih(val):
     if not val:
         return None
+    if isinstance(val, datetime.datetime):
+        return val.date()
+    if isinstance(val, datetime.date):
+        return val
+    raw = str(val).strip()
     try:
-        return datetime.date.fromisoformat(val)
+        return datetime.date.fromisoformat(raw[:10])
     except (ValueError, TypeError):
-        return None
+        pass
+    for fmt in ('%d.%m.%Y', '%d/%m/%Y'):
+        try:
+            return datetime.datetime.strptime(raw[:10], fmt).date()
+        except (ValueError, TypeError):
+            continue
+    return None

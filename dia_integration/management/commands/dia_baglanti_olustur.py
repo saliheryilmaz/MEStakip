@@ -65,6 +65,8 @@ class Command(BaseCommand):
                 )
             )
 
+        DiaBaglanti.objects.exclude(pk=baglanti.pk).update(is_aktif=False)
+
         self.stdout.write(
             f'  Sunucu  : {baglanti.sunucu_kodu}\n'
             f'  Kullanıcı: {baglanti.kullanici_adi}\n'

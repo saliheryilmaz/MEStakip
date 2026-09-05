@@ -1,7 +1,7 @@
 """
 Auto-create superuser if none exists
 """
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.contrib.auth import get_user_model
 from dashboard.models import UserProfile
 import os
@@ -18,7 +18,9 @@ class Command(BaseCommand):
             if User.objects.filter(is_superuser=True).count() == 0:
                 username = os.environ.get('ADMIN_USERNAME', 'admin')
                 email = os.environ.get('ADMIN_EMAIL', 'admin@example.com')
-                password = os.environ.get('ADMIN_PASSWORD', 'admin12345')
+                password = os.environ.get('ADMIN_PASSWORD', '').strip()
+                if not password:
+                    raise CommandError('ADMIN_PASSWORD boş bırakılamaz.')
                 
                 if not User.objects.filter(username=username).exists():
                     user = User.objects.create_superuser(
@@ -36,11 +38,6 @@ class Command(BaseCommand):
                     self.stdout.write(
                         self.style.SUCCESS(
                             f'✅ Superuser "{username}" otomatik oluşturuldu! (Role: admin)'
-                        )
-                    )
-                    self.stdout.write(
-                        self.style.WARNING(
-                            f'🔑 Password: {password}'
                         )
                     )
                 else:
@@ -99,4 +96,3 @@ class Command(BaseCommand):
                     'ℹ️  Local environment - skipping auto superuser'
                 )
             )
-

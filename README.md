@@ -30,7 +30,7 @@ Mestakip CRM, lastik satış ve servis işletmeleri için özel olarak tasarlanm
 | Backend | Django 5.1.4 |
 | Frontend | Bootstrap 5, JavaScript |
 | Veritabanı | MySQL / SQLite |
-| Deployment | PythonAnywhere |
+| Deployment | Docker / Coolify / Hetzner |
 
 ## 🚀 Hızlı Başlangıç
 
@@ -53,6 +53,40 @@ Mestakip CRM, lastik satış ve servis işletmeleri için özel olarak tasarlanm
 - Güçlü bir `SECRET_KEY` kullanın
 - Database credentials'ı environment variables'da saklayın
 - HTTPS kullanın
+
+## Coolify + Hetzner Deploy
+
+1. Hetzner sunucuda Coolify kurulu olsun ve GitHub repo erişimi tanımlansın.
+2. Coolify içinde yeni kaynak oluşturun: Git Repository -> Docker Compose.
+3. Compose dosyası olarak `docker-compose.coolify.yml` seçin.
+4. Web servisine domain bağlayın ve internal port olarak `8000` kullanın.
+5. Environment Variables bölümünde `.env.coolify.example` içindeki değerleri girin.
+6. İlk deploy sonrası web container loglarında migration ve healthcheck sonucunu kontrol edin.
+7. Uygulamada `/erp/dia/durum/` ekranından DİA bağlantı testini çalıştırın.
+
+Gerekli DİA env değerleri:
+
+```env
+DIA_SERVER_CODE=diademo
+DIA_USERNAME=ws
+DIA_PASSWORD=ws
+DIA_FIRMA_KODU=1
+DIA_DONEM_KODU=1
+DIA_SYNC_INTERVAL_MINUTES=1
+```
+
+Canlı DİA'ya geçince sadece bu DİA değerlerini gerçek hesap bilgilerinizle değiştirmeniz yeterli olur.
+
+Dockerfile build pack ile tek container kullanıyorsanız ve ayrı `worker`/`beat`
+servisi açmadıysanız şunu da ekleyin:
+
+```env
+RUN_CELERY_IN_WEB=True
+```
+
+Bu ayar DİA cari, stok, fatura ve stok miktarı sync görevlerini aynı container
+içinde her dakika çalıştırır. Docker Compose kullanımında önerilen yapı ayrı
+`web`, `worker` ve `beat` servisleridir.
 
 ## 📝 Lisans
 

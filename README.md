@@ -64,6 +64,11 @@ Mestakip CRM, lastik satış ve servis işletmeleri için özel olarak tasarlanm
 6. İlk deploy sonrası web container loglarında migration ve healthcheck sonucunu kontrol edin.
 7. Uygulamada `/erp/dia/durum/` ekranından DİA bağlantı testini çalıştırın.
 
+Coolify/Traefik HTTPS yönlendirmesini proxy tarafında yaptığı için Django içinde
+`SECURE_SSL_REDIRECT=False` bırakın. Bu değer `True` olursa Coolify'nin HTTP
+healthcheck isteği HTTPS'e yönlenebilir ve uygulama sağlıklı olsa bile Bad
+Gateway görünebilir.
+
 Gerekli DİA env değerleri:
 
 ```env

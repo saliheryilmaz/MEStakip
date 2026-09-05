@@ -10,7 +10,7 @@ is_true() {
 
 case "$1" in
   web)
-    python manage.py migrate --noinput
+    python manage.py migrate --noinput --fake-initial
     python manage.py dia_sync_zamanlama_kur
     if [ "${CREATE_SUPERUSER:-False}" = "True" ]; then
       python manage.py create_auto_superuser

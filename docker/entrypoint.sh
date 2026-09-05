@@ -10,6 +10,7 @@ is_true() {
 
 case "$1" in
   web)
+    python manage.py repair_migration_state
     python manage.py migrate --noinput --fake-initial
     python manage.py dia_sync_zamanlama_kur
     if [ "${CREATE_SUPERUSER:-False}" = "True" ]; then

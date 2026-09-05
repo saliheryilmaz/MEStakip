@@ -171,4 +171,122 @@ class Command(BaseCommand):
                     )
                 )
 
+        beat_checks = [
+            (
+                ('django_celery_beat', '0006_auto_20180322_0932'),
+                'django_celery_beat_crontabschedule',
+                {'timezone'},
+            ),
+            (
+                ('django_celery_beat', '0007_auto_20180521_0826'),
+                'django_celery_beat_periodictask',
+                {'one_off', 'start_time'},
+            ),
+            (
+                ('django_celery_beat', '0006_periodictask_priority'),
+                'django_celery_beat_periodictask',
+                {'priority'},
+            ),
+            (
+                ('django_celery_beat', '0009_periodictask_headers'),
+                'django_celery_beat_periodictask',
+                {'headers'},
+            ),
+            (
+                ('django_celery_beat', '0011_auto_20190508_0153'),
+                'django_celery_beat_periodictask',
+                {'clocked_id'},
+            ),
+            (
+                ('django_celery_beat', '0012_periodictask_expire_seconds'),
+                'django_celery_beat_periodictask',
+                {'expire_seconds'},
+            ),
+        ]
+        for key, table_name, columns in beat_checks:
+            repaired += self._record_if_columns_exist(
+                recorder,
+                applied,
+                tables,
+                key,
+                table_name,
+                columns,
+            )
+
+        results_checks = [
+            (
+                ('django_celery_results', '0002_add_task_name_args_kwargs'),
+                'django_celery_results_taskresult',
+                {'task_name', 'task_args', 'task_kwargs'},
+            ),
+            (
+                ('django_celery_results', '0005_taskresult_worker'),
+                'django_celery_results_taskresult',
+                {'worker'},
+            ),
+            (
+                ('django_celery_results', '0006_taskresult_date_created'),
+                'django_celery_results_taskresult',
+                {'date_created'},
+            ),
+            (
+                ('django_celery_results', '0011_taskresult_periodic_task_name'),
+                'django_celery_results_taskresult',
+                {'periodic_task_name'},
+            ),
+        ]
+        for key, table_name, columns in results_checks:
+            repaired += self._record_if_columns_exist(
+                recorder,
+                applied,
+                tables,
+                key,
+                table_name,
+                columns,
+            )
+
+        key = ('django_celery_results', '0007_remove_taskresult_hidden')
+        if (
+            key not in applied
+            and 'django_celery_results_taskresult' in tables
+            and 'hidden' not in self._columns('django_celery_results_taskresult')
+        ):
+            recorder.record_applied(*key)
+            applied.add(key)
+            repaired += 1
+            self.stdout.write(
+                self.style.WARNING(
+                    '↻ Mevcut kolon kaldırma için migration kaydı tamamlandı: '
+                    'django_celery_results.0007_remove_taskresult_hidden'
+                )
+            )
+
         return repaired
+
+    def _record_if_columns_exist(
+        self,
+        recorder,
+        applied: set[tuple[str, str]],
+        tables: set[str],
+        key: tuple[str, str],
+        table_name: str,
+        columns: set[str],
+    ) -> int:
+        if key in applied or table_name not in tables:
+            return 0
+        existing_columns = self._columns(table_name)
+        if not columns.issubset(existing_columns):
+            return 0
+        recorder.record_applied(*key)
+        applied.add(key)
+        self.stdout.write(
+            self.style.WARNING(
+                f'↻ Mevcut kolonlar için migration kaydı tamamlandı: {key[0]}.{key[1]}'
+            )
+        )
+        return 1
+
+    def _columns(self, table_name: str) -> set[str]:
+        with connection.cursor() as cursor:
+            description = connection.introspection.get_table_description(cursor, table_name)
+        return {column.name for column in description}

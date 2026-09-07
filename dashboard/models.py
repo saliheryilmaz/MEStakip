@@ -650,6 +650,65 @@ class CikmaLastik(models.Model):
             return 'secondary'
 
 
+class FiloArac(models.Model):
+    """Filo Yönetimi — araç lastik takip modeli"""
+
+    DURUM_CHOICES = [
+        ('saklamada', 'Saklamada'),
+        ('kullanicida', 'Kullanıcıya Teslim Edildi'),
+        ('otl', 'ÖTL'),
+    ]
+
+    MEVSIM_CHOICES = [
+        ('kis', 'Kış'),
+        ('yaz', 'Yaz'),
+        ('dort-mevsim', '4 Mevsim'),
+    ]
+
+    AMBAR_CHOICES = [
+        ('stok', 'Stok'),
+        ('satis', 'Satış'),
+    ]
+
+    user             = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Kullanıcı", related_name='filo_araclar')
+    plaka            = models.CharField(max_length=20, verbose_name="Plaka")
+    ambar            = models.CharField(max_length=20, choices=AMBAR_CHOICES, default='stok', verbose_name="Ambar")
+    adet             = models.PositiveIntegerField(validators=[MinValueValidator(1)], verbose_name="Adet")
+    durum            = models.CharField(max_length=20, choices=DURUM_CHOICES, default='saklamada', verbose_name="Durum")
+    ebat             = models.CharField(max_length=50, blank=True, null=True, verbose_name="Ebat")
+    mevsim           = models.CharField(max_length=20, choices=MEVSIM_CHOICES, blank=True, null=True, verbose_name="Mevsim")
+    aciklama         = models.TextField(blank=True, null=True, verbose_name="Açıklama")
+    olusturma_tarihi = models.DateTimeField(auto_now_add=True, verbose_name="Oluşturma Tarihi")
+    guncelleme_tarihi = models.DateTimeField(auto_now=True, verbose_name="Güncelleme Tarihi")
+
+    class Meta:
+        verbose_name = "Filo Aracı"
+        verbose_name_plural = "Filo Araçları"
+        ordering = ['-olusturma_tarihi']
+
+    def __str__(self):
+        return f"{self.plaka} - {self.ebat or '-'} ({self.get_durum_display()})"
+
+    def get_durum_display_color(self):
+        colors = {
+            'saklamada':  'secondary',
+            'kullanicida': 'success',
+            'otl':        'warning',
+        }
+        return colors.get(self.durum, 'secondary')
+
+    def get_ambar_display_color(self):
+        return 'primary' if self.ambar == 'stok' else 'success'
+
+    def get_mevsim_display_color(self):
+        colors = {
+            'kis':         'info',
+            'yaz':         'warning',
+            'dort-mevsim': 'primary',
+        }
+        return colors.get(self.mevsim, 'secondary')
+
+
 class MalzemeDosya(models.Model):
     dosya_adi = models.CharField(max_length=200)
     yukleme_tarihi = models.DateTimeField(auto_now_add=True)

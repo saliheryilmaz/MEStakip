@@ -17,7 +17,7 @@ from openpyxl.styles import Font, PatternFill, Alignment
 from django.urls import reverse
 from django.views.decorators.http import require_POST, require_http_methods
 from decimal import Decimal
-from .models import Siparis, UserProfile, Notification, Transaction, TransactionCategory, Event, MalzemeHareketi, MalzemeDosya, CikmaLastik, JokerSatisDosya, JokerSatisHareketi, LastikModelBilgisi, Quotation, GarantiBelgesi
+from .models import Siparis, UserProfile, Notification, Transaction, TransactionCategory, Event, MalzemeHareketi, MalzemeDosya, CikmaLastik, JokerSatisDosya, JokerSatisHareketi, LastikModelBilgisi, Quotation, GarantiBelgesi, FiloArac
 from .forms import SiparisForm, TransactionForm, MalzemeExcelUploadForm
 # pandas removed - using openpyxl instead
 from collections import defaultdict
@@ -465,6 +465,10 @@ def manager_assistant_query(request):
 
     model = os.environ.get("GROQ_MODEL", "groq/compound-mini")
 
+    # Tool calling için daha güçlü model tercih et
+    # groq/compound-mini tool calling'i iyi desteklemiyor, compound kullan
+    tool_model = "groq/compound"
+
     # ── SYSTEM PROMPT ──────────────────────────────────────────────────────────
     system_prompt = f"""Sen MEStakip'in Yönetici Asistanısın. Bugünün tarihi: {today} (Europe/Istanbul).
 
@@ -511,7 +515,7 @@ Tool çağırmadan kesin sayı söyleme."""
             # ── TUR 1: Tool selection ──────────────────────────────────────────
             response = groq_chat_completion(
                 api_key=api_key,
-                model=model,
+                model=tool_model,
                 messages=messages,
                 tools=TOOL_DEFINITIONS,
                 tool_choice="auto",
@@ -558,7 +562,7 @@ Tool çağırmadan kesin sayı söyleme."""
                 # ── TUR 2: Yorumlama ──────────────────────────────────────────
                 final_response = groq_chat_completion(
                     api_key=api_key,
-                    model=model,
+                    model=tool_model,
                     messages=messages,
                     temperature=0.2,
                     max_tokens=1000,
@@ -584,10 +588,32 @@ Tool çağırmadan kesin sayı söyleme."""
 
     # ── FALLBACK: Groq yoksa basit kural tabanlı yanıt ────────────────────────
     if not text:
-        from .ai_tools import get_proactive_summary, get_orders_summary, get_financial_summary
+        from .ai_tools import (get_proactive_summary, get_orders_summary,
+                               get_financial_summary, get_used_tire_sales,
+                               get_used_tire_inventory)
         t_lower = q.lower()
 
-        if any(w in t_lower for w in ["özet", "genel", "durum", "nasıl"]):
+        # Çıkma lastik satış tutarı sorguları
+        if any(w in t_lower for w in ["çıkma", "cikma"]) and any(w in t_lower for w in ["satış", "satis", "fiyat", "tutar", "ciro", "toplam", "kazan"]):
+            data = get_used_tire_sales()
+            inv  = get_used_tire_inventory()
+            text = (
+                f"🔧 Çıkma Lastik Satış Özeti ({data.get('donem', '')}):\n"
+                f"• Satılan: {data.get('toplam_satis_kayit', 0)} kayıt / {data.get('toplam_satis_adet', 0)} adet\n"
+                f"• **Toplam Ciro: {data.get('toplam_ciro_tl', 0):,.2f} ₺**\n\n"
+                f"📦 Depodaki Stok:\n"
+                f"• {inv.get('toplam_kayit', 0)} kayıt / {inv.get('toplam_adet', 0)} adet bekliyor"
+            )
+        elif any(w in t_lower for w in ["çıkma", "cikma"]) and any(w in t_lower for w in ["depo", "stok", "kaç", "kac", "var"]):
+            data = get_used_tire_inventory()
+            text = (
+                f"🔧 Çıkma Lastik Depo Durumu:\n"
+                f"• Toplam: {data.get('toplam_kayit', 0)} kayıt / {data.get('toplam_adet', 0)} adet\n"
+            )
+            top_eb = data.get('top_ebatlar', [])[:5]
+            if top_eb:
+                text += "• En çok stok:\n" + "\n".join(f"  - {e['ebat']}: {e['adet']} adet" for e in top_eb)
+        elif any(w in t_lower for w in ["özet", "genel", "durum", "nasıl"]):
             data = get_proactive_summary(user=user)
             lines = data.get("bilgiler", []) + data.get("pozitifler", []) + data.get("uyarilar", [])
             finans = data.get("finans_bu_ay", {})
@@ -631,6 +657,359 @@ def clear_chat_history(request):
         request.session.modified = True
         return JsonResponse({"ok": True})
     return JsonResponse({"error": "POST required"}, status=405)
+
+
+# ─────────────────────────────────────────────────────────────
+# FİLO YÖNETİMİ
+# ─────────────────────────────────────────────────────────────
+
+@login_required
+@misafir_forbidden
+def filo_yonetimi(request):
+    """Filo Yönetimi listesi"""
+    plaka   = request.GET.get('plaka', '')
+    durum   = request.GET.get('durum', '')
+    mevsim  = request.GET.get('mevsim', '')
+    ambar   = request.GET.get('ambar', '')
+    ebat    = request.GET.get('ebat', '')
+
+    # Sadece saklamada olanları göster (ÖTL ve kullanıcıda olanlar ayrı sayfada)
+    araclar = FiloArac.objects.filter(user=request.user, durum='saklamada')
+
+    if plaka:
+        araclar = araclar.filter(plaka__icontains=plaka)
+    if durum:
+        araclar = araclar.filter(durum=durum)
+    if mevsim:
+        araclar = araclar.filter(mevsim=mevsim)
+    if ambar:
+        araclar = araclar.filter(ambar=ambar)
+    if ebat:
+        formatted = format_tire_size(ebat)
+        araclar = araclar.filter(Q(ebat__icontains=ebat) | Q(ebat__icontains=formatted))
+
+    araclar = araclar.order_by('-olusturma_tarihi')
+    paginator = Paginator(araclar, 50)
+    page_obj  = paginator.get_page(request.GET.get('page'))
+
+    context = {
+        'page_title': 'Filo Yönetimi',
+        'araclar': page_obj,
+        'filters': {
+            'plaka': plaka, 'durum': durum,
+            'mevsim': mevsim, 'ambar': ambar, 'ebat': ebat,
+        },
+        'durum_choices': FiloArac.DURUM_CHOICES,
+        'mevsim_choices': FiloArac.MEVSIM_CHOICES,
+        'ambar_choices': FiloArac.AMBAR_CHOICES,
+    }
+    return render(request, 'dashboard/filo_yonetimi.html', context)
+
+
+@login_required
+@misafir_forbidden
+def filo_ekle(request):
+    """Yeni araç kaydı ekle"""
+    if request.method == 'POST':
+        try:
+            FiloArac.objects.create(
+                user=request.user,
+                plaka=request.POST.get('plaka', '').upper().strip(),
+                ambar=request.POST.get('ambar', 'stok'),
+                adet=int(request.POST.get('adet', 1)),
+                durum=request.POST.get('durum', 'saklamada'),
+                ebat=request.POST.get('ebat', '').strip() or None,
+                mevsim=request.POST.get('mevsim', '') or None,
+                aciklama=request.POST.get('aciklama', '').strip() or None,
+            )
+            messages.success(request, 'Araç kaydı başarıyla eklendi.')
+        except Exception as e:
+            messages.error(request, f'Hata: {e}')
+    return redirect('dashboard:filo_yonetimi')
+
+
+@login_required
+@misafir_forbidden
+def filo_duzenle(request, arac_id):
+    """Araç kaydını düzenle"""
+    arac = get_object_or_404(FiloArac, id=arac_id, user=request.user)
+    if request.method == 'POST':
+        try:
+            arac.plaka    = request.POST.get('plaka', arac.plaka).upper().strip()
+            arac.ambar    = request.POST.get('ambar', arac.ambar)
+            arac.adet     = int(request.POST.get('adet', arac.adet))
+            arac.durum    = request.POST.get('durum', arac.durum)
+            arac.ebat     = request.POST.get('ebat', '').strip() or None
+            arac.mevsim   = request.POST.get('mevsim', '') or None
+            arac.aciklama = request.POST.get('aciklama', '').strip() or None
+            arac.save()
+            messages.success(request, 'Araç kaydı güncellendi.')
+            return redirect('dashboard:filo_yonetimi')
+        except Exception as e:
+            messages.error(request, f'Hata: {e}')
+
+    context = {
+        'arac': arac,
+        'page_title': 'Araç Düzenle',
+        'durum_choices': FiloArac.DURUM_CHOICES,
+        'mevsim_choices': FiloArac.MEVSIM_CHOICES,
+        'ambar_choices': FiloArac.AMBAR_CHOICES,
+    }
+    return render(request, 'dashboard/filo_duzenle.html', context)
+
+
+@login_required
+@misafir_forbidden
+def filo_sil(request, arac_id):
+    """Araç kaydını sil"""
+    arac = get_object_or_404(FiloArac, id=arac_id, user=request.user)
+    arac.delete()
+    messages.success(request, 'Araç kaydı silindi.')
+    return redirect('dashboard:filo_yonetimi')
+
+
+@login_required
+@misafir_forbidden
+@require_POST
+def filo_durum_degistir(request, arac_id):
+    """AJAX: araç durumunu değiştir"""
+    arac = get_object_or_404(FiloArac, id=arac_id, user=request.user)
+    yeni_durum = request.POST.get('durum', '')
+    if yeni_durum in dict(FiloArac.DURUM_CHOICES):
+        arac.durum = yeni_durum
+        arac.save()
+        return JsonResponse({'status': 'success', 'durum': arac.get_durum_display()})
+    return JsonResponse({'status': 'error', 'message': 'Geçersiz durum'}, status=400)
+
+
+@login_required
+@misafir_forbidden
+def filo_export_excel(request):
+    """Filo listesini Excel'e aktar"""
+    plaka  = request.GET.get('plaka', '')
+    durum  = request.GET.get('durum', '')
+    mevsim = request.GET.get('mevsim', '')
+    ambar  = request.GET.get('ambar', '')
+    ebat   = request.GET.get('ebat', '')
+
+    araclar = FiloArac.objects.filter(user=request.user)
+    if plaka:
+        araclar = araclar.filter(plaka__icontains=plaka)
+    if durum:
+        araclar = araclar.filter(durum=durum)
+    if mevsim:
+        araclar = araclar.filter(mevsim=mevsim)
+    if ambar:
+        araclar = araclar.filter(ambar=ambar)
+    if ebat:
+        formatted = format_tire_size(ebat)
+        araclar = araclar.filter(Q(ebat__icontains=ebat) | Q(ebat__icontains=formatted))
+
+    araclar = araclar.order_by('-olusturma_tarihi')
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Filo Yönetimi"
+
+    header_font  = Font(bold=True, color="FFFFFF")
+    header_fill  = PatternFill(start_color="1F4E79", end_color="1F4E79", fill_type="solid")
+    header_align = Alignment(horizontal="center", vertical="center")
+
+    headers = ['PLAKA', 'AMBAR', 'ADET', 'DURUM', 'EBAT', 'MEVSİM', 'AÇIKLAMA', 'OLUŞTURMA TARİHİ']
+    for col, h in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=h)
+        cell.font      = header_font
+        cell.fill      = header_fill
+        cell.alignment = header_align
+
+    for row, arac in enumerate(araclar, 2):
+        ws.cell(row=row, column=1, value=arac.plaka)
+        ws.cell(row=row, column=2, value=arac.get_ambar_display())
+        ws.cell(row=row, column=3, value=arac.adet)
+        ws.cell(row=row, column=4, value=arac.get_durum_display())
+        ws.cell(row=row, column=5, value=arac.ebat or '')
+        ws.cell(row=row, column=6, value=arac.get_mevsim_display() if arac.mevsim else '')
+        ws.cell(row=row, column=7, value=arac.aciklama or '')
+        ws.cell(row=row, column=8, value=arac.olusturma_tarihi.strftime('%d.%m.%Y %H:%M'))
+
+    for col, width in enumerate([14, 10, 7, 22, 14, 12, 35, 18], 1):
+        ws.column_dimensions[ws.cell(row=1, column=col).column_letter].width = width
+
+    now = timezone.now()
+    filename = f"filo_{now.strftime('%Y%m%d_%H%M')}.xlsx"
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    wb.save(response)
+    return response
+
+
+@login_required
+@misafir_forbidden
+def filo_islem_gorenler(request):
+    """Kullanıcıya teslim edilmiş ve ÖTL'deki araçlar"""
+    plaka  = request.GET.get('plaka', '')
+    mevsim = request.GET.get('mevsim', '')
+    ambar  = request.GET.get('ambar', '')
+    ebat   = request.GET.get('ebat', '')
+
+    araclar = FiloArac.objects.filter(user=request.user, durum__in=['kullanicida', 'otl'])
+
+    if plaka:
+        araclar = araclar.filter(plaka__icontains=plaka)
+    if mevsim:
+        araclar = araclar.filter(mevsim=mevsim)
+    if ambar:
+        araclar = araclar.filter(ambar=ambar)
+    if ebat:
+        formatted = format_tire_size(ebat)
+        araclar = araclar.filter(Q(ebat__icontains=ebat) | Q(ebat__icontains=formatted))
+
+    araclar = araclar.order_by('-guncelleme_tarihi')
+    paginator = Paginator(araclar, 50)
+    page_obj  = paginator.get_page(request.GET.get('page'))
+
+    context = {
+        'page_title': 'İşlem Görenler',
+        'araclar': page_obj,
+        'filters': {
+            'plaka': plaka, 'mevsim': mevsim, 'ambar': ambar, 'ebat': ebat,
+        },
+        'mevsim_choices': FiloArac.MEVSIM_CHOICES,
+        'ambar_choices':  FiloArac.AMBAR_CHOICES,
+        'durum_choices':  FiloArac.DURUM_CHOICES,
+    }
+    return render(request, 'dashboard/filo_islem_gorenler.html', context)
+
+
+@login_required
+@misafir_forbidden
+def filo_excel_yukle(request):
+    """Excel'den filo kayıtlarını içe aktar"""
+    if request.method == 'POST':
+        excel_file = request.FILES.get('excel_file')
+        if not excel_file:
+            messages.error(request, 'Lütfen bir Excel dosyası seçin.')
+            return redirect('dashboard:filo_yonetimi')
+
+        if not excel_file.name.endswith(('.xlsx', '.xls')):
+            messages.error(request, 'Sadece .xlsx veya .xls dosyaları kabul edilir.')
+            return redirect('dashboard:filo_yonetimi')
+
+        try:
+            from openpyxl import load_workbook
+            wb = load_workbook(excel_file, data_only=True)
+            ws = wb.active
+
+            # Başlık satırını oku, sütun indekslerini bul
+            headers = {}
+            for col in ws.iter_cols(min_row=1, max_row=1):
+                for cell in col:
+                    if cell.value:
+                        headers[str(cell.value).strip().upper()] = cell.column - 1
+
+            KOLON_MAP = {
+                'PLAKA':    ['PLAKA'],
+                'AMBAR':    ['AMBAR'],
+                'ADET':     ['ADET'],
+                'DURUM':    ['DURUM'],
+                'EBAT':     ['EBAT'],
+                'MARKA':    ['MARKA', 'MARKA ADI', 'MARKA_ADI'],
+                'DESEN':    ['DESEN', 'MODEL', 'ÜRÜN', 'URUN'],
+                'MEVSIM':   ['MEVSİM', 'MEVSIM', 'SEZON'],
+                'ACIKLAMA': ['AÇIKLAMA', 'ACIKLAMA'],
+            }
+
+            def get_col(key):
+                for name in KOLON_MAP[key]:
+                    if name in headers:
+                        return headers[name]
+                return None
+
+            AMBAR_MAP = {
+                'stok': 'stok', 'satış': 'satis', 'satis': 'satis', 'satish': 'satis',
+            }
+            DURUM_MAP = {
+                'saklamada': 'saklamada',
+                'kullanıcıda teslim edildi': 'kullanicida',
+                'kullanicida': 'kullanicida',
+                'teslim edildi': 'kullanicida',
+                'ötl': 'otl', 'otl': 'otl',
+            }
+            MEVSIM_MAP = {
+                'kış': 'kis', 'kis': 'kis', 'kiş': 'kis',
+                'yaz': 'yaz',
+                '4 mevsim': 'dort-mevsim', 'dort-mevsim': 'dort-mevsim',
+                '4mevsim': 'dort-mevsim', '4-mevsim': 'dort-mevsim',
+                'four season': 'dort-mevsim', 'all season': 'dort-mevsim',
+                'winter': 'kis', 'summer': 'yaz',
+            }
+
+            eklenen = 0
+            hatali  = 0
+            hatalar = []
+
+            for row_idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+                try:
+                    plaka_col = get_col('PLAKA')
+                    if plaka_col is None:
+                        messages.error(request, 'Excel\'de "PLAKA" sütunu bulunamadı.')
+                        return redirect('dashboard:filo_yonetimi')
+
+                    plaka = str(row[plaka_col] or '').strip().upper()
+                    if not plaka:
+                        continue  # boş satır atla
+
+                    adet_col = get_col('ADET')
+                    try:
+                        adet = int(row[adet_col]) if adet_col is not None and row[adet_col] else 1
+                    except (ValueError, TypeError):
+                        adet = 1
+
+                    ambar_col = get_col('AMBAR')
+                    ambar_raw = str(row[ambar_col] or 'stok').strip().lower() if ambar_col is not None else 'stok'
+                    ambar = AMBAR_MAP.get(ambar_raw, 'stok')
+
+                    durum_col = get_col('DURUM')
+                    durum_raw = str(row[durum_col] or 'saklamada').strip().lower() if durum_col is not None else 'saklamada'
+                    durum = DURUM_MAP.get(durum_raw, 'saklamada')
+
+                    ebat_col  = get_col('EBAT')
+                    marka_col = get_col('MARKA')
+                    desen_col = get_col('DESEN')
+
+                    # Ebat, Marka Adı ve Desen'i birleştir → "185/65R15 HANKOOK KINERGY ECO K425"
+                    ebat_parca  = str(row[ebat_col]  or '').strip() if ebat_col  is not None else ''
+                    marka_parca = str(row[marka_col] or '').strip() if marka_col is not None else ''
+                    desen_parca = str(row[desen_col] or '').strip() if desen_col is not None else ''
+                    ebat = ' '.join(p for p in [ebat_parca, marka_parca, desen_parca] if p) or None
+
+                    mevsim_col = get_col('MEVSIM')
+                    mevsim_raw = str(row[mevsim_col] or '').strip().lower() if mevsim_col is not None else ''
+                    mevsim = MEVSIM_MAP.get(mevsim_raw) if mevsim_raw else None
+
+                    aciklama_col = get_col('ACIKLAMA')
+                    aciklama = str(row[aciklama_col] or '').strip() or None if aciklama_col is not None else None
+
+                    FiloArac.objects.create(
+                        user=request.user,
+                        plaka=plaka, ambar=ambar, adet=adet,
+                        durum=durum, ebat=ebat, mevsim=mevsim, aciklama=aciklama,
+                    )
+                    eklenen += 1
+
+                except Exception as e:
+                    hatali += 1
+                    hatalar.append(f'Satır {row_idx}: {e}')
+
+            if eklenen:
+                messages.success(request, f'{eklenen} araç kaydı başarıyla eklendi.')
+            if hatali:
+                messages.warning(request, f'{hatali} satır atlandı: ' + ' | '.join(hatalar[:5]))
+
+        except Exception as e:
+            messages.error(request, f'Excel okunamadı: {e}')
+
+    return redirect('dashboard:filo_yonetimi')
 
 
 @login_required

@@ -1,0 +1,377 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load turkish_format %}
+
+{% block title %}Filo Yönetimi - Mestakip{% endblock %}
+{% block page_name %}filo_yonetimi{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0"><i class="bi bi-truck me-2 text-primary"></i>Filo Yönetimi</h1>
+        <p class="text-muted small mb-0">Araç lastik takip ve durum yönetimi</p>
+    </div>
+    <a href="{% url 'dashboard:filo_islem_gorenler' %}" class="btn btn-danger">
+        <i class="bi bi-arrow-right-circle me-1"></i>İşlem Görenler
+    </a>
+</div>
+
+{% if messages %}
+{% for message in messages %}
+<div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+{% endif %}
+
+<!-- Filtre -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Filtreleme</h5>
+    </div>
+    <div class="card-body">
+        <form method="get">
+            <div class="row g-3">
+                <div class="col-md-2">
+                    <label class="form-label">PLAKA</label>
+                    <input type="text" class="form-control" name="plaka" value="{{ filters.plaka }}" placeholder="Plaka ara...">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">EBAT</label>
+                    <input type="text" class="form-control" name="ebat" value="{{ filters.ebat }}" placeholder="205/55R16...">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">MEVSİM</label>
+                    <select class="form-select" name="mevsim">
+                        <option value="">Tümü</option>
+                        {% for val, label in mevsim_choices %}
+                        <option value="{{ val }}" {% if filters.mevsim == val %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">AMBAR</label>
+                    <select class="form-select" name="ambar">
+                        <option value="">Tümü</option>
+                        {% for val, label in ambar_choices %}
+                        <option value="{{ val }}" {% if filters.ambar == val %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end gap-2">
+                    <button type="submit" class="btn btn-primary flex-fill">
+                        <i class="bi bi-funnel me-1"></i>Filtrele
+                    </button>
+                    <a href="{% url 'dashboard:filo_yonetimi' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Liste -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">Araç Listesi
+            <span class="badge bg-secondary ms-2">{{ araclar.paginator.count }}</span>
+        </h5>
+        <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#ekleModal">
+            <i class="bi bi-plus-lg me-1"></i>Araç Ekle
+        </button>
+        <a href="{% url 'dashboard:filo_export_excel' %}?plaka={{ filters.plaka }}&durum={{ filters.durum }}&mevsim={{ filters.mevsim }}&ambar={{ filters.ambar }}&ebat={{ filters.ebat }}"
+           class="btn btn-warning btn-sm">
+            <i class="bi bi-file-earmark-excel me-1"></i>Excel'e Aktar
+        </a>
+        <form method="post" action="{% url 'dashboard:filo_excel_yukle' %}" enctype="multipart/form-data" id="excelUploadForm" class="d-inline">
+            {% csrf_token %}
+            <label class="btn btn-info btn-sm mb-0" style="cursor:pointer;" title="Excel'den İçe Aktar">
+                <i class="bi bi-upload me-1"></i>Excel Yükle
+                <input type="file" name="excel_file" accept=".xlsx,.xls" class="d-none" onchange="document.getElementById('excelUploadForm').submit()">
+            </label>
+        </form>
+    </div>
+    <div class="card-body p-0">
+        <!-- Desktop -->
+        <div class="table-responsive d-none d-md-block">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>PLAKA</th>
+                        <th>ADET</th>
+                        <th>DURUM</th>
+                        <th>EBAT</th>
+                        <th>MEVSİM</th>
+                        <th>AÇIKLAMA</th>
+                        <th>İŞLEMLER</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for arac in araclar %}
+                    <tr>
+                        <td><strong>{{ arac.plaka }}</strong></td>
+                        <td><strong>{{ arac.adet }}</strong></td>
+                        <td><span class="badge bg-{{ arac.get_durum_display_color }}">{{ arac.get_durum_display }}</span></td>
+                        <td>
+                            {% if arac.ebat %}
+                                <code style="font-size:1em;font-weight:600;">{{ arac.ebat }}</code>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if arac.mevsim == 'yaz' %}
+                                <img src="{% static 'images/yaz.png' %}" alt="Yaz" title="Yaz" style="width:24px;height:24px;object-fit:contain;border-radius:4px;">
+                            {% elif arac.mevsim == 'kis' %}
+                                <img src="{% static 'images/kis.png' %}" alt="Kış" title="Kış" style="width:24px;height:24px;object-fit:contain;border-radius:4px;">
+                            {% elif arac.mevsim == 'dort-mevsim' %}
+                                <img src="{% static 'images/dörtmevsim.png' %}" alt="4 Mevsim" title="4 Mevsim" style="width:24px;height:24px;object-fit:contain;border-radius:4px;">
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ arac.aciklama|default:"-" }}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <!-- Değiştir-Saklamada -->
+                                <button type="button" class="btn btn-secondary btn-sm filo-durum-btn"
+                                        title="Saklamaya Al"
+                                        data-id="{{ arac.id }}" data-durum="saklamada">
+                                    <i class="bi bi-archive"></i>
+                                </button>
+                                <!-- Kullanıcıya Teslim Edildi -->
+                                <button type="button" class="btn btn-success btn-sm filo-durum-btn"
+                                        title="Kullanıcıya Teslim Edildi"
+                                        data-id="{{ arac.id }}" data-durum="kullanicida">
+                                    <i class="bi bi-person-check"></i>
+                                </button>
+                                <!-- ÖTL -->
+                                <button type="button" class="btn btn-warning btn-sm filo-durum-btn"
+                                        title="ÖTL"
+                                        data-id="{{ arac.id }}" data-durum="otl">
+                                    <i class="bi bi-tools"></i>
+                                </button>
+                                <!-- Düzenle -->
+                                <a href="{% url 'dashboard:filo_duzenle' arac.id %}" class="btn btn-primary btn-sm" title="Düzenle">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <!-- Sil -->
+                                <a href="{% url 'dashboard:filo_sil' arac.id %}" class="btn btn-danger btn-sm" title="Sil"
+                                   onclick="return confirm('{{ arac.plaka }} kaydını silmek istediğinizden emin misiniz?')">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-5">
+                            <i class="bi bi-truck fs-1 d-block mb-2"></i>
+                            Henüz araç kaydı bulunmuyor.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Mobil Kart -->
+        <div class="d-md-none p-2">
+            {% for arac in araclar %}
+            <div class="card mb-2 shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center py-2">
+                    <strong>{{ arac.plaka }}</strong>
+                    <span class="badge bg-{{ arac.get_durum_display_color }}">{{ arac.get_durum_display }}</span>
+                </div>
+                <div class="card-body py-2">
+                    <div class="row small">
+                        <div class="col-6">
+                            <span class="text-muted">Ebat:</span>
+                            <strong>{{ arac.ebat|default:"-" }}</strong>
+                        </div>
+                        <div class="col-6">
+                            <span class="text-muted">Adet:</span>
+                            <strong>{{ arac.adet }}</strong>
+                        </div>
+                        <div class="col-6 mt-1">
+                            <span class="text-muted">Mevsim:</span>
+                            <strong>{{ arac.get_mevsim_display|default:"-" }}</strong>
+                        </div>
+                        {% if arac.aciklama %}
+                        <div class="col-12 mt-1">
+                            <span class="text-muted">Açıklama:</span> {{ arac.aciklama }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-footer py-2 d-flex gap-2 flex-wrap">
+                    <button class="btn btn-secondary btn-sm filo-durum-btn" data-id="{{ arac.id }}" data-durum="saklamada">
+                        <i class="bi bi-archive me-1"></i>Saklamada
+                    </button>
+                    <button class="btn btn-success btn-sm filo-durum-btn" data-id="{{ arac.id }}" data-durum="kullanicida">
+                        <i class="bi bi-person-check me-1"></i>Teslim Edildi
+                    </button>
+                    <button class="btn btn-warning btn-sm filo-durum-btn" data-id="{{ arac.id }}" data-durum="otl">
+                        <i class="bi bi-tools me-1"></i>ÖTL
+                    </button>
+                    <a href="{% url 'dashboard:filo_duzenle' arac.id %}" class="btn btn-primary btn-sm">
+                        <i class="bi bi-pencil me-1"></i>Düzenle
+                    </a>
+                    <a href="{% url 'dashboard:filo_sil' arac.id %}" class="btn btn-danger btn-sm"
+                       onclick="return confirm('Silmek istediğinizden emin misiniz?')">
+                        <i class="bi bi-trash me-1"></i>Sil
+                    </a>
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center text-muted py-5">
+                <i class="bi bi-truck fs-1 d-block mb-2"></i>
+                Henüz araç kaydı bulunmuyor.
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if araclar.has_other_pages %}
+    <div class="card-footer">
+        <nav>
+            <ul class="pagination pagination-sm justify-content-center mb-0">
+                {% if araclar.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ araclar.previous_page_number }}&plaka={{ filters.plaka }}&durum={{ filters.durum }}&mevsim={{ filters.mevsim }}&ambar={{ filters.ambar }}&ebat={{ filters.ebat }}">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
+                {% endif %}
+                {% for num in araclar.paginator.page_range %}
+                <li class="page-item {% if araclar.number == num %}active{% endif %}">
+                    <a class="page-link" href="?page={{ num }}&plaka={{ filters.plaka }}&durum={{ filters.durum }}&mevsim={{ filters.mevsim }}&ambar={{ filters.ambar }}&ebat={{ filters.ebat }}">{{ num }}</a>
+                </li>
+                {% endfor %}
+                {% if araclar.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ araclar.next_page_number }}&plaka={{ filters.plaka }}&durum={{ filters.durum }}&mevsim={{ filters.mevsim }}&ambar={{ filters.ambar }}&ebat={{ filters.ebat }}">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Araç Ekle Modal -->
+<div class="modal fade" id="ekleModal" tabindex="-1" aria-labelledby="ekleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'dashboard:filo_ekle' %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title" id="ekleModalLabel">
+                        <i class="bi bi-plus-circle me-2"></i>Yeni Araç Ekle
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Plaka <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="plaka" required placeholder="34ABC123" style="text-transform:uppercase;">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Adet <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" name="adet" required min="1" value="4">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Ebat</label>
+                            <input type="text" class="form-control" name="ebat" placeholder="205/55R16">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Mevsim</label>
+                            <select class="form-select" name="mevsim">
+                                <option value="">Seçiniz</option>
+                                {% for val, label in mevsim_choices %}
+                                <option value="{{ val }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Ambar</label>
+                            <select class="form-select" name="ambar">
+                                {% for val, label in ambar_choices %}
+                                <option value="{{ val }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Durum</label>
+                            <select class="form-select" name="durum">
+                                {% for val, label in durum_choices %}
+                                <option value="{{ val }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-bold">Açıklama</label>
+                            <textarea class="form-control" name="aciklama" rows="2" placeholder="İsteğe bağlı..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-plus-lg me-1"></i>Ekle
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- CSRF token (AJAX için) -->
+{% csrf_token %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+const durumLabels = {
+    'saklamada':   'Saklamada',
+    'kullanicida': 'Kullanıcıya Teslim Edildi',
+    'otl':         'ÖTL',
+};
+
+document.querySelectorAll('.filo-durum-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        const id    = this.dataset.id;
+        const durum = this.dataset.durum;
+        const label = durumLabels[durum] || durum;
+
+        if (!confirm(`Bu aracı "${label}" olarak işaretlemek istiyor musunuz?`)) return;
+
+        const formData = new FormData();
+        formData.append('durum', durum);
+
+        fetch(`/dashboard/filo/${id}/durum/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrfToken },
+            body: formData,
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.status === 'success') {
+                location.reload();
+            } else {
+                alert('Hata: ' + (data.message || 'Bilinmeyen hata'));
+            }
+        })
+        .catch(() => alert('Bağlantı hatası.'));
+    });
+});
+</script>
+{% endblock %}

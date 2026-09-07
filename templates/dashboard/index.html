@@ -87,7 +87,7 @@
 
 <!-- Stats Cards -->
 <div class="row g-4 mb-4">
-    <div class="col-xl-6 col-lg-6">
+    <div class="col-xl-6 col-lg-6 col-6">
         <div class="card stats-card">
             <div class="card-body">
                 <div class="d-flex align-items-center">
@@ -108,7 +108,7 @@
         </div>
     </div>
 
-    <div class="col-xl-6 col-lg-6">
+    <div class="col-xl-6 col-lg-6 col-6">
         <div class="card stats-card">
             <div class="card-body">
                 <div class="d-flex align-items-center">
@@ -344,6 +344,40 @@
     /* Dashboard Mobile Responsive Styles */
     @media (max-width: 768px) {
 
+        /* Quick Action kartlar mobilde 2 sütun - daha küçük */
+        .quick-action-card .card-body {
+            padding: 0.875rem !important;
+        }
+        .quick-action-icon {
+            width: 36px !important;
+            height: 36px !important;
+            font-size: 1.1rem !important;
+        }
+        .quick-action-card .card-title {
+            font-size: 0.82rem !important;
+        }
+        .quick-action-card small {
+            font-size: 0.72rem !important;
+        }
+
+        /* Grafik yüksekliklerini küçült */
+        #chartdiv {
+            height: 280px !important;
+            min-height: 280px !important;
+        }
+        #brandDistributionChart {
+            height: 260px !important;
+            min-height: 260px !important;
+        }
+        #topCustomersChart {
+            min-height: 220px !important;
+            max-height: 220px !important;
+        }
+        #variableRadiusPieChart {
+            height: 260px !important;
+            min-height: 260px !important;
+        }
+
         /* Page Header Mobile */
         .d-flex.justify-content-between.align-items-center.mb-4 {
             flex-direction: column;
@@ -375,25 +409,25 @@
         }
 
         .stats-card .card-body {
-            padding: 1.25rem;
+            padding: 0.875rem;
         }
 
         .stats-icon {
-            width: 45px;
-            height: 45px;
-            font-size: 1.2rem;
+            width: 36px;
+            height: 36px;
+            font-size: 1rem;
         }
 
         .stats-card h3 {
-            font-size: 1.6rem;
+            font-size: 1.1rem;
         }
 
         .stats-card h6 {
-            font-size: 0.9rem;
+            font-size: 0.72rem;
         }
 
         .stats-card small {
-            font-size: 0.8rem;
+            font-size: 0.7rem;
         }
 
         /* Chart Cards Mobile */

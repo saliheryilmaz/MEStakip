@@ -136,7 +136,7 @@
         .admin-main {
             margin-left: 250px;
             min-height: 100vh;
-            background: #f8fafc;
+            background: #e8eaf2;
             transition: margin-left 0.3s ease;
         }
 
@@ -498,7 +498,7 @@
 
         <!-- Header -->
         <header class="admin-header">
-            <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom" style="overflow: visible !important;">
+            <nav class="navbar navbar-expand-lg navbar-light border-bottom" style="overflow: visible !important;">
                 <div class="container-fluid">
                     <!-- Mobile Sidebar Toggle (sadece mobilde görünür - Artık Bottom Nav'da olduğu için mobilde gizliyoruz) -->
                     <button class="btn btn-outline-primary d-none d-lg-none me-2" type="button" onclick="toggleMobileSidebar()"
@@ -685,6 +685,12 @@
                             <a class="nav-link {% if request.resolver_match.url_name == 'lastik_karsilastirma' %}active{% endif %}" href="{% url 'dashboard:lastik_karsilastirma' %}">
                                 <i class="bi bi-speedometer2"></i>
                                 <span>Lastik Karşılaştırma</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'filo_yonetimi' or request.resolver_match.url_name == 'filo_duzenle' %}active{% endif %}" href="{% url 'dashboard:filo_yonetimi' %}">
+                                <i class="bi bi-truck"></i>
+                                <span>Filo Yönetimi</span>
                             </a>
                         </li>
                         <li class="nav-item">
@@ -1114,6 +1120,7 @@
             // Set initial theme from localStorage
             const savedTheme = localStorage.getItem('theme') || 'light';
             htmlElement.setAttribute('data-bs-theme', savedTheme);
+            if (savedTheme === 'light') document.body.classList.add('theme-light');
 
             // Update button icon based on current theme
             updateThemeIcon(savedTheme);
@@ -1128,6 +1135,13 @@
                     // Apply new theme
                     htmlElement.setAttribute('data-bs-theme', newTheme);
                     localStorage.setItem('theme', newTheme);
+
+                    // Body class ile override uygula
+                    if (newTheme === 'light') {
+                        document.body.classList.add('theme-light');
+                    } else {
+                        document.body.classList.remove('theme-light');
+                    }
 
                     // Update button icon
                     updateThemeIcon(newTheme);
@@ -1226,6 +1240,166 @@
         [data-bs-theme="dark"] {
             --bs-body-bg: #0f172a;
             --bs-body-color: #ffffff;
+        }
+
+        /* Light mode - gri-mavi ton */
+        [data-bs-theme="light"] {
+            --bs-body-bg: #dde0ea;
+            --bs-body-color: #1a1a2e;
+            --bs-card-bg: #e8eaf2;
+            --bs-border-color: #c8cad8;
+        }
+
+        [data-bs-theme="light"] body,
+        [data-bs-theme="light"] .admin-main,
+        body.theme-light,
+        body.theme-light .admin-main {
+            background: #dde0ea !important;
+            color: #1a1a2e !important;
+        }
+
+        /* Light mode sidebar */
+        body.theme-light .admin-sidebar,
+        [data-bs-theme="light"] .admin-sidebar {
+            background: #d8dae8 !important;
+        }
+
+        /* Light modda text-white yazıları koyu yap */
+        body.theme-light .text-white,
+        [data-bs-theme="light"] .text-white {
+            color: #1a1a2e !important;
+        }
+
+        body.theme-light .stretched-link,
+        [data-bs-theme="light"] .stretched-link {
+            color: #1a1a2e !important;
+        }
+
+        /* Kart içindeki tüm yazılar */
+        body.theme-light .card,
+        body.theme-light .card *,
+        [data-bs-theme="light"] .card,
+        [data-bs-theme="light"] .card * {
+            color: #1a1a2e;
+        }
+
+        /* Badge ve buton yazıları hariç tut */
+        body.theme-light .card .badge,
+        body.theme-light .card .btn,
+        [data-bs-theme="light"] .card .badge,
+        [data-bs-theme="light"] .card .btn {
+            color: unset;
+        }
+        body.theme-light .admin-sidebar .nav-link,
+        body.theme-light .admin-sidebar .nav-link span,
+        body.theme-light .admin-sidebar .nav-link i,
+        body.theme-light .admin-sidebar .text-muted,
+        body.theme-light .admin-sidebar small,
+        [data-bs-theme="light"] .admin-sidebar .nav-link,
+        [data-bs-theme="light"] .admin-sidebar .nav-link span,
+        [data-bs-theme="light"] .admin-sidebar .nav-link i,
+        [data-bs-theme="light"] .admin-sidebar .text-muted,
+        [data-bs-theme="light"] .admin-sidebar small {
+            color: #1a1a2e !important;
+            font-weight: 600;
+        }
+
+        body.theme-light .admin-sidebar .navbar-brand h1,
+        [data-bs-theme="light"] .admin-sidebar .navbar-brand h1 {
+            color: #1a1a2e !important;
+        }
+
+        /* Light mode navbar */
+        body.theme-light .admin-header,
+        [data-bs-theme="light"] .admin-header {
+            background: #c8cad8 !important;
+        }
+
+        body.theme-light .admin-header .navbar,
+        [data-bs-theme="light"] .admin-header .navbar {
+            background: #c8cad8 !important;
+            border-bottom-color: #b0b3c5 !important;
+        }
+
+        /* Navbar ikonları ve yazıları light modda koyu olsun */
+        body.theme-light .admin-header .navbar .text-white,
+        body.theme-light .admin-header .nav-link,
+        body.theme-light .admin-header .btn-outline-light {
+            color: #1a1a2e !important;
+            border-color: #1a1a2e !important;
+        }
+
+        body.theme-light .card,
+        [data-bs-theme="light"] .card {
+            background-color: #e8eaf2 !important;
+            border-color: #c8cad8 !important;
+        }
+
+        body.theme-light .card-header,
+        [data-bs-theme="light"] .card-header {
+            background-color: #dfe1ec !important;
+            border-bottom-color: #c8cad8 !important;
+        }
+
+        body.theme-light .navbar,
+        body.theme-light .bg-white,
+        [data-bs-theme="light"] .navbar,
+        [data-bs-theme="light"] .bg-white {
+            background-color: #e8eaf2 !important;
+            border-bottom-color: #c8cad8 !important;
+        }
+
+        body.theme-light .table-light,
+        body.theme-light thead.table-light th,
+        [data-bs-theme="light"] .table-light,
+        [data-bs-theme="light"] thead.table-light th {
+            background-color: #dfe1ec !important;
+            border-color: #c8cad8 !important;
+        }
+
+        body.theme-light .modal-content,
+        [data-bs-theme="light"] .modal-content {
+            background-color: #e8eaf2 !important;
+            border-color: #c8cad8 !important;
+        }
+
+        body.theme-light .modal-header,
+        body.theme-light .modal-footer,
+        [data-bs-theme="light"] .modal-header,
+        [data-bs-theme="light"] .modal-footer {
+            background-color: #dfe1ec !important;
+            border-color: #c8cad8 !important;
+        }
+
+        body.theme-light .form-control,
+        body.theme-light .form-select,
+        [data-bs-theme="light"] .form-control,
+        [data-bs-theme="light"] .form-select {
+            background-color: #f0f1f8 !important;
+            border-color: #c8cad8 !important;
+        }
+
+        body.theme-light .dropdown-menu,
+        [data-bs-theme="light"] .dropdown-menu {
+            background-color: #e8eaf2 !important;
+            border-color: #c8cad8 !important;
+        }
+
+        body.theme-light .dropdown-item:hover,
+        [data-bs-theme="light"] .dropdown-item:hover {
+            background-color: #dde0ea !important;
+        }
+
+        body.theme-light .list-group-item,
+        [data-bs-theme="light"] .list-group-item {
+            background-color: #e8eaf2 !important;
+            border-color: #c8cad8 !important;
+        }
+
+        body.theme-light .input-group-text,
+        [data-bs-theme="light"] .input-group-text {
+            background-color: #dfe1ec !important;
+            border-color: #c8cad8 !important;
         }
 
         [data-bs-theme="dark"] .admin-main {
@@ -2426,9 +2600,9 @@
             </a>
         </div>
         
-        <a href="{% url 'dashboard:elements' %}" class="bottom-nav-item {% if request.resolver_match.url_name == 'elements' %}active{% endif %}">
-            <i class="bi bi-box-seam"></i>
-            <span>Siparişler</span>
+        <a href="{% url 'dashboard:cikma_lastikler' %}" class="bottom-nav-item {% if request.resolver_match.url_name == 'cikma_lastikler' %}active{% endif %}">
+            <i class="bi bi-arrow-down-circle"></i>
+            <span>Çıkma Lastik</span>
         </a>
         {% endif %}
         

@@ -670,6 +670,13 @@ class FiloArac(models.Model):
         ('satis', 'Satış'),
     ]
 
+    RAF_CHOICES = [
+        ('', 'Seçiniz'),
+        ('RAF 1', 'RAF 1'),
+        ('RAF 2', 'RAF 2'),
+        ('RAF 3', 'RAF 3'),
+    ]
+
     user             = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Kullanıcı", related_name='filo_araclar')
     plaka            = models.CharField(max_length=20, verbose_name="Plaka")
     ambar            = models.CharField(max_length=20, choices=AMBAR_CHOICES, default='stok', verbose_name="Ambar")
@@ -678,6 +685,7 @@ class FiloArac(models.Model):
     ebat             = models.CharField(max_length=50, blank=True, null=True, verbose_name="Ebat")
     mevsim           = models.CharField(max_length=20, choices=MEVSIM_CHOICES, blank=True, null=True, verbose_name="Mevsim")
     aciklama         = models.TextField(blank=True, null=True, verbose_name="Açıklama")
+    raf              = models.CharField(max_length=50, blank=True, null=True, verbose_name="Raf")
     olusturma_tarihi = models.DateTimeField(auto_now_add=True, verbose_name="Oluşturma Tarihi")
     guncelleme_tarihi = models.DateTimeField(auto_now=True, verbose_name="Güncelleme Tarihi")
 

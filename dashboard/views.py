@@ -702,6 +702,7 @@ def filo_yonetimi(request):
         'durum_choices': FiloArac.DURUM_CHOICES,
         'mevsim_choices': FiloArac.MEVSIM_CHOICES,
         'ambar_choices': FiloArac.AMBAR_CHOICES,
+        'raf_choices': FiloArac.RAF_CHOICES,
     }
     return render(request, 'dashboard/filo_yonetimi.html', context)
 
@@ -720,6 +721,7 @@ def filo_ekle(request):
                 durum=request.POST.get('durum', 'saklamada'),
                 ebat=request.POST.get('ebat', '').strip() or None,
                 mevsim=request.POST.get('mevsim', '') or None,
+                raf=request.POST.get('raf', '').strip() or None,
                 aciklama=request.POST.get('aciklama', '').strip() or None,
             )
             messages.success(request, 'Araç kaydı başarıyla eklendi.')
@@ -741,6 +743,7 @@ def filo_duzenle(request, arac_id):
             arac.durum    = request.POST.get('durum', arac.durum)
             arac.ebat     = request.POST.get('ebat', '').strip() or None
             arac.mevsim   = request.POST.get('mevsim', '') or None
+            arac.raf      = request.POST.get('raf', '').strip() or None
             arac.aciklama = request.POST.get('aciklama', '').strip() or None
             arac.save()
             messages.success(request, 'Araç kaydı güncellendi.')
@@ -754,6 +757,7 @@ def filo_duzenle(request, arac_id):
         'durum_choices': FiloArac.DURUM_CHOICES,
         'mevsim_choices': FiloArac.MEVSIM_CHOICES,
         'ambar_choices': FiloArac.AMBAR_CHOICES,
+        'raf_choices': FiloArac.RAF_CHOICES,
     }
     return render(request, 'dashboard/filo_duzenle.html', context)
 
@@ -815,7 +819,7 @@ def filo_export_excel(request):
     header_fill  = PatternFill(start_color="1F4E79", end_color="1F4E79", fill_type="solid")
     header_align = Alignment(horizontal="center", vertical="center")
 
-    headers = ['PLAKA', 'AMBAR', 'ADET', 'DURUM', 'EBAT', 'MEVSİM', 'AÇIKLAMA', 'OLUŞTURMA TARİHİ']
+    headers = ['PLAKA', 'ADET', 'DURUM', 'EBAT', 'RAF', 'MEVSİM', 'AÇIKLAMA', 'OLUŞTURMA TARİHİ']
     for col, h in enumerate(headers, 1):
         cell = ws.cell(row=1, column=col, value=h)
         cell.font      = header_font
@@ -824,15 +828,15 @@ def filo_export_excel(request):
 
     for row, arac in enumerate(araclar, 2):
         ws.cell(row=row, column=1, value=arac.plaka)
-        ws.cell(row=row, column=2, value=arac.get_ambar_display())
-        ws.cell(row=row, column=3, value=arac.adet)
-        ws.cell(row=row, column=4, value=arac.get_durum_display())
-        ws.cell(row=row, column=5, value=arac.ebat or '')
+        ws.cell(row=row, column=2, value=arac.adet)
+        ws.cell(row=row, column=3, value=arac.get_durum_display())
+        ws.cell(row=row, column=4, value=arac.ebat or '')
+        ws.cell(row=row, column=5, value=arac.raf or '')
         ws.cell(row=row, column=6, value=arac.get_mevsim_display() if arac.mevsim else '')
         ws.cell(row=row, column=7, value=arac.aciklama or '')
         ws.cell(row=row, column=8, value=arac.olusturma_tarihi.strftime('%d.%m.%Y %H:%M'))
 
-    for col, width in enumerate([14, 10, 7, 22, 14, 12, 35, 18], 1):
+    for col, width in enumerate([14, 7, 22, 14, 10, 12, 35, 18], 1):
         ws.column_dimensions[ws.cell(row=1, column=col).column_letter].width = width
 
     now = timezone.now()
@@ -913,6 +917,7 @@ def filo_excel_yukle(request):
                 'ADET':     ['ADET'],
                 'DURUM':    ['DURUM'],
                 'EBAT':     ['EBAT'],
+                'RAF':      ['RAF'],
                 'MARKA':    ['MARKA', 'MARKA ADI', 'MARKA_ADI'],
                 'DESEN':    ['DESEN', 'MODEL', 'ÜRÜN', 'URUN'],
                 'MEVSIM':   ['MEVSİM', 'MEVSIM', 'SEZON'],
@@ -990,10 +995,17 @@ def filo_excel_yukle(request):
                     aciklama_col = get_col('ACIKLAMA')
                     aciklama = str(row[aciklama_col] or '').strip() or None if aciklama_col is not None else None
 
+                    raf_col = get_col('RAF')
+                    raf_raw = str(row[raf_col] or '').strip() if raf_col is not None else ''
+                    # RAF 1, RAF 2, RAF 3 geçerli değerlerle eşleştir
+                    raf_valid = {v for v, _ in FiloArac.RAF_CHOICES if v}
+                    raf = raf_raw if raf_raw in raf_valid else None
+
                     FiloArac.objects.create(
                         user=request.user,
                         plaka=plaka, ambar=ambar, adet=adet,
-                        durum=durum, ebat=ebat, mevsim=mevsim, aciklama=aciklama,
+                        durum=durum, ebat=ebat, mevsim=mevsim,
+                        raf=raf, aciklama=aciklama,
                     )
                     eklenen += 1
 

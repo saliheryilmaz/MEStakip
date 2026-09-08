@@ -70,6 +70,14 @@
                     </select>
                 </div>
                 <div class="col-12">
+                    <label class="form-label fw-bold">RAF</label>
+                    <select class="form-select" name="raf">
+                        {% for val, label in raf_choices %}
+                        <option value="{{ val }}" {% if arac.raf == val %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12">
                     <label class="form-label fw-bold">Açıklama</label>
                     <textarea class="form-control" name="aciklama" rows="3">{{ arac.aciklama|default:'' }}</textarea>
                 </div>

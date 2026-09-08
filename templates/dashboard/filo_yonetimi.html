@@ -103,6 +103,7 @@
                         <th>ADET</th>
                         <th>DURUM</th>
                         <th>EBAT</th>
+                        <th>RAF</th>
                         <th>MEVSİM</th>
                         <th>AÇIKLAMA</th>
                         <th>İŞLEMLER</th>
@@ -117,6 +118,13 @@
                         <td>
                             {% if arac.ebat %}
                                 <code style="font-size:1em;font-weight:600;">{{ arac.ebat }}</code>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if arac.raf %}
+                                <span class="badge bg-secondary">{{ arac.raf }}</span>
                             {% else %}
                                 <span class="text-muted">-</span>
                             {% endif %}
@@ -195,6 +203,12 @@
                             <span class="text-muted">Adet:</span>
                             <strong>{{ arac.adet }}</strong>
                         </div>
+                        {% if arac.raf %}
+                        <div class="col-6 mt-1">
+                            <span class="text-muted">Raf:</span>
+                            <span class="badge bg-secondary">{{ arac.raf }}</span>
+                        </div>
+                        {% endif %}
                         <div class="col-6 mt-1">
                             <span class="text-muted">Mevsim:</span>
                             <strong>{{ arac.get_mevsim_display|default:"-" }}</strong>
@@ -311,6 +325,14 @@
                             <label class="form-label fw-bold">Durum</label>
                             <select class="form-select" name="durum">
                                 {% for val, label in durum_choices %}
+                                <option value="{{ val }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-bold">RAF</label>
+                            <select class="form-select" name="raf">
+                                {% for val, label in raf_choices %}
                                 <option value="{{ val }}">{{ label }}</option>
                                 {% endfor %}
                             </select>

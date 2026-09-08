@@ -89,6 +89,7 @@
                         <th>ADET</th>
                         <th>DURUM</th>
                         <th>EBAT</th>
+                        <th>RAF</th>
                         <th>MEVSİM</th>
                         <th>AÇIKLAMA</th>
                         <th>GÜNCELLEME</th>
@@ -104,6 +105,13 @@
                         <td>
                             {% if arac.ebat %}
                                 <code style="font-size:1em;font-weight:600;">{{ arac.ebat }}</code>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if arac.raf %}
+                                <span class="badge bg-secondary">{{ arac.raf }}</span>
                             {% else %}
                                 <span class="text-muted">-</span>
                             {% endif %}

@@ -51,12 +51,14 @@
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <label class="form-label">AMBAR</label>
-                    <select class="form-select" name="ambar">
+                    <label class="form-label">RAF</label>
+                    <select class="form-select" name="raf">
                         <option value="">Tümü</option>
-                        {% for val, label in ambar_choices %}
-                        <option value="{{ val }}" {% if filters.ambar == val %}selected{% endif %}>{{ label }}</option>
-                        {% endfor %}
+                        {% for val, label in raf_choices %}
+                        {% if val %}
+                        <option value="{{ val }}" {% if filters.raf == val %}selected{% endif %}>{{ label }}</option>
+                        {% endif %}
+                    {% endfor %}
                     </select>
                 </div>
                 <div class="col-md-2 d-flex align-items-end gap-2">
@@ -81,7 +83,7 @@
         <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#ekleModal">
             <i class="bi bi-plus-lg me-1"></i>Araç Ekle
         </button>
-        <a href="{% url 'dashboard:filo_export_excel' %}?plaka={{ filters.plaka }}&durum={{ filters.durum }}&mevsim={{ filters.mevsim }}&ambar={{ filters.ambar }}&ebat={{ filters.ebat }}"
+        <a href="{% url 'dashboard:filo_export_excel' %}?plaka={{ filters.plaka }}&durum={{ filters.durum }}&mevsim={{ filters.mevsim }}&raf={{ filters.raf }}&ebat={{ filters.ebat }}"
            class="btn btn-warning btn-sm">
             <i class="bi bi-file-earmark-excel me-1"></i>Excel'e Aktar
         </a>
@@ -145,8 +147,8 @@
                             <div class="btn-group btn-group-sm" role="group">
                                 <!-- Değiştir-Saklamada -->
                                 <button type="button" class="btn btn-secondary btn-sm filo-durum-btn"
-                                        title="Saklamaya Al"
-                                        data-id="{{ arac.id }}" data-durum="saklamada">
+                                        title="Değişim Yapıldı"
+                                        data-id="{{ arac.id }}" data-durum="kullanicida">
                                     <i class="bi bi-archive"></i>
                                 </button>
                                 <!-- Kullanıcıya Teslim Edildi -->
@@ -221,8 +223,8 @@
                     </div>
                 </div>
                 <div class="card-footer py-2 d-flex gap-2 flex-wrap">
-                    <button class="btn btn-secondary btn-sm filo-durum-btn" data-id="{{ arac.id }}" data-durum="saklamada">
-                        <i class="bi bi-archive me-1"></i>Saklamada
+                    <button class="btn btn-secondary btn-sm filo-durum-btn" data-id="{{ arac.id }}" data-durum="kullanicida">
+                        <i class="bi bi-archive me-1"></i>Değişim Yapıldı
                     </button>
                     <button class="btn btn-success btn-sm filo-durum-btn" data-id="{{ arac.id }}" data-durum="kullanicida">
                         <i class="bi bi-person-check me-1"></i>Teslim Edildi
@@ -255,19 +257,19 @@
             <ul class="pagination pagination-sm justify-content-center mb-0">
                 {% if araclar.has_previous %}
                 <li class="page-item">
-                    <a class="page-link" href="?page={{ araclar.previous_page_number }}&plaka={{ filters.plaka }}&durum={{ filters.durum }}&mevsim={{ filters.mevsim }}&ambar={{ filters.ambar }}&ebat={{ filters.ebat }}">
+                    <a class="page-link" href="?page={{ araclar.previous_page_number }}&plaka={{ filters.plaka }}&durum={{ filters.durum }}&mevsim={{ filters.mevsim }}&raf={{ filters.raf }}&ebat={{ filters.ebat }}">
                         <i class="bi bi-chevron-left"></i>
                     </a>
                 </li>
                 {% endif %}
                 {% for num in araclar.paginator.page_range %}
                 <li class="page-item {% if araclar.number == num %}active{% endif %}">
-                    <a class="page-link" href="?page={{ num }}&plaka={{ filters.plaka }}&durum={{ filters.durum }}&mevsim={{ filters.mevsim }}&ambar={{ filters.ambar }}&ebat={{ filters.ebat }}">{{ num }}</a>
+                    <a class="page-link" href="?page={{ num }}&plaka={{ filters.plaka }}&durum={{ filters.durum }}&mevsim={{ filters.mevsim }}&raf={{ filters.raf }}&ebat={{ filters.ebat }}">{{ num }}</a>
                 </li>
                 {% endfor %}
                 {% if araclar.has_next %}
                 <li class="page-item">
-                    <a class="page-link" href="?page={{ araclar.next_page_number }}&plaka={{ filters.plaka }}&durum={{ filters.durum }}&mevsim={{ filters.mevsim }}&ambar={{ filters.ambar }}&ebat={{ filters.ebat }}">
+                    <a class="page-link" href="?page={{ araclar.next_page_number }}&plaka={{ filters.plaka }}&durum={{ filters.durum }}&mevsim={{ filters.mevsim }}&raf={{ filters.raf }}&ebat={{ filters.ebat }}">
                         <i class="bi bi-chevron-right"></i>
                     </a>
                 </li>
@@ -314,14 +316,6 @@
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-bold">Ambar</label>
-                            <select class="form-select" name="ambar">
-                                {% for val, label in ambar_choices %}
-                                <option value="{{ val }}">{{ label }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-md-6">
                             <label class="form-label fw-bold">Durum</label>
                             <select class="form-select" name="durum">
                                 {% for val, label in durum_choices %}
@@ -363,7 +357,7 @@
 const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
 
 const durumLabels = {
-    'saklamada':   'Saklamada',
+    'saklamada':   'Değişim Yapıldı',
     'kullanicida': 'Kullanıcıya Teslim Edildi',
     'otl':         'ÖTL',
 };
@@ -387,7 +381,11 @@ document.querySelectorAll('.filo-durum-btn').forEach(function(btn) {
         .then(r => r.json())
         .then(data => {
             if (data.status === 'success') {
-                location.reload();
+                if (durum === 'kullanicida' || durum === 'otl') {
+                    window.location.href = '/dashboard/filo/islem-gorenler/';
+                } else {
+                    location.reload();
+                }
             } else {
                 alert('Hata: ' + (data.message || 'Bilinmeyen hata'));
             }

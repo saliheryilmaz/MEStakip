@@ -670,7 +670,7 @@ def filo_yonetimi(request):
     plaka   = request.GET.get('plaka', '')
     durum   = request.GET.get('durum', '')
     mevsim  = request.GET.get('mevsim', '')
-    ambar   = request.GET.get('ambar', '')
+    raf     = request.GET.get('raf', '')
     ebat    = request.GET.get('ebat', '')
 
     # Sadece saklamada olanları göster (ÖTL ve kullanıcıda olanlar ayrı sayfada)
@@ -682,8 +682,8 @@ def filo_yonetimi(request):
         araclar = araclar.filter(durum=durum)
     if mevsim:
         araclar = araclar.filter(mevsim=mevsim)
-    if ambar:
-        araclar = araclar.filter(ambar=ambar)
+    if raf:
+        araclar = araclar.filter(raf=raf)
     if ebat:
         formatted = format_tire_size(ebat)
         araclar = araclar.filter(Q(ebat__icontains=ebat) | Q(ebat__icontains=formatted))
@@ -697,7 +697,7 @@ def filo_yonetimi(request):
         'araclar': page_obj,
         'filters': {
             'plaka': plaka, 'durum': durum,
-            'mevsim': mevsim, 'ambar': ambar, 'ebat': ebat,
+            'mevsim': mevsim, 'raf': raf, 'ebat': ebat,
         },
         'durum_choices': FiloArac.DURUM_CHOICES,
         'mevsim_choices': FiloArac.MEVSIM_CHOICES,
@@ -793,7 +793,7 @@ def filo_export_excel(request):
     plaka  = request.GET.get('plaka', '')
     durum  = request.GET.get('durum', '')
     mevsim = request.GET.get('mevsim', '')
-    ambar  = request.GET.get('ambar', '')
+    raf    = request.GET.get('raf', '')
     ebat   = request.GET.get('ebat', '')
 
     araclar = FiloArac.objects.filter(user=request.user)
@@ -803,8 +803,8 @@ def filo_export_excel(request):
         araclar = araclar.filter(durum=durum)
     if mevsim:
         araclar = araclar.filter(mevsim=mevsim)
-    if ambar:
-        araclar = araclar.filter(ambar=ambar)
+    if raf:
+        araclar = araclar.filter(raf=raf)
     if ebat:
         formatted = format_tire_size(ebat)
         araclar = araclar.filter(Q(ebat__icontains=ebat) | Q(ebat__icontains=formatted))

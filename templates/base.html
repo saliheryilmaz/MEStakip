@@ -1290,6 +1290,65 @@
         [data-bs-theme="light"] .card .btn {
             color: unset;
         }
+
+        /* ── Light mode tablo stilleri ── */
+        body.theme-light .table,
+        [data-bs-theme="light"] .table {
+            --bs-table-bg: #eceef5;
+            --bs-table-striped-bg: #e4e6f0;
+            --bs-table-hover-bg: #d8dae8;
+            --bs-table-border-color: #c8cad8;
+            color: #1a1a2e;
+        }
+
+        body.theme-light .table thead th,
+        [data-bs-theme="light"] .table thead th {
+            background-color: #c8cad8 !important;
+            color: #1a1a2e !important;
+            border-color: #b0b3c5 !important;
+            font-weight: 700;
+        }
+
+        body.theme-light .table-dark thead th,
+        body.theme-light thead.table-dark th,
+        [data-bs-theme="light"] .table-dark thead th,
+        [data-bs-theme="light"] thead.table-dark th {
+            background-color: #b0b3c5 !important;
+            color: #1a1a2e !important;
+            border-color: #9da0b5 !important;
+        }
+
+        body.theme-light .table-light thead th,
+        body.theme-light thead.table-light th,
+        [data-bs-theme="light"] .table-light thead th,
+        [data-bs-theme="light"] thead.table-light th {
+            background-color: #d0d2e0 !important;
+            color: #1a1a2e !important;
+        }
+
+        body.theme-light .table td,
+        body.theme-light .table th,
+        [data-bs-theme="light"] .table td,
+        [data-bs-theme="light"] .table th {
+            border-color: #c8cad8 !important;
+            color: #1a1a2e;
+        }
+
+        body.theme-light .table-hover tbody tr:hover td,
+        [data-bs-theme="light"] .table-hover tbody tr:hover td {
+            background-color: #d0d2e0 !important;
+        }
+
+        body.theme-light .table-striped tbody tr:nth-of-type(odd) td,
+        [data-bs-theme="light"] .table-striped tbody tr:nth-of-type(odd) td {
+            background-color: #e4e6f0 !important;
+        }
+
+        /* Tablo içi badge renkleri korusun */
+        body.theme-light .table .badge,
+        [data-bs-theme="light"] .table .badge {
+            color: #fff !important;
+        }
         body.theme-light .admin-sidebar .nav-link,
         body.theme-light .admin-sidebar .nav-link span,
         body.theme-light .admin-sidebar .nav-link i,

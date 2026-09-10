@@ -133,9 +133,21 @@
                             <div class="btn-group btn-group-sm" role="group">
                                 <!-- Saklamaya geri al -->
                                 <button type="button" class="btn btn-secondary btn-sm filo-durum-btn"
-                                        title="Saklamaya Al"
+                                        title="Değişim Yapıldı"
                                         data-id="{{ arac.id }}" data-durum="saklamada">
                                     <i class="bi bi-archive"></i>
+                                </button>
+                                <!-- Teslim Belgesi -->
+                                <button type="button" class="btn btn-info btn-sm" title="Teslim Belgesi"
+                                        onclick="teslimBelgesiYazdir(
+                                            '{{ arac.plaka|escapejs }}',
+                                            {{ arac.adet }},
+                                            '{{ arac.ebat|default:''|escapejs }}',
+                                            '{{ arac.get_mevsim_display|default:''|escapejs }}',
+                                            '{{ arac.aciklama|default:''|escapejs }}',
+                                            '{{ arac.guncelleme_tarihi|date:'d.m.Y' }}'
+                                        )">
+                                    <i class="bi bi-file-earmark-text"></i>
                                 </button>
                                 <!-- Düzenle -->
                                 <a href="{% url 'dashboard:filo_duzenle' arac.id %}" class="btn btn-primary btn-sm" title="Düzenle">
@@ -178,7 +190,7 @@
                 </div>
                 <div class="card-footer py-2 d-flex gap-2 flex-wrap">
                     <button class="btn btn-secondary btn-sm filo-durum-btn" data-id="{{ arac.id }}" data-durum="saklamada">
-                        <i class="bi bi-archive me-1"></i>Saklamaya Al
+                        <i class="bi bi-archive me-1"></i>Değişim Yapıldı
                     </button>
                     <a href="{% url 'dashboard:filo_duzenle' arac.id %}" class="btn btn-primary btn-sm">
                         <i class="bi bi-pencil me-1"></i>Düzenle
@@ -234,11 +246,58 @@
 <script>
 const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
 
+function teslimBelgesiYazdir(plaka, adet, ebat, mevsim, aciklama, tarih) {
+    var icerik = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Kullanıcı Teslim Belgesi</title><style>' +
+        '*{box-sizing:border-box;margin:0;padding:0;}' +
+        'body{font-family:Arial,sans-serif;padding:30px;color:#000;background:#fff;}' +
+        '@page{size:A4 portrait;margin:15mm;}' +
+        '.belge{max-width:700px;margin:0 auto;}' +
+        '.baslik{text-align:center;border-bottom:2px solid #000;padding-bottom:12px;margin-bottom:24px;}' +
+        '.baslik h1{font-size:22px;font-weight:bold;letter-spacing:1px;}' +
+        '.baslik p{font-size:13px;color:#555;margin-top:4px;}' +
+        '.bilgi-tablo{width:100%;border-collapse:collapse;margin-bottom:28px;}' +
+        '.bilgi-tablo tr td{padding:10px 14px;font-size:14px;border:1px solid #ccc;}' +
+        '.bilgi-tablo tr td:first-child{font-weight:bold;background:#f5f5f5;width:35%;}' +
+        '.imza-alani{display:flex;justify-content:space-between;margin-top:48px;}' +
+        '.imza-kutu{text-align:center;width:40%;}' +
+        '.imza-kutu .cizgi{border-top:1px solid #000;margin-bottom:8px;margin-top:40px;}' +
+        '.imza-kutu p{font-size:13px;}' +
+        '.alt-not{margin-top:32px;font-size:11px;color:#888;text-align:center;border-top:1px solid #eee;padding-top:10px;}' +
+        '@media print{body{padding:0;}}' +
+        '</style></head><body>' +
+        '<div class="belge">' +
+        '<div class="baslik">' +
+        '<h1>LASTIK TESLİM TUTANAĞI</h1>' +
+        '<p>MesTakip Filo Yönetim Sistemi</p>' +
+        '</div>' +
+        '<table class="bilgi-tablo">' +
+        '<tr><td>Araç Plakası</td><td><strong>' + plaka + '</strong></td></tr>' +
+        '<tr><td>Lastik Adedi</td><td>' + adet + ' Adet</td></tr>' +
+        (ebat ? '<tr><td>Ebat / Marka</td><td>' + ebat + '</td></tr>' : '') +
+        (mevsim ? '<tr><td>Mevsim</td><td>' + mevsim + '</td></tr>' : '') +
+        (aciklama ? '<tr><td>Açıklama</td><td>' + aciklama + '</td></tr>' : '') +
+        '<tr><td>Teslim Tarihi</td><td>' + tarih + '</td></tr>' +
+        '</table>' +
+        '<div class="imza-alani">' +
+        '<div class="imza-kutu"><div class="cizgi"></div><p>Teslim Eden</p><p style="font-size:11px;color:#888;">Ad Soyad / İmza</p></div>' +
+        '<div class="imza-kutu"><div class="cizgi"></div><p>Teslim Alan</p><p style="font-size:11px;color:#888;">Ad Soyad / İmza</p></div>' +
+        '</div>' +
+        '<div class="alt-not">Bu belge MesTakip Filo Yönetim Sistemi tarafından oluşturulmuştur.</div>' +
+        '</div>' +
+        '</body></html>';
+
+    var pencere = window.open('', '_blank', 'width=800,height:1000');
+    pencere.document.write(icerik);
+    pencere.document.close();
+    pencere.focus();
+    setTimeout(function() { pencere.print(); }, 400);
+}
+
 document.querySelectorAll('.filo-durum-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {
         const id    = this.dataset.id;
         const durum = this.dataset.durum;
-        if (!confirm('Bu aracı "Saklamada" olarak geri almak istiyor musunuz?')) return;
+        if (!confirm('Bu aracı "Değişim Yapıldı" olarak geri almak istiyor musunuz?')) return;
 
         const formData = new FormData();
         formData.append('durum', durum);

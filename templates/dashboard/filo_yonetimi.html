@@ -167,6 +167,11 @@
                                 <a href="{% url 'dashboard:filo_duzenle' arac.id %}" class="btn btn-primary btn-sm" title="Düzenle">
                                     <i class="bi bi-pencil"></i>
                                 </a>
+                                <!-- Yazdır -->
+                                <button type="button" class="btn btn-secondary btn-sm" title="Yazdır"
+                                        onclick="filoYazdir('{{ arac.plaka|escapejs }}', {{ arac.adet }}, '{{ arac.ebat|default:''|escapejs }}', '{{ arac.get_mevsim_display|default:''|escapejs }}', '{{ arac.aciklama|default:''|escapejs }}')">
+                                    <i class="bi bi-printer"></i>
+                                </button>
                                 <!-- Sil -->
                                 <a href="{% url 'dashboard:filo_sil' arac.id %}" class="btn btn-danger btn-sm" title="Sil"
                                    onclick="return confirm('{{ arac.plaka }} kaydını silmek istediğinizden emin misiniz?')">
@@ -235,6 +240,10 @@
                     <a href="{% url 'dashboard:filo_duzenle' arac.id %}" class="btn btn-primary btn-sm">
                         <i class="bi bi-pencil me-1"></i>Düzenle
                     </a>
+                    <button type="button" class="btn btn-secondary btn-sm"
+                            onclick="filoYazdir('{{ arac.plaka|escapejs }}', {{ arac.adet }}, '{{ arac.ebat|default:''|escapejs }}', '{{ arac.get_mevsim_display|default:''|escapejs }}', '{{ arac.aciklama|default:''|escapejs }}')">
+                        <i class="bi bi-printer me-1"></i>Yazdır
+                    </button>
                     <a href="{% url 'dashboard:filo_sil' arac.id %}" class="btn btn-danger btn-sm"
                        onclick="return confirm('Silmek istediğinizden emin misiniz?')">
                         <i class="bi bi-trash me-1"></i>Sil
@@ -355,6 +364,37 @@
 {% block extra_js %}
 <script>
 const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+function filoYazdir(plaka, adet, ebat, mevsim, aciklama) {
+    var satirlar = '<div class="satir">' + plaka + '</div>' +
+        (ebat ? '<div class="ayrac"></div><div class="satir kucuk">' + ebat + '</div>' : '') +
+        (mevsim ? '<div class="ayrac"></div><div class="satir kucuk">' + mevsim + '</div>' : '') +
+        (aciklama ? '<div class="ayrac"></div><div class="satir kucuk">' + aciklama + '</div>' : '');
+
+    var icerik = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Filo Etiketi</title><style>' +
+        '*{box-sizing:border-box;margin:0;padding:0;}' +
+        'body{font-family:Arial,sans-serif;background:#fff;}' +
+        '@page{size:A4 portrait;margin:10mm;}' +
+        '.sayfa{width:100%;height:100vh;display:flex;flex-direction:column;justify-content:space-around;}' +
+        '.etiket{text-align:center;padding:20px 40px;flex:1;display:flex;flex-direction:column;justify-content:center;border:1px dashed #ccc;}' +
+        '.etiket:first-child{border-bottom:2px dashed #999;}' +
+        '.satir{font-size:38px;font-weight:bold;margin:12px 0;line-height:1.2;}' +
+        '.satir.kucuk{font-size:26px;}' +
+        '.ayrac{border-top:2px solid #ccc;margin:8px 0;}' +
+        '@media print{body{margin:0;}}' +
+        '</style></head><body>' +
+        '<div class="sayfa">' +
+        '<div class="etiket">' + satirlar + '</div>' +
+        '<div class="etiket">' + satirlar + '</div>' +
+        '</div>' +
+        '</body></html>';
+
+    var pencere = window.open('', '_blank', 'width=700,height=900');
+    pencere.document.write(icerik);
+    pencere.document.close();
+    pencere.focus();
+    setTimeout(function() { pencere.print(); }, 300);
+}
 
 const durumLabels = {
     'saklamada':   'Değişim Yapıldı',

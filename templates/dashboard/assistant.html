@@ -1,330 +1,171 @@
 {% extends 'base.html' %}
 {% load static %}
-
-{% block title %}Yönetici Asistanı - Mestakip{% endblock %}
-
+{% block title %}Yönetici Asistanı - MEStakip{% endblock %}
 {% block extra_css %}
 <style>
-  #chat-messages { height: 480px; overflow-y: auto; padding: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem; }
-
-  .msg-bubble { max-width: 88%; border-radius: 12px; padding: 0.75rem 1rem; line-height: 1.6; }
-  .msg-user   { background: #6366f1; color: #fff; }
-  .msg-bot    { background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12); color: var(--bs-body-color, #e2e8f0); }
-
-  /* Markdown render stilleri */
-  .msg-bubble table { border-collapse: collapse; margin: 0.5rem 0; width: 100%; font-size: 0.85rem; }
-  .msg-bubble th, .msg-bubble td { border: 1px solid rgba(255,255,255,0.2); padding: 4px 8px; }
-  .msg-bubble th { background: rgba(255,255,255,0.1); font-weight: 600; }
-  .msg-bubble code { background: rgba(0,0,0,0.3); border-radius: 4px; padding: 1px 5px; font-size: 0.85em; }
-  .msg-bubble pre  { background: rgba(0,0,0,0.3); border-radius: 6px; padding: 0.75rem; overflow-x: auto; }
-  .msg-bubble ul, .msg-bubble ol { padding-left: 1.25rem; margin: 0.4rem 0; }
-  .msg-bubble li { margin-bottom: 2px; }
-  .msg-bubble strong { font-weight: 700; }
-  .msg-bubble em     { font-style: italic; }
-  .msg-bubble hr     { border-color: rgba(255,255,255,0.15); margin: 0.5rem 0; }
-
-  .avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-
-  .quick-btn { text-align: left; font-size: 0.82rem; padding: 5px 10px; border-radius: 8px; }
-  .quick-section { font-size: 0.7rem; font-weight: 700; letter-spacing: .05em; color: var(--bs-secondary-color); padding: 4px 8px 2px; margin-top: 8px; }
-
-  #chat-input-row { gap: 0.5rem; }
-  #q { border-radius: 10px; resize: none; min-height: 44px; max-height: 120px; overflow-y: auto; }
-  #ask { border-radius: 10px; padding: 0 18px; }
-
-  .badge-groq { font-size: 0.7rem; }
-  .typing-dot { width: 8px; height: 8px; border-radius: 50%; background: #6366f1; display: inline-block; animation: blink 1.2s infinite both; }
-  .typing-dot:nth-child(2) { animation-delay: .2s; }
-  .typing-dot:nth-child(3) { animation-delay: .4s; }
-  @keyframes blink { 0%,80%,100% { opacity: 0.2; transform: scale(.8); } 40% { opacity: 1; transform: scale(1); } }
+@font-face {font-family:"bootstrap-icons";src:url("{% static 'vendor/assistant/bootstrap-icons-1.13.1.woff2' %}") format("woff2");font-display:swap}
+.assistant-header {display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+.assistant-layout {display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:24px}
+.assistant-chat {min-width:0;display:flex;flex-direction:column;height:min(740px,80vh);min-height:440px;border:1px solid var(--bs-border-color);border-radius:8px}
+#chat-messages {flex:1;min-height:0;overflow:auto;padding:20px;display:flex;flex-direction:column;gap:20px}
+.chat-message {min-width:0;max-width:100%}
+.chat-message.user {margin-left:auto;max-width:85%}
+.message-label {font-size:12px;color:var(--bs-secondary-color);margin-bottom:6px}
+.message-body {overflow-wrap:anywhere;line-height:1.65;min-width:0;overflow-x:auto}
+.user .message-body {background:var(--bs-tertiary-bg);border-radius:8px;padding:10px 14px;white-space:pre-wrap}
+.message-body > :last-child {margin-bottom:0}
+.message-body table {border-collapse:collapse;font-size:13px;width:100%}
+.message-body td,.message-body th {border:1px solid var(--bs-border-color);padding:7px}
+.message-body pre {max-width:100%;overflow:auto;padding:12px;background:var(--bs-tertiary-bg)}
+.message-body h1,.message-body h2,.message-body h3 {font-size:18px;margin:16px 0 8px}
+.message-sources {display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:12px;font-size:12px}
+.assistant-composer {border-top:1px solid var(--bs-border-color);padding:14px;display:flex;gap:10px;align-items:flex-end}
+#q {resize:vertical;min-height:46px;max-height:160px;border-radius:6px}
+.assistant-icon {width:42px;height:42px;flex-shrink:0;display:inline-grid;place-items:center}
+.assistant-topics h2 {font-size:13px;color:var(--bs-secondary-color);margin:20px 0 8px}
+.assistant-topics h2:first-child {margin-top:0}
+.assistant-fab {display:none !important}
+.quick-btn {display:block;width:100%;text-align:left;padding:9px 0;border:0;border-bottom:1px solid var(--bs-border-color);background:none;color:var(--bs-body-color);font-size:14px}
+.quick-btn:hover {color:var(--bs-primary)}
+.quick-btn:disabled {opacity:.5}
+#assistant-notice:empty {display:none}
+@media(max-width:991px) {.assistant-layout {grid-template-columns:minmax(0,1fr)} .assistant-chat {height:70vh}}
+@media(max-width:768px) {.assistant-chat {height:calc(100dvh - 360px);min-height:360px} .admin-wrapper .admin-main {margin-left:0 !important}}
+@media(max-width:480px) {#chat-messages {padding:12px} .assistant-composer {padding:10px}}
 </style>
 {% endblock %}
-
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <div>
-    <h1 class="h4 mb-0"><i class="bi bi-robot me-2 text-primary"></i>Yönetici Asistanı</h1>
-    <p class="text-muted small mb-0">Siparişler, finans, stok, çıkma lastikler ve daha fazlasını sorabilirsin.</p>
-  </div>
-  <div class="d-flex align-items-center gap-2">
-    <span id="groq-badge" class="badge bg-secondary badge-groq d-none">
-      <i class="bi bi-cpu me-1"></i>Kural tabanlı
-    </span>
-    <button id="btn-clear" class="btn btn-outline-secondary btn-sm" title="Sohbeti temizle">
-      <i class="bi bi-trash3"></i>
-    </button>
+<div class="assistant-header">
+  <h1 class="h4 mb-0"><i class="bi bi-robot me-2"></i>Yönetici Asistanı</h1>
+  <div class="d-flex align-items-center gap-3">
+    <span id="assistant-status" class="small {% if assistant_ready %}text-success{% else %}text-warning{% endif %}">{% if assistant_ready %}Bağlantı yapılandırıldı{% else %}API anahtarı eksik{% endif %}</span>
+    <button id="btn-clear" class="btn btn-outline-secondary assistant-icon" title="Sohbeti temizle" aria-label="Sohbeti temizle"><i class="bi bi-trash3"></i></button>
   </div>
 </div>
-
-<div class="row g-3">
-  <!-- Sol: Sohbet -->
-  <div class="col-lg-8">
-    <div class="card h-100">
-      <div class="card-body p-0 d-flex flex-column" style="height:580px;">
-        <!-- Mesajlar -->
-        <div id="chat-messages" class="flex-grow-1">
-          <div class="d-flex gap-2 align-items-start">
-            <div class="avatar bg-primary"><i class="bi bi-robot text-white" style="font-size:.85rem;"></i></div>
-            <div class="msg-bubble msg-bot">
-              <p class="mb-1">Merhaba! MEStakip asistanıyım. Gerçek verileriniz üzerinden analiz yapabilirim:</p>
-              <ul class="mb-0 small">
-                <li>📦 Sipariş durumları, ciro, marka analizi</li>
-                <li>💰 Gelir / gider / net finans özeti, dönem karşılaştırması</li>
-                <li>🔧 Çıkma lastik stok, satış, bekleyen kayıtlar</li>
-                <li>📋 Teklifler, garanti belgeleri, malzeme hareketleri</li>
-                <li>📊 Trend analizi ve proaktif uyarılar</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-        <!-- Input -->
-        <div class="p-3 border-top">
-          <div class="d-flex" id="chat-input-row">
-            <textarea id="q" class="form-control" placeholder="Soru yaz... (örn: Bu ay finans nasıl?)" rows="1"></textarea>
-            <button id="ask" class="btn btn-primary">
-              <i class="bi bi-send-fill"></i>
-            </button>
-          </div>
-          <div class="text-muted small mt-1" style="font-size:.7rem;">Enter ile gönder · Shift+Enter yeni satır</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Sağ: Hızlı sorular -->
-  <div class="col-lg-4">
-    <div class="card">
-      <div class="card-header py-2">
-        <h6 class="card-title mb-0"><i class="bi bi-lightning-charge me-1 text-warning"></i>Hızlı Sorular</h6>
-      </div>
-      <div class="card-body p-2" style="max-height:540px; overflow-y:auto;">
-
-        <div class="quick-section">📦 SİPARİŞLER</div>
-        <div class="d-flex flex-column gap-1 mb-1">
-          <button class="btn btn-outline-secondary btn-sm quick-btn" data-q="Bu ay kaç sipariş var ve toplam ciro ne kadar?">Bu ay sipariş özeti</button>
-          <button class="btn btn-outline-secondary btn-sm quick-btn" data-q="Şu an yolda ve işlemde kaç sipariş var, listeler misin?">Bekleyen siparişler</button>
-          <button class="btn btn-outline-secondary btn-sm quick-btn" data-q="Bu ay en çok sipariş verilen markalar hangileri?">Top markalar</button>
-          <button class="btn btn-outline-secondary btn-sm quick-btn" data-q="İptal edilen siparişler kaç tane ve sebepleri neler?">İptal siparişler</button>
-          <button class="btn btn-outline-secondary btn-sm quick-btn" data-q="Son 3 ayda sipariş ve ciro trendi nasıl değişti?">3 aylık trend</button>
-        </div>
-
-        <div class="quick-section">💰 FİNANS</div>
-        <div class="d-flex flex-column gap-1 mb-1">
-          <button class="btn btn-outline-secondary btn-sm quick-btn" data-q="Bu ay gelir, gider ve net durumu nedir?">Bu ay finans özeti</button>
-          <button class="btn btn-outline-secondary btn-sm quick-btn" data-q="Bu ay geçen aya göre finansal durum nasıl değişti? Yüzde değişimi de söyle.">Geçen ayla karşılaştır</button>
-          <button class="btn btn-outline-secondary btn-sm quick-btn" data-q="Bu ay para en çok nereye gitmiş? Gider kategorilerini göster.">En yüksek giderler</button>
-          <button class="btn btn-outline-secondary btn-sm quick-btn" data-q="Kasa dağılımı nasıl? Servis, merkez satış ve diğer kasalar bu ay.">Kasa dağılımı</button>
-        </div>
-
-        <div class="quick-section">🔧 ÇIKMA LASTİK</div>
-        <div class="d-flex flex-column gap-1 mb-1">
-          <button class="btn btn-outline-secondary btn-sm quick-btn" data-q="Depoda kaç tane çıkma lastik var? Marka ve ebat dağılımını göster.">Depo durumu</button>
-          <button class="btn btn-outline-secondary btn-sm quick-btn" data-q="Bu ay kaç çıkma lastik satıldı ve toplam ciro ne kadar?">Bu ay satışlar</button>
-          <button class="btn btn-outline-secondary btn-sm quick-btn" data-q="60 günden fazla depoda bekleyen çıkma lastikler hangileri?">Uzun bekleyenler</button>
-        </div>
-
-        <div class="quick-section">🏷️ MARKA ANALİZİ</div>
-        <div class="d-flex flex-column gap-1 mb-1">
-          <button class="btn btn-outline-secondary btn-sm quick-btn" data-q="Bu ay en çok ciro yapan 5 marka hangisi?">Top 5 marka (ciro)</button>
-          <button class="btn btn-outline-secondary btn-sm quick-btn" data-q="Bu ay Continental siparişleri nasıl? Kaç adet, ciro nedir?">Continental analizi</button>
-        </div>
-
-        <div class="quick-section">📋 DİĞER</div>
-        <div class="d-flex flex-column gap-1 mb-1">
-          <button class="btn btn-outline-secondary btn-sm quick-btn" data-q="Açık teklifler kaç tane ve toplam tutarı nedir?">Açık teklifler</button>
-          <button class="btn btn-outline-secondary btn-sm quick-btn" data-q="Bu ay malzeme hareketleri ve joker satış nasıl?">Malzeme & Joker</button>
-          <button class="btn btn-outline-secondary btn-sm quick-btn" data-q="İşletmenin genel durumunu özetle, önemli uyarılar varsa söyle.">Genel özet & uyarılar</button>
-        </div>
-
-      </div>
-    </div>
-  </div>
+<div id="assistant-notice" class="alert alert-warning py-2 small" role="status">{% if not assistant_ready %}Yapay zekâ bağlantısı için sunucuda GROQ_API_KEY tanımlanmalı.{% endif %}</div>
+<div class="assistant-layout">
+  <section class="assistant-chat" aria-label="Asistan sohbeti">
+    <div id="chat-messages" role="log" aria-live="polite" aria-relevant="additions"></div>
+    <form id="assistant-form" class="assistant-composer">
+      {% csrf_token %}
+      <label for="q" class="visually-hidden">Sorunuz</label>
+      <textarea id="q" class="form-control" placeholder="Bugün neyi inceleyelim?" rows="2" maxlength="4000" required></textarea>
+      <button id="ask" type="submit" class="btn btn-primary assistant-icon" title="Gönder" aria-label="Gönder"><i class="bi bi-send"></i></button>
+    </form>
+  </section>
+  <aside class="assistant-topics" aria-label="Örnek sorular">
+    <h2>PROJE VE İŞ AKIŞI</h2>
+    <button class="quick-btn" data-q="MEStakip projesini baştan sona açıkla. Hangi sayfa ne işe yarıyor, günlük işimi hangi sırayla yapmalıyım?">Projeyi ve sayfaları tanı</button>
+    <button class="quick-btn" data-q="Tekliften siparişe, stok kontrolüne ve faturaya kadar iş akışını adım adım anlat. Hangi adımlar bu projede mevcut?">Satış sürecini açıkla</button>
+    <h2>DİA VE STOK</h2>
+    <button class="quick-btn" data-q="DİA'da açtığım cari neden gelmemiş olabilir? Son senkronizasyon kayıtlarını kontrol et.">Eksik cari kaydını incele</button>
+    <button class="quick-btn" data-q="DİA sıfır lastik stoklarını marka ve miktarlarıyla göster. Veriler ne zaman güncellenmiş?">Sıfır lastik stokları</button>
+    <button class="quick-btn" data-q="Bu ay DİA satış faturalarının malzeme hareketlerini listele.">Satış ve malzeme hareketleri</button>
+    <h2>İŞLETME</h2>
+    <button class="quick-btn" data-q="Bu ay gelir ve gider durumunu, hesaplama kapsamını belirterek özetle.">Gelir ve gider durumu</button>
+    <button class="quick-btn" data-q="Bekleyen siparişleri ve bu ayki açık tekliflerimi incele.">Sipariş ve teklifler</button>
+    <button class="quick-btn" data-q="Depodaki çıkma lastikleri ve uzun süredir bekleyenleri göster.">Çıkma lastik durumu</button>
+  </aside>
 </div>
+{{ assistant_history|json_script:"assistant-history" }}
 {% endblock %}
-
 {% block extra_js %}
-<!-- Marked.js: Markdown → HTML -->
-<script src="https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js"></script>
+<script src="{% static 'vendor/assistant/marked-9.1.6.min.js' %}"></script>
+<script src="{% static 'vendor/assistant/purify-3.4.15.min.js' %}"></script>
 <script>
-// ─── Markdown renderer ────────────────────────────────────────────────────────
-marked.setOptions({
-  breaks: true,
-  gfm: true,
-  headerIds: false,
-  mangle: false,
-});
-
-function renderMarkdown(text) {
+(() => {
+const messages=document.getElementById('chat-messages'), input=document.getElementById('q');
+const status=document.getElementById('assistant-status'), notice=document.getElementById('assistant-notice');
+const csrf=document.querySelector('[name=csrfmiddlewaretoken]').value;
+let busy=false;
+function localUrl(value) {
   try {
-    return marked.parse(text || '');
-  } catch(e) {
-    return '<p>' + escapeHtml(text) + '</p>';
+    const url=new URL(value,location.origin);
+    return url.origin===location.origin && /^\/(dashboard|erp)\//.test(url.pathname) ? url.href : null;
+  } catch (_) {return null;}
+}
+function setBusy(value) {
+  busy=value;
+  document.querySelectorAll('#ask,#btn-clear,.quick-btn').forEach(el=>el.disabled=value);
+  messages.setAttribute('aria-busy',String(value));
+}
+function appendMessage(role,text,sources=[]) {
+  const row=document.createElement('article');
+  row.className='chat-message '+(role==='user'?'user':'assistant');
+  const label=document.createElement('div'); label.className='message-label';
+  label.textContent=role==='user'?'Siz':'MEStakip Asistanı';
+  const body=document.createElement('div'); body.className='message-body';
+  if(role!=='user' && window.marked && window.DOMPurify) {
+    body.innerHTML=DOMPurify.sanitize(marked.parse(text,{gfm:true,breaks:true}),{
+      ALLOWED_TAGS:['p','br','strong','em','ul','ol','li','table','thead','tbody','tr','th','td','pre','code','blockquote','h1','h2','h3','h4','a','hr'],
+      ALLOWED_ATTR:['href','title']
+    });
+    body.querySelectorAll('a').forEach(link=>{
+      const url=localUrl(link.getAttribute('href'));
+      if(url) link.href=url; else link.removeAttribute('href');
+    });
+  } else {body.textContent=text; body.style.whiteSpace='pre-wrap';}
+  row.append(label,body);
+  if(sources.length) {
+    const refs=document.createElement('div'); refs.className='message-sources';
+    const seen=new Set();
+    sources.forEach(source=>{
+      const url=localUrl(source.url), identity=source.tool+':'+source.ok;
+      if(!url || seen.has(identity)) return; seen.add(identity);
+      const link=document.createElement('a'); link.href=url;
+      link.textContent=source.title+(source.ok?'':' (sorgu başarısız)');
+      link.title='Kontrol: '+new Date(source.checked_at).toLocaleString('tr-TR'); refs.append(link);
+    });
+    row.append(refs);
   }
+  messages.append(row); messages.scrollTop=messages.scrollHeight; return row;
 }
-
-function escapeHtml(t) {
-  return (t || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+async function post(url,payload) {
+  const controller=new AbortController(), timer=setTimeout(()=>controller.abort(),125000);
+  try {
+    const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':csrf},body:JSON.stringify(payload),signal:controller.signal});
+    if(response.redirected) throw new Error('Oturumunuz kapanmış olabilir. Sayfayı yenileyin.');
+    if(!(response.headers.get('Content-Type')||'').includes('application/json')) throw new Error('Sunucudan yanıt alınamadı. Sayfayı yenileyip tekrar deneyin.');
+    const data=await response.json();
+    if(!response.ok) throw new Error(data.error||'İstek tamamlanamadı.');
+    return data;
+  } finally {clearTimeout(timer);}
 }
-
-// ─── Cookie ───────────────────────────────────────────────────────────────────
-function getCookie(name) {
-  const v = `; ${document.cookie}`;
-  const p = v.split(`; ${name}=`);
-  if (p.length === 2) return p.pop().split(';').shift();
-  return '';
-}
-
-// ─── Mesaj ekleme ─────────────────────────────────────────────────────────────
-function appendMessage(role, text) {
-  const container = document.getElementById('chat-messages');
-  const wrapper = document.createElement('div');
-  wrapper.className = 'd-flex gap-2 align-items-start' + (role === 'user' ? ' flex-row-reverse' : '');
-
-  const avatar = document.createElement('div');
-  avatar.className = 'avatar ' + (role === 'user' ? 'bg-success' : 'bg-primary');
-  avatar.innerHTML = role === 'user'
-    ? '<i class="bi bi-person text-white" style="font-size:.85rem;"></i>'
-    : '<i class="bi bi-robot text-white" style="font-size:.85rem;"></i>';
-
-  const bubble = document.createElement('div');
-  bubble.className = 'msg-bubble ' + (role === 'user' ? 'msg-user' : 'msg-bot');
-
-  if (role === 'user') {
-    bubble.innerHTML = '<p class="mb-0" style="white-space:pre-wrap;">' + escapeHtml(text) + '</p>';
-  } else {
-    bubble.innerHTML = renderMarkdown(text);
-  }
-
-  wrapper.appendChild(avatar);
-  wrapper.appendChild(bubble);
-  container.appendChild(wrapper);
-  container.scrollTop = container.scrollHeight;
-}
-
-function appendTyping() {
-  const container = document.getElementById('chat-messages');
-  const wrapper = document.createElement('div');
-  wrapper.className = 'd-flex gap-2 align-items-start';
-  wrapper.id = 'typing-indicator';
-  wrapper.innerHTML = `
-    <div class="avatar bg-primary"><i class="bi bi-robot text-white" style="font-size:.85rem;"></i></div>
-    <div class="msg-bubble msg-bot py-2 px-3 d-flex align-items-center gap-1" style="min-height:40px;">
-      <span class="typing-dot"></span>
-      <span class="typing-dot"></span>
-      <span class="typing-dot"></span>
-      <span class="text-muted small ms-1">Analiz ediliyor...</span>
-    </div>`;
-  container.appendChild(wrapper);
-  container.scrollTop = container.scrollHeight;
-}
-
-function removeTyping() {
-  const el = document.getElementById('typing-indicator');
-  if (el) el.remove();
-}
-
-// ─── Badge güncelle ────────────────────────────────────────────────────────────
-function updateBadge(used_groq) {
-  const badge = document.getElementById('groq-badge');
-  badge.classList.remove('d-none');
-  if (used_groq) {
-    badge.className = 'badge bg-success badge-groq';
-    badge.innerHTML = '<i class="bi bi-stars me-1"></i>Groq AI';
-  } else {
-    badge.className = 'badge bg-secondary badge-groq';
-    badge.innerHTML = '<i class="bi bi-cpu me-1"></i>Kural tabanlı';
-  }
-}
-
-// ─── Soru gönder ──────────────────────────────────────────────────────────────
 async function ask() {
-  const qEl  = document.getElementById('q');
-  const btn  = document.getElementById('ask');
-  const q    = (qEl.value || '').trim();
-  if (!q) return;
-
-  appendMessage('user', q);
-  qEl.value = '';
-  qEl.style.height = 'auto';
-  btn.disabled = true;
-  appendTyping();
-
+  const question=input.value.trim();
+  if(busy||!question) return;
+  setBusy(true); notice.textContent=''; appendMessage('user',question); input.value='';
+  const typing=appendMessage('assistant','İnceleniyor...');
   try {
-    const resp = await fetch("{% url 'dashboard:manager_assistant_query' %}", {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
-      body: JSON.stringify({ q })
-    });
-    const data = await resp.json();
-    removeTyping();
-
-    if (!resp.ok) throw new Error(data.error || 'Sunucu hatası');
-
-    const text = (data.text || '').trim();
-    appendMessage('assistant', text || '_(Yanıt boş geldi)_');
-    updateBadge(data.used_groq);
-
-  } catch (e) {
-    removeTyping();
-    appendMessage('assistant', '⚠️ **Hata:** ' + escapeHtml(String(e.message || e)));
-  } finally {
-    btn.disabled = false;
-    qEl.focus();
-  }
+    const data=await post("{% url 'dashboard:manager_assistant_query' %}",{q:question});
+    typing.remove(); appendMessage('assistant',data.text,data.sources||[]);
+    status.textContent=data.used_groq?'Yapay zekâ bağlı':'Yanıt tamamlanamadı';
+    status.className='small '+(data.used_groq?'text-success':'text-warning');
+    if(!data.used_groq) {notice.textContent=data.text; input.value=question;}
+    if(data.truncated) notice.textContent='Yanıt uzunluk sınırına ulaştı. Devamını isteyebilirsiniz.';
+  } catch(error) {
+    typing.remove();
+    notice.textContent=error.name==='AbortError'?'Yanıt zaman aşımına uğradı. Tekrar deneyin.':error.message;
+    input.value=question;
+  } finally {setBusy(false);input.focus();}
 }
-
-// ─── Sohbeti temizle ──────────────────────────────────────────────────────────
-async function clearChat() {
-  try {
-    await fetch("{% url 'dashboard:clear_chat_history' %}", {
-      method: 'POST',
-      headers: { 'X-CSRFToken': getCookie('csrftoken') }
-    });
-  } catch(e) {}
-
-  const container = document.getElementById('chat-messages');
-  container.innerHTML = `
-    <div class="d-flex gap-2 align-items-start">
-      <div class="avatar bg-primary"><i class="bi bi-robot text-white" style="font-size:.85rem;"></i></div>
-      <div class="msg-bubble msg-bot">
-        <p class="mb-0">Sohbet temizlendi. Yeni bir soru sorabilirsin.</p>
-      </div>
-    </div>`;
-
-  const badge = document.getElementById('groq-badge');
-  badge.classList.add('d-none');
-}
-
-// ─── Event listeners ──────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', function () {
-  const askBtn   = document.getElementById('ask');
-  const qEl      = document.getElementById('q');
-  const clearBtn = document.getElementById('btn-clear');
-
-  askBtn.addEventListener('click', ask);
-  clearBtn.addEventListener('click', clearChat);
-
-  // Enter gönder, Shift+Enter yeni satır
-  qEl.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      ask();
-    }
-  });
-
-  // Textarea auto-resize
-  qEl.addEventListener('input', function() {
-    this.style.height = 'auto';
-    this.style.height = Math.min(this.scrollHeight, 120) + 'px';
-  });
-
-  // Hızlı sorular
-  document.querySelectorAll('.quick-btn').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-      qEl.value = this.dataset.q;
-      ask();
-    });
-  });
+document.getElementById('assistant-form').addEventListener('submit',event=>{event.preventDefault();ask();});
+input.addEventListener('keydown',event=>{
+  if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing) {event.preventDefault();ask();}
 });
+document.querySelectorAll('.quick-btn').forEach(button=>button.addEventListener('click',()=>{
+  if(!busy) {input.value=button.dataset.q;ask();}
+}));
+document.getElementById('btn-clear').addEventListener('click',async()=>{
+  if(busy) return; setBusy(true);
+  try {
+    await post("{% url 'dashboard:clear_chat_history' %}",{});
+    messages.replaceChildren(); notice.textContent=''; appendMessage('assistant','Yeni bir sohbet. Neyi inceleyelim?');
+  } catch(error) {notice.textContent=error.message;} finally {setBusy(false);}
+});
+const history=JSON.parse(document.getElementById('assistant-history').textContent);
+if(history.length) history.forEach(turn=>appendMessage(turn.role,turn.content));
+else appendMessage('assistant','Merhaba. Bugün neyi inceleyelim?');
+})();
 </script>
 {% endblock %}

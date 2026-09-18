@@ -137,7 +137,7 @@
     <div class="col-lg-6">
         <div class="card">
             <div class="card-header">
-                <h5 class="card-title mb-0">Lastik Satış Analizi (3D)</h5>
+                <h5 class="card-title mb-0">Lastik Satış Analizi</h5>
             </div>
             <div class="card-body">
                 <div id="chartdiv" style="width: 100%; height: 500px;"></div>
@@ -290,6 +290,18 @@
         min-height: 500px !important;
         background: transparent !important;
         position: relative !important;
+    }
+
+    /* amCharts manages its canvas size; the generic mobile cap distorts it. */
+    #chartdiv canvas {
+        max-height: none !important;
+    }
+
+    @media (max-width: 768px) {
+        #chartdiv {
+            height: 360px !important;
+            min-height: 360px !important;
+        }
     }
 
     /* Variable Radius Pie Chart styling */
@@ -778,205 +790,170 @@
             }
         }
         
-        // Lastik Satış Analizi Chart (amCharts 5) - XY Chart
+        function bindLegendTheme(root, legend) {
+            function updateColors() {
+                const dark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+                const color = am5.color(dark ? '#e2e8f0' : '#303845');
+                root.interfaceColors.set('text', color);
+                legend.labels.template.set('fill', color);
+                legend.valueLabels.template.set('fill', color);
+            }
+            legend.labels.template.setAll({ fontSize: 13, fontWeight: '500' });
+            legend.valueLabels.template.set('fontSize', 13);
+            updateColors();
+            const observer = new MutationObserver(updateColors);
+            observer.observe(document.documentElement, {
+                attributes: true, attributeFilter: ['data-bs-theme']
+            });
+            root.events.on('disposed', () => observer.disconnect());
+        }
+
+        // Fixed-scale seasonal comparison using the existing order totals.
         function initLastikSatisChart() {
             const chartContainer = document.getElementById('chartdiv');
-            if (!chartContainer) {
-                console.error('chartdiv container bulunamadı!');
+            if (!chartContainer) return;
+            if (typeof am5 === 'undefined' || typeof am5xy === 'undefined') {
+                chartContainer.textContent = 'Satış grafiği yüklenemedi. Sayfayı yenileyin.';
                 return;
             }
 
-            // amCharts kütüphanesi kontrolü
-            if (typeof am5 === 'undefined') {
-                console.error('amCharts kütüphanesi yüklenmedi!');
-                chartContainer.innerHTML = '<div style="text-align: center; padding: 50px; color: #666; font-size: 14px;">amCharts kütüphanesi yüklenemedi</div>';
-                return;
-            }
-
-            if (typeof am5xy === 'undefined') {
-                console.error('amCharts XY kütüphanesi yüklenmedi!');
-                chartContainer.innerHTML = '<div style="text-align: center; padding: 50px; color: #666; font-size: 14px;">amCharts XY kütüphanesi yüklenemedi</div>';
-                return;
-            }
-
-            console.log('amCharts XY yüklendi, chart oluşturuluyor...');
-
-            am5.ready(function() {
+            am5.ready(function () {
+                let root;
                 try {
-                    // Önceki chart'ı temizle
-                    chartContainer.innerHTML = '';
-                    
-                    // Create root element
-                    var root = am5.Root.new("chartdiv");
-
-                    // Set themes
-                    root.setThemes([
-                        am5themes_Animated.new(root)
-                    ]);
-
-                    // Remove amCharts logo/watermark
-                    root._logo.dispose();
-
-                    // Django'dan gelen tire sales data'yı al
-                    const tireSalesDataRaw = JSON.parse('{{ tire_sales_data|escapejs }}');
-                    console.log('Tire sales data:', tireSalesDataRaw);
-
-                    // Veriyi amCharts formatına çevir
+                    const raw = JSON.parse('{{ tire_sales_data|escapejs }}');
                     const chartData = [
-                        {
-                            "season": "Yaz",
-                            "binek": tireSalesDataRaw.yaz.binek || 0,
-                            "ticari": tireSalesDataRaw.yaz.ticari || 0
-                        },
-                        {
-                            "season": "Kış", 
-                            "binek": tireSalesDataRaw.kis.binek || 0,
-                            "ticari": tireSalesDataRaw.kis.ticari || 0
-                        },
-                        {
-                            "season": "4 Mevsim",
-                            "binek": tireSalesDataRaw.dort_mevsim.binek || 0,
-                            "ticari": tireSalesDataRaw.dort_mevsim.ticari || 0
-                        }
+                        { season: 'Yaz', binek: Number(raw.yaz.binek) || 0, ticari: Number(raw.yaz.ticari) || 0 },
+                        { season: 'Kış', binek: Number(raw.kis.binek) || 0, ticari: Number(raw.kis.ticari) || 0 },
+                        { season: '4 Mevsim', binek: Number(raw.dort_mevsim.binek) || 0, ticari: Number(raw.dort_mevsim.ticari) || 0 }
                     ];
+                    const total = chartData.reduce((sum, row) => sum + row.binek + row.ticari, 0);
+                    if (total === 0) {
+                        chartContainer.classList.add('d-flex', 'align-items-center', 'justify-content-center', 'text-muted');
+                        chartContainer.textContent = 'Kontrol edilmiş lastik satış kaydı bulunmuyor.';
+                        return;
+                    }
 
-                    console.log('Chart data:', chartData);
+                    root = am5.Root.new('chartdiv');
+                    root.locale = { ...root.locale, _decimalSeparator: ',', _thousandSeparator: '.' };
+                    root.numberFormatter.set('numberFormat', '#,###');
 
-                    // Create chart
-                    var chart = root.container.children.push(am5xy.XYChart.new(root, {
+                    const chart = root.container.children.push(am5xy.XYChart.new(root, {
                         panX: false,
                         panY: false,
+                        wheelX: 'none',
+                        wheelY: 'none',
+                        pinchZoomX: false,
+                        pinchZoomY: false,
                         paddingLeft: 0,
-                        wheelX: "panX",
-                        wheelY: "zoomX",
+                        paddingRight: 8,
+                        paddingTop: 24,
+                        paddingBottom: 0,
                         layout: root.verticalLayout
                     }));
 
-                    // Set interface colors for light text
-                    root.interfaceColors.set("text", am5.color("#9ca3af"));
-                    root.interfaceColors.set("alternativeText", am5.color("#d1d5db"));
-                    root.interfaceColors.set("grid", am5.color("#374151"));
-
-                    // Add legend
-                    var legend = chart.children.push(
-                        am5.Legend.new(root, {
-                            centerX: am5.p50,
-                            x: am5.p50
-                        })
-                    );
-
-                    // Set legend text color
-                    legend.labels.template.setAll({
-                        fill: am5.color("#d1d5db")
+                    const xRenderer = am5xy.AxisRendererX.new(root, {
+                        minGridDistance: 35,
+                        cellStartLocation: 0.18,
+                        cellEndLocation: 0.82
                     });
-
-                    // Legend yazı rengini ayarla
-                    legend.labels.template.setAll({
-                        fill: am5.color("#d1d5db") // Solgun beyaz
-                    });
-
-                    // Create axes
-                    var xRenderer = am5xy.AxisRendererX.new(root, {
-                        cellStartLocation: 0.1,
-                        cellEndLocation: 0.9,
-                        minorGridEnabled: true
-                    });
-
-                    var xAxis = chart.xAxes.push(am5xy.CategoryAxis.new(root, {
-                        categoryField: "season",
+                    xRenderer.grid.template.set('forceHidden', true);
+                    xRenderer.labels.template.setAll({ fontSize: 12, paddingTop: 12 });
+                    const xAxis = chart.xAxes.push(am5xy.CategoryAxis.new(root, {
+                        categoryField: 'season',
                         renderer: xRenderer,
-                        tooltip: am5.Tooltip.new(root, {})
+                        zoomable: false
                     }));
-
-                    // X ekseni yazı rengini ayarla
-                    xRenderer.labels.template.setAll({
-                        fill: am5.color("#9ca3af") // Solgun gri
-                    });
-
-                    xRenderer.grid.template.setAll({
-                        location: 1,
-                        stroke: am5.color("#374151") // Grid çizgileri koyu gri
-                    });
-
                     xAxis.data.setAll(chartData);
 
-                    var yAxis = chart.yAxes.push(am5xy.ValueAxis.new(root, {
-                        renderer: am5xy.AxisRendererY.new(root, {
-                            strokeOpacity: 0.1
-                        })
+                    const yRenderer = am5xy.AxisRendererY.new(root, { minGridDistance: 45 });
+                    yRenderer.labels.template.setAll({ fontSize: 12, paddingRight: 10 });
+                    yRenderer.grid.template.setAll({ strokeOpacity: 0.12, strokeDasharray: [3, 4] });
+                    const yAxis = chart.yAxes.push(am5xy.ValueAxis.new(root, {
+                        min: 0,
+                        maxPrecision: 0,
+                        extraMax: 0.16,
+                        renderer: yRenderer,
+                        zoomable: false
                     }));
 
-                    // Y ekseni yazı rengini ayarla
-                    yAxis.get("renderer").labels.template.setAll({
-                        fill: am5.color("#9ca3af") // Solgun gri
-                    });
+                    const legend = chart.children.push(am5.Legend.new(root, {
+                        centerX: am5.p50,
+                        x: am5.p50,
+                        marginTop: 18,
+                        clickTarget: 'none',
+                        layout: root.horizontalLayout
+                    }));
+                    legend.labels.template.setAll({ fontSize: 12 });
+                    legend.valueLabels.template.set('forceHidden', true);
+                    legend.markers.template.setAll({ width: 12, height: 12 });
+                    legend.itemContainers.template.setAll({ paddingLeft: 8, paddingRight: 8 });
+                    const valueLabels = [];
 
-                    yAxis.get("renderer").grid.template.setAll({
-                        stroke: am5.color("#374151") // Grid çizgileri koyu gri
-                    });
-
-                    // Y ekseni yazı rengini ayarla
-                    yAxis.get("renderer").labels.template.setAll({
-                        fill: am5.color("#9ca3af") // Solgun gri
-                    });
-
-                    yAxis.get("renderer").grid.template.setAll({
-                        stroke: am5.color("#374151") // Grid çizgileri koyu gri
-                    });
-
-                    // Add series
-                    function makeSeries(name, fieldName, color) {
-                        var series = chart.series.push(am5xy.ColumnSeries.new(root, {
-                            name: name,
-                            xAxis: xAxis,
-                            yAxis: yAxis,
-                            valueYField: fieldName,
-                            categoryXField: "season"
+                    function makeSeries(name, field, color) {
+                        const series = chart.series.push(am5xy.ColumnSeries.new(root, {
+                            name,
+                            xAxis,
+                            yAxis,
+                            valueYField: field,
+                            categoryXField: 'season',
+                            fill: am5.color(color),
+                            stroke: am5.color(color),
+                            sequencedInterpolation: false
                         }));
-
                         series.columns.template.setAll({
-                            tooltipText: "{name}, {categoryX}: {valueY} adet",
-                            width: am5.percent(90),
-                            tooltipY: 0,
+                            width: am5.percent(76),
+                            maxWidth: 56,
+                            cornerRadiusTL: 5,
+                            cornerRadiusTR: 5,
                             strokeOpacity: 0,
-                            fill: am5.color(color)
+                            tooltipText: '{categoryX} · {name}: [bold]{valueY.formatNumber("#,###")} adet[/]',
+                            tooltipY: 0
                         });
-
-                        series.data.setAll(chartData);
-
-                        // Make stuff animate on load
-                        series.appear();
-
                         series.bullets.push(function () {
-                            return am5.Bullet.new(root, {
-                                locationY: 0,
-                                sprite: am5.Label.new(root, {
-                                    text: "{valueY}",
-                                    fill: am5.color("#d1d5db"), // Solgun beyaz
-                                    centerY: 0,
-                                    centerX: am5.p50,
-                                    populateText: true
-                                })
+                            const label = am5.Label.new(root, {
+                                text: '{valueY.formatNumber("#,###")}',
+                                centerX: am5.p50,
+                                centerY: am5.p100,
+                                dy: -4,
+                                fontSize: 12,
+                                fontWeight: '600',
+                                populateText: true
                             });
+                            valueLabels.push(label);
+                            return am5.Bullet.new(root, { locationY: 1, sprite: label });
                         });
-
+                        series.data.setAll(chartData);
                         legend.data.push(series);
-                        console.log('Series oluşturuldu:', name);
                     }
 
-                    makeSeries("Binek Araç", "binek", "#3b82f6");
-                    makeSeries("Ticari Araç", "ticari", "#ef4444");
+                    makeSeries('Binek Araç', 'binek', '#2563eb');
+                    makeSeries('Ticari Araç', 'ticari', '#0d9488');
 
-                    // Make stuff animate on load
-                    chart.appear(1000, 100);
-
-                    console.log('amCharts XY chart başarıyla oluşturuldu!');
-
+                    function updateTheme() {
+                        const dark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+                        const text = am5.color(dark ? '#e2e8f0' : '#334155');
+                        const muted = am5.color(dark ? '#94a3b8' : '#4b5563');
+                        root.interfaceColors.set('text', text);
+                        xRenderer.labels.template.set('fill', text);
+                        yRenderer.labels.template.set('fill', muted);
+                        yRenderer.grid.template.set('stroke', muted);
+                        legend.labels.template.set('fill', text);
+                        valueLabels.forEach(label => label.set('fill', text));
+                    }
+                    // Bullets are created during the first render, after data is assigned.
+                    root.events.once('frameended', updateTheme);
+                    updateTheme();
+                    const themeObserver = new MutationObserver(updateTheme);
+                    themeObserver.observe(document.documentElement, {
+                        attributes: true, attributeFilter: ['data-bs-theme']
+                    });
+                    root.events.on('disposed', () => themeObserver.disconnect());
                 } catch (error) {
-                    console.error('Chart oluşturulurken hata:', error);
-                    chartContainer.innerHTML = '<div style="text-align: center; padding: 50px; color: #e74c3c; font-size: 14px;">Chart oluşturulamadı: ' + error.message + '</div>';
+                    if (root) root.dispose();
+                    console.error('Lastik satış grafiği oluşturulamadı:', error);
+                    chartContainer.textContent = 'Satış grafiği oluşturulamadı.';
                 }
-            }); // end am5.ready()
+            });
         }
 
         // Variable Radius Pie Chart (amCharts 5)
@@ -1107,10 +1084,7 @@
                         marginBottom: 15
                     }));
 
-                    // Set legend text color
-                    legend.labels.template.setAll({
-                        fill: am5.color("#d1d5db") // Solgun beyaz
-                    });
+                    bindLegendTheme(root, legend);
 
                     legend.data.setAll(series.dataItems);
 
@@ -1237,10 +1211,7 @@
                         marginBottom: 15
                     }));
 
-                    // Set legend text color
-                    legend.labels.template.setAll({
-                        fill: am5.color("#d1d5db") // Solgun beyaz
-                    });
+                    bindLegendTheme(root, legend);
 
                     legend.data.setAll(series.dataItems);
 
@@ -1313,6 +1284,19 @@
                             }
                         }
                     }
+                });
+                function updateCustomerChartTheme() {
+                    const dark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+                    for (const axis of Object.values(topCustomersChart.options.scales)) {
+                        axis.ticks.color = dark ? '#e2e8f0' : '#303845';
+                        axis.grid.color = dark ? 'rgba(226,232,240,0.12)' : 'rgba(48,56,69,0.12)';
+                    }
+                    topCustomersChart.update('none');
+                }
+                updateCustomerChartTheme();
+                const customerThemeObserver = new MutationObserver(updateCustomerChartTheme);
+                customerThemeObserver.observe(document.documentElement, {
+                    attributes: true, attributeFilter: ['data-bs-theme']
                 });
                 console.log('Top customers chart başarıyla oluşturuldu!');
             } else {

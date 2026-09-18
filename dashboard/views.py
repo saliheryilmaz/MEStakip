@@ -417,209 +417,37 @@ def _orders_summary_for_user(*, user, q):
 @login_required
 @misafir_forbidden
 def manager_assistant(request):
-    return render(request, "dashboard/assistant.html", {})
+    from .assistant_service import clean_history, configuration
+    key, model = configuration()
+    return render(request, "dashboard/assistant.html", {
+        "assistant_history": clean_history(request.session.get("ai_chat_history", [])),
+        "assistant_ready": bool(key), "assistant_model": model,
+    })
 
 
 @login_required
 @misafir_forbidden
 @require_POST
 def manager_assistant_query(request):
-    """
-    Yönetici Asistanı — Tool-calling mimarisi ile gerçek veritabanı sorguları.
-    Groq, hangi tool'u çağıracağını belirler → Django ORM üzerinden veri çekilir
-    → Groq sonucu yorumlar → kullanıcıya döner.
-    """
-    import time
-    from .ai_tools import TOOL_DEFINITIONS, TOOL_REGISTRY, USER_REQUIRED_TOOLS
+    from .assistant_service import answer_question, clean_history
 
     try:
-        payload = json.loads(request.body.decode("utf-8") or "{}")
-    except Exception:
-        payload = {}
+        payload = json.loads(request.body)
+    except (ValueError, UnicodeDecodeError):
+        return JsonResponse({"error": "Geçersiz istek."}, status=400)
+    if not isinstance(payload, dict) or not isinstance(payload.get("q"), str):
+        return JsonResponse({"error": "Soru metin olmalıdır."}, status=400)
+    question = payload["q"].strip()
+    if not question or len(question) > 4000:
+        return JsonResponse({"error": "Soru 1-4000 karakter arasında olmalıdır."}, status=400)
 
-    q = (payload.get("q") or "").strip()
-    if not q:
-        return JsonResponse({"error": "Soru boş olamaz."}, status=400)
-
-    # Chat history (session tabanlı, son 10 tur)
-    history = request.session.get("ai_chat_history", [])
-    if not isinstance(history, list):
-        history = []
-
-    user = request.user
-    today = timezone.now().date()
-
-    # API key
-    api_key = getattr(settings, "GROQ_API_KEY", None) or os.environ.get("GROQ_API_KEY", "")
-    if not api_key:
-        try:
-            from dotenv import load_dotenv
-            load_dotenv(getattr(settings, "BASE_DIR", None) / ".env")
-        except Exception:
-            pass
-        api_key = os.environ.get("GROQ_API_KEY", "")
-
-    _bad_keys = {"buraya-yeni-key-yapistir", "your-api-key-here", "sk-xxx", ""}
-    if not api_key or api_key.strip() in _bad_keys or api_key.strip().lower().startswith("buraya"):
-        api_key = ""
-
-    model = os.environ.get("GROQ_MODEL", "groq/compound-mini")
-
-    # ── SYSTEM PROMPT ──────────────────────────────────────────────────────────
-    system_prompt = f"""Sen MEStakip'in Yönetici Asistanısın. Bugünün tarihi: {today} (Europe/Istanbul).
-
-ROLİN:
-- Siparişler, finans, stok, çıkma lastikler, teklifler ve malzeme verilerini analiz edersin
-- Kullanıcının sorularını anlayıp doğru tool'ları çağırırsın
-- Tool'dan gelen gerçek veriye dayanarak cevap verirsin
-- Veritabanında olmayan bilgiyi KESİNLİKLE uydurmaz, tahmin etmezsin
-- Bir bilgi mevcut değilse bunu açıkça söylersin
-
-CEVAP KURALLARI:
-- Türkçe yaz, kısa ve net ol
-- Sayıları Türk formatında yaz: 1.234,56 ₺
-- Birden fazla veri varsa tablo veya liste kullan (Markdown)
-- Gerçek veri ile öneriyi birbirinden ayır: öneri yapıyorsan "💡 Öneri:" önekini kullan
-- Tool sonucu boş gelirse "Bu dönemde kayıt bulunamadı" de
-- Konuşma geçmişine göre bağlamı koru ("peki geçen ay?" gibi follow-up sorularını anla)
-
-ZAMAN ANLAMA:
-- "Bu ay" = {today.replace(day=1)} – {today}
-- "Geçen ay" = bir önceki ayın tamamı
-- "Son 30 gün" = {today - timedelta(days=30)} – {today}
-- "Son 3 ay" = {(today - timedelta(days=90)).replace(day=1)} – {today}
-- "Bu yıl" = {today.replace(month=1, day=1)} – {today}
-
-Tool çağırmadan kesin sayı söyleme."""
-
-    # ── MESAJ YAPISI ───────────────────────────────────────────────────────────
-    messages = [{"role": "system", "content": system_prompt}]
-
-    # Son 8 tur geçmişi ekle (token tasarrufu için)
-    for turn in history[-8:]:
-        messages.append(turn)
-
-    messages.append({"role": "user", "content": q})
-
-    used_groq = False
-    text = ""
-
-    if api_key:
-        try:
-            t0 = time.time()
-
-            # ── TUR 1: Tool selection ──────────────────────────────────────────
-            response = groq_chat_completion(
-                api_key=api_key,
-                model=model,
-                messages=messages,
-                tools=TOOL_DEFINITIONS,
-                tool_choice="auto",
-                temperature=0.1,
-                max_tokens=1000,
-            )
-
-            choice = response.get("choices", [{}])[0]
-            msg = choice.get("message", {})
-            finish_reason = choice.get("finish_reason", "")
-
-            # ── Tool çağrısı var mı? ───────────────────────────────────────────
-            if finish_reason == "tool_calls" and msg.get("tool_calls"):
-                tool_calls = msg["tool_calls"]
-                messages.append(msg)  # asistan mesajını geçmişe ekle
-
-                tool_results = []
-                for tc in tool_calls:
-                    tool_name = tc["function"]["name"]
-                    try:
-                        tool_args = json.loads(tc["function"].get("arguments", "{}") or "{}")
-                    except Exception:
-                        tool_args = {}
-
-                    fn = TOOL_REGISTRY.get(tool_name)
-                    if fn is None:
-                        result = {"hata": f"Bilinmeyen tool: {tool_name}"}
-                    elif tool_name in USER_REQUIRED_TOOLS:
-                        result = fn(user=user, **tool_args)
-                    else:
-                        result = fn(**tool_args)
-
-                    tool_results.append({
-                        "tool_call_id": tc["id"],
-                        "tool_name": tool_name,
-                        "result": result,
-                    })
-                    messages.append({
-                        "role": "tool",
-                        "tool_call_id": tc["id"],
-                        "content": json.dumps(result, ensure_ascii=False, default=str),
-                    })
-
-                # ── TUR 2: Yorumlama ──────────────────────────────────────────
-                final_response = groq_chat_completion(
-                    api_key=api_key,
-                    model=model,
-                    messages=messages,
-                    temperature=0.2,
-                    max_tokens=1000,
-                )
-                text = (final_response or "").strip()
-
-            else:
-                # Tool çağrısı yok, doğrudan metin yanıtı
-                text = (msg.get("content") or "").strip()
-
-            if text:
-                used_groq = True
-
-                # Geçmişi güncelle (sadece user + assistant turları)
-                history.append({"role": "user", "content": q})
-                history.append({"role": "assistant", "content": text})
-                # Son 20 mesajı tut (10 tur)
-                request.session["ai_chat_history"] = history[-20:]
-                request.session.modified = True
-
-        except Exception as _e:
-            text = ""
-
-    # ── FALLBACK: Groq yoksa basit kural tabanlı yanıt ────────────────────────
-    if not text:
-        from .ai_tools import get_proactive_summary, get_orders_summary, get_financial_summary
-        t_lower = q.lower()
-
-        if any(w in t_lower for w in ["özet", "genel", "durum", "nasıl"]):
-            data = get_proactive_summary(user=user)
-            lines = data.get("bilgiler", []) + data.get("pozitifler", []) + data.get("uyarilar", [])
-            finans = data.get("finans_bu_ay", {})
-            text = (
-                f"📊 Genel Durum ({today}):\n\n"
-                + "\n".join(lines) + "\n\n"
-                f"💰 Bu ay: Gelir {finans.get('gelir_tl', 0):,.0f} ₺ | "
-                f"Gider {finans.get('gider_tl', 0):,.0f} ₺ | "
-                f"Net {finans.get('net_tl', 0):+,.0f} ₺"
-            )
-        elif any(w in t_lower for w in ["sipariş", "siparis", "ciro", "yolda", "marka"]):
-            data = get_orders_summary(user=user)
-            text = (
-                f"📦 Sipariş Özeti ({data.get('donem', '')}):\n"
-                f"• Toplam: {data.get('toplam_siparis', 0)} sipariş\n"
-                f"• Ciro: {data.get('toplam_ciro_tl', 0):,.0f} ₺"
-            )
-        elif any(w in t_lower for w in ["gelir", "gider", "finans", "net", "para", "kasa"]):
-            data = get_financial_summary(user=user)
-            text = (
-                f"💰 Finans ({data.get('donem', '')}):\n"
-                f"• Gelir: {data.get('gelir_tl', 0):,.0f} ₺\n"
-                f"• Gider: {data.get('gider_tl', 0):,.0f} ₺\n"
-                f"• Net: {data.get('net_tl', 0):+,.0f} ₺"
-            )
-        else:
-            text = (
-                "Şu anda AI servisine bağlanamıyorum. "
-                "Hızlı sorulardan birini deneyebilirsin."
-            )
-
-    return JsonResponse({"text": text, "used_groq": used_groq})
+    history = clean_history(request.session.get("ai_chat_history", []))
+    result = answer_question(request.user, question, history)
+    if result["used_groq"]:
+        history.extend([{"role": "user", "content": question},
+                        {"role": "assistant", "content": result["text"]}])
+        request.session["ai_chat_history"] = history[-12:]
+    return JsonResponse(result)
 
 
 @login_required
@@ -7451,5 +7279,3 @@ def lastik_mevsim_ai(request):
         "grup": grup_sonuc,
         "kaynak": "kural" if not model_sonuc else "veritabani"
     })
-
-

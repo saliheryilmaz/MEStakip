@@ -94,6 +94,33 @@ Bu ayar DİA cari, stok, fatura ve stok miktarı sync görevlerini aynı contain
 içinde her dakika çalıştırır. Docker Compose kullanımında önerilen yapı ayrı
 `web`, `worker` ve `beat` servisleridir.
 
+## Yönetici Asistanı
+
+`/dashboard/assistant/` proje sayfalarını açıklar ve izin verilen salt okunur
+sorgularla sipariş, finans, teklif, garanti, çıkma lastik ve DİA kayıtlarını inceler.
+DİA sonuçları canlı API sorgusu değil, son senkronize edilmiş yerel kayıtlardır.
+Yanıtlarda kullanılan sorguların kaynak bağlantıları gösterilir.
+
+Coolify uygulamasının **Environment Variables** bölümünde runtime için tanımlayın:
+
+```env
+GROQ_API_KEY=<Groq hesabınızın API anahtarı>
+GROQ_MODEL=openai/gpt-oss-120b
+```
+
+Değişiklikten sonra uygulamayı deploy edin. API anahtarını tarayıcıya veya Git'e koymayın.
+Sorular ve yanıt için gerekli sorgu sonuçları Groq'a gönderilir; bağlantı şifreleri gönderilmez.
+`groq/compound` ve `groq/compound-mini` yerel araç çağrısı desteklemediğinden asistan
+bunların yerine varsayılan modeli kullanır. Anahtar/limit/bağlantı hatası olduğunda
+ekranda açık bir durum mesajı gösterilir; yerine yanıltıcı sıfır tutarlar üretilmez.
+
+Kontrol soruları: "Projeyi ve sayfaları açıkla", "DİA carilerinde ... ara",
+"Bu ay satış faturalarını göster", "Peki geçen ay?", "Son cari sync ne zaman?".
+Yanıtı ilgili kayıt ekranıyla karşılaştırın. Asistan fatura kesmez ve kayıt değiştirmez.
+
+Geliştirici kontrolü: `python manage.py test dashboard.test_assistant --noinput`.
+Modül bilgileri `dashboard/assistant_guide.py` içinde sürümlenir.
+
 ## 📝 Lisans
 
 Bu proje MIT lisansı altında lisanslanmıştır. Detaylar için [LICENSE.md](LICENSE.md) dosyasına bakın.

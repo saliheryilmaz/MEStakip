@@ -69,7 +69,7 @@ def _safe(fn):
             return fn(*args, **kwargs)
         except Exception as exc:
             logger.error("AI tool hatası [%s]: %s", fn.__name__, exc, exc_info=True)
-            return {"hata": f"Veri alınamadı: {exc}"}
+            return {"hata": "Veri alınamadı. İlgili modülün kayıtlarını kontrol edin."}
     wrapper.__name__ = fn.__name__
     return wrapper
 
@@ -156,7 +156,7 @@ def get_cancelled_orders(user, start_date: str = "", end_date: str = "",
 
 @_safe
 def get_brand_analysis(user, start_date: str = "", end_date: str = "",
-                       limit: int = 10) -> dict:
+                       limit: int = 10, brand: str = "") -> dict:
     """Marka bazlı sipariş ve ciro analizini döndürür."""
     today = date.today()
     start = _parse_date(start_date) or _month_start(today)
@@ -164,6 +164,8 @@ def get_brand_analysis(user, start_date: str = "", end_date: str = "",
 
     qs = Siparis.objects.filter(user=user, olusturma_tarihi__date__gte=start,
                                 olusturma_tarihi__date__lte=end)
+    if brand:
+        qs = qs.filter(marka__icontains=brand)
     rows = list(
         qs.values("marka")
           .annotate(siparis_sayisi=Count("id"), toplam_adet=Sum("adet"),
@@ -488,10 +490,10 @@ def get_used_tire_waiting_long(days: int = 60, limit: int = 20) -> dict:
 # ─────────────────────────────────────────────
 
 @_safe
-def get_quotes_summary(status: str = "", start_date: str = "",
+def get_quotes_summary(user, status: str = "", start_date: str = "",
                        end_date: str = "", limit: int = 10) -> dict:
     """Teklifleri özetler."""
-    qs = Quotation.objects.all()
+    qs = Quotation.objects.filter(olusturan=user)
     if status:
         qs = qs.filter(durum=status)
     if start_date:
@@ -557,7 +559,7 @@ def get_material_movements(user, start_date: str = "", end_date: str = "",
 
 
 @_safe
-def get_joker_sales(start_date: str = "", end_date: str = "",
+def get_joker_sales(user, start_date: str = "", end_date: str = "",
                     limit: int = 10) -> dict:
     """Joker satış analizini döndürür."""
     today = date.today()
@@ -565,6 +567,8 @@ def get_joker_sales(start_date: str = "", end_date: str = "",
     end   = _parse_date(end_date)   or today
 
     qs = JokerSatisHareketi.objects.filter(tarih__gte=start, tarih__lte=end)
+    if not user.is_superuser:
+        qs = qs.filter(kullanici=user)
     toplam_satis = float(qs.aggregate(t=Sum("satis_fiyati"))["t"] or 0)
     toplam_kar   = float(qs.aggregate(t=Sum("kar_tutari"))["t"] or 0)
     top_urunler  = list(
@@ -611,9 +615,9 @@ def get_proactive_summary(user) -> dict:
     )
 
     # Teklifler
-    acik_teklif = Quotation.objects.filter(durum="acik").count()
+    acik_teklif = Quotation.objects.filter(olusturan=user, durum="acik").count()
     acik_teklif_tutar = float(
-        Quotation.objects.filter(durum="acik")
+        Quotation.objects.filter(olusturan=user, durum="acik")
                  .aggregate(t=Sum("genel_toplam"))["t"] or 0
     )
 
@@ -647,7 +651,7 @@ def get_proactive_summary(user) -> dict:
     if finans["net_tl"] > 0:
         pozitifler.append(f"📈 Bu ay net: +{finans['net_tl']:,.0f} ₺ (gelir: {finans['gelir_tl']:,.0f} ₺)")
     elif finans["net_tl"] < 0:
-        uyarilar.append(f"📉 Bu ay net zarar: {finans['net_tl']:,.0f} ₺")
+        uyarilar.append(f"Bu ay gelir-gider farkı: {finans['net_tl']:,.0f} ₺")
 
     return {
         "tarih": str(today),
@@ -724,6 +728,7 @@ TOOL_DEFINITIONS = [
             "parameters": {
                 "type": "object",
                 "properties": {
+                    "brand": {"type": "string", "description": "Marka adı, kısmi eşleşme; boş ise tüm markalar."},
                     "start_date": {"type": "string"},
                     "end_date":   {"type": "string"},
                     "limit":      {"type": "integer"},
@@ -962,6 +967,7 @@ TOOL_REGISTRY = {
 
 # user parametresi gerektiren tool'lar
 USER_REQUIRED_TOOLS = {
+    "get_quotes_summary", "get_joker_sales",
     "get_orders_summary", "get_pending_orders", "get_cancelled_orders",
     "get_brand_analysis", "get_stock_summary", "get_slow_moving_stock",
     "get_financial_summary", "get_financial_comparison", "get_cash_distribution",

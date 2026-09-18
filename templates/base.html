@@ -490,6 +490,7 @@
             }
         }
     </style>
+    <link rel="stylesheet" href="{% static 'css/light-theme.css' %}">
 </head>
 
 <body data-page="{% block page_name %}dashboard{% endblock %}" class="admin-layout">
@@ -541,8 +542,8 @@
                         <!-- User Info & Logout -->
                         {% if user.is_authenticated %}
                         <div class="d-none d-md-flex align-items-center gap-2">
-                            <span class="text-white">{{ user.username }}</span>
-                            <a href="{% url 'dashboard:logout' %}" class="btn btn-outline-light btn-sm">
+                            <span class="text-body">{{ user.username }}</span>
+                            <a href="{% url 'dashboard:logout' %}" class="btn btn-outline-secondary btn-sm">
                                 <i class="bi bi-box-arrow-right me-1"></i>
                                 Çıkış
                             </a>
@@ -566,7 +567,7 @@
                     <a class="navbar-brand d-flex align-items-center" href="{% url 'dashboard:index' %}">
                         <img src="{% load static %}{% static 'images/mestakip1.png' %}" alt="Logo" height="40"
                             class="d-inline-block align-text-top me-2 sidebar-logo">
-                        <h1 class="h4 mb-0 fw-bold text-white">MesTakip</h1>
+                        <h1 class="h4 mb-0 fw-bold text-body">MesTakip</h1>
                     </a>
                     <button class="sidebar-toggle-btn" type="button" data-sidebar-toggle aria-label="Toggle sidebar"
                         title="Toggle Sidebar">
@@ -1121,6 +1122,8 @@
             if (themeToggleButton) {
                 themeToggleButton.addEventListener('click', function (e) {
                     e.preventDefault();
+                    // The bundled template also delegates this click on document.
+                    e.stopPropagation();
 
                     const currentTheme = htmlElement.getAttribute('data-bs-theme');
                     const newTheme = currentTheme === 'light' ? 'dark' : 'light';

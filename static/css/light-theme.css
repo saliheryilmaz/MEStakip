@@ -113,6 +113,16 @@ html[data-bs-theme="light"] .table-light {
     --bs-table-color: #303845;
 }
 
+html[data-bs-theme="light"] .table thead th {
+    background-color: #dfe3e9 !important;
+    color: #252a32 !important;
+    border-color: #b9c0ca !important;
+}
+
+html[data-bs-theme="light"] thead.table-dark th {
+    background-color: #ccd2dc !important;
+}
+
 html[data-bs-theme="light"] .dropdown-menu,
 html[data-bs-theme="light"] .modal-content,
 html[data-bs-theme="light"] .list-group-item {

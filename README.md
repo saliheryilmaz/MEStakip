@@ -54,46 +54,6 @@ Mestakip CRM, lastik satış ve servis işletmeleri için özel olarak tasarlanm
 - Database credentials'ı environment variables'da saklayın
 - HTTPS kullanın
 
-## Coolify + Hetzner Deploy
-
-1. Hetzner sunucuda Coolify kurulu olsun ve GitHub repo erişimi tanımlansın.
-2. Coolify içinde yeni kaynak oluşturun: Git Repository -> Docker Compose.
-3. Compose dosyası olarak `docker-compose.coolify.yml` seçin.
-4. Web servisine domain bağlayın ve internal port olarak `8000` kullanın.
-5. Environment Variables bölümünde `.env.coolify.example` içindeki değerleri girin.
-6. İlk deploy sonrası web container loglarında migration ve healthcheck sonucunu kontrol edin.
-7. Uygulamada `/erp/dia/durum/` ekranından DİA bağlantı testini çalıştırın.
-
-Coolify/Traefik HTTPS yönlendirmesini proxy tarafında yaptığı için Django içinde
-`SECURE_SSL_REDIRECT=False` bırakın. Bu değer `True` olursa Coolify'nin HTTP
-healthcheck isteği HTTPS'e yönlenebilir ve uygulama sağlıklı olsa bile Bad
-Gateway görünebilir.
-
-Gerekli DİA env değerleri:
-
-```env
-DIA_SERVER_CODE=diademo
-DIA_USERNAME=ws
-DIA_PASSWORD=ws
-DIA_FIRMA_KODU=1
-DIA_DONEM_KODU=1
-DIA_SYNC_INTERVAL_MINUTES=1
-DIA_DELTA_LOOKBACK_MINUTES=15
-```
-
-Canlı DİA'ya geçince sadece bu DİA değerlerini gerçek hesap bilgilerinizle değiştirmeniz yeterli olur.
-
-Dockerfile build pack ile tek container kullanıyorsanız ve ayrı `worker`/`beat`
-servisi açmadıysanız şunu da ekleyin:
-
-```env
-RUN_CELERY_IN_WEB=True
-```
-
-Bu ayar DİA cari, stok, fatura ve stok miktarı sync görevlerini aynı container
-içinde her dakika çalıştırır. Docker Compose kullanımında önerilen yapı ayrı
-`web`, `worker` ve `beat` servisleridir.
-
 ## Yönetici Asistanı
 
 `/dashboard/assistant/` proje sayfalarını açıklar ve izin verilen salt okunur
@@ -120,7 +80,6 @@ Yanıtı ilgili kayıt ekranıyla karşılaştırın. Asistan fatura kesmez ve k
 
 Geliştirici kontrolü: `python manage.py test dashboard.test_assistant --noinput`.
 Modül bilgileri `dashboard/assistant_guide.py` içinde sürümlenir.
-
 ## 📝 Lisans
 
 Bu proje MIT lisansı altında lisanslanmıştır. Detaylar için [LICENSE.md](LICENSE.md) dosyasına bakın.

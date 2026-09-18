@@ -136,7 +136,7 @@
         .admin-main {
             margin-left: 250px;
             min-height: 100vh;
-            background: #f8fafc;
+            background: #e8eaf2;
             transition: margin-left 0.3s ease;
         }
 
@@ -499,7 +499,7 @@
 
         <!-- Header -->
         <header class="admin-header">
-            <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom" style="overflow: visible !important;">
+            <nav class="navbar navbar-expand-lg navbar-light border-bottom" style="overflow: visible !important;">
                 <div class="container-fluid">
                     <!-- Mobile Sidebar Toggle (sadece mobilde görünür - Artık Bottom Nav'da olduğu için mobilde gizliyoruz) -->
                     <button class="btn btn-outline-primary d-none d-lg-none me-2" type="button" onclick="toggleMobileSidebar()"
@@ -686,6 +686,12 @@
                             <a class="nav-link {% if request.resolver_match.url_name == 'lastik_karsilastirma' %}active{% endif %}" href="{% url 'dashboard:lastik_karsilastirma' %}">
                                 <i class="bi bi-speedometer2"></i>
                                 <span>Lastik Karşılaştırma</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'filo_yonetimi' or request.resolver_match.url_name == 'filo_duzenle' %}active{% endif %}" href="{% url 'dashboard:filo_yonetimi' %}">
+                                <i class="bi bi-truck"></i>
+                                <span>Filo Yönetimi</span>
                             </a>
                         </li>
                         <li class="nav-item">
@@ -1115,6 +1121,7 @@
             // Set initial theme from localStorage
             const savedTheme = localStorage.getItem('theme') || 'light';
             htmlElement.setAttribute('data-bs-theme', savedTheme);
+            if (savedTheme === 'light') document.body.classList.add('theme-light');
 
             // Update button icon based on current theme
             updateThemeIcon(savedTheme);
@@ -1131,6 +1138,13 @@
                     // Apply new theme
                     htmlElement.setAttribute('data-bs-theme', newTheme);
                     localStorage.setItem('theme', newTheme);
+
+                    // Body class ile override uygula
+                    if (newTheme === 'light') {
+                        document.body.classList.add('theme-light');
+                    } else {
+                        document.body.classList.remove('theme-light');
+                    }
 
                     // Update button icon
                     updateThemeIcon(newTheme);
@@ -1230,6 +1244,8 @@
             --bs-body-bg: #0f172a;
             --bs-body-color: #ffffff;
         }
+
+        /* Light palette is maintained in static/css/light-theme.css. */
 
         [data-bs-theme="dark"] .admin-main {
             background: #0f172a !important;
@@ -2429,9 +2445,9 @@
             </a>
         </div>
         
-        <a href="{% url 'dashboard:elements' %}" class="bottom-nav-item {% if request.resolver_match.url_name == 'elements' %}active{% endif %}">
-            <i class="bi bi-box-seam"></i>
-            <span>Siparişler</span>
+        <a href="{% url 'dashboard:cikma_lastikler' %}" class="bottom-nav-item {% if request.resolver_match.url_name == 'cikma_lastikler' %}active{% endif %}">
+            <i class="bi bi-arrow-down-circle"></i>
+            <span>Çıkma Lastik</span>
         </a>
         {% endif %}
         

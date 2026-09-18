@@ -21,6 +21,51 @@
     [data-bs-theme=dark] .table-sm {
         --bs-table-bg: transparent;
     }
+
+    /* ── Mobil: filtre formu ── */
+    @media (max-width: 767px) {
+        .products-header {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 0.75rem;
+        }
+        .products-filter-form {
+            width: 100%;
+            flex-wrap: wrap;
+        }
+        .products-filter-form input[type=date] {
+            flex: 1 1 calc(50% - 0.25rem);
+            min-width: 0;
+        }
+        .products-filter-form .btn {
+            flex: 1 1 calc(50% - 0.25rem);
+        }
+
+        /* Özet kart yazıları küçük ekranda sığsın */
+        .ozet-kart h3 { font-size: 1.2rem; }
+        .ozet-kart .fs-1 { font-size: 1.5rem !important; }
+
+        /* Ödeme kartları 3'lü grid */
+        .odeme-kart { padding: 0.5rem !important; }
+        .odeme-kart h6 { font-size: 0.7rem; }
+        .odeme-kart h4 { font-size: 0.9rem; }
+
+        /* Tablolarda gizlenecek sütunlar */
+        .tbl-hide-mobile { display: none !important; }
+
+        /* İşlem tablosu mobil kart görünümü */
+        .tx-mobile-card {
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+            padding: 0.75rem 1rem;
+        }
+        .tx-mobile-card:last-child { border-bottom: none; }
+
+        /* Merkez satış toplamları 3'lü grid */
+        .merkez-kart-col {
+            flex: 0 0 33.333%;
+            max-width: 33.333%;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -34,7 +79,7 @@
 
     <div class="col-12">
         <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
+            <div class="card-header products-header d-flex justify-content-between align-items-center">
                 <div>
                     <h5 class="card-title mb-0">
                         {% if baslangic_tarih and bitis_tarih %}
@@ -49,7 +94,7 @@
                     </h5>
 
                 </div>
-                <form class="d-flex gap-2" method="get">
+                <form class="d-flex gap-2 products-filter-form" method="get">
                     <input type="date" class="form-control form-control-sm" name="baslangic_tarih"
                         value="{{ baslangic_tarih }}">
                     <input type="date" class="form-control form-control-sm" name="bitis_tarih"
@@ -64,7 +109,7 @@
             </div>
             <div class="card-body">
                 <div class="row g-3 mb-4">
-                    <div class="col-md-3">
+                    <div class="col-6 col-md-3 ozet-kart">
                         <div class="card border-start border-success border-4 shadow-sm">
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-center">
@@ -84,7 +129,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-6 col-md-3 ozet-kart">
                         <div class="card border-start border-danger border-4 shadow-sm">
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-center">
@@ -99,7 +144,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-6 col-md-3 ozet-kart">
                         <div class="card border-start border-{% if gun_ozeti.servis_merkez_toplam.net >= 0 %}primary{% else %}warning{% endif %} border-4 shadow-sm">
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-center">
@@ -114,7 +159,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-6 col-md-3 ozet-kart">
                         <div class="card border-start border-info border-4 shadow-sm">
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-center">
@@ -157,51 +202,51 @@
                 </div>
             </div>
             <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-md-2">
-                        <div class="card {% if gun_ozeti.nakit_toplam >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10">
-                            <div class="card-body text-center">
+                <div class="row g-2">
+                    <div class="col-4 col-md-2">
+                        <div class="card {% if gun_ozeti.nakit_toplam >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10 odeme-kart">
+                            <div class="card-body text-center p-2">
                                 <h6 class="card-title {% if gun_ozeti.nakit_toplam >= 0 %}text-success{% else %}text-danger{% endif %} mb-1">💰 Nakit</h6>
                                 <h4 class="mb-0 {% if gun_ozeti.nakit_toplam >= 0 %}text-success{% else %}text-danger{% endif %}">{{ gun_ozeti.nakit_toplam|turkish_lira }}</h4>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-2">
-                        <div class="card {% if gun_ozeti.kredi_karti_toplam >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10">
-                            <div class="card-body text-center">
-                                <h6 class="card-title {% if gun_ozeti.kredi_karti_toplam >= 0 %}text-success{% else %}text-danger{% endif %} mb-1">💳 Kredi Kartı</h6>
+                    <div class="col-4 col-md-2">
+                        <div class="card {% if gun_ozeti.kredi_karti_toplam >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10 odeme-kart">
+                            <div class="card-body text-center p-2">
+                                <h6 class="card-title {% if gun_ozeti.kredi_karti_toplam >= 0 %}text-success{% else %}text-danger{% endif %} mb-1">💳 K.Kartı</h6>
                                 <h4 class="mb-0 {% if gun_ozeti.kredi_karti_toplam >= 0 %}text-success{% else %}text-danger{% endif %}">{{ gun_ozeti.kredi_karti_toplam|turkish_lira }}</h4>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-2">
-                        <div class="card {% if gun_ozeti.cari_toplam >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10">
-                            <div class="card-body text-center">
+                    <div class="col-4 col-md-2">
+                        <div class="card {% if gun_ozeti.cari_toplam >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10 odeme-kart">
+                            <div class="card-body text-center p-2">
                                 <h6 class="card-title {% if gun_ozeti.cari_toplam >= 0 %}text-success{% else %}text-danger{% endif %} mb-1">🏢 Cari</h6>
                                 <h4 class="mb-0 {% if gun_ozeti.cari_toplam >= 0 %}text-success{% else %}text-danger{% endif %}">{{ gun_ozeti.cari_toplam|turkish_lira }}</h4>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-2">
-                        <div class="card {% if gun_ozeti.sanal_pos_toplam >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10">
-                            <div class="card-body text-center">
-                                <h6 class="card-title {% if gun_ozeti.sanal_pos_toplam >= 0 %}text-success{% else %}text-danger{% endif %} mb-1">💳 Sanal Pos</h6>
+                    <div class="col-4 col-md-2">
+                        <div class="card {% if gun_ozeti.sanal_pos_toplam >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10 odeme-kart">
+                            <div class="card-body text-center p-2">
+                                <h6 class="card-title {% if gun_ozeti.sanal_pos_toplam >= 0 %}text-success{% else %}text-danger{% endif %} mb-1">💳 S.Pos</h6>
                                 <h4 class="mb-0 {% if gun_ozeti.sanal_pos_toplam >= 0 %}text-success{% else %}text-danger{% endif %}">{{ gun_ozeti.sanal_pos_toplam|turkish_lira }}</h4>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-2">
-                        <div class="card {% if gun_ozeti.mehmet_havale_toplam >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10">
-                            <div class="card-body text-center">
-                                <h6 class="card-title {% if gun_ozeti.mehmet_havale_toplam >= 0 %}text-success{% else %}text-danger{% endif %} mb-1">🏦 M.Havale</h6>
+                    <div class="col-4 col-md-2">
+                        <div class="card {% if gun_ozeti.mehmet_havale_toplam >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10 odeme-kart">
+                            <div class="card-body text-center p-2">
+                                <h6 class="card-title {% if gun_ozeti.mehmet_havale_toplam >= 0 %}text-success{% else %}text-danger{% endif %} mb-1">🏦 M.Hav.</h6>
                                 <h4 class="mb-0 {% if gun_ozeti.mehmet_havale_toplam >= 0 %}text-success{% else %}text-danger{% endif %}">{{ gun_ozeti.mehmet_havale_toplam|turkish_lira }}</h4>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-2">
-                        <div class="card {% if gun_ozeti.banka_havale_toplam >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10">
-                            <div class="card-body text-center">
-                                <h6 class="card-title {% if gun_ozeti.banka_havale_toplam >= 0 %}text-success{% else %}text-danger{% endif %} mb-1">🏦 B.Havale</h6>
+                    <div class="col-4 col-md-2">
+                        <div class="card {% if gun_ozeti.banka_havale_toplam >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10 odeme-kart">
+                            <div class="card-body text-center p-2">
+                                <h6 class="card-title {% if gun_ozeti.banka_havale_toplam >= 0 %}text-success{% else %}text-danger{% endif %} mb-1">🏦 B.Hav.</h6>
                                 <h4 class="mb-0 {% if gun_ozeti.banka_havale_toplam >= 0 %}text-success{% else %}text-danger{% endif %}">{{ gun_ozeti.banka_havale_toplam|turkish_lira }}</h4>
                             </div>
                         </div>
@@ -249,7 +294,8 @@
             </div>
             <div class="card-body p-0">
                 {% if gunun_islemleri %}
-                <div class="table-responsive">
+                <!-- Desktop tablo -->
+                <div class="table-responsive d-none d-md-block">
                     <table class="table table-striped mb-0">
                         <thead>
                             <tr>
@@ -335,6 +381,56 @@
                             {% endfor %}
                         </tbody>
                     </table>
+                </div>
+
+                <!-- Mobil kart görünümü -->
+                <div class="d-md-none">
+                    {% for tx in gunun_islemleri %}
+                    <div class="tx-mobile-card">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge {% if tx.hareket_tipi == 'gelir' %}bg-success{% else %}bg-danger{% endif %}">
+                                    {{ tx.get_hareket_tipi_display }}
+                                </span>
+                                <small class="text-muted">{{ tx.created_at|date:'H:i' }}</small>
+                                <small class="text-muted">{{ tx.kasa_adi }}</small>
+                            </div>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'dashboard:transaction_duzenle' tx.id %}" class="btn btn-outline-primary btn-sm">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <form method="post" action="{% url 'dashboard:transaction_sil' tx.id %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                    <button type="submit" class="btn btn-outline-danger btn-sm"
+                                        onclick="return confirm('Bu işlemi silmek istediğinize emin misiniz?');">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                        <!-- Sadece dolu alanları göster -->
+                        <div class="d-flex flex-wrap gap-2 small">
+                            {% if tx.nakit > 0 %}<span>💰 {{ tx.nakit|turkish_lira }}</span>{% endif %}
+                            {% if tx.kredi_karti > 0 %}<span>💳 {{ tx.kredi_karti|turkish_lira }}</span>{% endif %}
+                            {% if tx.cari > 0 %}<span>🏢 {{ tx.cari|turkish_lira }}</span>{% endif %}
+                            {% if tx.sanal_pos > 0 %}<span>📱 {{ tx.sanal_pos|turkish_lira }}</span>{% endif %}
+                            {% if tx.mehmet_havale > 0 %}<span>🏦 M: {{ tx.mehmet_havale|turkish_lira }}</span>{% endif %}
+                            {% if tx.banka_havale > 0 %}<span>🏦 B: {{ tx.banka_havale|turkish_lira }}</span>{% endif %}
+                            {% if tx.canta_cikis|default:0 > 0 %}<span>👜 {{ tx.canta_cikis|turkish_lira }}</span>{% endif %}
+                        </div>
+                        {% if tx.aciklama %}
+                        <div class="small text-muted mt-1">{{ tx.aciklama|truncatechars:60 }}</div>
+                        {% endif %}
+                        {% if tx.kategori1 %}
+                        <div class="mt-1">
+                            <span class="badge bg-primary">
+                                {% if tx.kategori1.parent %}{{ tx.kategori1.parent.name }} / {% endif %}{{ tx.kategori1.name }}
+                            </span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
                 </div>
                 {% else %}
                 <div class="p-4 text-center text-muted">
@@ -634,7 +730,7 @@
                 </div>
                 <div class="card-body">
                     {% if merkez_ekstra_islemler %}
-                    <div class="table-responsive">
+                    <div class="table-responsive d-none d-md-block">
                         <table class="table table-sm table-hover mb-0">
                             <thead class="table-dark">
                                 <tr>
@@ -724,6 +820,37 @@
                                 {% endfor %}
                             </tbody>
                         </table>
+                    </div>
+                    <!-- Mobil kart görünümü - Merkez Ekstra -->
+                    <div class="d-md-none">
+                        {% for tx in merkez_ekstra_islemler %}
+                        <div class="tx-mobile-card">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    <span class="badge {% if tx.hareket_tipi == 'gelir' %}bg-success{% else %}bg-danger{% endif %}">{{ tx.get_hareket_tipi_display }}</span>
+                                    <span class="badge {% if tx.kasa_adi == 'merkez-satis' %}bg-info{% elif tx.kasa_adi == 'virman' %}bg-warning{% else %}bg-secondary{% endif %}">{{ tx.get_kasa_adi_display }}</span>
+                                    <small class="text-muted">{{ tx.tarih|date:'d.m.Y' }}</small>
+                                </div>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'dashboard:transaction_duzenle' tx.id %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-pencil"></i></a>
+                                    <form method="post" action="{% url 'dashboard:transaction_sil' tx.id %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                        <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Silmek istediğinize emin misiniz?');"><i class="bi bi-trash"></i></button>
+                                    </form>
+                                </div>
+                            </div>
+                            <div class="d-flex flex-wrap gap-2 small">
+                                {% if tx.nakit > 0 %}<span>💰 {{ tx.nakit|turkish_lira }}</span>{% endif %}
+                                {% if tx.kredi_karti > 0 %}<span>💳 {{ tx.kredi_karti|turkish_lira }}</span>{% endif %}
+                                {% if tx.cari > 0 %}<span>🏢 {{ tx.cari|turkish_lira }}</span>{% endif %}
+                                {% if tx.sanal_pos > 0 %}<span>📱 {{ tx.sanal_pos|turkish_lira }}</span>{% endif %}
+                                {% if tx.mehmet_havale > 0 %}<span>🏦 M: {{ tx.mehmet_havale|turkish_lira }}</span>{% endif %}
+                                {% if tx.banka_havale > 0 %}<span>🏦 B: {{ tx.banka_havale|turkish_lira }}</span>{% endif %}
+                            </div>
+                            {% if tx.aciklama %}<div class="small text-muted mt-1">{{ tx.aciklama|truncatechars:60 }}</div>{% endif %}
+                        </div>
+                        {% endfor %}
                     </div>
                     {% else %}
                     <div class="p-4 text-center text-muted">

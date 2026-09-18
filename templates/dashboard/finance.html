@@ -15,12 +15,59 @@
     [data-bs-theme=dark] .table-secondary th {
         background-color: #182f46 !important;
     }
-    
 
-    
     /* Toast bildirimi için özel stil */
     .toast {
         min-width: 350px;
+    }
+
+    /* ── Mobil düzeltmeleri ── */
+    @media (max-width: 767px) {
+        /* Excel filtre header'ı dikey yap */
+        .excel-card-header {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 0.75rem;
+        }
+        .excel-filter-row {
+            width: 100%;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .excel-filter-row input[type=date] {
+            flex: 1 1 calc(50% - 0.25rem);
+            min-width: 0;
+        }
+        .excel-filter-row .btn { flex: 1 1 100%; }
+
+        /* Ödeme alanları 2'li grid */
+        .odeme-col { flex: 0 0 50%; max-width: 50%; }
+
+        /* Kaydet butonu tam genişlik */
+        #saveButton { width: 100%; }
+
+        .w-md-auto { width: auto !important; }
+
+        /* Kategori seçici padding */
+        .card-body .row.g-3 > [class*="col-"] { padding-top: 0.5rem; }
+
+        /* Tablo scroll göstergesi */
+        .table-responsive { -webkit-overflow-scrolling: touch; }
+        .table-responsive::after {
+            content: '← Sola kaydırın →';
+            display: block;
+            text-align: center;
+            font-size: 0.7rem;
+            color: #6c757d;
+            padding: 4px;
+        }
+        .table-responsive:not(:has(table)) { display: none; }
+        .table-responsive:has(table)::after { display: block; }
+    }
+
+    @media (min-width: 768px) {
+        #saveButton { width: auto; }
     }
 </style>
 {% endblock %}
@@ -80,35 +127,35 @@
                         </div>
                     </div>
 
-                    <div class="col-md-3">
+                    <div class="col-6 col-md-3 odeme-col">
                         <label class="form-label">💰 Nakit</label>
                         {{ form.nakit }}
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-6 col-md-3 odeme-col">
                         <label class="form-label">💳 Kredi Kartı</label>
                         {{ form.kredi_karti }}
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-6 col-md-3 odeme-col">
                         <label class="form-label">🏢 Cari</label>
                         {{ form.cari }}
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-6 col-md-3 odeme-col">
                         <label class="form-label">💳 Sanal Pos</label>
                         {{ form.sanal_pos }}
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-6 col-md-3 odeme-col">
                         <label class="form-label">🏦 Mehmet Havale</label>
                         {{ form.mehmet_havale }}
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-6 col-md-3 odeme-col">
                         <label class="form-label">🏦 Banka Havale</label>
                         {{ form.banka_havale }}
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-6 col-md-3 odeme-col">
                         <label class="form-label">🏦 Pafgo</label>
                         {{ form.pafgo }}
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-6 col-md-3 odeme-col">
                         <label class="form-label">👜 Çanta Çıkış</label>
                         {{ form.canta_cikis }}
                     </div>
@@ -164,17 +211,19 @@
     </div>
 
     <div class="col-12 d-flex justify-content-end">
-        <button type="submit" class="btn btn-primary" id="saveButton">Kaydet</button>
+        <button type="submit" class="btn btn-primary w-100 w-md-auto" id="saveButton">
+            <i class="bi bi-save me-2"></i>Kaydet
+        </button>
     </div>
 </form>
 
 <!-- Excel Gömme Alanı Başlangıç -->
 <div class="card mt-4">
-    <div class="card-header d-flex justify-content-between align-items-center">
+    <div class="card-header excel-card-header d-flex justify-content-between align-items-center">
         <h5 class="card-title mb-0">
             <i class="bi bi-file-earmark-excel me-2"></i>Excel Dosyası Yükle ve Görüntüle
         </h5>
-        <div class="d-flex gap-2">
+        <div class="excel-filter-row d-flex gap-2">
             <input type="date" id="start-date" class="form-control form-control-sm" placeholder="Başlangıç">
             <input type="date" id="end-date" class="form-control form-control-sm" placeholder="Bitiş">
             <button type="button" id="btn-date-filter" class="btn btn-outline-primary btn-sm">

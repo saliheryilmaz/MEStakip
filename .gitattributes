@@ -1,14 +1,13 @@
-# Enforce Unix newlines
-*.*     text eol=lf
-*.css   text eol=lf
-*.html  text eol=lf
-*.js    text eol=lf
-*.json  text eol=lf
-*.less  text eol=lf
-*.md    text eol=lf
-*.yml   text eol=lf
+# Generated / frontend files should not dominate GitHub language statistics
+static/** linguist-vendored
+src-modern/** linguist-vendored
 
-*.jpg binary
-*.gif binary
-*.png binary
-*.jpeg binary
+# Django templates are templates, not the primary project language
+templates/** linguist-vendored
+**/templates/** linguist-vendored
+
+# Explicitly identify Python
+*.py linguist-language=Python
+
+# Font assets must never undergo line-ending conversion.
+*.woff2 binary

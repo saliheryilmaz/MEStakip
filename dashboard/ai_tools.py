@@ -440,13 +440,19 @@ def get_used_tire_inventory(brand: str = "", size: str = "",
 @_safe
 def get_used_tire_sales(start_date: str = "", end_date: str = "",
                         limit: int = 20) -> dict:
-    """Satılan çıkma lastiklerini ve cirosunu döndürür."""
+    """Satılan çıkma lastiklerini ve cirosunu döndürür. Tarih belirtilmezse tüm zamanlar."""
     today = date.today()
-    start = _parse_date(start_date) or _month_start(today)
-    end   = _parse_date(end_date)   or today
+    start = _parse_date(start_date)
+    end   = _parse_date(end_date)
 
-    qs = CikmaLastik.objects.filter(durum="satildi",
-                                    satis_tarihi__gte=start, satis_tarihi__lte=end)
+    qs = CikmaLastik.objects.filter(durum="satildi")
+    if start:
+        qs = qs.filter(satis_tarihi__gte=start)
+    if end:
+        qs = qs.filter(satis_tarihi__lte=end)
+
+    donem = f"{start} – {end}" if start or end else "Tüm zamanlar"
+
     toplam_adet = int(qs.aggregate(t=Sum("adet"))["t"] or 0)
     ciro = sum(
         float((r.satis_fiyati or 0) * (r.adet or 0))
@@ -456,7 +462,7 @@ def get_used_tire_sales(start_date: str = "", end_date: str = "",
         qs.values("ebat").annotate(adet=Sum("adet")).order_by("-adet")[:10]
     )
     return {
-        "donem": f"{start} – {end}",
+        "donem": donem,
         "toplam_satis_kayit": qs.count(),
         "toplam_satis_adet": toplam_adet,
         "toplam_ciro_tl": round(ciro, 2),

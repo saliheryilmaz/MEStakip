@@ -658,7 +658,7 @@ def filo_islem_gorenler(request):
     ambar  = request.GET.get('ambar', '')
     ebat   = request.GET.get('ebat', '')
 
-    araclar = FiloArac.objects.filter(user=request.user, durum__in=['kullanicida', 'otl'])
+    araclar = FiloArac.objects.filter(user=request.user, durum__in=['degisim_yapildi', 'kullanicida', 'otl'])
 
     if plaka:
         araclar = araclar.filter(plaka__icontains=plaka)

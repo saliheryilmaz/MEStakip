@@ -148,7 +148,7 @@
                                 <!-- Değiştir-Saklamada -->
                                 <button type="button" class="btn btn-secondary btn-sm filo-durum-btn"
                                         title="Değişim Yapıldı"
-                                        data-id="{{ arac.id }}" data-durum="kullanicida">
+                                        data-id="{{ arac.id }}" data-durum="degisim_yapildi">
                                     <i class="bi bi-archive"></i>
                                 </button>
                                 <!-- Kullanıcıya Teslim Edildi -->
@@ -228,7 +228,7 @@
                     </div>
                 </div>
                 <div class="card-footer py-2 d-flex gap-2 flex-wrap">
-                    <button class="btn btn-secondary btn-sm filo-durum-btn" data-id="{{ arac.id }}" data-durum="kullanicida">
+                    <button class="btn btn-secondary btn-sm filo-durum-btn" data-id="{{ arac.id }}" data-durum="degisim_yapildi">
                         <i class="bi bi-archive me-1"></i>Değişim Yapıldı
                     </button>
                     <button class="btn btn-success btn-sm filo-durum-btn" data-id="{{ arac.id }}" data-durum="kullanicida">
@@ -421,7 +421,7 @@ document.querySelectorAll('.filo-durum-btn').forEach(function(btn) {
         .then(r => r.json())
         .then(data => {
             if (data.status === 'success') {
-                if (durum === 'kullanicida' || durum === 'otl') {
+                if (durum === 'degisim_yapildi' || durum === 'kullanicida' || durum === 'otl') {
                     window.location.href = '/dashboard/filo/islem-gorenler/';
                 } else {
                     location.reload();

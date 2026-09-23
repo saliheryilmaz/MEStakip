@@ -655,6 +655,7 @@ class FiloArac(models.Model):
 
     DURUM_CHOICES = [
         ('saklamada', 'Saklamada'),
+        ('degisim_yapildi', 'Değişim Yapıldı'),
         ('kullanicida', 'Kullanıcıya Teslim Edildi'),
         ('otl', 'ÖTL'),
     ]
@@ -699,9 +700,10 @@ class FiloArac(models.Model):
 
     def get_durum_display_color(self):
         colors = {
-            'saklamada':  'secondary',
-            'kullanicida': 'success',
-            'otl':        'warning',
+            'saklamada':       'secondary',
+            'degisim_yapildi': 'primary',
+            'kullanicida':     'success',
+            'otl':             'warning',
         }
         return colors.get(self.durum, 'secondary')
 

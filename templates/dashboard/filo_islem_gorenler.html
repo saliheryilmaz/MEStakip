@@ -131,12 +131,6 @@
                         <td><small class="text-muted">{{ arac.guncelleme_tarihi|date:"d.m.Y H:i" }}</small></td>
                         <td>
                             <div class="btn-group btn-group-sm" role="group">
-                                <!-- Saklamaya geri al -->
-                                <button type="button" class="btn btn-secondary btn-sm filo-durum-btn"
-                                        title="Değişim Yapıldı"
-                                        data-id="{{ arac.id }}" data-durum="saklamada">
-                                    <i class="bi bi-archive"></i>
-                                </button>
                                 <!-- Teslim Belgesi -->
                                 <button type="button" class="btn btn-info btn-sm" title="Teslim Belgesi"
                                         onclick="teslimBelgesiYazdir(
@@ -189,9 +183,6 @@
                     </div>
                 </div>
                 <div class="card-footer py-2 d-flex gap-2 flex-wrap">
-                    <button class="btn btn-secondary btn-sm filo-durum-btn" data-id="{{ arac.id }}" data-durum="saklamada">
-                        <i class="bi bi-archive me-1"></i>Değişim Yapıldı
-                    </button>
                     <a href="{% url 'dashboard:filo_duzenle' arac.id %}" class="btn btn-primary btn-sm">
                         <i class="bi bi-pencil me-1"></i>Düzenle
                     </a>
@@ -297,7 +288,7 @@ document.querySelectorAll('.filo-durum-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {
         const id    = this.dataset.id;
         const durum = this.dataset.durum;
-        if (!confirm('Bu aracı "Değişim Yapıldı" olarak geri almak istiyor musunuz?')) return;
+        if (!confirm('Bu aracı "Saklamada" olarak geri almak istiyor musunuz?')) return;
 
         const formData = new FormData();
         formData.append('durum', durum);

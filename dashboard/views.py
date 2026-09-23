@@ -4982,154 +4982,57 @@ def cikma_lastikler(request):
             # Hata durumunda da sayfayı yeniden yükle
             return redirect('dashboard:cikma_lastikler')
     
-    # Filtreleme parametreleri - sadece GET request'te
-    marka = request.GET.get('marka', '')
-    ebat = request.GET.get('ebat', '')
-    mevsim = request.GET.get('mevsim', '')
-    arac_tipi = request.GET.get('arac_tipi', '')
-    depo_konumu = request.GET.get('depo_konumu', '')
-    tarih_filtre = request.GET.get('tarih', '')
-    baslangic_tarihi = request.GET.get('baslangic_tarihi', '')
-    bitis_tarihi = request.GET.get('bitis_tarihi', '')
-    
-    # Çıkma lastikleri getir
-    # Misafir kullanıcılar tüm aktif verileri görür, diğer kullanıcılar sadece kendi kayıtlarını görür
-    if is_misafir:
-        # Misafir kullanıcılar için tüm aktif veriler (satılmayanlar)
-        cikma_lastikler = CikmaLastik.objects.exclude(durum='satildi')
-    else:
-        # Diğer kullanıcılar için sadece kendi kayıtları (satılmayanlar)
-        cikma_lastikler = CikmaLastik.objects.filter(user=request.user).exclude(durum='satildi')
-    
-    print(f"DEBUG: Kullanıcı {request.user.username} için toplam kayıt sayısı: {cikma_lastikler.count()}")
-    if cikma_lastikler.exists():
-        print(f"DEBUG: İlk 3 kayıt: {list(cikma_lastikler.values('id', 'marka', 'ebat', 'user__username')[:3])}")
-    else:
-        print("DEBUG: Hiç kayıt bulunamadı")
-    
-    # Filtreleme uygula
-    if marka:
-        # Türkçe karakter varyantları oluştur ve hepsiyle ara
-        search_variants = create_turkish_search_variants(marka)
-        q_objects = Q()
-        for variant in search_variants:
-            q_objects |= Q(marka__icontains=variant)
-        cikma_lastikler = cikma_lastikler.filter(q_objects)
-    if ebat:
-        # Ebat formatını otomatik düzenle (2055516 -> 205/55R16)
-        formatted_ebat = format_tire_size(ebat)
-        cikma_lastikler = cikma_lastikler.filter(ebat__icontains=formatted_ebat)
-    if mevsim:
-        cikma_lastikler = cikma_lastikler.filter(mevsim=mevsim)
-    if arac_tipi:
-        cikma_lastikler = cikma_lastikler.filter(arac_tipi=arac_tipi)
-    if depo_konumu:
-        cikma_lastikler = cikma_lastikler.filter(depo_konumu__icontains=depo_konumu)
-    
-    # Tarih filtreleme uygula
-    now = timezone.now()
-    if tarih_filtre:
-        if tarih_filtre == 'son-1-ay':
-            start_date = now - timedelta(days=30)
-            cikma_lastikler = cikma_lastikler.filter(olusturma_tarihi__gte=start_date)
-        elif tarih_filtre == 'son-3-ay':
-            start_date = now - timedelta(days=90)
-            cikma_lastikler = cikma_lastikler.filter(olusturma_tarihi__gte=start_date)
-        elif tarih_filtre == 'son-6-ay':
-            start_date = now - timedelta(days=180)
-            cikma_lastikler = cikma_lastikler.filter(olusturma_tarihi__gte=start_date)
-        elif tarih_filtre == 'bugun':
-            cikma_lastikler = cikma_lastikler.filter(olusturma_tarihi__date=now.date())
-        elif tarih_filtre == 'bu-hafta':
-            start_date = now - timedelta(days=now.weekday())
-            cikma_lastikler = cikma_lastikler.filter(olusturma_tarihi__gte=start_date)
-        elif tarih_filtre == 'bu-ay':
-            start_date = now.replace(day=1)
-            cikma_lastikler = cikma_lastikler.filter(olusturma_tarihi__gte=start_date)
-    
-    # Özel tarih aralığı filtreleme
-    if baslangic_tarihi and bitis_tarihi:
-        try:
-            start_date = datetime.strptime(baslangic_tarihi, '%Y-%m-%d').date()
-            end_date = datetime.strptime(bitis_tarihi, '%Y-%m-%d').date()
-            cikma_lastikler = cikma_lastikler.filter(olusturma_tarihi__date__range=[start_date, end_date])
-        except ValueError:
-            pass
-    elif baslangic_tarihi:
-        try:
-            start_date = datetime.strptime(baslangic_tarihi, '%Y-%m-%d').date()
-            cikma_lastikler = cikma_lastikler.filter(olusturma_tarihi__date__gte=start_date)
-        except ValueError:
-            pass
-    elif bitis_tarihi:
-        try:
-            end_date = datetime.strptime(bitis_tarihi, '%Y-%m-%d').date()
-            cikma_lastikler = cikma_lastikler.filter(olusturma_tarihi__date__lte=end_date)
-        except ValueError:
-            pass
-    
-    # Sıralama - en yeni kayıtlar üstte
-    cikma_lastikler = cikma_lastikler.order_by('-olusturma_tarihi')
-    
-    # Sayfalama
-    paginator = Paginator(cikma_lastikler, 50)  # Sayfa başına 50 kayıt
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-    
-    # İstatistikler (satılanlar hariç)
-    toplam_kayit = cikma_lastikler.count()
-    toplam_adet = cikma_lastikler.aggregate(total=Sum('adet'))['total'] or 0
-    depolanan_adet = cikma_lastikler.filter(durum='depolandi').aggregate(total=Sum('adet'))['total'] or 0
-    cikti_adet = cikma_lastikler.filter(durum='cikti').aggregate(total=Sum('adet'))['total'] or 0
-    
-    # Durum dağılımı
-    durum_dagilimi = cikma_lastikler.values('durum').annotate(
-        kayit_sayisi=Count('id'),
-        adet_toplam=Sum('adet')
-    ).order_by('durum')
-    
-    # Filtreleme parametrelerini URL query string olarak hazırla
-    filter_params = []
-    if marka:
-        filter_params.append(f'marka={marka}')
-    if ebat:
-        filter_params.append(f'ebat={ebat}')
-    if mevsim:
-        filter_params.append(f'mevsim={mevsim}')
-    if arac_tipi:
-        filter_params.append(f'arac_tipi={arac_tipi}')
-    if depo_konumu:
-        filter_params.append(f'depo_konumu={depo_konumu}')
-    if tarih_filtre:
-        filter_params.append(f'tarih={tarih_filtre}')
-    if baslangic_tarihi:
-        filter_params.append(f'baslangic_tarihi={baslangic_tarihi}')
-    if bitis_tarihi:
-        filter_params.append(f'bitis_tarihi={bitis_tarihi}')
-    
-    filter_query_string = '&'.join(filter_params)
-    
+    from django.http import QueryDict
+    from .used_tire_inventory import inventory_scope, inventory_filters, filter_inventory
+
+    filters = inventory_filters(request.GET, is_misafir)
+    stock = inventory_scope(request.user, is_misafir)
+    overview = filter_inventory(stock, filters, include_depot=False)
+    cikma_lastikler = filter_inventory(stock, filters).order_by('-olusturma_tarihi', '-pk')
+    totals = cikma_lastikler.aggregate(
+        toplam_kayit=Count('id'), toplam_adet=Sum('adet'),
+        depolanan_adet=Sum('adet', filter=Q(durum='depolandi')),
+        cikti_adet=Sum('adet', filter=Q(durum='cikti')),
+    )
+    stats = {key: value or 0 for key, value in totals.items()}
+    params = QueryDict(mutable=True)
+    params.update({key: value for key, value in filters.items() if value})
+
+    def depot_link(name):
+        query = params.copy()
+        query.pop('depo_konumu', None)
+        if name:
+            query['depo_konumu'] = name
+        return '?' + query.urlencode()
+
+    depot_rows = []
+    depot_options = []
+    if not is_misafir:
+        depot_options = list(stock.exclude(depot_name='').order_by('depot_name')
+                             .values_list('depot_name', flat=True).distinct())
+        if filters['depo_konumu'] and filters['depo_konumu'] not in depot_options:
+            depot_options.append(filters['depo_konumu'])
+        for row in overview.exclude(depot_name='').order_by('depot_name').values('depot_name').annotate(
+                kayit_sayisi=Count('id'), adet_toplam=Sum('adet')):
+            row['url'] = depot_link(row['depot_name'])
+            row['selected'] = row['depot_name'] == filters['depo_konumu']
+            depot_rows.append(row)
+
+    page_obj = Paginator(cikma_lastikler, 50).get_page(request.GET.get('page'))
     context = {
         'page_title': 'Çıkma Lastikler',
         'cikma_lastikler': page_obj,
-        'filters': {
-            'marka': marka,
-            'ebat': ebat,
-            'mevsim': mevsim,
-            'arac_tipi': arac_tipi,
-            'depo_konumu': depo_konumu,
-            'tarih': tarih_filtre,
-            'baslangic_tarihi': baslangic_tarihi,
-            'bitis_tarihi': bitis_tarihi,
-        },
-        'filter_query_string': filter_query_string,
-        'stats': {
-            'toplam_kayit': toplam_kayit,
-            'toplam_adet': toplam_adet,
-            'depolanan_adet': depolanan_adet,
-            'cikti_adet': cikti_adet,
-        },
-        'durum_dagilimi': durum_dagilimi,
+        'filters': filters,
+        'filter_query_string': params.urlencode(),
+        'stats': stats,
+        'depot_rows': depot_rows,
+        'depot_options': depot_options,
+        'all_depots_url': depot_link(None),
+        'depot_totals': overview.aggregate(kayit_sayisi=Count('id'), adet_toplam=Sum('adet')),
+        'extra_filters': [(key, filters[key]) for key in
+                          ('arac_tipi', 'tarih', 'baslangic_tarihi', 'bitis_tarihi') if filters[key]],
+        'durum_dagilimi': cikma_lastikler.order_by('durum').values('durum').annotate(
+            kayit_sayisi=Count('id'), adet_toplam=Sum('adet')),
         'durum_choices': CikmaLastik.DURUM_CHOICES,
         'mevsim_choices': CikmaLastik.MEVSIM_CHOICES,
         'arac_tipi_choices': CikmaLastik.ARAC_TIPI_CHOICES,
@@ -5497,76 +5400,12 @@ def export_cikma_lastikler_excel(request):
     except Exception:
         is_misafir = False
 
-    # Filtreleme parametrelerini al
-    marka = request.GET.get('marka', '')
-    ebat = request.GET.get('ebat', '')
-    mevsim = request.GET.get('mevsim', '')
-    arac_tipi = request.GET.get('arac_tipi', '')
-    depo_konumu = request.GET.get('depo_konumu', '')
-    tarih_filtre = request.GET.get('tarih', '')
-    baslangic_tarihi = request.GET.get('baslangic_tarihi', '')
-    bitis_tarihi = request.GET.get('bitis_tarihi', '')
+    from .used_tire_inventory import inventory_scope, inventory_filters, filter_inventory
 
-    # Queryset
-    if is_misafir:
-        lastikler = CikmaLastik.objects.exclude(durum='satildi')
-    else:
-        lastikler = CikmaLastik.objects.filter(user=request.user).exclude(durum='satildi')
-
-    # Filtreler
-    if marka:
-        search_variants = create_turkish_search_variants(marka)
-        q_objects = Q()
-        for variant in search_variants:
-            q_objects |= Q(marka__icontains=variant)
-        lastikler = lastikler.filter(q_objects)
-    if ebat:
-        formatted_ebat = format_tire_size(ebat)
-        lastikler = lastikler.filter(ebat__icontains=formatted_ebat)
-    if mevsim:
-        lastikler = lastikler.filter(mevsim=mevsim)
-    if arac_tipi:
-        lastikler = lastikler.filter(arac_tipi=arac_tipi)
-    if depo_konumu:
-        lastikler = lastikler.filter(depo_konumu__icontains=depo_konumu)
-
-    # Tarih filtreleme
+    filters = inventory_filters(request.GET, is_misafir)
+    lastikler = filter_inventory(inventory_scope(request.user, is_misafir), filters)
+    lastikler = lastikler.order_by('-olusturma_tarihi', '-pk')
     now = timezone.now()
-    if tarih_filtre:
-        if tarih_filtre == 'son-1-ay':
-            lastikler = lastikler.filter(olusturma_tarihi__gte=now - timedelta(days=30))
-        elif tarih_filtre == 'son-3-ay':
-            lastikler = lastikler.filter(olusturma_tarihi__gte=now - timedelta(days=90))
-        elif tarih_filtre == 'son-6-ay':
-            lastikler = lastikler.filter(olusturma_tarihi__gte=now - timedelta(days=180))
-        elif tarih_filtre == 'bugun':
-            lastikler = lastikler.filter(olusturma_tarihi__date=now.date())
-        elif tarih_filtre == 'bu-hafta':
-            lastikler = lastikler.filter(olusturma_tarihi__gte=now - timedelta(days=now.weekday()))
-        elif tarih_filtre == 'bu-ay':
-            lastikler = lastikler.filter(olusturma_tarihi__gte=now.replace(day=1))
-
-    if baslangic_tarihi and bitis_tarihi:
-        try:
-            start_date = datetime.strptime(baslangic_tarihi, '%Y-%m-%d').date()
-            end_date = datetime.strptime(bitis_tarihi, '%Y-%m-%d').date()
-            lastikler = lastikler.filter(olusturma_tarihi__date__range=[start_date, end_date])
-        except ValueError:
-            pass
-    elif baslangic_tarihi:
-        try:
-            start_date = datetime.strptime(baslangic_tarihi, '%Y-%m-%d').date()
-            lastikler = lastikler.filter(olusturma_tarihi__date__gte=start_date)
-        except ValueError:
-            pass
-    elif bitis_tarihi:
-        try:
-            end_date = datetime.strptime(bitis_tarihi, '%Y-%m-%d').date()
-            lastikler = lastikler.filter(olusturma_tarihi__date__lte=end_date)
-        except ValueError:
-            pass
-
-    lastikler = lastikler.order_by('-olusturma_tarihi')
 
     # Excel dosyası oluştur
     wb = Workbook()
@@ -5581,6 +5420,8 @@ def export_cikma_lastikler_excel(request):
     headers = [
         'EBAT', 'MARKA', 'MODEL', 'MEVSİM', 'ADET', 'AÇIKLAMA',
     ]
+    if not is_misafir:
+        headers += ['DEPO', 'KAYIT ID']
 
     for col, header in enumerate(headers, 1):
         cell = ws.cell(row=1, column=col, value=header)
@@ -5596,9 +5437,15 @@ def export_cikma_lastikler_excel(request):
         ws.cell(row=row, column=4, value=lastik.get_mevsim_display())
         ws.cell(row=row, column=5, value=lastik.adet)
         ws.cell(row=row, column=6, value=lastik.aciklama or '')
+        if not is_misafir:
+            depot_cell = ws.cell(row=row, column=7, value=lastik.depot_name)
+            depot_cell.data_type = 's'
+            ws.cell(row=row, column=8, value=lastik.pk)
 
     # Sütun genişlikleri
     column_widths = [14, 18, 18, 12, 7, 40]
+    if not is_misafir:
+        column_widths += [24, 12]
     for col, width in enumerate(column_widths, 1):
         ws.column_dimensions[ws.cell(row=1, column=col).column_letter].width = width
 

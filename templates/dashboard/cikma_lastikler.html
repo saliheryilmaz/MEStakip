@@ -6,6 +6,16 @@
 
 {% block extra_css %}
 <style>
+.depot-control { border-block: 1px solid var(--bs-border-color); padding: 16px 0; }
+.depot-summary-scroll { max-height: 300px; }
+#depotSummary { table-layout: fixed; }
+#depotSummary th, #depotSummary td { white-space: normal !important; overflow-wrap: anywhere; min-width: 0; letter-spacing: 0; }
+#depotSummary th { text-transform: none; }
+#depotSummary th:first-child { width: 56%; overflow-wrap: anywhere; }
+#depotSummary td { font-variant-numeric: tabular-nums; }
+#depotSummary a { display: inline-block; padding: 4px 0; }
+#depotSummary .depot-selected > * { background: var(--bs-tertiary-bg); border-bottom: 2px solid var(--bs-primary); }
+.depot-stock-total { font-variant-numeric: tabular-nums; }
 /* Mobil optimizasyonları */
 @media (max-width: 768px) {
     /* Modal içeriğe göre boyutlandır */
@@ -501,16 +511,20 @@
 <!-- Compact Mobile Filter -->
 <div class="compact-mobile-filter d-md-none mb-2">
     <form method="get" id="mobileFilterForm" class="d-flex gap-2 flex-wrap">
+        {% for key, value in extra_filters %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}
+        <input type="text" inputmode="numeric" maxlength="20" class="form-control form-control-sm" id="mobileIdInput" name="id" value="{{ filters.id }}" placeholder="ID / #123" aria-label="Kayıt ID" style="flex: 1; min-width: 100px;">
         <input type="text" class="form-control form-control-sm" id="mobileEbatInput" name="ebat" value="{{ filters.ebat }}" placeholder="Ebat girin..." style="flex: 2; min-width: 140px;">
         <input type="text" class="form-control form-control-sm" id="mobileMarkaInput" name="marka" value="{{ filters.marka }}" placeholder="Marka..." style="flex: 1; min-width: 100px;">
         {% if not is_misafir %}
-        <input type="text" class="form-control form-control-sm" id="mobileDepoInput" name="depo_konumu" value="{{ filters.depo_konumu }}" placeholder="Depo..." style="flex: 1; min-width: 80px;">
+        <select class="form-select form-select-sm" id="mobileDepoInput" name="depo_konumu" aria-label="Depo" style="flex: 1; min-width: 140px;" data-depot-select>
+            {% include 'dashboard/_used_tire_depot_options.html' %}
+        </select>
         {% endif %}
         <input type="hidden" id="mobileMevsimInput" name="mevsim" value="{{ filters.mevsim }}">
-        <button type="submit" class="btn btn-primary btn-sm">
+        <button type="submit" class="btn btn-primary btn-sm" aria-label="Filtrele" title="Filtrele">
             <i class="bi bi-search"></i>
         </button>
-        {% if filters.marka or filters.ebat or filters.depo_konumu or filters.mevsim %}
+        {% if filter_query_string %}
         <a href="{% url 'dashboard:cikma_lastikler' %}" class="btn btn-outline-secondary btn-sm" id="clearFiltersBtn">
             <i class="bi bi-x"></i>
         </a>
@@ -532,8 +546,13 @@
         <h6 class="card-title mb-0">Filtreleme</h6>
     </div>
     <div class="card-body">
-        <form method="get">
+        <form method="get" id="desktopFilterForm">
+            {% for key, value in extra_filters %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}
             <div class="row g-2 filter-row">
+                <div class="col-md-2 col-6 filter-col">
+                    <label for="filterRecordId" class="form-label">KAYIT ID</label>
+                    <input type="text" inputmode="numeric" maxlength="20" class="form-control" id="filterRecordId" name="id" value="{{ filters.id }}" placeholder="123 veya #123">
+                </div>
                 <div class="col-md-2 col-6 filter-col">
                     <label for="marka" class="form-label">MARKA</label>
                     <input type="text" class="form-control" id="marka" name="marka" value="{{ filters.marka }}" placeholder="Marka adı...">
@@ -544,8 +563,10 @@
                 </div>
                 {% if not is_misafir %}
                 <div class="col-md-2 col-6 filter-col">
-                    <label for="depo_konumu" class="form-label">AMBAR (DEPO)</label>
-                    <input type="text" class="form-control" id="depo_konumu" name="depo_konumu" value="{{ filters.depo_konumu }}" placeholder="Raf A-1...">
+                    <label for="filterDepot" class="form-label">AMBAR (DEPO)</label>
+                    <select class="form-select" id="filterDepot" name="depo_konumu" data-depot-select>
+                        {% include 'dashboard/_used_tire_depot_options.html' %}
+                    </select>
                 </div>
                 {% endif %}
                 <div class="col-md-2 col-6 filter-col">
@@ -563,7 +584,7 @@
                             <i class="bi bi-funnel me-1"></i>
                             Filtrele
                         </button>
-                        <a href="{% url 'dashboard:cikma_lastikler' %}" class="btn btn-outline-secondary">
+                        <a href="{% url 'dashboard:cikma_lastikler' %}" class="btn btn-outline-secondary" aria-label="Filtreleri temizle" title="Filtreleri temizle">
                             <i class="bi bi-arrow-clockwise"></i>
                         </a>
                     </div>
@@ -574,9 +595,13 @@
 </div>
 
 <!-- Main Content Section -->
+{% include 'dashboard/_used_tire_depot_summary.html' %}
 <div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h6 class="card-title mb-0">Çıkma Lastik Listesi</h6>
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+            <h6 class="card-title mb-1">Çıkma Lastik Listesi</h6>
+            <div class="small depot-stock-total" id="filteredStockTotal">{{ stats.toplam_kayit }} kayıt · <strong>{{ stats.toplam_adet }} lastik</strong>{% if filters.depo_konumu %} · {{ filters.depo_konumu }}{% endif %}</div>
+        </div>
         <div class="d-flex gap-2">
             <a href="{% url 'dashboard:export_cikma_lastikler_excel' %}{% if filter_query_string %}?{{ filter_query_string }}{% endif %}"
                class="btn btn-warning btn-sm d-none d-md-inline-block">
@@ -647,8 +672,8 @@
                         <td><strong>{{ lastik.adet }}</strong></td>
                         {% if not is_misafir %}
                         <td>
-                            {% if lastik.depo_konumu %}
-                                <span class="badge bg-info">{{ lastik.depo_konumu }}</span>
+                            {% if lastik.depot_name %}
+                                <span class="badge bg-info">{{ lastik.depot_name }}</span>
                             {% else %}
                                 <span class="text-muted">-</span>
                             {% endif %}
@@ -753,11 +778,11 @@
                         </span>
                     </div>
                     {% endif %}
-                    {% if lastik.depo_konumu and not is_misafir %}
+                    {% if not is_misafir %}
                     <div class="lastik-info-row">
                         <span class="info-label">Depo:</span>
                         <span class="info-value">
-                            <span class="badge bg-info">{{ lastik.depo_konumu }}</span>
+                            {% if lastik.depot_name %}<span class="badge bg-info">{{ lastik.depot_name }}</span>{% else %}<span class="text-muted">-</span>{% endif %}
                         </span>
                     </div>
                     {% endif %}
@@ -1224,6 +1249,7 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             
             // Tüm inputları temizle
+            document.getElementById('mobileIdInput').value = '';
             document.getElementById('mobileMarkaInput').value = '';
             document.getElementById('mobileEbatInput').value = '';
             if (document.getElementById('mobileDepoInput')) {

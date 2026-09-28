@@ -17,6 +17,14 @@ FILTER_KEYS = (
 )
 
 
+def can_manage_admin_note(user):
+    """Match the dashboard admin role without granting access to managers."""
+    if not user.is_authenticated or not user.is_active:
+        return False
+    profile = getattr(user, 'userprofile', None)
+    return user.is_superuser or user.is_staff or bool(profile and profile.is_admin())
+
+
 def inventory_scope(user, is_guest=False):
     stock = CikmaLastik.objects.filter(durum__in=('cikti', 'depolandi'))
     if not is_guest:

@@ -120,6 +120,12 @@
                     <label for="aciklama" class="form-label">Açıklama</label>
                     <textarea class="form-control" id="aciklama" name="aciklama" rows="2" placeholder="Ek notlar...">{{ lastik.aciklama|default:'' }}</textarea>
                 </div>
+                {% if can_edit_admin_note %}
+                <div class="col-12">
+                    <label for="admin_aciklama" class="form-label"><i class="bi bi-lock me-1" aria-hidden="true"></i>Admin Açıklaması</label>
+                    <textarea class="form-control" id="admin_aciklama" name="admin_aciklama" rows="3">{{ lastik.admin_aciklama }}</textarea>
+                </div>
+                {% endif %}
             </div>
             
             <div class="d-flex justify-content-end gap-2 mt-4">

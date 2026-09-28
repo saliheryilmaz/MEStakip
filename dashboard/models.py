@@ -583,6 +583,7 @@ class CikmaLastik(models.Model):
     
     # Ek Bilgiler
     aciklama = models.TextField(blank=True, null=True, verbose_name="Açıklama")
+    admin_aciklama = models.TextField(blank=True, default='', verbose_name="Admin Açıklaması")
     depo_konumu = models.CharField(max_length=100, blank=True, null=True, verbose_name="Depo Konumu")
     
     # Zaman Damgaları

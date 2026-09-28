@@ -629,6 +629,9 @@
                         <th style="min-width: 120px;">AMBAR (DEPO)</th>
                         {% endif %}
                         <th style="min-width: 250px;">AÇIKLAMA</th>
+                        {% if can_edit_admin_note %}
+                        <th style="min-width: 220px;"><i class="bi bi-lock me-1" aria-hidden="true"></i>ADMIN AÇIKLAMASI</th>
+                        {% endif %}
                         <th style="min-width: 100px;">GİRİŞ TARİHİ</th>
                         {% if not is_misafir %}
                         <th style="min-width: 120px;">İŞLEMLER</th>
@@ -688,6 +691,11 @@
                                 <span class="text-muted">-</span>
                             {% endif %}
                         </td>
+                        {% if can_edit_admin_note %}
+                        <td class="admin-note" style="min-width: 220px; max-width: 320px; white-space: normal; overflow-wrap: anywhere;">
+                            {{ lastik.admin_aciklama|default:"-"|linebreaksbr }}
+                        </td>
+                        {% endif %}
                         <td>{{ lastik.olusturma_tarihi|date:"d.m.Y" }}</td>
                         {% if not is_misafir %}
                         <td>
@@ -715,7 +723,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="12" class="text-center text-muted py-4">
+                        <td colspan="{% if can_edit_admin_note %}11{% elif is_misafir %}7{% else %}10{% endif %}" class="text-center text-muted py-4">
                             <i class="bi bi-inbox fs-1 d-block mb-2"></i>
                             Henüz çıkma lastik kaydı bulunmuyor.
                         </td>
@@ -792,6 +800,12 @@
                             {{ lastik.aciklama|default:"-" }}
                         </span>
                     </div>
+                    {% if can_edit_admin_note %}
+                    <div class="lastik-info-row admin-note" style="display: block;">
+                        <span class="info-label d-block mb-1"><i class="bi bi-lock me-1" aria-hidden="true"></i>Admin Açıklaması:</span>
+                        <span class="info-value d-block text-start fw-normal" style="white-space: normal; overflow-wrap: anywhere;">{{ lastik.admin_aciklama|default:"-"|linebreaksbr }}</span>
+                    </div>
+                    {% endif %}
                     
                     {% if not is_misafir %}
                     <div class="mobile-actions">
@@ -984,6 +998,12 @@
                             <label for="aciklama" class="form-label">Açıklama</label>
                             <textarea class="form-control" id="aciklama" name="aciklama" rows="2" placeholder="Ek notlar..."></textarea>
                         </div>
+                        {% if can_edit_admin_note %}
+                        <div class="col-12">
+                            <label for="admin_aciklama" class="form-label"><i class="bi bi-lock me-1" aria-hidden="true"></i>Admin Açıklaması</label>
+                            <textarea class="form-control" id="admin_aciklama" name="admin_aciklama" rows="3"></textarea>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
                 <div class="modal-footer">

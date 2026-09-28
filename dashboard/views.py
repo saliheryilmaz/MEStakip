@@ -4856,6 +4856,9 @@ def cikma_lastikler(request):
     """Çıkma Lastikler sayfası"""
     from .models import CikmaLastik
     from django.core.paginator import Paginator
+    from .used_tire_inventory import can_manage_admin_note
+
+    can_edit_admin_note = can_manage_admin_note(request.user)
     
     # Kullanıcı profili kontrolü
     try:
@@ -4872,7 +4875,6 @@ def cikma_lastikler(request):
     # Yeni kayıt ekleme - POST işlemi önce kontrol edilir
     if request.method == 'POST':
         print(f"DEBUG: POST request geldi, kullanıcı: {request.user.username}")
-        print(f"DEBUG: POST verileri: {dict(request.POST)}")
         try:
             # Form verilerini al
             marka = request.POST.get('marka')
@@ -4935,7 +4937,8 @@ def cikma_lastikler(request):
                 canta=canta,
                 cari=cari,
                 depo_konumu=depo_konumu,
-                aciklama=aciklama
+                aciklama=aciklama,
+                admin_aciklama=request.POST.get('admin_aciklama', '') if can_edit_admin_note else '',
             )
             
             # Eğer durum "satıldı" ise ve ödeme seçenekleri varsa Transaction kaydı oluştur
@@ -5028,6 +5031,7 @@ def cikma_lastikler(request):
         'depot_rows': depot_rows,
         'depot_options': depot_options,
         'all_depots_url': depot_link(None),
+        'can_edit_admin_note': can_edit_admin_note,
         'depot_totals': overview.aggregate(kayit_sayisi=Count('id'), adet_toplam=Sum('adet')),
         'extra_filters': [(key, filters[key]) for key in
                           ('arac_tipi', 'tarih', 'baslangic_tarihi', 'bitis_tarihi') if filters[key]],
@@ -5046,6 +5050,9 @@ def cikma_lastikler(request):
 def cikma_lastik_duzenle(request, lastik_id):
     """Çıkma lastik düzenleme sayfası"""
     from .models import CikmaLastik
+    from .used_tire_inventory import can_manage_admin_note
+
+    can_edit_admin_note = can_manage_admin_note(request.user)
     
     # Kullanıcı profili kontrolü
     try:
@@ -5091,6 +5098,8 @@ def cikma_lastik_duzenle(request, lastik_id):
             lastik.hasar_durumu = request.POST.get('hasar_durumu', lastik.hasar_durumu)
             lastik.depo_konumu = request.POST.get('depo_konumu', lastik.depo_konumu)
             lastik.aciklama = request.POST.get('aciklama', lastik.aciklama)
+            if can_edit_admin_note:
+                lastik.admin_aciklama = request.POST.get('admin_aciklama', lastik.admin_aciklama)
             
             # Tahmini değeri güncelle
             tahmini_deger = request.POST.get('tahmini_deger', '')
@@ -5182,6 +5191,7 @@ def cikma_lastik_duzenle(request, lastik_id):
     context = {
         'page_title': 'Çıkma Lastik Düzenle',
         'lastik': lastik,
+        'can_edit_admin_note': can_edit_admin_note,
         'mevsim_choices': CikmaLastik.MEVSIM_CHOICES,
         'kalite_choices': CikmaLastik.KALITE_CHOICES,
     }

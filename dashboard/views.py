@@ -7418,86 +7418,97 @@ def lastik_mevsim_ai(request):
     kural_mevsim_sonuc = kural_tabani(metin)
     kural_grup_sonuc = kural_grup(metin)
 
-    # Eğer veritabanında mevsim bulduysa, sadece grup için kural/AI kullan
-    if model_sonuc:
-        if kural_grup_sonuc:
-            return JsonResponse({"mevsim": model_sonuc, "kaynak": "veritabani", "grup": kural_grup_sonuc})
-        # Grup bilinmiyorsa Groq'a sor (aşağıda)
+    bilinen_mevsim = model_sonuc or kural_mevsim_sonuc
+    eksik_alanlar = []
+    if not bilinen_mevsim:
+        eksik_alanlar.append('mevsim')
+    if not kural_grup_sonuc:
+        eksik_alanlar.append('grup')
 
-    # --- Groq ile tespit ---
-    api_key = getattr(settings, "GROQ_API_KEY", None) or os.environ.get("GROQ_API_KEY", "")
-    if not api_key:
-        try:
-            from dotenv import load_dotenv
-            load_dotenv(getattr(settings, "BASE_DIR", None) / ".env")
-        except Exception:
-            pass
-        api_key = os.environ.get("GROQ_API_KEY", "")
+    groq_mevsim = 'bilinmiyor'
+    groq_grup = 'bilinmiyor'
+    groq_kullanildi = False
 
-    if api_key:
-        try:
-            groq_yanit = groq_chat_completion(
-                api_key=api_key,
-                temperature=0.0,
-                max_tokens=60,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": (
-                            "Sen bir lastik/akü/jant uzmanı AI'sın. Verilen ürün markası ve modeline bakarak mevsim ve grup türünü tahmin et.\n"
-                            "SADECE ve KESİNLİKLE JSON formatında yanıt ver. Markdown (```) veya ek metin kullanma.\n"
-                            "'mevsim' değerleri: 'yaz', 'kis', 'dort-mevsim', 'bilinmiyor'.\n"
-                            "'grup' değerleri: 'binek', 'ticari', 'aku', 'jant', 'bilinmiyor'.\n"
-                            "İpuçları:\n"
-                            "- Sport, Primacy, Turanza, Eagle, PC6, PS4 -> mevsim:yaz, grup:binek\n"
-                            "- Winter, Snow, Blizzak, TS870, LM005 -> mevsim:kis, grup:binek\n"
-                            "- All Season, CrossClimate, A/T -> mevsim:dort-mevsim\n"
-                            "- Van, Transporter, LT, C (ticari ebat: 195/70R15C gibi) -> grup:ticari\n"
-                            "- Akü, Battery, AGM, EFB -> mevsim:bilinmiyor, grup:aku\n"
-                            "- Jant, Alaşım, Rim -> mevsim:bilinmiyor, grup:jant\n\n"
-                            "Örnek Yanıt:\n"
-                            "{\"mevsim\": \"yaz\", \"grup\": \"binek\"}"
-                        ),
-                    },
-                    {"role": "user", "content": metin},
-                ],
-            )
-            groq_yanit = (groq_yanit or "").strip()
-
-            # Markdown etiketlerini temizle
-            if groq_yanit.startswith("```json"):
-                groq_yanit = groq_yanit[7:]
-            elif groq_yanit.startswith("```"):
-                groq_yanit = groq_yanit[3:]
-            if groq_yanit.endswith("```"):
-                groq_yanit = groq_yanit[:-3]
-
-            groq_yanit = groq_yanit.strip()
-
+    # Kurallar ve öğrenilmiş veriler iki alanı da bulduysa dış servise gitme.
+    if eksik_alanlar:
+        api_key = getattr(settings, "GROQ_API_KEY", None) or os.environ.get("GROQ_API_KEY", "")
+        if not api_key:
             try:
-                parsed = json.loads(groq_yanit)
-                mevsim = parsed.get("mevsim", "bilinmiyor")
-                grup = parsed.get("grup", "bilinmiyor")
-                if mevsim not in ("yaz", "kis", "dort-mevsim", "bilinmiyor"):
-                    mevsim = "bilinmiyor"
-                if grup not in ("binek", "ticari", "aku", "jant", "bilinmiyor"):
-                    grup = "bilinmiyor"
-                # Kural tabanlı sonuçlar varsa onları öncelik ver
-                return JsonResponse({
-                    "mevsim": kural_mevsim_sonuc or mevsim,
-                    "grup": kural_grup_sonuc or ("binek" if (kural_mevsim_sonuc or mevsim) not in ("bilinmiyor",) else grup),
-                    "kaynak": "groq"
-                })
+                from dotenv import load_dotenv
+                load_dotenv(getattr(settings, "BASE_DIR", None) / ".env")
             except Exception:
                 pass
-        except Exception:
-            pass
+            api_key = os.environ.get("GROQ_API_KEY", "")
 
-    # Groq başarısız ya da yoksa kural sonuçlarını kullan
-    mevsim_sonuc = kural_mevsim_sonuc or (model_sonuc or "bilinmiyor")
-    grup_sonuc = kural_grup_sonuc or ("binek" if mevsim_sonuc != "bilinmiyor" else "bilinmiyor")
+        if api_key:
+            try:
+                groq_yanit = groq_chat_completion(
+                    api_key=api_key,
+                    temperature=0.0,
+                    max_tokens=60,
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": (
+                                "Sen bir lastik/akü/jant uzmanı AI'sın. Verilen ürün markası ve modelinden istenen alanları tahmin et.\n"
+                                "SADECE JSON döndür; Markdown veya ek metin kullanma.\n"
+                                "'mevsim': 'yaz', 'kis', 'dort-mevsim', 'bilinmiyor'.\n"
+                                "'grup': 'binek', 'ticari', 'aku', 'jant', 'bilinmiyor'.\n"
+                                "İpuçları: Sport/Primacy/Turanza/Eagle yaz; Winter/Snow/Blizzak kış; "
+                                "All Season/CrossClimate dört mevsim; ticari ebatta C ticari; Akü/Battery/AGM akü; "
+                                "Jant/Alaşım jant.\n"
+                                f"Yerel veriler şu alanları belirleyemedi: {', '.join(eksik_alanlar)}. "
+                                "Diğer alan için bilinmiyor yaz.\n"
+                                "Örnek: {\"mevsim\": \"yaz\", \"grup\": \"binek\"}"
+                            ),
+                        },
+                        {"role": "user", "content": metin},
+                    ],
+                )
+                groq_yanit = (groq_yanit or "").strip()
+                if groq_yanit.startswith("```json"):
+                    groq_yanit = groq_yanit[7:]
+                elif groq_yanit.startswith("```"):
+                    groq_yanit = groq_yanit[3:]
+                if groq_yanit.endswith("```"):
+                    groq_yanit = groq_yanit[:-3]
+
+                parsed = json.loads(groq_yanit.strip())
+                if not isinstance(parsed, dict):
+                    raise ValueError('Groq yanıtı JSON nesnesi değil.')
+                candidate_mevsim = parsed.get('mevsim', 'bilinmiyor')
+                candidate_grup = parsed.get('grup', 'bilinmiyor')
+                if candidate_mevsim in ('yaz', 'kis', 'dort-mevsim'):
+                    groq_mevsim = candidate_mevsim
+                if candidate_grup in ('binek', 'ticari', 'aku', 'jant'):
+                    groq_grup = candidate_grup
+                groq_kullanildi = True
+            except Exception:
+                pass
+
+    if model_sonuc:
+        mevsim_sonuc, mevsim_kaynagi = model_sonuc, 'veritabani'
+    elif kural_mevsim_sonuc:
+        mevsim_sonuc, mevsim_kaynagi = kural_mevsim_sonuc, 'kural'
+    elif groq_mevsim != 'bilinmiyor':
+        mevsim_sonuc, mevsim_kaynagi = groq_mevsim, 'groq'
+    else:
+        mevsim_sonuc, mevsim_kaynagi = 'bilinmiyor', 'kural'
+
+    if kural_grup_sonuc:
+        grup_sonuc, grup_kaynagi = kural_grup_sonuc, 'kural'
+    elif groq_grup != 'bilinmiyor':
+        grup_sonuc, grup_kaynagi = groq_grup, 'groq'
+    elif mevsim_sonuc != 'bilinmiyor':
+        grup_sonuc, grup_kaynagi = 'binek', 'kural'
+    else:
+        grup_sonuc, grup_kaynagi = 'bilinmiyor', 'kural'
+
+    kaynak = 'groq' if groq_kullanildi else (mevsim_kaynagi if mevsim_kaynagi == grup_kaynagi else 'karma')
     return JsonResponse({
-        "mevsim": mevsim_sonuc,
-        "grup": grup_sonuc,
-        "kaynak": "kural" if not model_sonuc else "veritabani"
+        'mevsim': mevsim_sonuc,
+        'grup': grup_sonuc,
+        'kaynak': kaynak,
+        'mevsim_kaynagi': mevsim_kaynagi,
+        'grup_kaynagi': grup_kaynagi,
     })

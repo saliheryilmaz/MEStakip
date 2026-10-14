@@ -1,0 +1,4 @@
+<option value="">Tüm depolar</option>
+{% for name in depot_options %}
+<option value="{{ name }}" {% if filters.depo_konumu == name %}selected{% endif %}>{{ name }}</option>
+{% endfor %}

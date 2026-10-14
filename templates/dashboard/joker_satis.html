@@ -1,0 +1,400 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }} - Mestakip{% endblock %}
+
+{% block extra_css %}
+<style>
+    .joker-stats-card {
+        background: #2d3748;
+        border: none;
+        border-radius: 12px;
+        color: white;
+        transition: transform 0.2s ease;
+    }
+    
+    .joker-stats-card:hover {
+        transform: translateY(-2px);
+    }
+    
+    .joker-stats-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+    }
+    
+    .joker-stats-icon.purple {
+        background: rgba(139, 92, 246, 0.2);
+        color: #a78bfa;
+    }
+    
+    .joker-stats-icon.green {
+        background: rgba(34, 197, 94, 0.2);
+        color: #4ade80;
+    }
+    
+    .joker-stats-icon.blue {
+        background: rgba(59, 130, 246, 0.2);
+        color: #60a5fa;
+    }
+    
+    .joker-stats-icon.orange {
+        background: rgba(249, 115, 22, 0.2);
+        color: #fb923c;
+    }
+    
+    .upload-area {
+        background: #2d3748;
+        border: 2px dashed #4a5568;
+        border-radius: 12px;
+        padding: 3rem 2rem;
+        text-align: center;
+        color: white;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .upload-area:hover {
+        border-color: #6366f1;
+        background: #374151;
+    }
+    
+    .upload-area.dragover {
+        border-color: #6366f1;
+        background: #374151;
+        transform: scale(1.02);
+    }
+    
+    .upload-icon {
+        font-size: 3rem;
+        color: #6b7280;
+        margin-bottom: 1rem;
+    }
+    
+    .btn-upload {
+        background: #6366f1;
+        border: none;
+        padding: 0.75rem 2rem;
+        border-radius: 8px;
+        color: white;
+        font-weight: 500;
+        transition: all 0.2s ease;
+    }
+    
+    .btn-upload:hover {
+        background: #4f46e5;
+        transform: translateY(-1px);
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0"> Joker Satış İşlemleri</h1>
+        <p class="text-muted">Joker satış verilerini yükleyin ve yönetin</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#filterCollapse" aria-expanded="false">
+            <i class="bi bi-funnel me-1"></i>Filtrele
+        </button>
+        <a href="{% url 'dashboard:joker_satis' %}" class="btn btn-primary">
+            <i class="bi bi-arrow-clockwise me-1"></i>Temizle
+        </a>
+    </div>
+</div>
+
+<!-- İstatistik Kartları -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card joker-stats-card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="joker-stats-icon green me-3">
+                        <i class="bi bi-arrow-up-circle"></i>
+                    </div>
+                    <div>
+                        <div class="text-muted small">Toplam Gelir</div>
+                        <div class="h4 mb-0 fw-bold">{{ toplam_kar|floatformat:0|default:"0" }} ₺</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card joker-stats-card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="joker-stats-icon purple me-3">
+                        <i class="bi bi-arrow-down-circle"></i>
+                    </div>
+                    <div>
+                        <div class="text-muted small">Toplam Gider</div>
+                        <div class="h4 mb-0 fw-bold">0 ₺</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card joker-stats-card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="joker-stats-icon blue me-3">
+                        <i class="bi bi-wallet2"></i>
+                    </div>
+                    <div>
+                        <div class="text-muted small">Net Bakiye</div>
+                        <div class="h4 mb-0 fw-bold">{{ toplam_kar|floatformat:0|default:"0" }} ₺</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filtre Formu -->
+<div class="collapse mb-4" id="filterCollapse">
+    <div class="card">
+        <div class="card-header">
+            <h6 class="card-title mb-0">
+                <i class="bi bi-funnel me-2"></i>Filtreleme Seçenekleri
+            </h6>
+        </div>
+        <div class="card-body">
+            <form method="get" action="{% url 'dashboard:joker_satis' %}">
+                <div class="row">
+                    <div class="col-md-3">
+                        <label for="tarih_baslangic" class="form-label">Başlangıç Tarihi</label>
+                        <input type="date" class="form-control" id="tarih_baslangic" name="tarih_baslangic" value="{{ request.GET.tarih_baslangic }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="tarih_bitis" class="form-label">Bitiş Tarihi</label>
+                        <input type="date" class="form-control" id="tarih_bitis" name="tarih_bitis" value="{{ request.GET.tarih_bitis }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="cari" class="form-label">Cari</label>
+                        <input type="text" class="form-control" id="cari" name="cari" placeholder="Cari adı..." value="{{ request.GET.cari }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="kategori" class="form-label">Kategori</label>
+                        <input type="text" class="form-control" id="kategori" name="kategori" placeholder="Kategori..." value="{{ request.GET.kategori }}">
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-md-3">
+                        <label for="marka" class="form-label">Marka</label>
+                        <input type="text" class="form-control" id="marka" name="marka" placeholder="Marka..." value="{{ request.GET.marka }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="urun_kodu" class="form-label">Ürün Kodu</label>
+                        <input type="text" class="form-control" id="urun_kodu" name="urun_kodu" placeholder="Ürün kodu..." value="{{ request.GET.urun_kodu }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="urun" class="form-label">Ürün</label>
+                        <input type="text" class="form-control" id="urun" name="urun" placeholder="Ürün adı..." value="{{ request.GET.urun }}">
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary me-2">
+                            <i class="bi bi-search me-1"></i>Filtrele
+                        </button>
+                        <a href="{% url 'dashboard:joker_satis' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle me-1"></i>Temizle
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Excel Yükleme Alanı -->
+{% if not joker_hareketleri %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">
+                <i class="bi bi-cloud-upload"></i>
+            </div>
+            <h5 class="mb-2">Henüz Joker Satış Verisi Yok</h5>
+            <p class="text-muted mb-3">Joker satış verilerini görüntülemek için önce Excel dosyası yüklemeniz gerekiyor.</p>
+            
+            <form id="uploadForm" method="post" enctype="multipart/form-data" action="{% url 'dashboard:joker_satis_excel_upload' %}">
+                {% csrf_token %}
+                <input type="file" id="fileInput" name="file" accept=".xlsx,.xls" style="display: none;">
+                <button type="button" class="btn btn-upload" onclick="document.getElementById('fileInput').click()">
+                    <i class="bi bi-plus-circle me-2"></i>Veri Yükle
+                </button>
+            </form>
+            
+            <div class="mt-3">
+                <small class="text-muted">
+                    Desteklenen formatlar: .xlsx, .xls | Maksimum dosya boyutu: 10MB
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Dosya Bazında Toplamlar -->
+{% if dosya_toplamlar %}
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">
+            <i class="bi bi-files me-2"></i>Yüklenen Dosyalar
+        </h5>
+        <a href="{% url 'dashboard:joker_satis_excel_upload' %}" class="btn btn-sm btn-success">
+            <i class="bi bi-plus me-1"></i>Yeni Dosya Yükle
+        </a>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Dosya Adı</th>
+                        <th>Yükleme Tarihi</th>
+                        <th class="text-center">Satır Sayısı</th>
+                        <th class="text-end">Toplam Kar</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for dosya in dosya_toplamlar %}
+                    <tr>
+                        <td>
+                            <i class="bi bi-file-earmark-excel text-success me-2"></i>
+                            {{ dosya.dosya_adi }}
+                        </td>
+                        <td>{{ dosya.yukleme_tarihi|date:"d.m.Y H:i" }}</td>
+                        <td class="text-center">
+                            <span class="badge bg-info">{{ dosya.satir_sayisi }}</span>
+                        </td>
+                        <td class="text-end">
+                            <span class="badge bg-success">{{ dosya.toplam_kar|floatformat:2 }} ₺</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Son İşlemler -->
+{% if joker_hareketleri %}
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            <i class="bi bi-list-ul me-2"></i>Son İşlemler
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Tarih</th>
+                        <th>Cari</th>
+                        <th>Kategori</th>
+                        <th>Marka</th>
+                        <th>Ürün Kodu</th>
+                        <th>Ürün</th>
+                        <th class="text-center">Miktar</th>
+                        <th class="text-end">Alış</th>
+                        <th class="text-end">Satış</th>
+                        <th class="text-end">Kar</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for hareket in joker_hareketleri %}
+                    <tr>
+                        <td>{{ hareket.tarih|date:"d.m.Y" }}</td>
+                        <td>{{ hareket.cari|default:"-" }}</td>
+                        <td>{{ hareket.kategori|default:"-" }}</td>
+                        <td>{{ hareket.marka|default:"-" }}</td>
+                        <td>{{ hareket.urun_kodu|default:"-" }}</td>
+                        <td>{{ hareket.urun|default:"-" }}</td>
+                        <td class="text-center">{{ hareket.miktar|floatformat:0 }}</td>
+                        <td class="text-end">{{ hareket.alis_fiyati|floatformat:2 }} ₺</td>
+                        <td class="text-end">{{ hareket.satis_fiyati|floatformat:2 }} ₺</td>
+                        <td class="text-end">
+                            <span class="badge bg-success">{{ hareket.kar_tutari|floatformat:2 }} ₺</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+    const uploadForm = document.getElementById('uploadForm');
+    
+    if (uploadArea && fileInput && uploadForm) {
+        // Drag & Drop olayları
+        uploadArea.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', function(e) {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                const file = files[0];
+                if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+                    fileInput.files = files;
+                    uploadForm.submit();
+                } else {
+                    alert('Lütfen sadece Excel dosyası (.xlsx, .xls) yükleyin.');
+                }
+            }
+        });
+        
+        // Dosya seçildiğinde otomatik yükle
+        fileInput.addEventListener('change', function() {
+            if (this.files.length > 0) {
+                uploadForm.submit();
+            }
+        });
+    }
+});
+
+// Filtre parametreleri varsa collapse'ı aç
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const hasFilters = urlParams.has('tarih_baslangic') || urlParams.has('tarih_bitis') || 
+                      urlParams.has('cari') || urlParams.has('kategori') || 
+                      urlParams.has('marka') || urlParams.has('urun_kodu') || urlParams.has('urun');
+    
+    if (hasFilters) {
+        const filterCollapse = document.getElementById('filterCollapse');
+        if (filterCollapse) {
+            const bsCollapse = new bootstrap.Collapse(filterCollapse, {
+                show: true
+            });
+        }
+    }
+});
+</script>
+
+{% endblock %}

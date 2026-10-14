@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lastik Giriş Fişi – {{ kayit.plaka }}</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; color: #1a1a1a; background: #fff; padding: 24px; }
+        .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #1a1a1a; padding-bottom: 12px; margin-bottom: 18px; }
+        .header .firma { font-size: 20px; font-weight: 700; }
+        .header .firma small { display: block; font-size: 12px; font-weight: 400; color: #555; margin-top: 2px; }
+        .header .fis-no { text-align: right; }
+        .header .fis-no .no { font-size: 18px; font-weight: 700; color: #16a34a; }
+        .header .fis-no small { display: block; font-size: 11px; color: #777; }
+        .info-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 18px; }
+        .info-box { border: 1px solid #d1d5db; border-radius: 6px; padding: 8px 10px; }
+        .info-box .label { font-size: 9px; text-transform: uppercase; letter-spacing: .06em; color: #6b7280; margin-bottom: 3px; }
+        .info-box .value { font-size: 13px; font-weight: 600; }
+        .info-box .value.plaka { font-size: 15px; letter-spacing: .08em; }
+        .section-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #374151; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; margin-bottom: 8px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 18px; }
+        th { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; background: #f3f4f6; padding: 6px 8px; text-align: left; border: 1px solid #d1d5db; }
+        td { padding: 6px 8px; border: 1px solid #e5e7eb; font-size: 12px; }
+        tr:nth-child(even) td { background: #f9fafb; }
+        .imza-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 24px; }
+        .imza-box { border-top: 1px solid #374151; padding-top: 8px; font-size: 11px; color: #6b7280; text-align: center; }
+        .footer { margin-top: 12px; font-size: 10px; color: #9ca3af; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 8px; }
+        .print-btn { position: fixed; top: 16px; right: 16px; background: #16a34a; color: #fff; border: none; border-radius: 8px; padding: 10px 20px; font-size: 14px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.2); }
+        .print-btn:hover { background: #15803d; }
+        @media print { .print-btn { display: none; } body { padding: 8px; } }
+    </style>
+</head>
+<body>
+
+<button class="print-btn" onclick="window.print()">🖨️ Yazdır</button>
+
+<!-- ── Başlık ── -->
+<div class="header">
+    <div class="firma">
+        MesTakip
+        <small>Lastik Oteli – Giriş Fişi</small>
+    </div>
+    <div class="fis-no">
+        <div class="no">FİŞ #{{ kayit.pk }}</div>
+        <small>Giriş: {{ kayit.giris_tarihi|date:"d.m.Y" }}</small>
+    </div>
+</div>
+
+<!-- ── Bilgi Kartları ── -->
+<div class="info-grid">
+    <div class="info-box">
+        <div class="label">Müşteri</div>
+        <div class="value">{{ kayit.musteri_adi }}</div>
+    </div>
+    <div class="info-box">
+        <div class="label">Telefon</div>
+        <div class="value">{{ kayit.musteri_telefon|default:"–" }}</div>
+    </div>
+    <div class="info-box">
+        <div class="label">Plaka</div>
+        <div class="value plaka">{{ kayit.plaka|default:"–" }}</div>
+    </div>
+    <div class="info-box">
+        <div class="label">Araç</div>
+        <div class="value">{{ kayit.arac_marka_model|default:"–" }}{% if kayit.model_yili %} ({{ kayit.model_yili }}){% endif %}</div>
+    </div>
+    <div class="info-box">
+        <div class="label">Depo / Raf</div>
+        <div class="value">{{ kayit.depo|default:"–" }}</div>
+    </div>
+    <div class="info-box">
+        <div class="label">Mevsim</div>
+        <div class="value">
+            {% if kayit.mevsim == 'kis' %}❄️ Kış
+            {% elif kayit.mevsim == 'yaz' %}☀️ Yaz
+            {% else %}🔄 4 Mevsim{% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- ── Lastik Bilgileri ── -->
+{% with lastikler=kayit.lastikler.all %}
+{% if lastikler %}
+<div class="section-title">Lastik Bilgileri</div>
+<table>
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>Marka</th>
+            <th>Ebat</th>
+            <th>DOT</th>
+            <th>Diş (mm)</th>
+            <th>Jant</th>
+            <th>Açıklama</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for l in lastikler %}
+        <tr>
+            <td>{{ l.sira }}</td>
+            <td><strong>{{ l.marka|default:"–" }}</strong></td>
+            <td>{{ l.ebat|default:"–" }}</td>
+            <td>{{ l.dot|default:"–" }}</td>
+            <td>{{ l.dis_derinligi|default:"–" }}</td>
+            <td>{{ l.get_jant_display|default:"–" }}</td>
+            <td>{{ l.aciklama|default:"" }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+{% endwith %}
+
+{% if kayit.aciklama %}
+<div class="section-title">Notlar</div>
+<p style="font-size:12px; color:#374151; margin-bottom:18px;">{{ kayit.aciklama }}</p>
+{% endif %}
+
+<!-- ── İmza ── -->
+<div class="imza-grid">
+    <div class="imza-box">Teslim Eden İmza</div>
+    <div class="imza-box">Teslim Alan İmza</div>
+</div>
+
+<div style="margin-top:40px; padding:10px 14px; border:1.5px solid #dc2626; border-radius:6px; background:#fef2f2; color:#991b1b; font-size:12px; font-weight:600; text-align:center;">
+    ⚠️ 1 yıl içinde hareket görmeyen lastikler imha edilecektir.
+</div>
+
+<div class="footer" style="margin-top:12px;">
+    Kayıt: {{ kayit.olusturan.get_full_name|default:kayit.olusturan.username|default:"–" }} ·
+    Giriş: {{ kayit.giris_tarihi|date:"d.m.Y" }} ·
+    MesTakip Lastik Oteli Yönetim Sistemi
+</div>
+
+</body>
+</html>

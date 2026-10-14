@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Excel Yükle - Lastik Saklama{% endblock %}
+{% block page_name %}lastik_saklama{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0"><i class="bi bi-file-earmark-excel me-2 text-success"></i>Excel Yükle</h1>
+        <p class="text-muted small mb-0">Toplu lastik saklama kaydı içe aktarma</p>
+    </div>
+    <a href="{% url 'dashboard:lastik_saklama' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Geri
+    </a>
+</div>
+
+{% if messages %}
+{% for message in messages %}
+<div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+{% endif %}
+
+<div class="row g-4">
+    <!-- Sol: Yükleme Formu -->
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="fw-bold mb-4 text-primary"><i class="bi bi-upload me-1"></i>Dosya Yükle</h6>
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Excel Dosyası (.xlsx / .xls)</label>
+                        <input type="file" name="excel_file" class="form-control" accept=".xlsx,.xls" required>
+                        <div class="form-text">Dosya boyutu en fazla 10 MB olabilir.</div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary px-4">
+                            <i class="bi bi-cloud-upload me-1"></i>Yükle ve İçe Aktar
+                        </button>
+                        <a href="{% url 'dashboard:lastik_saklama_excel_sablon' %}" class="btn btn-outline-success">
+                            <i class="bi bi-download me-1"></i>Örnek Şablon İndir
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sağ: Talimatlar -->
+    <div class="col-lg-5">
+        <div class="card border-0 bg-light">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3"><i class="bi bi-info-circle me-1 text-primary"></i>Sütun Başlıkları</h6>
+                <p class="text-muted small mb-3">Excel dosyanızda 1. satır başlık satırı olmalıdır. Aşağıdaki sütun adlarını kullanın:</p>
+                <table class="table table-sm table-bordered small">
+                    <thead class="table-primary">
+                        <tr>
+                            <th>Sütun Adı</th>
+                            <th>Açıklama</th>
+                            <th>Zorunlu</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><code>MÜŞTERİ ADI</code></td><td>Ad soyad veya firma</td><td><span class="text-danger">✓</span></td></tr>
+                        <tr><td><code>TELEFON</code></td><td>05xx xxx xx xx</td><td>–</td></tr>
+                        <tr><td><code>PLAKA</code></td><td>34ABC123</td><td>–</td></tr>
+                        <tr><td><code>MARKA</code></td><td>Bridgestone, Pirelli...</td><td>–</td></tr>
+                        <tr><td><code>EBAT</code></td><td>205/55R16</td><td>–</td></tr>
+                        <tr><td><code>MEVSİM</code></td><td>Kış / Yaz / 4 Mevsim</td><td>–</td></tr>
+                        <tr><td><code>ADET</code></td><td>Sayı (varsayılan: 4)</td><td>–</td></tr>
+                        <tr><td><code>DİŞ DERİNLİĞİ</code></td><td>mm cinsinden (7.5)</td><td>–</td></tr>
+                        <tr><td><code>DEPO/RAF</code></td><td>Sistemdeki depo adı</td><td>–</td></tr>
+                        <tr><td><code>GİRİŞ TARİHİ</code></td><td>GG.AA.YYYY</td><td>–</td></tr>
+                        <tr><td><code>TAHMİNİ ÇIKIŞ</code></td><td>GG.AA.YYYY</td><td>–</td></tr>
+                        <tr><td><code>ÜCRET</code></td><td>Saklama ücreti (₺)</td><td>–</td></tr>
+                        <tr><td><code>AÇIKLAMA</code></td><td>Serbest not</td><td>–</td></tr>
+                    </tbody>
+                </table>
+                <div class="alert alert-warning small mb-0 py-2">
+                    <i class="bi bi-exclamation-triangle me-1"></i>
+                    <strong>MÜŞTERİ ADI</strong> dolu olmayan satırlar otomatik atlanır. Giriş tarihi boş bırakılırsa bugünün tarihi kullanılır.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

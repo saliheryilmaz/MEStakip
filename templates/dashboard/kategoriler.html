@@ -1,0 +1,677 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Kategoriler - Mestakip{% endblock %}
+{% block page_name %}kategoriler{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">Kategoriler</h1>
+        <p class="text-muted mb-0">Gelir/Gider kategorilerini yönetin</p>
+    </div>
+    <div class="d-flex gap-2">
+        <div class="input-group" style="max-width: 300px;">
+            <span class="input-group-text"><i class="bi bi-search"></i></span>
+            <input type="text" class="form-control" id="kategoriArama" placeholder="Kategori ara...">
+        </div>
+        <button class="btn btn-outline-secondary me-2" onclick="window.location.reload()" title="Sayfayı yenile">
+            <i class="bi bi-arrow-clockwise"></i>
+        </button>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#yeniKategoriModal">
+            <i class="bi bi-plus-circle me-2"></i>Yeni Kategori
+        </button>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- İstatistik Kartları -->
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-tags fs-2 me-3"></i>
+                    <div>
+                        <h5 class="card-title mb-0">{{ stats.toplam }}</h5>
+                        <small>Toplam Kategori</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-folder fs-2 me-3"></i>
+                    <div>
+                        <h5 class="card-title mb-0">{{ stats.ana }}</h5>
+                        <small>Ana Kategori</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-diagram-3 fs-2 me-3"></i>
+                    <div>
+                        <h5 class="card-title mb-0">{{ stats.alt }}</h5>
+                        <small>Alt Kategori</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-check-circle fs-2 me-3"></i>
+                    <div>
+                        <h5 class="card-title mb-0">{{ stats.aktif }}</h5>
+                        <small>Aktif Kategori</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Kategori Listesi -->
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Kategori Listesi</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>KATEGORİ ADI</th>
+                                <th>KULLANIM DURUMU</th>
+                                <th>KAYDI AÇAN</th>
+                                <th>KAYIT TARİHİ</th>
+                                <th>İŞLEMLER</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for kategori in tum_kategoriler %}
+                            <tr {% if kategori.parent %}class="table-light" {% endif %}>
+                                <td>
+                                    {% if kategori.parent %}
+                                    <span class="text-muted ms-3">└─</span> {{ kategori.name }}
+                                    {% else %}
+                                    <strong>{{ kategori.name }}</strong>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge bg-success">AKTİF</span>
+                                </td>
+                                <td>{{ kategori.get_created_by_display }}</td>
+                                <td>{{ kategori.created_at|date:"d.m.Y H:i" }}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary me-1" title="Düzenle"
+                                        data-bs-toggle="modal" data-bs-target="#duzenleModal{{ kategori.id }}">
+                                        <i class="bi bi-pencil"></i> DÜZENLE
+                                    </button>
+                                    {% if not kategori.parent %}
+                                    <button class="btn btn-sm btn-outline-success me-1" title="Alt Kategori"
+                                        data-bs-toggle="modal" data-bs-target="#altKategoriModal{{ kategori.id }}">
+                                        <i class="bi bi-plus"></i> ALT KATEGORİ
+                                    </button>
+                                    {% endif %}
+                                    <a href="{% url 'dashboard:kategori_sil' kategori.id %}"
+                                        class="btn btn-sm btn-outline-danger" title="Sil"
+                                        onclick="return confirm('{{ kategori.name }} kategorisini silmek istediğinizden emin misiniz?')">
+                                        <i class="bi bi-trash"></i> SİL
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">Kategori bulunamadı.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Yeni Kategori Modal -->
+<div class="modal fade" id="yeniKategoriModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Yeni Kategori Ekle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" id="yeniKategoriForm">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Ana Kategori Adı <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="kategori_adi" id="anaKategoriAdi" placeholder="Örn: Giderler, Gelirler" required>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Alt Kategoriler (Opsiyonel)</label>
+                        <small class="form-text text-muted d-block mb-2">Ana kategorinizin altına eklemek istediğiniz alt kategorileri girin</small>
+                        
+                        <div id="altKategorilerContainer">
+                            <!-- Alt kategoriler buraya dinamik olarak eklenecek -->
+                        </div>
+                        
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="altKategoriEkleBtn">
+                            <i class="bi bi-plus-circle me-1"></i>Alt Kategori Ekle
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-primary">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Düzenle Modal'ları -->
+{% for kategori in tum_kategoriler %}
+<div class="modal fade" id="duzenleModal{{ kategori.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Kategori Düzenle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'dashboard:kategori_duzenle' kategori.id %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Kategori Adı</label>
+                        <input type="text" class="form-control" name="kategori_adi" value="{{ kategori.name }}"
+                            required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Üst Kategori (Opsiyonel)</label>
+                        <select class="form-select" name="parent_id">
+                            <option value="">Ana Kategori (Üst Kategori Yok)</option>
+                            {% for kat in tum_kategoriler %}
+                            {% if kat.id != kategori.id %}
+                            <option value="{{ kat.id }}" {% if kategori.parent and kategori.parent.id == kat.id %}selected{% endif %}>
+                                {% if kat.parent %}└─ {% endif %}{{ kat.name }}
+                            </option>
+                            {% endif %}
+                            {% endfor %}
+                        </select>
+                        <small class="form-text text-muted">Boş bırakırsanız ana kategori olur</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Kaydı Açan</label>
+                        <input type="text" class="form-control" value="{{ kategori.get_created_by_display }}" readonly>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-primary">Güncelle</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endfor %}
+
+<!-- Alt Kategori Modal'ları (sadece ana kategoriler için) -->
+{% for ana_kategori in ana_kategoriler %}
+<div class="modal fade" id="altKategoriModal{{ ana_kategori.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ ana_kategori.name }} - Alt Kategori Ekle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="parent_id" value="{{ ana_kategori.id }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Alt Kategori Adı</label>
+                        <input type="text" class="form-control" name="kategori_adi" required>
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Bu kategori <strong>{{ ana_kategori.name }}</strong> kategorisinin altında oluşturulacak.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-success">Alt Kategori Ekle</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Light Mode Stilleri */
+    [data-bs-theme="light"] .table tbody tr.table-light {
+        background-color: #f8f9fa !important;
+    }
+
+    [data-bs-theme="light"] .table tbody tr:hover {
+        background-color: #e9ecef !important;
+    }
+
+    [data-bs-theme="light"] .alert-info {
+        background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+        border: 1px solid #2196f3;
+        color: #1565c0;
+    }
+
+    /* Dark Mode Stilleri */
+    [data-bs-theme="dark"] .table tbody tr.table-light {
+        background-color: #2d3748 !important;
+        color: #e2e8f0 !important;
+    }
+
+    [data-bs-theme="dark"] .table tbody tr:hover {
+        background-color: #4a5568 !important;
+        color: #f7fafc !important;
+    }
+
+    [data-bs-theme="dark"] .card {
+        background-color: #1a202c !important;
+        border-color: #2d3748 !important;
+        color: #e2e8f0 !important;
+    }
+
+    [data-bs-theme="dark"] .table {
+        color: #e2e8f0 !important;
+    }
+
+    [data-bs-theme="dark"] .table-light th {
+        background-color: #2d3748 !important;
+        border-color: #4a5568 !important;
+        color: #e2e8f0 !important;
+    }
+
+    [data-bs-theme="dark"] .modal-content {
+        background-color: #1a202c !important;
+        border-color: #2d3748 !important;
+        color: #e2e8f0 !important;
+    }
+
+    [data-bs-theme="dark"] .form-control {
+        background-color: #2d3748 !important;
+        border-color: #4a5568 !important;
+        color: #e2e8f0 !important;
+    }
+
+    [data-bs-theme="dark"] .form-control:focus {
+        background-color: #2d3748 !important;
+        border-color: #6366f1 !important;
+        color: #e2e8f0 !important;
+        box-shadow: 0 0 0 0.2rem rgba(99, 102, 241, 0.25) !important;
+    }
+
+    [data-bs-theme="dark"] .form-select {
+        background-color: #2d3748 !important;
+        border-color: #4a5568 !important;
+        color: #e2e8f0 !important;
+    }
+
+    [data-bs-theme="dark"] .form-select:focus {
+        background-color: #2d3748 !important;
+        border-color: #6366f1 !important;
+        color: #e2e8f0 !important;
+        box-shadow: 0 0 0 0.2rem rgba(99, 102, 241, 0.25) !important;
+    }
+
+    [data-bs-theme="dark"] .alert-info {
+        background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%) !important;
+        border: 1px solid #3b82f6 !important;
+        color: #dbeafe !important;
+    }
+
+    [data-bs-theme="dark"] .input-group-text {
+        background-color: #2d3748 !important;
+        border-color: #4a5568 !important;
+        color: #e2e8f0 !important;
+    }
+
+    [data-bs-theme="dark"] .btn-outline-primary {
+        color: #6366f1 !important;
+        border-color: #6366f1 !important;
+    }
+
+    [data-bs-theme="dark"] .btn-outline-primary:hover {
+        background-color: #6366f1 !important;
+        border-color: #6366f1 !important;
+        color: #ffffff !important;
+    }
+
+    [data-bs-theme="dark"] .btn-outline-success {
+        color: #10b981 !important;
+        border-color: #10b981 !important;
+    }
+
+    [data-bs-theme="dark"] .btn-outline-success:hover {
+        background-color: #10b981 !important;
+        border-color: #10b981 !important;
+        color: #ffffff !important;
+    }
+
+    [data-bs-theme="dark"] .btn-outline-danger {
+        color: #ef4444 !important;
+        border-color: #ef4444 !important;
+    }
+
+    [data-bs-theme="dark"] .btn-outline-danger:hover {
+        background-color: #ef4444 !important;
+        border-color: #ef4444 !important;
+        color: #ffffff !important;
+    }
+
+    [data-bs-theme="dark"] .text-muted {
+        color: #9ca3af !important;
+    }
+
+    /* Ortak Modal stilleri */
+    .modal-content {
+        border-radius: 12px;
+        border: none;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    }
+
+    .modal-header {
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        color: white;
+        border-radius: 12px 12px 0 0;
+    }
+
+    .modal-header .btn-close {
+        filter: invert(1);
+    }
+
+    /* Buton hover efektleri */
+    .btn-outline-primary:hover,
+    .btn-outline-success:hover,
+    .btn-outline-danger:hover {
+        transform: translateY(-1px);
+        transition: all 0.2s ease;
+    }
+
+    .btn-outline-primary:hover {
+        box-shadow: 0 4px 8px rgba(99, 102, 241, 0.3);
+    }
+
+    .btn-outline-success:hover {
+        box-shadow: 0 4px 8px rgba(34, 197, 94, 0.3);
+    }
+
+    .btn-outline-danger:hover {
+        box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
+    }
+
+    /* Badge stilleri */
+    .badge {
+        font-size: 0.75rem;
+        padding: 0.5rem 0.75rem;
+        border-radius: 6px;
+    }
+
+    /* Modal animasyonları */
+    .modal.fade .modal-dialog {
+        transform: translateY(-50px);
+        transition: transform 0.3s ease-out;
+    }
+
+    .modal.show .modal-dialog {
+        transform: translateY(0);
+    }
+
+    /* Tablo satır hover efekti */
+    .table tbody tr:hover {
+        transform: translateY(-1px);
+        transition: all 0.2s ease;
+    }
+
+    [data-bs-theme="light"] .table tbody tr:hover {
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    [data-bs-theme="dark"] .table tbody tr:hover {
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    /* İstatistik kartları dark mode */
+    [data-bs-theme="dark"] .card.bg-primary {
+        background: linear-gradient(135deg, #4338ca 0%, #3730a3 100%) !important;
+    }
+
+    [data-bs-theme="dark"] .card.bg-success {
+        background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+    }
+
+    [data-bs-theme="dark"] .card.bg-info {
+        background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%) !important;
+    }
+
+    [data-bs-theme="dark"] .card.bg-warning {
+        background: linear-gradient(135deg, #d97706 0%, #b45309 100%) !important;
+    }
+
+    /* Dark mode için tablo border'ları */
+    [data-bs-theme="dark"] .table td,
+    [data-bs-theme="dark"] .table th {
+        border-color: #4a5568 !important;
+    }
+
+    /* Dark mode için modal backdrop */
+    [data-bs-theme="dark"] .modal-backdrop {
+        background-color: rgba(0, 0, 0, 0.8) !important;
+    }
+
+    /* Dark mode için dropdown menüler */
+    [data-bs-theme="dark"] .dropdown-menu {
+        background-color: #1a202c !important;
+        border-color: #2d3748 !important;
+    }
+
+    [data-bs-theme="dark"] .dropdown-item {
+        color: #e2e8f0 !important;
+    }
+
+    [data-bs-theme="dark"] .dropdown-item:hover {
+        background-color: #2d3748 !important;
+        color: #ffffff !important;
+    }
+
+    /* Dark mode için pagination */
+    [data-bs-theme="dark"] .page-link {
+        background-color: #2d3748 !important;
+        border-color: #4a5568 !important;
+        color: #e2e8f0 !important;
+    }
+
+    [data-bs-theme="dark"] .page-link:hover {
+        background-color: #4a5568 !important;
+        border-color: #6366f1 !important;
+        color: #ffffff !important;
+    }
+
+    /* Dark mode için tooltip */
+    [data-bs-theme="dark"] .tooltip .tooltip-inner {
+        background-color: #1a202c !important;
+        color: #e2e8f0 !important;
+    }
+
+    /* Dark mode için scrollbar */
+    [data-bs-theme="dark"] ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+
+    [data-bs-theme="dark"] ::-webkit-scrollbar-track {
+        background: #2d3748;
+    }
+
+    [data-bs-theme="dark"] ::-webkit-scrollbar-thumb {
+        background: #4a5568;
+        border-radius: 4px;
+    }
+
+    [data-bs-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+        background: #6b7280;
+    }
+
+    /* Dark mode için placeholder text */
+    [data-bs-theme="dark"] .form-control::placeholder {
+        color: #9ca3af !important;
+        opacity: 1;
+    }
+
+    [data-bs-theme="dark"] .form-select option {
+        background-color: #2d3748 !important;
+        color: #e2e8f0 !important;
+    }
+
+    /* Dark mode için close button */
+    [data-bs-theme="dark"] .btn-close {
+        filter: invert(1) grayscale(100%) brightness(200%);
+    }
+
+    /* Dark mode için card header */
+    [data-bs-theme="dark"] .card-header {
+        background-color: #2d3748 !important;
+        border-color: #4a5568 !important;
+        color: #e2e8f0 !important;
+    }
+
+    /* Dark mode için table responsive */
+    [data-bs-theme="dark"] .table-responsive {
+        border-color: #4a5568 !important;
+    }
+
+    /* Dark mode için input group */
+    [data-bs-theme="dark"] .input-group .form-control:not(:first-child) {
+        border-left-color: #4a5568 !important;
+    }
+
+    /* Dark mode için focus ring */
+    [data-bs-theme="dark"] .btn:focus,
+    [data-bs-theme="dark"] .form-control:focus,
+    [data-bs-theme="dark"] .form-select:focus {
+        box-shadow: 0 0 0 0.2rem rgba(99, 102, 241, 0.25) !important;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Alt kategori ekleme butonu
+        document.getElementById('altKategoriEkleBtn').addEventListener('click', function() {
+            const container = document.getElementById('altKategorilerContainer');
+            const newInput = document.createElement('div');
+            newInput.className = 'input-group mb-2';
+            newInput.innerHTML = `
+                <input type="text" class="form-control" name="alt_kategoriler[]" placeholder="Alt kategori adı">
+                <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()">
+                    <i class="bi bi-trash"></i>
+                </button>
+            `;
+            container.appendChild(newInput);
+            newInput.querySelector('input').focus();
+        });
+        
+        // Modal açıldığında input'a focus
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.addEventListener('shown.bs.modal', function () {
+                const input = this.querySelector('input[name="kategori_adi"]');
+                if (input) {
+                    input.focus();
+                    input.select();
+                }
+            });
+        });
+
+        // Form submit animasyonu
+        document.querySelectorAll('form').forEach(form => {
+            form.addEventListener('submit', function () {
+                const submitBtn = this.querySelector('button[type="submit"]');
+                if (submitBtn) {
+                    submitBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>İşleniyor...';
+                    submitBtn.disabled = true;
+                }
+            });
+        });
+
+        // Kategori sayısını göster
+        const kategoriSayisi = document.querySelectorAll('tbody tr').length - 1; // empty satırını çıkar
+        if (kategoriSayisi > 0) {
+            const cardTitle = document.querySelector('.card-title');
+            if (cardTitle) {
+                cardTitle.innerHTML += ` <span class="badge bg-primary ms-2">${kategoriSayisi}</span>`;
+            }
+        }
+
+        // Kategori arama özelliği
+        const aramaInput = document.getElementById('kategoriArama');
+        if (aramaInput) {
+            // Sayfa yüklendiğinde arama kutusunu temizle
+            aramaInput.value = '';
+
+            aramaInput.addEventListener('input', function () {
+                const aramaMetni = this.value.toLowerCase();
+                const satirlar = document.querySelectorAll('tbody tr');
+
+                satirlar.forEach(satir => {
+                    const kategoriAdi = satir.querySelector('td:first-child');
+                    if (kategoriAdi) {
+                        const metin = kategoriAdi.textContent.toLowerCase();
+                        if (metin.includes(aramaMetni)) {
+                            satir.style.display = '';
+                        } else {
+                            satir.style.display = 'none';
+                        }
+                    }
+                });
+            });
+
+            // Temizle butonu ekle
+            const clearBtn = document.createElement('button');
+            clearBtn.type = 'button';
+            clearBtn.className = 'btn btn-outline-secondary';
+            clearBtn.innerHTML = '<i class="bi bi-x"></i>';
+            clearBtn.title = 'Aramayı temizle';
+            clearBtn.addEventListener('click', function () {
+                aramaInput.value = '';
+                const satirlar = document.querySelectorAll('tbody tr');
+                satirlar.forEach(satir => {
+                    satir.style.display = '';
+                });
+            });
+
+            // Temizle butonunu input group'a ekle
+            const inputGroup = aramaInput.parentElement;
+            inputGroup.appendChild(clearBtn);
+        }
+    });
+</script>
+{% endblock %}

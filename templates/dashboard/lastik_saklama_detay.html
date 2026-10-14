@@ -1,0 +1,241 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Lastik Detay - Mestakip{% endblock %}
+{% block page_name %}lastik_saklama{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0"><i class="bi bi-archive me-2 text-primary"></i>Lastik Detay</h1>
+        <p class="text-muted small mb-0">{{ kayit.musteri_adi }} – {{ kayit.plaka }}</p>
+    </div>
+    <div class="d-flex gap-2">
+        {% if kayit.durum == 'depoda' %}
+        <a href="{% url 'dashboard:lastik_saklama_cikis' kayit.pk %}" class="btn btn-success">
+            <i class="bi bi-box-arrow-up me-1"></i>Teslim Et
+        </a>
+        {% endif %}
+        <a href="{% url 'dashboard:lastik_saklama_duzenle' kayit.pk %}" class="btn btn-outline-secondary">
+            <i class="bi bi-pencil me-1"></i>Düzenle
+        </a>
+        {% if kayit.durum == 'teslim_edildi' %}
+        <a href="{% url 'dashboard:lastik_saklama_cikis_fisi' kayit.pk %}" class="btn btn-outline-dark" target="_blank">
+            <i class="bi bi-printer me-1"></i>Çıkış Fişi
+        </a>
+        {% endif %}
+        <a href="{% url 'dashboard:lastik_saklama' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Geri
+        </a>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Sol: Kayıt Bilgileri -->
+    <div class="col-lg-7">
+        <div class="card mb-4">
+            <div class="card-header fw-semibold"><i class="bi bi-person me-1"></i>Müşteri & Araç Bilgileri</div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-5 text-muted">Müşteri Adı</dt>
+                    <dd class="col-7 fw-semibold">{{ kayit.musteri_adi }}</dd>
+                    <dt class="col-5 text-muted">Telefon</dt>
+                    <dd class="col-7">{{ kayit.musteri_telefon|default:"–" }}</dd>
+                    <dt class="col-5 text-muted">Plaka</dt>
+                    <dd class="col-7"><span class="badge bg-secondary fs-6">{{ kayit.plaka|default:"–" }}</span></dd>
+                    {% if kayit.arac_marka_model %}
+                    <dt class="col-5 text-muted">Araç</dt>
+                    <dd class="col-7">{{ kayit.arac_marka_model }}</dd>
+                    {% endif %}
+                    {% if kayit.model_yili %}
+                    <dt class="col-5 text-muted">Model Yılı</dt>
+                    <dd class="col-7">{{ kayit.model_yili }}</dd>
+                    {% endif %}
+                    {% if kayit.arac_kilometre %}
+                    <dt class="col-5 text-muted">Kilometre</dt>
+                    <dd class="col-7">{{ kayit.arac_kilometre|floatformat:0 }} km</dd>
+                    {% endif %}
+                </dl>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header fw-semibold d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-circle me-1"></i>Lastik Bilgileri</span>
+                <span class="badge bg-primary">
+                    {% if kayit.mevsim == 'kis' %}❄️ Kış{% elif kayit.mevsim == 'yaz' %}☀️ Yaz{% else %}🔄 4 Mevsim{% endif %}
+                    · {{ kayit.adet }} adet
+                </span>
+            </div>
+            {% with lastikler=kayit.lastikler.all %}
+            {% if lastikler %}
+            <div class="table-responsive">
+                <table class="table table-bordered table-sm align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="text-center">#</th>
+                            <th>Marka</th>
+                            <th>Ebat</th>
+                            <th>Desen</th>
+                            <th>DOT</th>
+                            <th>Diş (mm)</th>
+                            <th>Jant</th>
+                            <th>Açıklama</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for l in lastikler %}
+                        <tr>
+                            <td class="text-center text-muted">{{ l.sira }}</td>
+                            <td>{{ l.marka|default:"–" }}</td>
+                            <td>{{ l.ebat|default:"–" }}</td>
+                            <td>{{ l.desen|default:"–" }}</td>
+                            <td>{{ l.dot|default:"–" }}</td>
+                            <td>{{ l.dis_derinligi|default:"–" }}</td>
+                            <td>{{ l.get_jant_display|default:"–" }}</td>
+                            <td>{{ l.aciklama|default:"–" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-5 text-muted">Marka</dt>
+                    <dd class="col-7">{{ kayit.marka|default:"–" }}</dd>
+                    <dt class="col-5 text-muted">Ebat</dt>
+                    <dd class="col-7">{{ kayit.ebat|default:"–" }}</dd>
+                </dl>
+            </div>
+            {% endif %}
+            {% endwith %}
+        </div>
+
+        <div class="card">
+            <div class="card-header fw-semibold"><i class="bi bi-geo-alt me-1"></i>Depo & Tarih Bilgileri</div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-5 text-muted">Depo / Raf</dt>
+                    <dd class="col-7">{{ kayit.depo|default:"–" }}</dd>
+                    <dt class="col-5 text-muted">Giriş Tarihi</dt>
+                    <dd class="col-7">{{ kayit.giris_tarihi|date:"d.m.Y" }}</dd>
+                    <dt class="col-5 text-muted">Tahmini Çıkış</dt>
+                    <dd class="col-7">{{ kayit.tahmini_cikis|date:"d.m.Y"|default:"–" }}</dd>
+                    <dt class="col-5 text-muted">Çıkış Tarihi</dt>
+                    <dd class="col-7">{{ kayit.cikis_tarihi|date:"d.m.Y"|default:"–" }}</dd>
+                    <dt class="col-5 text-muted">Depoda Süre</dt>
+                    <dd class="col-7"><span class="badge bg-warning text-dark">{{ kayit.depoda_kac_gun }} gün</span></dd>
+                    <dt class="col-5 text-muted">Saklama Ücreti</dt>
+                    <dd class="col-7">{% if kayit.saklama_ucreti %}₺{{ kayit.saklama_ucreti }}{% else %}–{% endif %}</dd>
+                    <dt class="col-5 text-muted">Durum</dt>
+                    <dd class="col-7">
+                        {% if kayit.durum == 'depoda' %}
+                        <span class="badge bg-success">Depoda</span>
+                        {% else %}
+                        <span class="badge bg-secondary">Teslim Edildi</span>
+                        {% endif %}
+                    </dd>
+                    {% if kayit.aciklama %}
+                    <dt class="col-5 text-muted">Açıklama</dt>
+                    <dd class="col-7">{{ kayit.aciklama }}</dd>
+                    {% endif %}
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sağ: Hareket Geçmişi -->
+    <div class="col-lg-5">
+        <div class="card mb-4">
+            <div class="card-header fw-semibold"><i class="bi bi-clock-history me-1"></i>Hareket Geçmişi</div>
+            <div class="card-body p-0">
+                {% if hareketler %}
+                <ul class="list-group list-group-flush">
+                    {% for h in hareketler %}
+                    <li class="list-group-item">
+                        <div class="d-flex align-items-start gap-2">
+                            {% if h.hareket_tipi == 'giris' %}
+                            <i class="bi bi-box-arrow-in-down text-success mt-1"></i>
+                            {% elif h.hareket_tipi == 'cikis' %}
+                            <i class="bi bi-box-arrow-up text-danger mt-1"></i>
+                            {% else %}
+                            <i class="bi bi-pencil text-warning mt-1"></i>
+                            {% endif %}
+                            <div>
+                                <div class="fw-semibold small">{{ h.get_hareket_tipi_display }}</div>
+                                <div class="text-muted small">{{ h.tarih|date:"d.m.Y H:i" }}</div>
+                                {% if h.aciklama %}<div class="small mt-1">{{ h.aciklama }}</div>{% endif %}
+                                {% if h.yapan %}<div class="text-muted small"><i class="bi bi-person me-1"></i>{{ h.yapan.get_full_name|default:h.yapan.username }}</div>{% endif %}
+                            </div>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="text-center py-4 text-muted">Hareket kaydı yok.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ─── Plaka Geçmişi ─────────────────────────────── -->
+{% if plaka_gecmis %}
+<div class="card mt-2">
+    <div class="card-header fw-semibold d-flex align-items-center justify-content-between">
+        <span><i class="bi bi-calendar-range me-1 text-primary"></i>{{ kayit.plaka }} – Geçmiş Saklama Kayıtları</span>
+        <span class="badge bg-primary">{{ plaka_gecmis|length }} kayıt</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>#</th>
+                    <th>Müşteri</th>
+                    <th>Giriş</th>
+                    <th>Çıkış</th>
+                    <th>Süre</th>
+                    <th>Mevsim</th>
+                    <th>Depo</th>
+                    <th>Ebat</th>
+                    <th>Durum</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for g in plaka_gecmis %}
+                <tr>
+                    <td class="text-muted small">{{ forloop.counter }}</td>
+                    <td>{{ g.musteri_adi }}</td>
+                    <td><small>{{ g.giris_tarihi|date:"d.m.Y" }}</small></td>
+                    <td><small>{{ g.cikis_tarihi|date:"d.m.Y"|default:"–" }}</small></td>
+                    <td><span class="badge bg-light text-dark border">{{ g.depoda_kac_gun }} gün</span></td>
+                    <td>
+                        {% if g.mevsim == 'kis' %}<span class="badge bg-info">❄️ Kış</span>
+                        {% elif g.mevsim == 'yaz' %}<span class="badge bg-warning text-dark">☀️ Yaz</span>
+                        {% else %}<span class="badge bg-secondary">🔄 4 Mevsim</span>{% endif %}
+                    </td>
+                    <td><small>{{ g.depo|default:"–" }}</small></td>
+                    <td><small>{{ g.ebat|default:"–" }}</small></td>
+                    <td>
+                        {% if g.durum == 'depoda' %}
+                        <span class="badge bg-success">Depoda</span>
+                        {% else %}
+                        <span class="badge bg-secondary">Teslim Edildi</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'dashboard:lastik_saklama_detay' g.pk %}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

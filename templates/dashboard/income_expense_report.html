@@ -1,0 +1,400 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Gelir/Gider Raporu - Mestakip{% endblock %}
+
+{% block extra_css %}
+<style>
+    @media (max-width: 767px) {
+        /* Başlık + butonlar dikey */
+        .ier-header {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 0.75rem;
+        }
+        .ier-header .d-flex.gap-2 {
+            width: 100%;
+        }
+        .ier-header .btn { flex: 1; }
+
+        /* Filtre formu 2'li grid */
+        .ier-filter-col { flex: 0 0 50%; max-width: 50%; }
+        .ier-filter-btn  { flex: 0 0 100%; max-width: 100%; }
+
+        /* Özet kartlar 3'lü grid */
+        .ier-ozet-kart { flex: 0 0 33.333%; max-width: 33.333%; }
+        .ier-ozet-kart .card-body { padding: 0.5rem 0.25rem; }
+        .ier-ozet-kart h6 { font-size: 0.65rem; }
+        .ier-ozet-kart h4 { font-size: 0.85rem; }
+
+        /* Alt kart satırı */
+        .ier-alt-kart { flex: 0 0 50%; max-width: 50%; }
+        .ier-alt-kart.wide { flex: 0 0 100%; max-width: 100%; }
+        .ier-alt-kart .card-body { padding: 0.6rem; }
+        .ier-alt-kart h6 { font-size: 0.7rem; }
+        .ier-alt-kart h3 { font-size: 1rem; }
+
+        /* İşlem tablosu yerine kart görünümü */
+        .ier-table-desktop { display: none !important; }
+        .ier-cards-mobile  { display: block !important; }
+
+        /* İşlem kartı */
+        .ier-tx-card {
+            border-bottom: 1px solid rgba(0,0,0,0.08);
+            padding: 0.65rem 1rem;
+        }
+        .ier-tx-card:last-child { border-bottom: none; }
+    }
+
+    @media (min-width: 768px) {
+        .ier-table-desktop { display: block !important; }
+        .ier-cards-mobile  { display: none !important; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4 ier-header">
+    <div>
+        <h1 class="h3 mb-0">Gelir/Gider Raporu</h1>
+        <p class="text-muted mb-0">
+            Gelir ve gider işlemlerinizi detaylı analiz edin.
+            {% if current_month_default %}
+                <span class="badge bg-info ms-2">Bu Ay (Varsayılan)</span>
+            {% endif %}
+        </p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'dashboard:export_income_expense_excel' %}?{{ request.GET.urlencode }}" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-file-earmark-excel me-1"></i>
+            Excel İndir
+        </a>
+        <button type="button" class="btn btn-outline-success btn-sm" onclick="window.print()">
+            <i class="bi bi-printer me-1"></i>
+            Yazdır
+        </button>
+    </div>
+</div>
+
+<!-- Filtre Bölümü -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Kriterler</h5>
+    </div>
+    <div class="card-body">
+        <form method="GET" action="{% url 'dashboard:income_expense_report' %}" id="filterForm">
+            <div class="row g-3">
+                <!-- Tarih Aralığı -->
+                <div class="col-6 col-md-2 ier-filter-col">
+                    <label class="form-label">Başlangıç Tarihi</label>
+                    <input type="date" name="baslangic_tarih" class="form-control" value="{{ filters.baslangic_tarih }}">
+                </div>
+                <div class="col-6 col-md-2 ier-filter-col">
+                    <label class="form-label">Bitiş Tarihi</label>
+                    <input type="date" name="bitis_tarih" class="form-control" value="{{ filters.bitis_tarih }}">
+                </div>
+                
+                <!-- Gelir/Gider -->
+                <div class="col-6 col-md-2 ier-filter-col">
+                    <label class="form-label">Gelir/Gider</label>
+                    <select name="hareket_tipi" class="form-select">
+                        <option value="">Tümü</option>
+                        <option value="gelir" {% if filters.hareket_tipi == 'gelir' %}selected{% endif %}>Gelir</option>
+                        <option value="gider" {% if filters.hareket_tipi == 'gider' %}selected{% endif %}>Gider</option>
+                    </select>
+                </div>
+                
+                <!-- Kasa -->
+                <div class="col-6 col-md-2 ier-filter-col">
+                    <label class="form-label">Kasa</label>
+                    <select name="kasa_adi" class="form-select">
+                        <option value="">Tümü</option>
+                        {% for kasa_value, kasa_label in kasa_choices %}
+                        <option value="{{ kasa_value }}" {% if filters.kasa_adi == kasa_value %}selected{% endif %}>
+                            {{ kasa_label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Kategori -->
+                <div class="col-6 col-md-2 ier-filter-col">
+                    <label class="form-label">Kategori</label>
+                    <select name="kategori" class="form-select">
+                        <option value="">Tümü</option>
+                        {% for kategori in kategoriler %}
+                        <option value="{{ kategori.id }}" {% if filters.kategori == kategori.id|stringformat:"s" %}selected{% endif %}>
+                            {{ kategori.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Çalıştır Butonu -->
+                <div class="col-6 col-md-2 ier-filter-btn d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-play-fill me-1"></i>
+                        ÇALIŞTIR
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Özet Kartlar -->
+<div class="row g-2 mb-4">
+    <div class="col-4 col-md-2 ier-ozet-kart">
+        <div class="card text-white clickable-card h-100" style="background: #5bc0de; cursor: pointer;" data-bs-toggle="modal" data-bs-target="#modalNakit">
+            <div class="card-body text-center p-2">
+                <h6 class="card-title mb-1">💰 Nakit</h6>
+                <h4 class="mb-0">{{ summary.nakit|default:0|floatformat:0 }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-4 col-md-2 ier-ozet-kart">
+        <div class="card text-white clickable-card h-100" style="background: #5cb85c; cursor: pointer;" data-bs-toggle="modal" data-bs-target="#modalKrediKarti">
+            <div class="card-body text-center p-2">
+                <h6 class="card-title mb-1">💳 K.Kartı</h6>
+                <h4 class="mb-0">{{ summary.kredi_karti_brut|default:0|floatformat:0 }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-4 col-md-2 ier-ozet-kart">
+        <div class="card text-white clickable-card h-100" style="background: #d9534f; cursor: pointer;" data-bs-toggle="modal" data-bs-target="#modalCari">
+            <div class="card-body text-center p-2">
+                <h6 class="card-title mb-1">🏢 Cari</h6>
+                <h4 class="mb-0">{{ summary.cari_brut|default:0|floatformat:0 }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-4 col-md-2 ier-ozet-kart">
+        <div class="card text-white clickable-card h-100" style="background: #f0ad4e; cursor: pointer;" data-bs-toggle="modal" data-bs-target="#modalSanalPos">
+            <div class="card-body text-center p-2">
+                <h6 class="card-title mb-1">💳 S.Pos</h6>
+                <h4 class="mb-0">{{ summary.sanal_pos_brut|default:0|floatformat:0 }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-4 col-md-2 ier-ozet-kart">
+        <div class="card text-white clickable-card h-100" style="background: #9b59b6; cursor: pointer;" data-bs-toggle="modal" data-bs-target="#modalMehmetHavale">
+            <div class="card-body text-center p-2">
+                <h6 class="card-title mb-1">🏦 M.Hav.</h6>
+                <h4 class="mb-0">{{ summary.mehmet_havale|default:0|floatformat:0 }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-4 col-md-2 ier-ozet-kart">
+        <div class="card text-white clickable-card h-100" style="background: #8e44ad; cursor: pointer;" data-bs-toggle="modal" data-bs-target="#modalBankaHavale">
+            <div class="card-body text-center p-2">
+                <h6 class="card-title mb-1">🏦 B.Hav.</h6>
+                <h4 class="mb-0">{{ summary.banka_havale_brut|default:0|floatformat:0 }}</h4>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Pafgo, Komisyon ve Toplam Kartları -->
+<div class="row g-2 mb-4">
+    <div class="col-6 col-md-3 ier-alt-kart">
+        <div class="card text-white clickable-card h-100" style="background: #16a085; cursor: pointer;" data-bs-toggle="modal" data-bs-target="#modalPafgo">
+            <div class="card-body text-center p-2">
+                <h6 class="card-title mb-1">💰 Pafgo</h6>
+                <h3 class="mb-0">{{ summary.pafgo|default:0|floatformat:0 }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3 ier-alt-kart">
+        <div class="card text-white h-100" style="background: #e74c3c;">
+            <div class="card-body text-center p-2">
+                <h6 class="card-title mb-1">⚠️ Komisyon</h6>
+                <h3 class="mb-0">-{{ summary.komisyon|default:0|floatformat:0 }}</h3>
+                <small class="text-white-50 d-none d-md-block">K.Kartı, Cari, S.Pos & B.Havale</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-6 ier-alt-kart wide">
+        <div class="card text-white clickable-card h-100" style="background: #34495e; cursor: pointer;" data-bs-toggle="modal" data-bs-target="#modalToplam">
+            <div class="card-body text-center p-2">
+                <h6 class="card-title mb-1">💵 Toplam</h6>
+                <h3 class="mb-0">{{ summary.toplam|default:0|floatformat:0 }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- İşlemler Tablosu -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">İşlem Listesi</h5>
+    </div>
+    <div class="card-body p-0">
+        {% if islemler %}
+
+        <!-- Desktop tablo -->
+        <div class="table-responsive ier-table-desktop">
+            <table class="table table-hover mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>TARİH</th>
+                        <th>KASA</th>
+                        <th>ANA KATEGORİ</th>
+                        <th>ALT KATEGORİ</th>
+                        <th class="text-end">NAKİT</th>
+                        <th class="text-end">KREDİ KARTI</th>
+                        <th class="text-end">CARİ</th>
+                        <th class="text-end">SANAL POS</th>
+                        <th class="text-end">M.HAVALE</th>
+                        <th class="text-end">B.HAVALE</th>
+                        <th class="text-end">PAFGO</th>
+                        <th class="text-end">ÇANTA ÇIKIŞ</th>
+                        <th class="text-end">TOPLAM</th>
+                        <th class="text-end">AÇIKLAMA</th>
+                        <th class="text-end">İŞLEM</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for islem in islemler %}
+                    <tr>
+                        <td>{{ islem.tarih|date:'d.m.Y' }}</td>
+                        <td>{{ islem.get_kasa_adi_display }}</td>
+                        <td>
+                            {% if islem.id|stringformat:"s"|slice:":6" == "excel_" %}
+                                Hizmet
+                            {% elif islem.kategori1.parent %}
+                                {{ islem.kategori1.parent.name }}
+                            {% elif islem.kategori1 %}
+                                {{ islem.kategori1.name }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if islem.id|stringformat:"s"|slice:":6" == "excel_" %}
+                                Excel Verisi
+                            {% elif islem.kategori1.parent %}
+                                {{ islem.kategori1.name }}
+                            {% elif islem.kategori2 %}
+                                {{ islem.kategori2.name }}
+                            {% elif islem.kategori3 %}
+                                {{ islem.kategori3.name }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            {% if islem.nakit > 0 %}
+                                <span class="badge bg-{% if islem.hareket_tipi == 'gelir' %}success{% else %}danger{% endif %}">
+                                    {{ islem.nakit|floatformat:0 }}
+                                </span>
+                            {% else %}-{% endif %}
+                        </td>
+                        <td class="text-end">
+                            {% if islem.kredi_karti > 0 %}
+                                <span class="badge bg-{% if islem.hareket_tipi == 'gelir' %}success{% else %}danger{% endif %}">
+                                    {{ islem.kredi_karti|floatformat:0 }}
+                                </span>
+                            {% else %}-{% endif %}
+                        </td>
+                        <td class="text-end">
+                            {% if islem.cari > 0 %}
+                                <span class="badge bg-{% if islem.hareket_tipi == 'gelir' %}success{% else %}danger{% endif %}">
+                                    {{ islem.cari|floatformat:0 }}
+                                </span>
+                            {% else %}-{% endif %}
+                        </td>
+                        <td class="text-end">
+                            {% if islem.sanal_pos > 0 %}
+                                <span class="badge bg-{% if islem.hareket_tipi == 'gelir' %}success{% else %}danger{% endif %}">
+                                    {{ islem.sanal_pos|floatformat:0 }}
+                                </span>
+                            {% else %}-{% endif %}
+                        </td>
+                        <td class="text-end">
+                            {% if islem.mehmet_havale > 0 %}
+                                <span class="badge bg-{% if islem.hareket_tipi == 'gelir' %}success{% else %}danger{% endif %}">
+                                    {{ islem.mehmet_havale|floatformat:0 }}
+                                </span>
+                            {% else %}-{% endif %}
+                        </td>
+                        <td class="text-end">
+                            {% if islem.banka_havale > 0 %}
+                                <span class="badge bg-{% if islem.hareket_tipi == 'gelir' %}success{% else %}danger{% endif %}">
+                                    {{ islem.banka_havale|floatformat:0 }}
+                                </span>
+                            {% else %}-{% endif %}
+                        </td>
+                        <td class="text-end">
+                            {% if islem.pafgo > 0 %}
+                                <span class="badge bg-{% if islem.hareket_tipi == 'gelir' %}success{% else %}danger{% endif %}">
+                                    {{ islem.pafgo|floatformat:0 }}
+                                </span>
+                            {% else %}-{% endif %}
+                        </td>
+                        <td class="text-end">
+                            {% if islem.canta_cikis|default:0 > 0 %}
+                                <span class="badge bg-{% if islem.hareket_tipi == 'gelir' %}success{% else %}danger{% endif %}">
+                                    {{ islem.canta_cikis|floatformat:0 }}
+                                </span>
+                            {% else %}-{% endif %}
+                        </td>
+                        <td class="text-end">
+                            <strong class="{% if islem.hareket_tipi == 'gelir' %}text-success{% else %}text-danger{% endif %}">
+                                {{ islem.toplam|floatformat:0 }}
+                            </strong>
+                        </td>
+                        <td>{{ islem.aciklama|default:"-" }}</td>
+                        <td class="text-end">
+                            <div class="d-flex align-items-center justify-content-end gap-2">
+                                <span class="badge bg-{% if islem.hareket_tipi == 'gelir' %}success{% else %}danger{% endif %}">
+                                    {{ islem.get_hareket_tipi_display }}
+                                </span>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    {% if islem.id|stringformat:"s"|slice:":6" == "excel_" %}
+                                        <!-- Excel işlemleri düzenlenemez -->
+                                        <span class="btn btn-outline-secondary btn-sm disabled" title="Excel verisi - düzenlenemez">
+                                            <i class="bi bi-file-earmark-excel"></i>
+                                        </span>
+                                    {% else %}
+                                        <!-- Normal Transaction işlemleri -->
+                                        <a href="{% url 'dashboard:transaction_duzenle' islem.id %}?next={{ request.get_full_path|urlencode }}" class="btn btn-outline-primary btn-sm" title="Düzenle">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <form method="post" action="{% url 'dashboard:transaction_sil' islem.id %}" class="d-inline">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                            <button type="submit" class="btn btn-outline-danger btn-sm" title="İşlemi sil"
+                                                onclick="return confirm('Bu işlemi silmek istediğinize emin misiniz?');">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="p-4 text-center text-muted">
+            <i class="bi bi-info-circle fs-2 mb-2"></i>
+            <p class="mb-0">Seçilen kriterlere uygun kayıt bulunamadı.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modals -->
+{% include 'dashboard/partials/finance-modal.html' with modal_id='modalNakit' title='Nakit İşlemleri' entries=odeme_detaylari.nakit total=summary.nakit color_class='info' selected_range=date_range_label %}
+{% include 'dashboard/partials/finance-modal.html' with modal_id='modalKrediKarti' title='Kredi Kartı İşlemleri' entries=odeme_detaylari.kredi_karti total=summary.kredi_karti_brut color_class='success' selected_range=date_range_label komisyon_toplam=komisyon_kredi_karti %}
+{% include 'dashboard/partials/finance-modal.html' with modal_id='modalCari' title='Cari İşlemleri' entries=odeme_detaylari.cari total=summary.cari_brut color_class='danger' selected_range=date_range_label komisyon_toplam=komisyon_cari %}
+{% include 'dashboard/partials/finance-modal.html' with modal_id='modalSanalPos' title='Sanal Pos İşlemleri' entries=odeme_detaylari.sanal_pos total=summary.sanal_pos_brut color_class='warning' selected_range=date_range_label komisyon_toplam=komisyon_sanal_pos %}
+{% include 'dashboard/partials/finance-modal.html' with modal_id='modalMehmetHavale' title='Mehmet Havale İşlemleri' entries=odeme_detaylari.mehmet_havale total=summary.mehmet_havale color_class='secondary' selected_range=date_range_label %}
+{% include 'dashboard/partials/finance-modal.html' with modal_id='modalBankaHavale' title='Banka Havale İşlemleri' entries=odeme_detaylari.banka_havale total=summary.banka_havale_brut color_class='dark' selected_range=date_range_label komisyon_toplam=komisyon_banka_havale %}
+{% include 'dashboard/partials/finance-modal.html' with modal_id='modalPafgo' title='💰 Pafgo İşlemleri' entries=odeme_detaylari.pafgo total=summary.pafgo color_class='success' selected_range=date_range_label %}
+{% include 'dashboard/partials/finance-modal.html' with modal_id='modalToplam' title='Tüm İşlemler' entries=odeme_detaylari.toplam total=summary.toplam color_class='primary' selected_range=date_range_label %}
+
+{% endblock %}

@@ -1,0 +1,176 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Lastik Teslim - Mestakip{% endblock %}
+{% block page_name %}lastik_saklama{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0"><i class="bi bi-box-arrow-up me-2 text-success"></i>Lastik Teslim</h1>
+        <p class="text-muted small mb-0">Müşteriye lastik teslimi</p>
+    </div>
+    <a href="{% url 'dashboard:lastik_saklama' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Geri
+    </a>
+</div>
+
+<form method="post">
+{% csrf_token %}
+
+<!-- ─── Müşteri & Araç Bilgileri ─────────────────────────────── -->
+<div class="card mb-4">
+    <div class="card-body">
+        <h6 class="fw-bold mb-3 d-flex align-items-center gap-2">
+            <span class="rounded-circle bg-success bg-opacity-10 p-1 px-2 text-success" style="font-size:.8rem">👤</span>
+            Müşteri & Araç Bilgileri
+        </h6>
+        <div class="row g-3">
+            <div class="col-md-3 col-6">
+                <div class="border rounded p-2">
+                    <div class="text-muted" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em">Müşteri</div>
+                    <div class="fw-bold">{{ kayit.musteri_adi }}</div>
+                </div>
+            </div>
+            <div class="col-md-3 col-6">
+                <div class="border rounded p-2">
+                    <div class="text-muted" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em">Telefon</div>
+                    <div class="fw-bold">{{ kayit.musteri_telefon|default:"–" }}</div>
+                </div>
+            </div>
+            <div class="col-md-3 col-6">
+                <div class="border rounded p-2">
+                    <div class="text-muted" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em">Plaka</div>
+                    <div class="fw-bold"><span class="badge bg-secondary fs-6">{{ kayit.plaka|default:"–" }}</span></div>
+                </div>
+            </div>
+            <div class="col-md-3 col-6">
+                <div class="border rounded p-2">
+                    <div class="text-muted" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em">Araç</div>
+                    <div class="fw-bold">{{ kayit.arac_marka_model|default:"–" }}</div>
+                </div>
+            </div>
+            {% if kayit.model_yili %}
+            <div class="col-md-3 col-6">
+                <div class="border rounded p-2">
+                    <div class="text-muted" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em">Model Yılı</div>
+                    <div class="fw-bold">{{ kayit.model_yili }}</div>
+                </div>
+            </div>
+            {% endif %}
+            {% if kayit.arac_kilometre %}
+            <div class="col-md-3 col-6">
+                <div class="border rounded p-2">
+                    <div class="text-muted" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em">Kilometre</div>
+                    <div class="fw-bold">{{ kayit.arac_kilometre }} km</div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- ─── Depo & Tarih Bilgileri ─────────────────────────────── -->
+<div class="card mb-4">
+    <div class="card-body">
+        <h6 class="fw-bold mb-3 d-flex align-items-center gap-2">
+            <span class="rounded-circle bg-success bg-opacity-10 p-1 px-2 text-success" style="font-size:.8rem">📍</span>
+            Depo & Tarih Bilgileri
+        </h6>
+        <div class="row g-3">
+            <div class="col-md-3 col-6">
+                <div class="border rounded p-2">
+                    <div class="text-muted" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em">Depo / Raf</div>
+                    <div class="fw-bold">{{ kayit.depo|default:"–" }}</div>
+                </div>
+            </div>
+            <div class="col-md-3 col-6">
+                <div class="border rounded p-2">
+                    <div class="text-muted" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em">Giriş Tarihi</div>
+                    <div class="fw-bold">{{ kayit.giris_tarihi|date:"d.m.Y" }}</div>
+                </div>
+            </div>
+            <div class="col-md-3 col-6">
+                <div class="border rounded p-2">
+                    <div class="text-muted" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em">Depoda Süre</div>
+                    <div class="fw-bold">
+                        <span class="badge bg-warning text-dark">{{ kayit.depoda_kac_gun }} gün</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-6">
+                <div class="border rounded p-2">
+                    <div class="text-muted" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em">Lastik Adedi</div>
+                    <div class="fw-bold">
+                        {{ kayit.adet }} adet ·
+                        {% if kayit.mevsim == 'kis' %}❄️ Kış
+                        {% elif kayit.mevsim == 'yaz' %}☀️ Yaz
+                        {% else %}🔄 4 Mevsim{% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ─── Lastik Bilgileri ─────────────────────────────── -->
+{% with lastikler=kayit.lastikler.all %}
+{% if lastikler %}
+<div class="card mb-4">
+    <div class="card-body">
+        <h6 class="fw-bold mb-3 d-flex align-items-center gap-2">
+            <span class="rounded-circle bg-success bg-opacity-10 p-1 px-2 text-success" style="font-size:.8rem">🔵</span>
+            Lastik Bilgileri
+        </h6>
+        <div class="table-responsive">
+            <table class="table table-bordered align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="text-center">#</th>
+                        <th>Marka</th>
+                        <th>Ebat</th>
+                        <th>DOT</th>
+                        <th>Diş (mm)</th>
+                        <th>Jant</th>
+                        <th>Açıklama</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for l in lastikler %}
+                    <tr>
+                        <td class="text-center text-muted fw-semibold">{{ l.sira }}</td>
+                        <td class="fw-semibold">{{ l.marka|default:"–" }}</td>
+                        <td>{{ l.ebat|default:"–" }}</td>
+                        <td>{{ l.dot|default:"–" }}</td>
+                        <td>{{ l.dis_derinligi|default:"–" }}</td>
+                        <td>{{ l.get_jant_display|default:"–" }}</td>
+                        <td>{{ l.aciklama|default:"" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endwith %}
+
+<!-- ─── Teslim Formu ─────────────────────────────── -->
+<div class="card border-success mb-4">
+    <div class="card-body">
+        <h6 class="fw-bold mb-3 text-success"><i class="bi bi-check-circle me-1"></i>Teslim Onayı</h6>
+        <div class="mb-3">
+            <label class="form-label fw-semibold">Teslim Notu (opsiyonel)</label>
+            <textarea name="aciklama" class="form-control" rows="2" placeholder="Teslim sırasında bir not eklemek ister misiniz?"></textarea>
+        </div>
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-success px-5">
+                <i class="bi bi-check-circle me-1"></i>Teslim Et
+            </button>
+            <a href="{% url 'dashboard:lastik_saklama' %}" class="btn btn-outline-secondary">İptal</a>
+        </div>
+    </div>
+</div>
+
+</form>
+{% endblock %}

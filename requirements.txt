@@ -1,0 +1,47 @@
+# Django Core
+Django==5.1.4
+gunicorn==23.0.0
+whitenoise==6.11.0
+
+# Django Extensions
+crispy-bootstrap5==2024.10
+django-crispy-forms==2.3
+django-filter==25.1
+django-imagekit==5.0.0
+django-import-export==4.3.10
+django-jazzmin==3.0.1
+django-phonenumber-field==8.1.0
+django-tables2==2.7.5
+django-taggit==6.1.0
+
+# Image Processing
+pilkit==3.0
+pillow==11.0.0
+
+# Phone Numbers
+phonenumbers==9.0.15
+
+# Excel Support
+openpyxl==3.1.5
+tablib==3.8.0
+pandas==2.2.3
+
+# Environment & Config
+dj-database-url==2.3.0
+python-dotenv==1.0.1
+requests==2.32.3
+
+# PDF Generation
+xhtml2pdf==0.2.17
+
+# Database
+psycopg2-binary==2.9.12
+
+# ─── Celery / Görev kuyruğu (DİA senkronizasyon otomasyonu) ─────────────────────
+celery==5.4.0
+redis==5.2.1
+SQLAlchemy==2.0.36
+django-celery-beat==2.7.0
+django-celery-results==2.5.1
+
+mysqlclient==2.2.7

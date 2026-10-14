@@ -1,0 +1,450 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Lastik Saklama - Mestakip{% endblock %}
+{% block page_name %}lastik_saklama{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0"><i class="bi bi-archive me-2 text-primary"></i>Lastik Saklama</h1>
+        <p class="text-muted small mb-0">Lastik oteli giriş / çıkış ve depo-raf takibi</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'dashboard:lastik_saklama' %}?durum=teslim_edildi" class="btn {% if filters.durum == 'teslim_edildi' %}btn-secondary{% else %}btn-outline-secondary{% endif %}">
+            <i class="bi bi-check-circle me-1"></i>Teslim Edilenler
+        </a>
+        <a href="{% url 'dashboard:lastik_saklama_excel_yukle' %}" class="btn btn-outline-success">
+            <i class="bi bi-file-earmark-excel me-1"></i>Excel Yükle
+        </a>
+        <a href="{% url 'dashboard:lastik_saklama_giris' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i>Yeni Giriş
+        </a>
+    </div>
+</div>
+
+{% if messages %}
+{% for message in messages %}
+<div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+{% endif %}
+
+<!-- İstatistik Kartları -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="rounded-circle bg-primary bg-opacity-10 p-3">
+                    <i class="bi bi-car-front-fill text-primary fs-4"></i>
+                </div>
+                <div>
+                    <div class="text-muted small">Toplam Plaka</div>
+                    <div class="fs-3 fw-bold">{{ toplam_plaka }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="rounded-circle bg-info bg-opacity-10 p-3">
+                    <span class="fs-4">❄️</span>
+                </div>
+                <div>
+                    <div class="text-muted small">Kışlık Lastik</div>
+                    <div class="fs-3 fw-bold">{{ toplam_kislik }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="rounded-circle bg-warning bg-opacity-10 p-3">
+                    <span class="fs-4">☀️</span>
+                </div>
+                <div>
+                    <div class="text-muted small">Yazlık Lastik</div>
+                    <div class="fs-3 fw-bold">{{ toplam_yazlik }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filtre -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">Durum</label>
+                <select name="durum" class="form-select">
+                    <option value="">Tümü</option>
+                    {% for val, label in durum_choices %}
+                    <option value="{{ val }}" {% if filters.durum == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">Müşteri</label>
+                <input type="text" name="musteri" class="form-control" value="{{ filters.musteri }}" placeholder="Müşteri adı...">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-semibold">Plaka</label>
+                <input type="text" name="plaka" class="form-control" value="{{ filters.plaka }}" placeholder="34ABC123...">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-semibold">Mevsim</label>
+                <select name="mevsim" class="form-select">
+                    <option value="">Tümü</option>
+                    {% for val, label in mevsim_choices %}
+                    <option value="{{ val }}" {% if filters.mevsim == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-primary flex-fill"><i class="bi bi-search me-1"></i>Filtrele</button>
+                <a href="{% url 'dashboard:lastik_saklama' %}" class="btn btn-outline-secondary"><i class="bi bi-x"></i></a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Tablo -->
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Müşteri</th>
+                        <th>Plaka</th>
+                        <th>Ebat / Marka</th>
+                        <th>Mevsim</th>
+                        <th>Depo / Raf</th>
+                        <th>Giriş</th>
+                        <th>Süre</th>
+                        <th>Durum</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for k in kayitlar %}
+                    <tr>
+                        <td>
+                            <div class="fw-semibold">{{ k.musteri_adi }}</div>
+                            {% if k.musteri_telefon %}<small class="text-muted">{{ k.musteri_telefon }}</small>{% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary fs-6 plaka-link"
+                                  style="cursor:pointer"
+                                  data-bs-toggle="modal"
+                                  data-bs-target="#detayModal"
+                                  data-id="{{ k.pk }}"
+                                  data-musteri="{{ k.musteri_adi }}"
+                                  data-telefon="{{ k.musteri_telefon|default:'–' }}"
+                                  data-plaka="{{ k.plaka|default:'–' }}"
+                                  data-arac="{{ k.arac_marka_model|default:'–' }}"
+                                  data-km="{{ k.arac_kilometre|default:'–' }}"
+                                  data-yil="{{ k.model_yili|default:'–' }}"
+                                  data-mevsim="{{ k.get_mevsim_display }}"
+                                  data-mevsim-kodu="{{ k.mevsim }}"
+                                  data-adet="{{ k.adet }}"
+                                  data-depo="{{ k.depo|default:'–' }}"
+                                  data-giris="{{ k.giris_tarihi|date:'d.m.Y' }}"
+                                  data-sure="{{ k.depoda_kac_gun }}"
+                                  data-durum="{{ k.durum }}"
+                                  data-cikis="{{ k.cikis_tarihi|date:'d.m.Y'|default:'' }}"
+                                  data-olusturan="{% if k.olusturan %}{{ k.olusturan.get_full_name|default:k.olusturan.username }}{% else %}–{% endif %}"
+                                  data-lastikler="{% for l in k.lastikler.all %}{{ l.sira }}|{{ l.marka }}|{{ l.ebat }}|{{ l.desen }}|{{ l.dot }}|{{ l.dis_derinligi|default:'' }}|{{ l.get_jant_display }}|{{ l.aciklama }}{% if not forloop.last %};;{% endif %}{% endfor %}"
+                                  title="Detayı gör">
+                                {{ k.plaka|default:"–" }}
+                            </span>
+                        </td>
+                        <td>
+                            <div>{{ k.ebat|default:"–" }}</div>
+                            <small class="text-muted">{{ k.marka|default:"" }}</small>
+                        </td>
+                        <td>
+                            {% if k.mevsim == 'kis' %}<span class="badge bg-info">❄️ Kış</span>
+                            {% elif k.mevsim == 'yaz' %}<span class="badge bg-warning text-dark">☀️ Yaz</span>
+                            {% else %}<span class="badge bg-secondary">🔄 4 Mevsim</span>{% endif %}
+                        </td>
+                        <td>{{ k.depo|default:"–" }}</td>
+                        <td><small>{{ k.giris_tarihi|date:"d.m.Y" }}</small></td>
+                        <td>
+                            {% if k.durum == 'depoda' %}
+                            <div class="small
+                                {% if k.kalan_gun > 0 %}text-success
+                                {% elif k.kalan_gun == 0 %}text-warning fw-bold
+                                {% else %}text-danger fw-bold{% endif %}">
+                                {% if k.kalan_gun > 0 %}{{ k.kalan_gun }} gün kaldı
+                                {% elif k.kalan_gun == 0 %}Son gün!
+                                {% else %}{{ k.kalan_gun }} gün geçti{% endif %}
+                            </div>
+                            {% else %}–{% endif %}
+                        </td>
+                        <td>
+                            {% if k.durum == 'depoda' %}
+                            <span class="badge bg-success"><i class="bi bi-archive me-1"></i>Depoda</span>
+                            <a href="{% url 'dashboard:lastik_saklama_giris_fisi' k.pk %}" target="_blank" class="btn btn-sm btn-outline-success ms-1 py-0" title="Giriş Fişi">
+                                <i class="bi bi-printer"></i>
+                            </a>
+                            {% else %}
+                            <span class="badge bg-secondary"><i class="bi bi-check me-1"></i>Teslim Edildi</span>
+                            <a href="{% url 'dashboard:lastik_saklama_cikis_fisi' k.pk %}" target="_blank" class="btn btn-sm btn-outline-secondary ms-1 py-0" title="Çıkış Fişi">
+                                <i class="bi bi-printer"></i>
+                            </a>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="d-flex gap-1">
+                                {% if k.durum == 'depoda' %}
+                                <a href="{% url 'dashboard:lastik_saklama_cikis' k.pk %}" class="btn btn-sm btn-outline-success" title="Teslim Et">
+                                    <i class="bi bi-box-arrow-up"></i>
+                                </a>
+                                {% endif %}
+                                <a href="{% url 'dashboard:lastik_saklama_duzenle' k.pk %}" class="btn btn-sm btn-outline-secondary" title="Düzenle">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                {% if k.durum == 'depoda' and k.wa_link %}
+                                <a href="{{ k.wa_link }}" target="_blank" class="btn btn-sm" title="WhatsApp Gönder" style="background-color:#25d366;border-color:#25d366;color:#fff">
+                                    <i class="bi bi-whatsapp"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" class="text-center py-5 text-muted">
+                            <i class="bi bi-archive fs-1 d-block mb-2"></i>
+                            Kayıt bulunamadı.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ─── Detay Modal ─────────────────────────────── -->
+<div class="modal fade" id="detayModal" tabindex="-1" aria-labelledby="detayModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold" id="detayModalLabel">
+                    <i class="bi bi-archive me-2 text-primary"></i>
+                    <span id="m-plaka"></span>
+                </h5>
+                <div class="ms-auto d-flex gap-2 me-2">
+                    <a href="#" id="m-detay-btn" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-eye me-1"></i>Detay
+                    </a>
+                    <a href="#" id="m-duzenle-btn" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-pencil me-1"></i>Düzenle
+                    </a>
+                    <a href="#" id="m-teslim-btn" class="btn btn-sm btn-success">
+                        <i class="bi bi-box-arrow-up me-1"></i>Teslim Et
+                    </a>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body pt-2">
+
+                <!-- Bilgi Kartları -->
+                <div class="row g-2 mb-3">
+                    <div class="col-md-3 col-6">
+                        <div class="border rounded p-2">
+                            <div class="text-muted" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em">Müşteri / Cari</div>
+                            <div class="fw-bold" id="m-musteri"></div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="border rounded p-2">
+                            <div class="text-muted" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em">Telefon</div>
+                            <div class="fw-bold" id="m-telefon"></div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="border rounded p-2">
+                            <div class="text-muted" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em">Araç</div>
+                            <div class="fw-bold" id="m-arac"></div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="border rounded p-2">
+                            <div class="text-muted" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em">Model Yılı</div>
+                            <div class="fw-bold" id="m-yil"></div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="border rounded p-2">
+                            <div class="text-muted" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em">Kilometre</div>
+                            <div class="fw-bold" id="m-km"></div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="border rounded p-2">
+                            <div class="text-muted" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em">Giriş Tarihi</div>
+                            <div class="fw-bold" id="m-giris"></div>
+                            <div class="small" id="m-kalan"></div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6" id="m-cikis-kart" style="display:none">
+                        <div class="border rounded p-2">
+                            <div class="text-muted" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em">Çıkış Tarihi</div>
+                            <div class="fw-bold" id="m-cikis"></div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="border rounded p-2">
+                            <div class="text-muted" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em">Depo / Raf</div>
+                            <div class="fw-bold" id="m-depo"></div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="border rounded p-2">
+                            <div class="text-muted" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em">Lastik Adedi</div>
+                            <div class="fw-bold" id="m-adet"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lastik Bilgileri Tablosu -->
+                <div id="m-lastik-bolum">
+                    <div class="fw-bold mb-2">Lastik Bilgileri</div>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-sm align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="text-center">#</th>
+                                    <th>Mevsim</th>
+                                    <th>Marka</th>
+                                    <th>Ebat</th>
+                                    <th>DOT</th>
+                                    <th>Diş</th>
+                                    <th>Jant</th>
+                                    <th>Açıklama</th>
+                                </tr>
+                            </thead>
+                            <tbody id="m-lastik-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="text-muted small mt-3" id="m-kayit-bilgi"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const modal = document.getElementById('detayModal');
+
+    modal.addEventListener('show.bs.modal', function (e) {
+        const btn = e.relatedTarget;
+
+        // Temel bilgiler
+        document.getElementById('m-plaka').textContent     = btn.dataset.plaka;
+        document.getElementById('m-musteri').textContent   = btn.dataset.musteri;
+        document.getElementById('m-telefon').textContent   = btn.dataset.telefon;
+        document.getElementById('m-arac').textContent      = btn.dataset.arac;
+        document.getElementById('m-yil').textContent       = btn.dataset.yil;
+        document.getElementById('m-km').textContent        = btn.dataset.km !== '–' ? btn.dataset.km + ' km' : '–';
+        document.getElementById('m-giris').textContent     = btn.dataset.giris;
+        document.getElementById('m-depo').textContent      = btn.dataset.depo;
+
+        // Geri sayaç: 180 günden eksilt, eksiye de düşebilir
+        const girisParcalar = btn.dataset.giris.split('.');
+        const girisDate = new Date(
+            parseInt(girisParcalar[2]),
+            parseInt(girisParcalar[1]) - 1,
+            parseInt(girisParcalar[0])
+        );
+        const sonGun = new Date(girisDate.getTime() + 180 * 24 * 60 * 60 * 1000);
+        const bugun = new Date();
+        bugun.setHours(0, 0, 0, 0);
+        const kalanGun = Math.round((sonGun - bugun) / (24 * 60 * 60 * 1000));
+        const kalanEl = document.getElementById('m-kalan');
+        if (btn.dataset.durum === 'depoda') {
+            if (kalanGun > 0) {
+                kalanEl.textContent = kalanGun + ' gün kaldı';
+                kalanEl.className = 'small text-success';
+            } else if (kalanGun === 0) {
+                kalanEl.textContent = 'Son gün!';
+                kalanEl.className = 'small text-warning fw-bold';
+            } else {
+                kalanEl.textContent = kalanGun + ' gün geçti';
+                kalanEl.className = 'small text-danger fw-bold';
+            }
+        } else {
+            kalanEl.textContent = '';
+        }
+
+        const mevsimKodu = btn.dataset.mevsimKodu;
+        const mevsimEtiketi = mevsimKodu === 'kis' ? '❄️ Kış' : mevsimKodu === 'yaz' ? '☀️ Yaz' : '🔄 4 Mevsim';
+        document.getElementById('m-adet').textContent = btn.dataset.adet + ' adet · ' + btn.dataset.mevsim;
+
+        // Buton linkleri
+        const id = btn.dataset.id;
+        document.getElementById('m-duzenle-btn').href = '/dashboard/lastik-saklama/' + id + '/duzenle/';
+        document.getElementById('m-detay-btn').href   = '/dashboard/lastik-saklama/' + id + '/detay/';
+        // Teslim Et butonu
+        const teslimBtn = document.getElementById('m-teslim-btn');
+        if (btn.dataset.durum === 'depoda') {
+            teslimBtn.href = '/dashboard/lastik-saklama/' + id + '/cikis/';
+            teslimBtn.style.display = '';
+        } else {
+            teslimBtn.style.display = 'none';
+        }
+
+        // Çıkış tarihi kartı
+        const cikisKart = document.getElementById('m-cikis-kart');
+        if (btn.dataset.cikis) {
+            document.getElementById('m-cikis').textContent = btn.dataset.cikis;
+            cikisKart.style.display = '';
+        } else {
+            cikisKart.style.display = 'none';
+        }
+
+        // Kayıt bilgisi
+        document.getElementById('m-kayit-bilgi').textContent =
+            'Kayıt: ' + btn.dataset.olusturan + ' · ' + btn.dataset.giris +
+            (btn.dataset.sure ? ' · ' + btn.dataset.sure + ' gündür depoda' : '');
+
+        // Lastik satırları
+        const tbody = document.getElementById('m-lastik-tbody');
+        tbody.innerHTML = '';
+        const lastiklerStr = btn.dataset.lastikler;
+
+        if (lastiklerStr) {
+            const satirlar = lastiklerStr.split(';;');
+            satirlar.forEach(function (satir) {
+                const [sira, marka, ebat, desen, dot, dis, jant, aciklama] = satir.split('|');
+                const tr = document.createElement('tr');
+                tr.innerHTML =
+                    '<td class="text-center text-muted">' + (sira || '') + '</td>' +
+                    '<td><span class="badge ' + (mevsimKodu === 'kis' ? 'bg-info' : mevsimKodu === 'yaz' ? 'bg-warning text-dark' : 'bg-secondary') + '">' + mevsimEtiketi + '</span></td>' +
+                    '<td class="fw-semibold">' + (marka || '–') + '</td>' +
+                    '<td>' + (ebat || '–') + '</td>' +
+                    '<td>' + (dot || '–') + '</td>' +
+                    '<td>' + (dis ? dis + ' mm' : '–') + '</td>' +
+                    '<td>' + (jant || '–') + '</td>' +
+                    '<td>' + (aciklama || '') + '</td>';
+                tbody.appendChild(tr);
+            });
+        } else {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-3">Lastik satırı girilmemiş.</td></tr>';
+        }
+    });
+});
+</script>
+{% endblock %}

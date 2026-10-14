@@ -1,0 +1,35 @@
+{% if not is_misafir %}
+<section class="depot-control mb-4" aria-labelledby="depotControlTitle">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+        <h2 id="depotControlTitle" class="h6 mb-0"><i class="bi bi-box-seam me-2" aria-hidden="true"></i>Depo Kontrolü</h2>
+        <span class="small text-muted">Aktif stok · Çıktı / Depolandı</span>
+    </div>
+    <div class="table-responsive depot-summary-scroll">
+        <table class="table table-sm table-hover align-middle mb-0" id="depotSummary">
+            <caption class="caption-top small">Depo dağılımı · Seçili ID, marka, ebat, mevsim ve tarih filtreleri</caption>
+            <thead><tr><th scope="col">Depo</th><th scope="col" class="text-end">Kayıt</th><th scope="col" class="text-end">Lastik adedi</th></tr></thead>
+            <tbody>
+                {% for depot in depot_rows %}
+                <tr {% if depot.selected %}class="depot-selected"{% endif %}>
+                    <th scope="row" class="fw-normal">
+                        <a href="{{ depot.url }}" {% if depot.selected %}aria-current="true"{% endif %}>
+                            {% if depot.selected %}<i class="bi bi-check2 me-1" aria-hidden="true"></i>{% endif %}
+                            {{ depot.depot_name }}
+                        </a>
+                    </th>
+                    <td class="text-end">{{ depot.kayit_sayisi }}</td>
+                    <td class="text-end fw-semibold">{{ depot.adet_toplam }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="3" class="text-muted py-3">Bu filtrelerde aktif stok bulunamadı.</td></tr>
+                {% endfor %}
+            </tbody>
+            <tfoot><tr>
+                <th scope="row"><a href="{{ all_depots_url }}">Tüm depolar</a></th>
+                <td class="text-end fw-semibold">{{ depot_totals.kayit_sayisi }}</td>
+                <td class="text-end fw-semibold">{{ depot_totals.adet_toplam|default:0 }}</td>
+            </tr></tfoot>
+        </table>
+    </div>
+</section>
+{% endif %}

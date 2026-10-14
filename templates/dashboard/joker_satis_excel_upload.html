@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }} - Mestakip{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">{{ page_title }}</h1>
+        <p class="text-muted">Joker satış Excel dosyasını yükleyin</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'dashboard:joker_satis' %}" class="btn btn-outline-primary">
+            <i class="bi bi-arrow-left me-1"></i>Geri Dön
+        </a>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-file-earmark-excel me-2"></i>Excel Dosyası Yükle
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <div class="mb-4">
+                        <label for="{{ form.file.id_for_label }}" class="form-label">Excel Dosyası</label>
+                        {{ form.file }}
+                        <div class="form-text">
+                            Sadece .xlsx ve .xls dosyaları kabul edilir. Maksimum dosya boyutu: 10MB
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <h6><i class="bi bi-info-circle me-2"></i>Excel Formatı</h6>
+                        <p class="mb-2">Excel dosyanızın ilk satırında şu sütun başlıkları olmalıdır:</p>
+                        <ul class="mb-0">
+                            <li><strong>TARİH</strong> - İşlem tarihi (DD.MM.YYYY formatında)</li>
+                            <li><strong>CARİ</strong> - Cari/Müşteri adı</li>
+                            <li><strong>KATEGORİ</strong> - Ürün kategorisi</li>
+                            <li><strong>MARKA</strong> - Ürün markası</li>
+                            <li><strong>ÜRÜN KODU</strong> - Ürün kodu</li>
+                            <li><strong>ÜRÜN</strong> - Ürün açıklaması/adı</li>
+                            <li><strong>MİKTAR</strong> - Ürün miktarı</li>
+                            <li><strong>ALIŞ</strong> - Alış fiyatı</li>
+                            <li><strong>SATIŞ</strong> - Satış fiyatı</li>
+                        </ul>
+                        <div class="mt-2">
+                            <small class="text-info">
+                                <i class="bi bi-calculator me-1"></i>
+                                <strong>Kar Hesaplama:</strong> (Satış Fiyatı × 1.20 - Alış Fiyatı) × Miktar
+                            </small>
+                        </div>
+
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'dashboard:joker_satis' %}" class="btn btn-secondary">İptal</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-upload me-1"></i>Dosyayı Yükle
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

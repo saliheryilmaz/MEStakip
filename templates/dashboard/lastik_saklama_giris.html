@@ -1,0 +1,325 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Lastik Giriş - Mestakip{% endblock %}
+{% block page_name %}lastik_saklama{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0"><i class="bi bi-plus-circle me-2 text-primary"></i>Lastik Giriş</h1>
+        <p class="text-muted small mb-0">Yeni lastik teslim alma</p>
+    </div>
+    <a href="{% url 'dashboard:lastik_saklama' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Geri
+    </a>
+</div>
+
+<form method="post" id="girisForm">
+{% csrf_token %}
+
+<!-- ─── Müşteri Bilgileri ─────────────────────────────── -->
+<div class="card mb-4">
+    <div class="card-body">
+        <h6 class="fw-bold mb-3 d-flex align-items-center gap-2">
+            <span class="rounded-circle bg-primary bg-opacity-10 p-1 px-2 text-primary" style="font-size:.8rem">👤</span>
+            Müşteri Bilgileri
+        </h6>
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label fw-semibold">Müşteri Adı <span class="text-danger">*</span></label>
+                <input type="text" name="musteri_adi" class="form-control" required placeholder="Ad Soyad veya Firma">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">Telefon</label>
+                <input type="text" name="musteri_telefon" class="form-control" placeholder="05xx xxx xx xx">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-semibold">Plaka</label>
+                <div class="input-group">
+                    <input type="text" name="plaka" id="plakaInput" class="form-control" placeholder="34ABC123" style="text-transform:uppercase">
+                    <span class="input-group-text" id="plakaSpinner" style="display:none">
+                        <span class="spinner-border spinner-border-sm text-primary"></span>
+                    </span>
+                </div>
+                <div id="plakaUyari" class="form-text text-success fw-semibold" style="display:none">
+                    <i class="bi bi-check-circle me-1"></i>Önceki kayıttan dolduruldu
+                </div>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">Araç Marka / Model</label>
+                <input type="text" name="arac_marka_model" class="form-control" placeholder="Toyota Corolla">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-semibold">Araç Kilometre</label>
+                <input type="number" name="arac_kilometre" class="form-control" placeholder="85000" min="0">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-semibold">Model Yılı</label>
+                <input type="number" name="model_yili" class="form-control" placeholder="2019" min="1950" max="2100">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ─── Depo & Tarih Bilgileri ─────────────────────────────── -->
+<div class="card mb-4">
+    <div class="card-body">
+        <h6 class="fw-bold mb-3 d-flex align-items-center gap-2">
+            <span class="rounded-circle bg-primary bg-opacity-10 p-1 px-2 text-primary" style="font-size:.8rem">📍</span>
+            Depo & Tarih Bilgileri
+        </h6>
+        <div class="row g-3">
+            <div class="col-md-2">
+                <label class="form-label fw-semibold">Mevsim <span class="text-danger">*</span></label>
+                <select name="mevsim" class="form-select" required>
+                    {% for val, label in mevsim_choices %}
+                    <option value="{{ val }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-1">
+                <label class="form-label fw-semibold">Adet</label>
+                <input type="number" name="adet" class="form-control" value="4" min="1" max="8" id="adetInput">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">Depo / Raf</label>
+                <div class="input-group">
+                    <select name="depo" class="form-select" id="depoSelect">
+                        <option value="">– Seç –</option>
+                        {% for d in depolar %}
+                        <option value="{{ d.pk }}">{{ d }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="button" class="btn btn-outline-primary" id="depoEkleBtn" title="Yeni depo ekle">
+                        <i class="bi bi-plus-lg"></i>
+                    </button>
+                </div>
+                <!-- Yeni depo formu (gizli) -->
+                <div id="depoEkleForm" class="border rounded p-2 mt-2 bg-light" style="display:none">
+                    <div class="fw-semibold small mb-2 text-primary">Yeni Depo / Raf Ekle</div>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <input type="text" id="yeniDepoAd" class="form-control form-control-sm" placeholder="Depo adı (Ör: A)">
+                        </div>
+                        <div class="col-6">
+                            <input type="text" id="yeniDepoRaf" class="form-control form-control-sm" placeholder="Raf (Ör: 3)">
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2 mt-2">
+                        <button type="button" class="btn btn-sm btn-primary" id="depoKaydetBtn">
+                            <i class="bi bi-check me-1"></i>Kaydet
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="depoIptalBtn">İptal</button>
+                    </div>
+                    <div id="depoHata" class="text-danger small mt-1" style="display:none"></div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-semibold">Giriş Tarihi <span class="text-danger">*</span></label>
+                <input type="date" name="giris_tarihi" class="form-control" value="{{ bugun }}" required>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-semibold">Saklama Ücreti (₺)</label>
+                <input type="number" name="saklama_ucreti" class="form-control" step="0.01" placeholder="0.00">
+            </div>
+            <div class="col-12">
+                <label class="form-label fw-semibold">Açıklama</label>
+                <textarea name="aciklama" class="form-control" rows="2" placeholder="Ek notlar..."></textarea>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ─── Lastik Bilgileri ─────────────────────────────── -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="fw-bold mb-0 d-flex align-items-center gap-2">
+                <span class="rounded-circle bg-primary bg-opacity-10 p-1 px-2 text-primary" style="font-size:.8rem">🔵</span>
+                Lastik Bilgileri
+            </h6>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="kopyalaBtn">
+                <i class="bi bi-copy me-1"></i>1. Satırı Kopyala
+            </button>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-bordered align-middle mb-0" id="lastikTablosu">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:36px" class="text-center text-muted">#</th>
+                        <th>MARKA</th>
+                        <th>EBAT</th>
+                        <th>DOT</th>
+                        <th>DİŞ DERİNLİĞİ</th>
+                        <th style="width:130px">JANT</th>
+                        <th>AÇIKLAMA</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for i in lastik_sayilari %}
+                    <tr>
+                        <td class="text-center text-muted fw-semibold">{{ i }}</td>
+                        <td><input type="text" name="lastik_{{ i }}_marka" class="form-control form-control-sm border-0 bg-transparent" placeholder=""></td>
+                        <td>
+                            <input type="text" name="lastik_{{ i }}_ebat" class="form-control form-control-sm border-0 bg-transparent" placeholder="205/55R16">
+                        </td>
+                        <td><input type="text" name="lastik_{{ i }}_dot" class="form-control form-control-sm border-0 bg-transparent" placeholder=""></td>
+                        <td><input type="number" name="lastik_{{ i }}_dis" class="form-control form-control-sm border-0 bg-transparent" step="0.1" placeholder=""></td>
+                        <td>
+                            <select name="lastik_{{ i }}_jant" class="form-select form-select-sm border-0 bg-transparent">
+                                <option value="">–</option>
+                                <option value="celik">Çelik</option>
+                                <option value="aluminyum">Alüminyum</option>
+                            </select>
+                        </td>
+                        <td><input type="text" name="lastik_{{ i }}_aciklama" class="form-control form-control-sm border-0 bg-transparent" placeholder=""></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="d-flex gap-2">
+    <button type="submit" class="btn btn-primary px-4">
+        <i class="bi bi-check-circle me-1"></i>Teslim Al
+    </button>
+    <a href="{% url 'dashboard:lastik_saklama' %}" class="btn btn-outline-secondary">İptal</a>
+</div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Plaka yazınca önceki kayıttan otomatik doldur
+const plakaInput    = document.getElementById('plakaInput');
+const plakaSpinner  = document.getElementById('plakaSpinner');
+const plakaUyari    = document.getElementById('plakaUyari');
+let plakaTimer      = null;
+
+plakaInput.addEventListener('input', function () {
+    const plaka = this.value.toUpperCase().replace(/\s+/g, '');
+    this.value = plaka;
+    plakaUyari.style.display = 'none';
+    clearTimeout(plakaTimer);
+
+    if (plaka.length < 5) return;
+
+    plakaTimer = setTimeout(function () {
+        plakaSpinner.style.display = '';
+        fetch('{% url "dashboard:lastik_plaka_sorgula" %}?plaka=' + encodeURIComponent(plaka))
+            .then(r => r.json())
+            .then(data => {
+                plakaSpinner.style.display = 'none';
+                if (data.ok) {
+                    // Sadece boşsa doldur — kullanıcı bir şey yazdıysa dokunma
+                    const set = (id, val) => {
+                        const el = document.querySelector('[name="' + id + '"]');
+                        if (el && !el.value.trim()) el.value = val;
+                    };
+                    set('musteri_adi', data.musteri_adi);
+                    set('musteri_telefon', data.musteri_telefon);
+                    set('arac_marka_model', data.arac_marka_model);
+                    set('arac_kilometre', data.arac_kilometre);
+                    set('model_yili', data.model_yili);
+                    plakaUyari.style.display = 'block';
+                }
+            })
+            .catch(() => { plakaSpinner.style.display = 'none'; });
+    }, 600); // 600ms bekle — her tuşa basışta istek atmasın
+});
+
+// 1. Satırı Kopyala
+document.getElementById('kopyalaBtn').addEventListener('click', function () {
+    const tbody = document.querySelector('#lastikTablosu tbody');
+    const rows = tbody.querySelectorAll('tr');
+    if (rows.length < 2) return;
+    const ilkRow = rows[0];
+    const ilkInputs = ilkRow.querySelectorAll('input, select');
+    for (let i = 1; i < rows.length; i++) {
+        const inputs = rows[i].querySelectorAll('input, select');
+        inputs.forEach((el, idx) => {
+            if (ilkInputs[idx]) el.value = ilkInputs[idx].value;
+        });
+    }
+});
+
+// Adet değişince satırları göster/gizle
+document.getElementById('adetInput').addEventListener('change', function () {
+    const adet = parseInt(this.value) || 4;
+    const rows = document.querySelectorAll('#lastikTablosu tbody tr');
+    rows.forEach((row, idx) => {
+        row.style.display = (idx < adet) ? '' : 'none';
+    });
+});
+
+// Depo ekleme
+const depoEkleBtn  = document.getElementById('depoEkleBtn');
+const depoEkleForm = document.getElementById('depoEkleForm');
+const depoIptalBtn = document.getElementById('depoIptalBtn');
+const depoKaydetBtn = document.getElementById('depoKaydetBtn');
+const depoHata     = document.getElementById('depoHata');
+const depoSelect   = document.getElementById('depoSelect');
+
+depoEkleBtn.addEventListener('click', function () {
+    depoEkleForm.style.display = depoEkleForm.style.display === 'none' ? 'block' : 'none';
+    document.getElementById('yeniDepoAd').focus();
+});
+
+depoIptalBtn.addEventListener('click', function () {
+    depoEkleForm.style.display = 'none';
+    document.getElementById('yeniDepoAd').value = '';
+    document.getElementById('yeniDepoRaf').value = '';
+    depoHata.style.display = 'none';
+});
+
+depoKaydetBtn.addEventListener('click', function () {
+    const ad  = document.getElementById('yeniDepoAd').value.trim();
+    const raf = document.getElementById('yeniDepoRaf').value.trim();
+
+    if (!ad) {
+        depoHata.textContent = 'Depo adı boş olamaz.';
+        depoHata.style.display = 'block';
+        return;
+    }
+
+    depoKaydetBtn.disabled = true;
+    depoHata.style.display = 'none';
+
+    fetch('{% url "dashboard:lastik_depo_ekle" %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'ad=' + encodeURIComponent(ad) + '&raf=' + encodeURIComponent(raf),
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.ok) {
+            // Dropdown'a ekle ve seç
+            const opt = new Option(data.label, data.id, true, true);
+            depoSelect.add(opt);
+            depoSelect.value = data.id;
+            // Formu kapat
+            depoEkleForm.style.display = 'none';
+            document.getElementById('yeniDepoAd').value = '';
+            document.getElementById('yeniDepoRaf').value = '';
+        } else {
+            depoHata.textContent = data.hata;
+            depoHata.style.display = 'block';
+        }
+    })
+    .catch(() => {
+        depoHata.textContent = 'Bir hata oluştu, tekrar dene.';
+        depoHata.style.display = 'block';
+    })
+    .finally(() => {
+        depoKaydetBtn.disabled = false;
+    });
+});
+</script>
+{% endblock %}

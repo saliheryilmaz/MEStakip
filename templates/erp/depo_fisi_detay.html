@@ -1,0 +1,299 @@
+{% extends "base.html" %}
+{% block title %}Fiş #{{ fis.fis_no|default:"—" }}{% endblock %}
+{% block page_name %}depo_fisi_listesi{% endblock %}
+
+{% block content %}
+
+{% if not fis %}
+<div class="card border-0 shadow-sm text-center py-5 mt-4">
+    <div class="text-muted">
+        <i class="bi bi-basket fs-2 d-block mb-3" style="color:#1565C0"></i>
+        <p>Aktif fiş yok. Stok listesinden ürün seçin.</p>
+        <a href="{% url 'erp:stok_listesi' %}" class="btn btn-primary btn-sm mt-1">
+            <i class="bi bi-box-seam me-1"></i>Stok Listesi
+        </a>
+    </div>
+</div>
+{% else %}
+
+<!-- Başlık -->
+<div class="d-flex justify-content-between align-items-start mb-4">
+    <div>
+        <h4 class="fw-bold mb-1">
+            <i class="bi bi-truck me-2" style="color:#1565C0"></i>Fiş #{{ fis.fis_no }}
+        </h4>
+        <div class="d-flex align-items-center gap-2">
+            <span class="text-muted small">{{ fis.tarih|date:"d.m.Y" }}</span>
+            {% if fis.durum == 'bekliyor' %}
+            <span class="badge bg-warning text-dark">Bekliyor</span>
+            {% elif fis.durum == 'onaylandi' %}
+            <span class="badge bg-success">
+                <i class="bi bi-check-circle me-1"></i>Yazıldı / Onaylandı
+            </span>
+            {% else %}
+            <span class="badge bg-secondary">İptal</span>
+            {% endif %}
+        </div>
+    </div>
+    <div class="d-flex gap-2">
+        {% if fis.durum == 'bekliyor' %}
+        <button class="btn btn-outline-danger btn-sm" onclick="fisIptal({{ fis.fis_no }})">
+            <i class="bi bi-x-circle me-1"></i>İptal
+        </button>
+        {% endif %}
+        <a href="{% url 'erp:stok_listesi' %}" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-plus me-1"></i>Ürün Ekle
+        </a>
+        <a href="{% url 'erp:depo_fisi_listesi' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Fişler
+        </a>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Sol: Ürün kalemleri -->
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header py-2 d-flex justify-content-between align-items-center"
+                 style="background:#1565C0;color:white">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-list-ul me-2"></i>Ürünler</h6>
+                <span class="badge bg-white text-primary">{{ kalemler|length }} kalem</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 small align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Stok Kodu</th>
+                            <th>Ürün</th>
+                            <th>Marka</th>
+                            <th>Yıl</th>
+                            <th>Segment</th>
+                            <th class="text-center" style="width:110px">Adet</th>
+                            {% if fis.durum == 'bekliyor' %}<th class="text-center">Sil</th>{% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for kalem in kalemler %}
+                        <tr>
+                            <td><code class="text-success small">{{ kalem.stok.stok_kodu }}</code></td>
+                            <td class="fw-semibold">{{ kalem.stok.aciklama }}</td>
+                            <td class="text-muted small">{{ kalem.stok.marka|default:"—" }}</td>
+                            <td class="text-muted small">{{ kalem.stok.ozel_kod1|default:"—" }}</td>
+                            <td class="text-muted small">{{ kalem.stok.ozel_kod2|default:"—" }}</td>
+                            <td class="text-center">
+                                {% if fis.durum == 'bekliyor' %}
+                                <form method="post" class="d-flex align-items-center justify-content-center gap-1">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="islem" value="kalem_adet">
+                                    <input type="hidden" name="kalem_pk" value="{{ kalem.pk }}">
+                                    <input type="number" name="adet" value="{{ kalem.adet }}"
+                                           min="1" max="999" class="form-control form-control-sm text-center"
+                                           style="width:60px"
+                                           onchange="this.form.submit()">
+                                </form>
+                                {% else %}
+                                <span class="badge bg-primary">{{ kalem.adet }}</span>
+                                {% endif %}
+                            </td>
+                            {% if fis.durum == 'bekliyor' %}
+                            <td class="text-center">
+                                <button class="btn btn-outline-danger btn-sm py-0 px-1"
+                                        onclick="kalemSil({{ kalem.pk }})"
+                                        title="Kalemden çıkar">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                            {% endif %}
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                <i class="bi bi-inbox me-1"></i>Fiş boş —
+                                <a href="{% url 'erp:stok_listesi' %}">Stok listesinden ürün ekle</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sağ: Fiş bilgileri (düzenlenebilir) -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-bottom py-2">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-pencil-square me-2"></i>Fiş Bilgileri</h6>
+            </div>
+            <div class="card-body">
+                {% if fis.durum == 'bekliyor' %}
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="islem" value="fis_guncelle">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-muted">Plaka</label>
+                        <input type="text" name="plaka" value="{{ fis.plaka }}"
+                               class="form-control form-control-sm text-uppercase"
+                               placeholder="34 ABC 123" maxlength="15">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold text-muted">Kilometre</label>
+                        <input type="number" name="kilometre" value="{{ fis.kilometre|default:'' }}"
+                               class="form-control form-control-sm" placeholder="Ör: 85000" min="0">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold text-muted">Araç Marka</label>
+                        <input type="text" name="arac_marka" value="{{ fis.arac_marka }}"
+                               class="form-control form-control-sm" placeholder="Ör: Toyota">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-muted">Araç Model</label>
+                        <input type="text" name="arac_model" value="{{ fis.arac_model }}"
+                               class="form-control form-control-sm" placeholder="Ör: Corolla">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-muted">Cari / Müşteri</label>
+                        <input type="text" name="cari" value="{{ fis.cari }}"
+                               class="form-control form-control-sm"
+                               placeholder="Müşteri adı...">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-muted">Açıklama / Not</label>
+                        <textarea name="aciklama" rows="3"
+                                  class="form-control form-control-sm"
+                                  placeholder="İsteğe bağlı not...">{{ fis.aciklama }}</textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm w-100">
+                        <i class="bi bi-save me-1"></i>Kaydet
+                    </button>
+                </form>
+                {% else %}
+                <!-- Salt okunur görünüm -->
+                <div class="small">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Plaka</span>
+                        <strong>{{ fis.plaka|default:"—" }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Kilometre</span>
+                        <strong>{% if fis.kilometre %}{{ fis.kilometre|floatformat:0 }} km{% else %}—{% endif %}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Araç Marka</span>
+                        <strong>{{ fis.arac_marka|default:"—" }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Araç Model</span>
+                        <strong>{{ fis.arac_model|default:"—" }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Cari</span>
+                        <strong>{{ fis.cari|default:"—" }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Yazıldı?</span>
+                        {% if fis.yazildi %}
+                        <span class="text-success fw-bold"><i class="bi bi-check-circle me-1"></i>Evet</span>
+                        {% else %}
+                        <span class="text-muted">Hayır</span>
+                        {% endif %}
+                    </div>
+                    {% if fis.islem_yapan %}
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">İşlem Yapan</span>
+                        <span>{{ fis.islem_yapan.get_full_name|default:fis.islem_yapan.username }}</span>
+                    </div>
+                    {% endif %}
+                    {% if fis.aciklama %}
+                    <hr class="my-2">
+                    <div class="text-muted">{{ fis.aciklama }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Fiş özet bilgi -->
+        <div class="card border-0 shadow-sm mt-3">
+            <div class="card-body py-3 small">
+                <div class="d-flex justify-content-between mb-1">
+                    <span class="text-muted">Fiş No</span>
+                    <strong>#{{ fis.fis_no }}</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-1">
+                    <span class="text-muted">Tarih</span>
+                    <span>{{ fis.tarih|date:"d.m.Y" }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-1">
+                    <span class="text-muted">Toplam Kalem</span>
+                    <strong>{{ kalemler|length }}</strong>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span class="text-muted">Oluşturulma</span>
+                    <span>{{ fis.olusturuldu|date:"d.m H:i" }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endif %}
+
+<!-- Toast -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index:11">
+    <div id="fisToast" class="toast" role="alert">
+        <div class="toast-header">
+            <i class="bi bi-truck me-2" style="color:#1565C0"></i>
+            <strong class="me-auto">Depo Fişi</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body" id="fisToastBody">İşlem tamamlandı.</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if fis %}
+<script>
+function yazildiIsle(pk) {
+    if (!confirm('Fatura kesildi ve fiş yazıldı olarak işaretlensin mi?')) return;
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = window.location.href;
+    form.innerHTML = `
+        <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+        <input type="hidden" name="islem" value="yazildi_isle">
+    `;
+    document.body.appendChild(form);
+    form.submit();
+}
+
+function fisIptal(pk) {
+    if (!confirm('Fişi iptal etmek istediğinizden emin misiniz?')) return;
+    fetch(`/erp/depo-fisi/${pk}/iptal/`, {
+        method: 'POST',
+        headers: {'X-CSRFToken': '{{ csrf_token }}'}
+    })
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById('fisToastBody').textContent = data.mesaj;
+        new bootstrap.Toast(document.getElementById('fisToast')).show();
+        setTimeout(() => window.location.href = "{% url 'erp:depo_fisi_listesi' %}", 1500);
+    });
+}
+
+function kalemSil(kalemPk) {
+    fetch(`/erp/depo-fisi/kalem/${kalemPk}/sil/`, {
+        method: 'POST',
+        headers: {'X-CSRFToken': '{{ csrf_token }}'}
+    })
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById('fisToastBody').textContent = data.mesaj;
+        new bootstrap.Toast(document.getElementById('fisToast')).show();
+        setTimeout(() => location.reload(), 800);
+    });
+}
+</script>
+{% endif %}
+{% endblock %}

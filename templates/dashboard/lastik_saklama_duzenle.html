@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Kayıt Düzenle - Mestakip{% endblock %}
+{% block page_name %}lastik_saklama{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0"><i class="bi bi-pencil me-2 text-primary"></i>Kayıt Düzenle</h1>
+        <p class="text-muted small mb-0">{{ kayit.musteri_adi }} – {{ kayit.plaka }}</p>
+    </div>
+    <a href="{% url 'dashboard:lastik_saklama_detay' kayit.pk %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Geri
+    </a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <h6 class="fw-bold mb-3 text-primary"><i class="bi bi-person me-1"></i>Müşteri Bilgileri</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Müşteri Adı <span class="text-danger">*</span></label>
+                            <input type="text" name="musteri_adi" class="form-control" value="{{ kayit.musteri_adi }}" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Telefon</label>
+                            <input type="text" name="musteri_telefon" class="form-control" value="{{ kayit.musteri_telefon }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Plaka</label>
+                            <input type="text" name="plaka" class="form-control" value="{{ kayit.plaka }}" style="text-transform:uppercase">
+                        </div>
+                    </div>
+
+                    <h6 class="fw-bold mb-3 text-primary"><i class="bi bi-circle me-1"></i>Lastik Bilgileri</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Marka</label>
+                            <input type="text" name="marka" class="form-control" value="{{ kayit.marka }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Ebat</label>
+                            <input type="text" name="ebat" class="form-control" value="{{ kayit.ebat }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fw-semibold">Mevsim</label>
+                            <select name="mevsim" class="form-select">
+                                {% for val, label in mevsim_choices %}
+                                <option value="{{ val }}" {% if kayit.mevsim == val %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fw-semibold">Adet</label>
+                            <input type="number" name="adet" class="form-control" value="{{ kayit.adet }}" min="1" max="8">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fw-semibold">Diş Derinliği (mm)</label>
+                            <input type="number" name="dis_derinligi" class="form-control" step="0.1" value="{{ kayit.dis_derinligi|default:'' }}">
+                        </div>
+                    </div>
+
+                    <h6 class="fw-bold mb-3 text-primary"><i class="bi bi-geo-alt me-1"></i>Depo Bilgileri</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Depo / Raf</label>
+                            <select name="depo" class="form-select">
+                                <option value="">– Seç –</option>
+                                {% for d in depolar %}
+                                <option value="{{ d.pk }}" {% if kayit.depo.pk == d.pk %}selected{% endif %}>{{ d }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Tahmini Çıkış</label>
+                            <input type="date" name="tahmini_cikis" class="form-control" value="{{ kayit.tahmini_cikis|date:'Y-m-d'|default:'' }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fw-semibold">Ücret (₺)</label>
+                            <input type="number" name="saklama_ucreti" class="form-control" step="0.01" value="{{ kayit.saklama_ucreti|default:'' }}">
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Açıklama</label>
+                        <textarea name="aciklama" class="form-control" rows="2">{{ kayit.aciklama }}</textarea>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary px-4">
+                            <i class="bi bi-check-circle me-1"></i>Kaydet
+                        </button>
+                        <a href="{% url 'dashboard:lastik_saklama_detay' kayit.pk %}" class="btn btn-outline-secondary">İptal</a>
+                        <a href="{% url 'dashboard:lastik_saklama_sil' kayit.pk %}" class="btn btn-outline-danger ms-auto">
+                            <i class="bi bi-trash me-1"></i>Sil
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

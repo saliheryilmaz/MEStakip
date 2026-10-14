@@ -1,0 +1,5 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Simple solid background version for PNG fallback -->
+  <rect width="32" height="32" rx="6" fill="#6366f1"/>
+  <path d="M8 24V8h4l2 6 2-6h4v16h-3V13l-1.5 5h-2L12 13v11H8z" fill="white" font-weight="700"/>
+</svg> 

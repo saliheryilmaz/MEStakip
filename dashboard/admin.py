@@ -1,0 +1,530 @@
+from django.contrib import admin
+from .models import Siparis, UserProfile, Notification, Transaction, TransactionCategory, Event, MalzemeHareketi, MalzemeDosya, CikmaLastik, JokerSatisDosya, JokerSatisHareketi, Quotation, QuotationItem, GarantiBelgesi, GarantiBelgesiLastik
+
+@admin.register(Siparis)
+class SiparisAdmin(admin.ModelAdmin):
+    """Sipariş admin paneli"""
+    
+    list_display = [
+        'id', 'cari_firma', 'marka', 'urun', 'grup', 
+        'mevsim', 'adet', 'birim_fiyat', 'toplam_fiyat', 
+        'durum', 'ambar', 'odeme', 'sms_durum', 'one_cikar', 
+        'olusturma_tarihi'
+    ]
+    
+    list_filter = [
+        'grup', 'mevsim', 'durum', 'odeme', 'sms_durum', 
+        'one_cikar', 'olusturma_tarihi'
+    ]
+    
+    search_fields = [
+        'cari_firma', 'marka', 'urun', 'ambar', 'aciklama'
+    ]
+    
+    list_editable = [
+        'durum', 'ambar', 'sms_durum', 'one_cikar'
+    ]
+    
+    readonly_fields = [
+        'toplam_fiyat', 'olusturma_tarihi', 'guncelleme_tarihi'
+    ]
+    
+    fieldsets = (
+        ('Temel Bilgiler', {
+            'fields': ('cari_firma', 'marka', 'urun')
+        }),
+        ('Kategori', {
+            'fields': ('grup', 'mevsim')
+        }),
+        ('Miktar ve Fiyat', {
+            'fields': ('adet', 'birim_fiyat', 'toplam_fiyat')
+        }),
+        ('Durum', {
+            'fields': ('durum', 'ambar', 'odeme', 'sms_durum')
+        }),
+        ('Ek Bilgiler', {
+            'fields': ('aciklama', 'one_cikar'),
+            'classes': ('collapse',)
+        }),
+        ('Zaman Damgaları', {
+            'fields': ('olusturma_tarihi', 'guncelleme_tarihi'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    ordering = ['-olusturma_tarihi']
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related()
+
+@admin.register(Event)
+class EventAdmin(admin.ModelAdmin):
+    """Etkinlik admin paneli"""
+    
+    list_display = [
+        'id', 'title', 'type', 'date', 'time', 'priority', 
+        'location', 'created_by', 'created_at'
+    ]
+    
+    list_filter = [
+        'type', 'priority', 'date', 'recurring', 'created_at'
+    ]
+    
+    search_fields = [
+        'title', 'description', 'location', 'attendees'
+    ]
+    
+    list_editable = [
+        'type', 'priority'
+    ]
+    
+    readonly_fields = [
+        'created_at', 'updated_at'
+    ]
+    
+    fieldsets = (
+        ('Temel Bilgiler', {
+            'fields': ('title', 'description', 'type', 'priority')
+        }),
+        ('Tarih ve Zaman', {
+            'fields': ('date', 'time', 'duration')
+        }),
+        ('Konum ve Katılımcılar', {
+            'fields': ('location', 'attendees')
+        }),
+        ('Tekrarlama', {
+            'fields': ('recurring', 'recurrence'),
+            'classes': ('collapse',)
+        }),
+        ('Hatırlatıcılar', {
+            'fields': ('reminders',),
+            'classes': ('collapse',)
+        }),
+        ('Sistem Bilgileri', {
+            'fields': ('created_by', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    ordering = ['-created_at']
+    
+    def save_model(self, request, obj, form, change):
+        if not change:  # Yeni kayıt ise
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)
+
+@admin.register(UserProfile)
+class UserProfileAdmin(admin.ModelAdmin):
+    """Kullanıcı Profili admin paneli"""
+    
+    list_display = [
+        'user', 'role', 'created_at', 'updated_at'
+    ]
+    
+    list_filter = [
+        'role', 'created_at'
+    ]
+    
+    search_fields = [
+        'user__username', 'user__first_name', 'user__last_name', 'user__email'
+    ]
+    
+    readonly_fields = [
+        'created_at', 'updated_at'
+    ]
+
+@admin.register(Notification)
+class NotificationAdmin(admin.ModelAdmin):
+    """Bildirim admin paneli"""
+    
+    list_display = [
+        'id', 'title', 'type', 'status', 'user',
+        'scheduled_time', 'sent_time', 'read_time', 'created_at'
+    ]
+    
+    list_filter = [
+        'type', 'status', 'scheduled_time', 'created_at'
+    ]
+    
+    search_fields = [
+        'title', 'message', 'user__username', 'user__first_name', 'user__last_name'
+    ]
+    
+    list_editable = [
+        'status'
+    ]
+    
+    readonly_fields = [
+        'sent_time', 'read_time', 'created_at', 'updated_at'
+    ]
+    
+    fieldsets = (
+        ('Temel Bilgiler', {
+            'fields': ('title', 'message', 'type', 'status')
+        }),
+        ('İlişkiler', {
+            'fields': ('user',)
+        }),
+        ('Zamanlar', {
+            'fields': ('scheduled_time', 'sent_time', 'read_time')
+        }),
+        ('Ek Veriler', {
+            'fields': ('extra_data',),
+            'classes': ('collapse',)
+        }),
+        ('Sistem Bilgileri', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    ordering = ['-scheduled_time']
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('user')
+    
+    actions = ['mark_as_sent', 'mark_as_read', 'mark_as_dismissed']
+    
+    def mark_as_sent(self, request, queryset):
+        """Seçili bildirimleri gönderildi olarak işaretle"""
+        count = 0
+        for notification in queryset:
+            if notification.status == 'pending':
+                notification.mark_as_sent()
+                count += 1
+        
+        self.message_user(request, f'{count} bildirim gönderildi olarak işaretlendi.')
+    mark_as_sent.short_description = "Seçili bildirimleri gönderildi olarak işaretle"
+    
+    def mark_as_read(self, request, queryset):
+        """Seçili bildirimleri okundu olarak işaretle"""
+        count = 0
+        for notification in queryset:
+            if notification.status in ['pending', 'sent']:
+                notification.mark_as_read()
+                count += 1
+        
+        self.message_user(request, f'{count} bildirim okundu olarak işaretlendi.')
+    mark_as_read.short_description = "Seçili bildirimleri okundu olarak işaretle"
+    
+    def mark_as_dismissed(self, request, queryset):
+        """Seçili bildirimleri kapatıldı olarak işaretle"""
+        count = queryset.update(status='dismissed')
+        self.message_user(request, f'{count} bildirim kapatıldı olarak işaretlendi.')
+    mark_as_dismissed.short_description = "Seçili bildirimleri kapatıldı olarak işaretle"
+
+
+@admin.register(TransactionCategory)
+class TransactionCategoryAdmin(admin.ModelAdmin):
+    list_display = ['id', 'name', 'parent', 'order']
+    list_filter = ['parent']
+    search_fields = ['name']
+    ordering = ['parent__id', 'order', 'name']
+
+
+@admin.register(Transaction)
+class TransactionAdmin(admin.ModelAdmin):
+    list_display = ['id', 'hareket_tipi', 'tarih', 'kasa_adi', 'nakit', 'kredi_karti', 'sanal_pos', 'cari', 'toplam', 'kategori1', 'kategori2', 'kategori3', 'created_by']
+    list_filter = ['hareket_tipi', 'tarih', 'kategori1', 'kategori2', 'kategori3']
+    search_fields = ['aciklama', 'kasa_adi']
+    readonly_fields = ['created_at', 'updated_at']
+    ordering = ['-tarih', '-id']
+
+@admin.register(CikmaLastik)
+class CikmaLastikAdmin(admin.ModelAdmin):
+    """Çıkma Lastik admin paneli"""
+    
+    list_display = [
+        'id', 'marka', 'model', 'ebat', 
+        'mevsim', 'arac_tipi', 'adet', 'durum', 
+        'kalite_notu', 'tahmini_deger', 'cikis_tarihi', 
+        'user', 'olusturma_tarihi'
+    ]
+    
+    list_filter = [
+        'durum', 'mevsim', 'arac_tipi', 'cikis_tarihi', 
+        'olusturma_tarihi', 'user'
+    ]
+    
+    search_fields = [
+        'marka', 'model', 'ebat', 'aciklama'
+    ]
+    
+    list_editable = [
+        'durum', 'kalite_notu', 'tahmini_deger'
+    ]
+    
+    readonly_fields = [
+        'olusturma_tarihi', 'guncelleme_tarihi'
+    ]
+    
+    fieldsets = (
+        ('Lastik Bilgileri', {
+            'fields': ('marka', 'model', 'ebat', 'mevsim', 'arac_tipi', 'adet')
+        }),
+        ('Durum ve Kalite', {
+            'fields': ('durum', 'diş_derinligi', 'kalite_notu', 'hasar_durumu')
+        }),
+        ('Fiyat ve Konum', {
+            'fields': ('tahmini_deger', 'satis_fiyati', 'depo_konumu')
+        }),
+        ('Tarihler', {
+            'fields': ('cikis_tarihi', 'satis_tarihi')
+        }),
+        ('Ek Bilgiler', {
+            'fields': ('aciklama',),
+            'classes': ('collapse',)
+        }),
+        ('Sistem Bilgileri', {
+            'fields': ('user', 'olusturma_tarihi', 'guncelleme_tarihi'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    ordering = ['-cikis_tarihi', '-olusturma_tarihi']
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('user')
+    
+    def save_model(self, request, obj, form, change):
+        if not change:  # Yeni kayıt ise
+            obj.user = request.user
+        super().save_model(request, obj, form, change)
+
+
+admin.site.register(MalzemeHareketi)
+admin.site.register(MalzemeDosya)
+
+
+@admin.register(JokerSatisDosya)
+class JokerSatisDosyaAdmin(admin.ModelAdmin):
+    """Joker Satış Dosyası admin paneli"""
+    
+    list_display = [
+        'id', 'dosya_adi', 'yukleme_tarihi', 'kullanici', 'satirlar_sayisi'
+    ]
+    
+    list_filter = [
+        'yukleme_tarihi', 'kullanici'
+    ]
+    
+    search_fields = [
+        'dosya_adi', 'kullanici__username', 'kullanici__first_name', 'kullanici__last_name'
+    ]
+    
+    readonly_fields = [
+        'yukleme_tarihi', 'satirlar_sayisi'
+    ]
+    
+    def satirlar_sayisi(self, obj):
+        return obj.satirlar.count()
+    satirlar_sayisi.short_description = 'Satır Sayısı'
+    
+    ordering = ['-yukleme_tarihi']
+
+
+@admin.register(JokerSatisHareketi)
+class JokerSatisHareketiAdmin(admin.ModelAdmin):
+    """Joker Satış Hareketi admin paneli"""
+    
+    list_display = [
+        'id', 'tarih', 'cari_kisaltma', 'kategori', 'marka', 'urun_kodu', 'urun_kisaltma', 
+        'miktar', 'alis_fiyati', 'satis_fiyati', 'kar_tutari', 'dosya', 'kullanici'
+    ]
+    
+    list_filter = [
+        'tarih', 'kategori', 'marka', 'dosya', 'kullanici', 'eklenme_zamani'
+    ]
+    
+    search_fields = [
+        'cari', 'kategori', 'marka', 'urun_kodu', 'urun'
+    ]
+    
+    readonly_fields = [
+        'kar_tutari', 'eklenme_zamani'
+    ]
+    
+    def cari_kisaltma(self, obj):
+        return obj.cari[:20] + '...' if obj.cari and len(obj.cari) > 20 else (obj.cari or '-')
+    cari_kisaltma.short_description = 'Cari'
+    
+    def urun_kisaltma(self, obj):
+        return obj.urun[:30] + '...' if obj.urun and len(obj.urun) > 30 else (obj.urun or '-')
+    urun_kisaltma.short_description = 'Ürün'
+    
+    ordering = ['-tarih', '-eklenme_zamani']
+    
+    fieldsets = (
+        ('Temel Bilgiler', {
+            'fields': ('dosya', 'tarih', 'faturano', 'musteri')
+        }),
+        ('Ürün Bilgileri', {
+            'fields': ('kategori', 'urun', 'tutar', 'odeme_sekli')
+        }),
+        ('Sistem Bilgileri', {
+            'fields': ('kullanici', 'eklenme_zamani'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+
+class QuotationItemInline(admin.TabularInline):
+    """Teklif kalemleri inline admin"""
+    model = QuotationItem
+    extra = 1
+    fields = ['urun_adi', 'miktar', 'birim_fiyat', 'toplam', 'sira']
+    readonly_fields = ['toplam']
+
+
+@admin.register(Quotation)
+class QuotationAdmin(admin.ModelAdmin):
+    """Teklif admin paneli"""
+    
+    list_display = [
+        'teklif_no', 'cari', 'ilgili_kisi', 'durum', 
+        'teklif_tarihi', 'gecerlilik_tarihi', 'genel_toplam',
+        'rezerve', 'proforma', 'olusturan', 'olusturma_tarihi'
+    ]
+    
+    list_filter = [
+        'durum', 'rezerve', 'proforma', 'teklif_tarihi', 
+        'gecerlilik_tarihi', 'olusturan', 'olusturma_tarihi'
+    ]
+    
+    search_fields = [
+        'teklif_no', 'cari', 'ilgili_kisi', 'email', 'aciklama'
+    ]
+    
+    list_editable = [
+        'durum'
+    ]
+    
+    readonly_fields = [
+        'teklif_no', 'olusturan', 'olusturma_tarihi', 'guncelleme_tarihi',
+        'ara_toplam', 'kdv_tutari', 'genel_toplam'
+    ]
+    
+    fieldsets = (
+        ('Teklif Bilgileri', {
+            'fields': ('teklif_no', 'durum', 'teklif_tarihi', 'gecerlilik_tarihi')
+        }),
+        ('Cari Bilgileri', {
+            'fields': ('cari', 'ilgili_kisi', 'email', 'odeme_sekli')
+        }),
+        ('Açıklama', {
+            'fields': ('aciklama',)
+        }),
+        ('Finansal Bilgiler', {
+            'fields': ('ara_toplam', 'kdv_tutari', 'genel_toplam')
+        }),
+        ('Ek Bilgiler', {
+            'fields': ('rezerve', 'proforma')
+        }),
+        ('Sistem Bilgileri', {
+            'fields': ('olusturan', 'olusturma_tarihi', 'guncelleme_tarihi'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    inlines = [QuotationItemInline]
+    
+    ordering = ['-olusturma_tarihi']
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('olusturan')
+    
+    def save_model(self, request, obj, form, change):
+        if not change:  # Yeni kayıt ise
+            obj.olusturan = request.user
+        super().save_model(request, obj, form, change)
+
+
+
+class GarantiBelgesiLastikInline(admin.TabularInline):
+    """Garanti Belgesi Lastik kalemleri inline admin"""
+    model = GarantiBelgesiLastik
+    extra = 1
+    fields = ['marka', 'ebat', 'adet', 'fiyat', 'sira']
+
+
+@admin.register(GarantiBelgesi)
+class GarantiBelgesiAdmin(admin.ModelAdmin):
+    """Garanti Belgesi admin paneli"""
+    
+    list_display = [
+        'belge_no', 'musteri_adi', 'musteri_telefon', 'arac_plaka',
+        'arac_marka_model', 'montaj_tarihi', 'olusturan', 'olusturma_tarihi'
+    ]
+    
+    list_filter = [
+        'montaj_tarihi', 'olusturan', 'olusturma_tarihi'
+    ]
+    
+    search_fields = [
+        'belge_no', 'musteri_adi', 'musteri_telefon', 'arac_plaka',
+        'arac_marka_model', 'notlar'
+    ]
+    
+    readonly_fields = [
+        'belge_no', 'olusturan', 'olusturma_tarihi', 'guncelleme_tarihi'
+    ]
+    
+    fieldsets = (
+        ('Belge Bilgileri', {
+            'fields': ('belge_no', 'montaj_tarihi')
+        }),
+        ('Müşteri Bilgileri', {
+            'fields': ('musteri_adi', 'musteri_telefon')
+        }),
+        ('Araç Bilgileri', {
+            'fields': ('arac_plaka', 'arac_marka_model', 'arac_yil', 'arac_km')
+        }),
+        ('Notlar', {
+            'fields': ('notlar',)
+        }),
+        ('Sistem Bilgileri', {
+            'fields': ('olusturan', 'olusturma_tarihi', 'guncelleme_tarihi'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    inlines = [GarantiBelgesiLastikInline]
+    
+    def save_model(self, request, obj, form, change):
+        if not change:  # Yeni kayıt
+            obj.olusturan = request.user
+        super().save_model(request, obj, form, change)
+
+
+# ─────────────────────────────────────────────────────────────
+# Lastik Saklama Admin
+# ─────────────────────────────────────────────────────────────
+from .models import LastikDepo, LastikOteli, LastikOteliHareket
+
+
+@admin.register(LastikDepo)
+class LastikDepoAdmin(admin.ModelAdmin):
+    list_display = ['ad', 'raf', 'kapasite', 'dolu_adet', 'aktif']
+    list_filter = ['aktif']
+    search_fields = ['ad', 'raf']
+
+
+class LastikOteliHareketInline(admin.TabularInline):
+    model = LastikOteliHareket
+    extra = 0
+    readonly_fields = ['tarih', 'yapan']
+
+
+@admin.register(LastikOteli)
+class LastikOteliAdmin(admin.ModelAdmin):
+    list_display = ['musteri_adi', 'plaka', 'ebat', 'marka', 'mevsim', 'depo', 'giris_tarihi', 'durum', 'depoda_kac_gun']
+    list_filter = ['durum', 'mevsim', 'giris_tarihi']
+    search_fields = ['musteri_adi', 'plaka', 'ebat', 'marka']
+    readonly_fields = ['olusturma_tarihi', 'guncelleme_tarihi', 'depoda_kac_gun']
+    inlines = [LastikOteliHareketInline]
+
+    def save_model(self, request, obj, form, change):
+        if not change:
+            obj.olusturan = request.user
+        super().save_model(request, obj, form, change)

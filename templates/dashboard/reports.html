@@ -1,0 +1,521 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}İptal Edilen Siparişler Raporu - Mestakip{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">İptal Edilen Siparişler Raporu</h1>
+        <p class="text-muted mb-0">İptal edilen siparişleri analiz edin ve takip edin.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button type="button" class="btn btn-outline-danger btn-sm" onclick="exportCancelledToExcel()">
+            <i class="bi bi-file-earmark-excel me-1"></i>
+            Excel'e Aktar
+        </button>
+    </div>
+</div>
+
+<!-- İstatistik Kartları -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-danger text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title">{{ stats.toplam_iptal }}</h4>
+                        <p class="card-text">Toplam İptal</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="bi bi-x-circle fs-1"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title">₺{{ stats.toplam_tutar|floatformat:2 }}</h4>
+                        <p class="card-text">İptal Tutarı</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="bi bi-currency-dollar fs-1"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title">{{ stats.toplam_adet }}</h4>
+                        <p class="card-text">Toplam Adet</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="bi bi-box fs-1"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-secondary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title">{{ grup_istatistikleri|length }}</h4>
+                        <p class="card-text">Etkilenen Grup</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="bi bi-tags fs-1"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Grup Bazında İstatistikler -->
+{% if grup_istatistikleri %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Grup Bazında İptal İstatistikleri</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for grup in grup_istatistikleri %}
+                    <div class="col-md-3 mb-3">
+                        <div class="card border-{{ grup.grup|default:'secondary' }}">
+                            <div class="card-body text-center">
+                                <h6 class="card-title text-uppercase">{{ grup.grup|default:'Bilinmeyen' }}</h6>
+                                <h4 class="text-danger">{{ grup.total_adet }}</h4>
+                                <small class="text-muted">₺{{ grup.total_amount|floatformat:2 }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Filtering Section -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Filtreleme</h5>
+    </div>
+    <div class="card-body">
+        <form method="get">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label for="firma" class="form-label">CARI (FIRMA)</label>
+                    <input type="text" class="form-control" id="firma" name="firma" value="{{ filters.firma }}" placeholder="Firma adı...">
+                </div>
+                <div class="col-md-3">
+                    <label for="marka" class="form-label">MARKA</label>
+                    <input type="text" class="form-control" id="marka" name="marka" value="{{ filters.marka }}" placeholder="Marka adı...">
+                </div>
+                <div class="col-md-2">
+                    <label for="grup" class="form-label">GRUP</label>
+                    <select class="form-select" id="grup" name="grup">
+                        <option value="">Tümü</option>
+                        <option value="ticari" {% if filters.grup == 'ticari' %}selected{% endif %}>Ticari</option>
+                        <option value="binek" {% if filters.grup == 'binek' %}selected{% endif %}>Binek</option>
+                        <option value="aku" {% if filters.grup == 'aku' %}selected{% endif %}>Akü</option>
+                        <option value="jant" {% if filters.grup == 'jant' %}selected{% endif %}>Jant</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="mevsim" class="form-label">MEVSİM</label>
+                    <select class="form-select" id="mevsim" name="mevsim">
+                        <option value="">Tümü</option>
+                        <option value="kis" {% if filters.mevsim == 'kis' %}selected{% endif %}>Kış</option>
+                        <option value="yaz" {% if filters.mevsim == 'yaz' %}selected{% endif %}>Yaz</option>
+                        <option value="dort-mevsim" {% if filters.mevsim == 'dort-mevsim' %}selected{% endif %}>4 Mevsim</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="ambar" class="form-label">AMBAR</label>
+                    <select class="form-select" id="ambar" name="ambar">
+                        <option value="">Tümü</option>
+                        <option value="stok" {% if filters.ambar == 'stok' %}selected{% endif %}>Stok</option>
+                        <option value="satis" {% if filters.ambar == 'satis' %}selected{% endif %}>Satış</option>
+                    </select>
+                </div>
+            </div>
+            <div class="row g-3 mt-2">
+                <div class="col-md-3">
+                    <label for="tarih" class="form-label">TARİH FİLTRESİ</label>
+                    <select class="form-select" id="tarih" name="tarih">
+                        <option value="">Tümü</option>
+                        <option value="bugun" {% if filters.tarih == 'bugun' %}selected{% endif %}>Bugün</option>
+                        <option value="bu-hafta" {% if filters.tarih == 'bu-hafta' %}selected{% endif %}>Bu Hafta</option>
+                        <option value="bu-ay" {% if filters.tarih == 'bu-ay' %}selected{% endif %}>Bu Ay</option>
+                        <option value="son-1-ay" {% if filters.tarih == 'son-1-ay' %}selected{% endif %}>Son 1 Ay</option>
+                        <option value="son-3-ay" {% if filters.tarih == 'son-3-ay' %}selected{% endif %}>Son 3 Ay</option>
+                        <option value="son-6-ay" {% if filters.tarih == 'son-6-ay' %}selected{% endif %}>Son 6 Ay</option>
+                        <option value="ozel-tarih" {% if filters.tarih == 'ozel-tarih' %}selected{% endif %}>Özel Tarih Aralığı</option>
+                    </select>
+                </div>
+                <div class="col-md-6 d-flex align-items-end">
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-funnel me-2"></i>
+                            Filtrele
+                        </button>
+                        <a href="{% url 'dashboard:reports' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-clockwise me-2"></i>
+                            Temizle
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Özel Tarih Aralığı Bölümü -->
+            <div class="row g-3 mt-2" id="ozel-tarih-section" style="display: none;">
+                <div class="col-md-4">
+                    <label for="baslangic_tarihi" class="form-label">BAŞLANGIÇ TARİHİ</label>
+                    <input type="date" class="form-control" id="baslangic_tarihi" name="baslangic_tarihi" value="{{ filters.baslangic_tarihi }}">
+                </div>
+                <div class="col-md-4">
+                    <label for="bitis_tarihi" class="form-label">BİTİŞ TARİHİ</label>
+                    <input type="date" class="form-control" id="bitis_tarihi" name="bitis_tarihi" value="{{ filters.bitis_tarihi }}">
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-outline-info btn-sm" id="bugun-btn">
+                            <i class="bi bi-calendar-day me-1"></i>
+                            Bugün
+                        </button>
+                        <button type="button" class="btn btn-outline-info btn-sm" id="bu-hafta-btn">
+                            <i class="bi bi-calendar-week me-1"></i>
+                            Bu Hafta
+                        </button>
+                        <button type="button" class="btn btn-outline-info btn-sm" id="bu-ay-btn">
+                            <i class="bi bi-calendar-month me-1"></i>
+                            Bu Ay
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- İptal Edilen Siparişler Tablosu -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">İptal Edilen Siparişler</h5>
+        <div class="text-muted">
+            <i class="bi bi-info-circle me-1"></i>
+            Toplam <strong>{{ siparisler.paginator.count }}</strong> iptal edilen sipariş
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>CARI (FIRMA)</th>
+                        <th>ÜRÜN (LASTIK MARKA MODEL)</th>
+                        <th>MARKA</th>
+                        <th>GRUP</th>
+                        <th>MEVSİM</th>
+                        <th>ADET</th>
+                        <th>BİRİM FİYAT</th>
+                        <th>AMBAR</th>
+                        <th>TOPLAM FİYAT</th>
+                        <th>ÖDEME</th>
+                        <th>İPTAL TARİHİ</th>
+                        <th>İPTAL SEBEBİ</th>
+                        <th>İŞLEMLER</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for siparis in siparisler %}
+                    <tr class="table-danger">
+                        <td><strong>#{{ siparis.id }}</strong></td>
+                        <td><strong>{{ siparis.cari_firma }}</strong></td>
+                        <td>
+                            {% if siparis.one_cikar %}
+                                <span class="urun-with-ebat-highlight">{{ siparis.urun }}</span>
+                            {% else %}
+                                {{ siparis.urun }}
+                            {% endif %}
+                        </td>
+                        <td>{{ siparis.marka }}</td>
+                        <td><span class="badge bg-{{ siparis.get_grup_display_color }}">{{ siparis.get_grup_display }}</span></td>
+                        <td>
+                            {% if siparis.mevsim == 'yaz' %}
+                                <img src="{% static 'images/yaz.png' %}" alt="Yaz" title="Yaz Lastiği" 
+                                     style="width: 24px; height: 24px; object-fit: contain; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+                            {% elif siparis.mevsim == 'kis' %}
+                                <img src="{% static 'images/kis.png' %}" alt="Kış" title="Kış Lastiği" 
+                                     style="width: 24px; height: 24px; object-fit: contain; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+                            {% elif siparis.mevsim == 'dort-mevsim' %}
+                                <img src="{% static 'images/dörtmevsim.png' %}" alt="4 Mevsim" title="4 Mevsim Lastiği" 
+                                     style="width: 24px; height: 24px; object-fit: contain; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td><strong>{{ siparis.adet }}</strong></td>
+                        <td>₺{{ siparis.birim_fiyat|floatformat:2 }}</td>
+                        <td><span class="badge bg-primary">{{ siparis.get_ambar_display }}</span></td>
+                        <td><strong class="text-danger">₺{{ siparis.toplam_fiyat|floatformat:2 }}</strong></td>
+                        <td>{{ siparis.get_odeme_display }}</td>
+                        <td>
+                            <small class="text-muted">
+                                {{ siparis.guncelleme_tarihi|date:"d.m.Y H:i" }}
+                            </small>
+                        </td>
+                        <td>
+                            {% if siparis.iptal_sebebi %}
+                                <small class="text-danger bg-light p-2 rounded d-inline-block">
+                                    <i class="bi bi-exclamation-triangle me-1"></i>
+                                    {{ siparis.iptal_sebebi|truncatewords:10 }}
+                                </small>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <a href="{% url 'dashboard:siparis_detay' siparis.id %}" class="btn btn-primary btn-sm" title="Detay">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{% url 'dashboard:siparis_duzenle' siparis.id %}" class="btn btn-warning btn-sm" title="Düzenle">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <a href="{% url 'dashboard:siparis_whatsapp' siparis.id %}" class="btn btn-success btn-sm" title="WhatsApp" target="_blank">
+                                    <i class="bi bi-whatsapp"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="14" class="text-center text-muted py-4">
+                            <i class="bi bi-check-circle fs-1 d-block mb-2 text-success"></i>
+                            <h5>Harika! İptal edilen sipariş bulunmuyor.</h5>
+                            <p class="mb-0">Tüm siparişleriniz başarıyla işleniyor.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card-footer">
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="text-muted">
+                Toplam <strong>{{ siparisler.paginator.count }}</strong> iptal edilen sipariş gösteriliyor
+            </div>
+            {% if siparisler.has_other_pages %}
+            <nav aria-label="Page navigation">
+                <ul class="pagination pagination-sm mb-0">
+                    {% if siparisler.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ siparisler.previous_page_number }}">Önceki</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#" tabindex="-1">Önceki</a>
+                        </li>
+                    {% endif %}
+                    
+                    {% for num in siparisler.paginator.page_range %}
+                        {% if siparisler.number == num %}
+                            <li class="page-item active">
+                                <a class="page-link" href="#">{{ num }}</a>
+                            </li>
+                        {% else %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if siparisler.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ siparisler.next_page_number }}">Sonraki</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#" tabindex="-1">Sonraki</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('İptal Edilen Siparişler Raporu sayfası yüklendi');
+    
+    // Ebat vurgulama fonksiyonu
+    function highlightEbatInTable() {
+        const urunElements = document.querySelectorAll('.urun-with-ebat-highlight');
+        urunElements.forEach(function(element) {
+            const content = element.textContent;
+            const ebatPattern = /(\d{3}\/\d{2}R\d{2})/g;
+            
+            if (content.match(ebatPattern)) {
+                const highlightedContent = content.replace(ebatPattern, '<span class="ebat-highlight">$1</span>');
+                element.innerHTML = highlightedContent;
+            }
+        });
+    }
+    
+    // Sayfa yüklendiğinde ebat vurgulamasını uygula
+    highlightEbatInTable();
+    
+    // Tarih filtreleme fonksiyonları
+    const tarihSelect = document.getElementById('tarih');
+    const ozelTarihSection = document.getElementById('ozel-tarih-section');
+    const baslangicTarihi = document.getElementById('baslangic_tarihi');
+    const bitisTarihi = document.getElementById('bitis_tarihi');
+    
+    // Tarih seçimi değiştiğinde özel tarih bölümünü göster/gizle
+    if (tarihSelect) {
+        tarihSelect.addEventListener('change', function() {
+            if (this.value === 'ozel-tarih') {
+                ozelTarihSection.style.display = 'block';
+            } else {
+                ozelTarihSection.style.display = 'none';
+                // Özel tarih seçili değilse tarih alanlarını temizle
+                baslangicTarihi.value = '';
+                bitisTarihi.value = '';
+            }
+        });
+        
+        // Sayfa yüklendiğinde özel tarih seçiliyse bölümü göster
+        if (tarihSelect.value === 'ozel-tarih') {
+            ozelTarihSection.style.display = 'block';
+        }
+    }
+    
+    // Hızlı tarih butonları
+    const bugunBtn = document.getElementById('bugun-btn');
+    const buHaftaBtn = document.getElementById('bu-hafta-btn');
+    const buAyBtn = document.getElementById('bu-ay-btn');
+    
+    if (bugunBtn) {
+        bugunBtn.addEventListener('click', function() {
+            const today = new Date().toISOString().split('T')[0];
+            baslangicTarihi.value = today;
+            bitisTarihi.value = today;
+        });
+    }
+    
+    if (buHaftaBtn) {
+        buHaftaBtn.addEventListener('click', function() {
+            const today = new Date();
+            const startOfWeek = new Date(today.setDate(today.getDate() - today.getDay()));
+            const endOfWeek = new Date(today.setDate(today.getDate() - today.getDay() + 6));
+            
+            baslangicTarihi.value = startOfWeek.toISOString().split('T')[0];
+            bitisTarihi.value = endOfWeek.toISOString().split('T')[0];
+        });
+    }
+    
+    if (buAyBtn) {
+        buAyBtn.addEventListener('click', function() {
+            const today = new Date();
+            const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+            const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            
+            baslangicTarihi.value = startOfMonth.toISOString().split('T')[0];
+            bitisTarihi.value = endOfMonth.toISOString().split('T')[0];
+        });
+    }
+    
+    // Filtreleme fonksiyonları
+    const filterBtn = document.querySelector('.btn-primary');
+    const clearBtn = document.querySelector('.btn-outline-secondary');
+    
+    if (filterBtn) {
+        filterBtn.addEventListener('click', function() {
+            console.log('İptal edilen siparişler filtrelendi');
+        });
+    }
+    
+    if (clearBtn) {
+        clearBtn.addEventListener('click', function() {
+            console.log('Filtreler temizlendi');
+            // Form alanlarını temizle
+            document.querySelectorAll('input[type="text"], input[type="date"], select').forEach(input => {
+                if (input.type === 'text' || input.type === 'date') {
+                    input.value = '';
+                } else {
+                    input.selectedIndex = 0;
+                }
+            });
+            // Özel tarih bölümünü gizle
+            ozelTarihSection.style.display = 'none';
+        });
+    }
+});
+
+// Excel export fonksiyonu
+function exportCancelledToExcel() {
+    // Mevcut filtreleme parametrelerini al
+    const form = document.querySelector('form');
+    const formData = new FormData(form);
+    
+    // URL parametrelerini oluştur
+    const params = new URLSearchParams();
+    for (let [key, value] of formData.entries()) {
+        if (value) {
+            params.append(key, value);
+        }
+    }
+    
+    // Excel export URL'sine yönlendir
+    const exportUrl = '{% url "dashboard:export_cancelled_excel" %}' + '?' + params.toString();
+    window.location.href = exportUrl;
+}
+</script>
+
+<style>
+/* Ebat vurgulama stilleri */
+.ebat-highlight {
+    color: #dc3545 !important;
+    font-weight: bold !important;
+    background-color: rgba(220, 53, 69, 0.1) !important;
+    padding: 2px 4px;
+    border-radius: 3px;
+}
+
+/* Öne çıkar ürün satırı */
+.urun-with-ebat-highlight {
+    font-weight: 500;
+}
+
+/* İptal edilen sipariş satırı */
+.table-danger {
+    background-color: rgba(220, 53, 69, 0.05) !important;
+}
+
+.table-danger:hover {
+    background-color: rgba(220, 53, 69, 0.1) !important;
+}
+</style>
+{% endblock %}

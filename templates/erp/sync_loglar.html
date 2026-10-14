@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block title %}Sync Logları — DİA ERP{% endblock %}
+{% block page_name %}sync_loglar{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="bi bi-clock-history me-2 text-secondary"></i>Senkronizasyon Logları</h4>
+        <p class="text-muted mb-0">Tüm DİA sync işlemlerinin geçmişi</p>
+    </div>
+    <a href="{% url 'erp:dia_durum' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Sync Durumu
+    </a>
+</div>
+
+<!-- Filtreler -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body py-3">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <select name="modul" class="form-select form-select-sm">
+                    <option value="">Tüm modüller</option>
+                    {% for modul_adi in modul_listesi %}
+                    <option value="{{ modul_adi }}" {% if secili_modul == modul_adi %}selected{% endif %}>{{ modul_adi|upper }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select name="durum" class="form-select form-select-sm">
+                    <option value="">Tüm durumlar</option>
+                    {% for val, label in durum_secenekleri %}
+                    <option value="{{ val }}" {% if secili_durum == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 d-flex gap-1">
+                <button type="submit" class="btn btn-primary btn-sm flex-grow-1">
+                    <i class="bi bi-filter"></i> Filtrele
+                </button>
+                <a href="{% url 'erp:sync_loglar' %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-x"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Log tablosu -->
+<div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 small">
+            <thead class="table-light">
+                <tr>
+                    <th>Modül</th>
+                    <th>Başlangıç</th>
+                    <th>Bitiş</th>
+                    <th>Durum</th>
+                    <th>Tetikleyen</th>
+                    <th class="text-end">Toplam</th>
+                    <th class="text-end">Başarılı</th>
+                    <th class="text-end">Hatalı</th>
+                    <th>Süre</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in sayfa %}
+                <tr>
+                    <td><span class="badge bg-secondary">{{ log.modul }}</span></td>
+                    <td>{{ log.baslangic|date:"d.m.Y H:i:s" }}</td>
+                    <td class="text-muted">{{ log.bitis|date:"H:i:s"|default:"—" }}</td>
+                    <td>
+                        {% if log.durum == 'basarili' %}
+                        <span class="text-success fw-semibold"><i class="bi bi-check-circle me-1"></i>Başarılı</span>
+                        {% elif log.durum == 'basarisiz' %}
+                        <span class="text-danger fw-semibold"><i class="bi bi-x-circle me-1"></i>Başarısız</span>
+                        {% elif log.durum == 'calisiyor' %}
+                        <span class="text-info"><i class="bi bi-arrow-repeat me-1"></i>Çalışıyor</span>
+                        {% elif log.durum == 'kismi_basarili' %}
+                        <span class="text-warning fw-semibold"><i class="bi bi-exclamation-circle me-1"></i>Kısmen</span>
+                        {% else %}
+                        <span class="text-muted">{{ log.get_durum_display }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-muted">{{ log.get_tetikleyen_display }}</td>
+                    <td class="text-end">{{ log.toplam_kayit }}</td>
+                    <td class="text-end text-success">{{ log.basarili_kayit }}</td>
+                    <td class="text-end {% if log.hatali_kayit > 0 %}text-danger fw-bold{% else %}text-muted{% endif %}">
+                        {{ log.hatali_kayit }}
+                    </td>
+                    <td class="text-muted">
+                        {% if log.bitis and log.baslangic %}
+                        {{ log.baslangic|timesince:log.bitis }}
+                        {% else %}—{% endif %}
+                    </td>
+                </tr>
+                {% if log.hata_mesaji %}
+                <tr class="table-danger">
+                    <td colspan="9" class="small text-danger ps-4">
+                        <i class="bi bi-exclamation-triangle me-1"></i>{{ log.hata_mesaji|truncatechars:200 }}
+                    </td>
+                </tr>
+                {% endif %}
+                {% empty %}
+                <tr>
+                    <td colspan="9" class="text-center text-muted py-4">
+                        <i class="bi bi-clock-history fs-4 d-block mb-2"></i>
+                        Henüz sync logu yok.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if sayfa.has_other_pages %}
+    <div class="card-footer bg-white border-top d-flex justify-content-between align-items-center py-2">
+        <small class="text-muted">Sayfa {{ sayfa.number }} / {{ sayfa.paginator.num_pages }}</small>
+        <nav>
+            <ul class="pagination pagination-sm mb-0">
+                {% if sayfa.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?{% if secili_modul %}modul={{ secili_modul }}&{% endif %}sayfa={{ sayfa.previous_page_number }}">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
+                {% endif %}
+                <li class="page-item active">
+                    <span class="page-link">{{ sayfa.number }}</span>
+                </li>
+                {% if sayfa.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?{% if secili_modul %}modul={{ secili_modul }}&{% endif %}sayfa={{ sayfa.next_page_number }}">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

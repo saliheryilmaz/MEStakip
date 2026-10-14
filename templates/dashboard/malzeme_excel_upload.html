@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-5" style="max-width:500px;">
+  <h3>Excel'den Malzeme Hareketi Yükle</h3>
+  {% if messages %}
+    <ul class="list-unstyled">
+      {% for message in messages %}
+        <li class="alert alert-{{ message.tags }}">{{ message }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+  <form method="post" enctype="multipart/form-data" class="mt-4 mb-3">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button class="btn btn-primary" type="submit">Kaydet</button>
+    <a href="{% url 'dashboard:products' %}" class="btn btn-secondary ms-2">Vazgeç</a>
+  </form>
+</div>
+{% endblock %}

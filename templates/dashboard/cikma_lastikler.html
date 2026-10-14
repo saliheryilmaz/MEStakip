@@ -1,0 +1,1609 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load turkish_format %}
+
+{% block title %}Çıkma Lastikler - Mestakip{% endblock %}
+
+{% block extra_css %}
+<style>
+.depot-control { border-block: 1px solid var(--bs-border-color); padding: 16px 0; }
+.depot-summary-scroll { max-height: 300px; }
+#depotSummary { table-layout: fixed; }
+#depotSummary th, #depotSummary td { white-space: normal !important; overflow-wrap: anywhere; min-width: 0; letter-spacing: 0; }
+#depotSummary th { text-transform: none; }
+#depotSummary th:first-child { width: 56%; overflow-wrap: anywhere; }
+#depotSummary td { font-variant-numeric: tabular-nums; }
+#depotSummary a { display: inline-block; padding: 4px 0; }
+#depotSummary .depot-selected > * { background: var(--bs-tertiary-bg); border-bottom: 2px solid var(--bs-primary); }
+.depot-stock-total { font-variant-numeric: tabular-nums; }
+/* Mobil optimizasyonları */
+@media (max-width: 768px) {
+    /* Modal içeriğe göre boyutlandır */
+    .modal-dialog {
+        margin: 0;
+        max-width: 100%;
+        min-height: 100vh;
+        display: flex;
+        align-items: stretch;
+    }
+    
+    .modal-content {
+        background: #1a1d29 !important;
+        border-radius: 0;
+        border: none;
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+    }
+    
+    .modal-header {
+        padding: 15px 20px;
+        border-bottom: 2px solid #28a745;
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        flex-shrink: 0;
+    }
+    
+    .modal-header .modal-title {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #ffffff;
+    }
+    
+    .modal-body {
+        padding: 15px;
+        background: #1a1d29;
+        flex: 0 1 auto;
+    }
+    
+    .modal-body .row {
+        margin: 0 -5px;
+    }
+    
+    .modal-body .col-6,
+    .modal-body .col-12 {
+        padding: 0 5px;
+        margin-bottom: 12px;
+    }
+    
+    .modal-body .form-label {
+        color: #e9ecef;
+        font-weight: 600;
+        font-size: 0.75rem;
+        margin-bottom: 5px;
+        display: block;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }
+    
+    .modal-body .form-control,
+    .modal-body .form-select,
+    .modal-body textarea {
+        background: #2d3142;
+        border: 2px solid #3d4152;
+        color: #ffffff;
+        font-size: 0.9rem;
+        padding: 8px 10px;
+        border-radius: 6px;
+        transition: all 0.3s ease;
+        width: 100%;
+    }
+    
+    .modal-body .form-control::placeholder,
+    .modal-body textarea::placeholder {
+        color: #8b92a8;
+        font-style: italic;
+        font-size: 0.85rem;
+    }
+    
+    .modal-body .form-control:focus,
+    .modal-body .form-select:focus,
+    .modal-body textarea:focus {
+        background: #353849;
+        border-color: #28a745;
+        box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.15);
+        color: #ffffff;
+        outline: none;
+    }
+    
+    .modal-body .form-select option {
+        background: #2d3142;
+        color: #ffffff;
+        padding: 10px;
+    }
+    
+    .modal-body .text-muted,
+    .modal-body small {
+        color: #8b92a8 !important;
+        font-size: 0.7rem;
+        display: block;
+        margin-top: 3px;
+        font-style: italic;
+    }
+    
+    .modal-body textarea {
+        min-height: 60px;
+        resize: vertical;
+    }
+    
+    .modal-footer {
+        padding: 15px;
+        background: #1a1d29;
+        border-top: 2px solid #3d4152;
+        display: flex;
+        gap: 10px;
+        flex-shrink: 0;
+        margin-top: auto;
+    }
+    
+    /* Mobilde modal tam ekran + footer her zaman görünür */
+    @media (max-width: 575.98px) {
+        .modal-fullscreen-sm-down .modal-content {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        .modal-fullscreen-sm-down .modal-body {
+            flex: 1 1 auto;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .modal-fullscreen-sm-down .modal-footer {
+            flex-shrink: 0;
+            position: sticky;
+            bottom: 0;
+            z-index: 10;
+        }
+    }
+    
+    .modal-footer .btn {
+        font-size: 0.95rem;
+        padding: 11px 18px;
+        font-weight: 700;
+        flex: 1;
+        border-radius: 6px;
+        border: none;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .modal-footer .btn i {
+        font-size: 1rem;
+        margin-right: 5px;
+    }
+    
+    .modal-footer .btn-secondary {
+        background: #495057;
+        color: #ffffff;
+    }
+    
+    .modal-footer .btn-secondary:active {
+        background: #5a6268;
+        transform: scale(0.98);
+    }
+    
+    .modal-footer .btn-success {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        color: #ffffff;
+        box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+    }
+    
+    .modal-footer .btn-success:active {
+        transform: scale(0.98);
+        box-shadow: 0 1px 4px rgba(40, 167, 69, 0.3);
+    }
+    @media (min-width: 576px) {
+        .w-sm-auto { width: auto !important; }
+    }
+    
+    /* Input animasyonları */
+    .modal-body .form-control:valid:not(:placeholder-shown),
+    .modal-body .form-select:valid {
+        border-color: #20c997;
+    }
+    
+    /* Header düzenlemeleri */
+    .mobile-header {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .mobile-header .btn-group {
+        width: 100%;
+        display: flex;
+        gap: 5px;
+    }
+    
+    .mobile-header .btn {
+        flex: 1;
+        font-size: 0.8rem;
+        padding: 8px 4px;
+    }
+    
+    /* Filtreleme kartı mobil optimizasyonu */
+    .filter-card {
+        margin-bottom: 15px;
+    }
+    
+    .filter-card .card-body {
+        padding: 15px;
+    }
+    
+    .filter-row {
+        gap: 10px !important;
+    }
+    
+    .filter-col {
+        margin-bottom: 10px;
+    }
+    
+    .form-label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-bottom: 4px;
+    }
+    
+    .form-control, .form-select {
+        font-size: 0.9rem;
+        padding: 8px 10px;
+    }
+    
+    /* Mobil kart görünümü */
+    .mobile-card-view {
+        display: block;
+    }
+    
+    .desktop-table-view {
+        display: none;
+    }
+    
+    .lastik-card {
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        background: white;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .lastik-card-header {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        padding: 12px 15px;
+        border-bottom: 1px solid #dee2e6;
+        border-radius: 8px 8px 0 0;
+    }
+    
+    .lastik-card-body {
+        padding: 15px;
+    }
+    
+    .lastik-info-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #f1f3f4;
+    }
+    
+    .lastik-info-row:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+    }
+    
+    .info-label {
+        font-size: 0.8rem;
+        color: #6c757d;
+        font-weight: 500;
+        min-width: 80px;
+    }
+    
+    .info-value {
+        font-size: 0.9rem;
+        font-weight: 600;
+        text-align: right;
+        flex: 1;
+        color: #212529;
+    }
+    
+    .lastik-info-row .info-value {
+        color: #212529 !important;
+    }
+    
+    .ebat-code {
+        background: #e3f2fd;
+        color: #1976d2;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-family: 'Courier New', monospace;
+        font-size: 0.85rem;
+        font-weight: bold;
+    }
+    
+    .mevsim-icon {
+        width: 20px;
+        height: 20px;
+        object-fit: contain;
+        border-radius: 3px;
+        margin-right: 5px;
+    }
+    
+    .mobile-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid #f1f3f4;
+    }
+    
+    .mobile-actions .btn {
+        flex: 1;
+        font-size: 0.8rem;
+        padding: 8px 4px;
+    }
+    
+    .pagination {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    
+    .pagination .page-item .page-link {
+        padding: 6px 10px;
+        font-size: 0.85rem;
+    }
+    
+    .fab {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: #28a745;
+        color: white;
+        border: none;
+        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        transition: all 0.3s ease;
+    }
+    
+    .fab:hover {
+        background: #218838;
+        transform: scale(1.1);
+        box-shadow: 0 6px 16px rgba(40, 167, 69, 0.5);
+    }
+    
+    .quick-filters {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 15px;
+        overflow-x: auto;
+        padding: 5px 0;
+    }
+    
+    .quick-filter-btn {
+        white-space: nowrap;
+        font-size: 0.8rem;
+        padding: 6px 12px;
+        border-radius: 20px;
+        border: 1px solid #dee2e6;
+        background: white;
+        color: #495057;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+    
+    .quick-filter-btn.active {
+        background: #007bff;
+        color: white;
+        border-color: #007bff;
+    }
+    
+    .quick-filter-btn:hover {
+        background: #f8f9fa;
+        text-decoration: none;
+        color: #495057;
+    }
+    
+    .quick-filter-btn.active:hover {
+        background: #0056b3;
+        color: white;
+    }
+    
+    .compact-mobile-filter {
+        background: #f8f9fa;
+        padding: 10px;
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
+    }
+    
+    .compact-mobile-filter .form-control-sm {
+        font-size: 0.8rem;
+        padding: 6px 8px;
+    }
+    
+    .compact-mobile-filter .btn-sm {
+        padding: 6px 10px;
+        font-size: 0.8rem;
+    }
+    
+    /* Clear filters button - koyu tema */
+    #clearFiltersBtn {
+        background: #dc3545 !important;
+        border-color: #dc3545 !important;
+        color: #ffffff !important;
+    }
+    
+    #clearFiltersBtn:hover,
+    #clearFiltersBtn:active {
+        background: #c82333 !important;
+        border-color: #bd2130 !important;
+        transform: scale(1.05);
+    }
+}
+
+/* Desktop görünümü */
+@media (min-width: 769px) {
+    .mobile-card-view {
+        display: none;
+    }
+    
+    .desktop-table-view {
+        display: block;
+    }
+    
+    .fab {
+        display: none;
+    }
+}
+
+/* Genel iyileştirmeler */
+.badge {
+    font-size: 0.75rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hidden CSRF Token for JavaScript -->
+<form style="display: none;">
+    {% csrf_token %}
+</form>
+
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-3 mobile-header">
+    <div>
+        <h1 class="h4 mb-1">Çıkma Lastikler</h1>
+        <p class="text-muted mb-0 small">Müşterilerden çıkan lastiklerin takibi</p>
+    </div>
+    <div class="d-none d-md-flex gap-2">
+        {% if not is_misafir %}
+        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#yeniKayitModal">
+            <i class="bi bi-plus-lg me-1"></i>
+            Yeni Kayıt
+        </button>
+        {% endif %}
+        <a href="{% url 'dashboard:satilan_cikma_lastikler' %}" class="btn btn-warning">
+            <i class="bi bi-check-circle me-1"></i>
+            Satılanları Görüntüle
+        </a>
+    </div>
+    <div class="d-md-none btn-group w-100">
+        {% if not is_misafir %}
+        <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#yeniKayitModal">
+            <i class="bi bi-plus-lg"></i>
+            Yeni
+        </button>
+        {% endif %}
+        <a href="{% url 'dashboard:satilan_cikma_lastikler' %}" class="btn btn-warning btn-sm">
+            <i class="bi bi-check-circle"></i>
+            Satılan
+        </a>
+    </div>
+</div>
+
+<!-- Compact Mobile Filter -->
+<div class="compact-mobile-filter d-md-none mb-2">
+    <form method="get" id="mobileFilterForm" class="d-flex gap-2 flex-wrap">
+        {% for key, value in extra_filters %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}
+        <input type="text" inputmode="numeric" maxlength="20" class="form-control form-control-sm" id="mobileIdInput" name="id" value="{{ filters.id }}" placeholder="ID / #123" aria-label="Kayıt ID" style="flex: 1; min-width: 100px;">
+        <input type="text" class="form-control form-control-sm" id="mobileEbatInput" name="ebat" value="{{ filters.ebat }}" placeholder="Ebat girin..." style="flex: 2; min-width: 140px;">
+        <input type="text" class="form-control form-control-sm" id="mobileMarkaInput" name="marka" value="{{ filters.marka }}" placeholder="Marka..." style="flex: 1; min-width: 100px;">
+        {% if not is_misafir %}
+        <select class="form-select form-select-sm" id="mobileDepoInput" name="depo_konumu" aria-label="Depo" style="flex: 1; min-width: 140px;" data-depot-select>
+            {% include 'dashboard/_used_tire_depot_options.html' %}
+        </select>
+        {% endif %}
+        <input type="hidden" id="mobileMevsimInput" name="mevsim" value="{{ filters.mevsim }}">
+        <button type="submit" class="btn btn-primary btn-sm" aria-label="Filtrele" title="Filtrele">
+            <i class="bi bi-search"></i>
+        </button>
+        {% if filter_query_string %}
+        <a href="{% url 'dashboard:cikma_lastikler' %}" class="btn btn-outline-secondary btn-sm" id="clearFiltersBtn">
+            <i class="bi bi-x"></i>
+        </a>
+        {% endif %}
+    </form>
+</div>
+
+<!-- Quick Filters (Mobile) - Mevsim Seçimi -->
+<div class="quick-filters d-md-none mb-3">
+    <button type="button" class="quick-filter-btn {% if not filters.mevsim %}active{% endif %}" data-mevsim="">Tümü</button>
+    <button type="button" class="quick-filter-btn {% if filters.mevsim == 'yaz' %}active{% endif %}" data-mevsim="yaz">☀️ Yaz</button>
+    <button type="button" class="quick-filter-btn {% if filters.mevsim == 'kis' %}active{% endif %}" data-mevsim="kis">❄️ Kış</button>
+    <button type="button" class="quick-filter-btn {% if filters.mevsim == 'dort-mevsim' %}active{% endif %}" data-mevsim="dort-mevsim">🔄 4 Mevsim</button>
+</div>
+
+<!-- Filtering Section -->
+<div class="card mb-3 filter-card d-none d-md-block">
+    <div class="card-header">
+        <h6 class="card-title mb-0">Filtreleme</h6>
+    </div>
+    <div class="card-body">
+        <form method="get" id="desktopFilterForm">
+            {% for key, value in extra_filters %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}
+            <div class="row g-2 filter-row">
+                <div class="col-md-2 col-6 filter-col">
+                    <label for="filterRecordId" class="form-label">KAYIT ID</label>
+                    <input type="text" inputmode="numeric" maxlength="20" class="form-control" id="filterRecordId" name="id" value="{{ filters.id }}" placeholder="123 veya #123">
+                </div>
+                <div class="col-md-2 col-6 filter-col">
+                    <label for="marka" class="form-label">MARKA</label>
+                    <input type="text" class="form-control" id="marka" name="marka" value="{{ filters.marka }}" placeholder="Marka adı...">
+                </div>
+                <div class="col-md-2 col-6 filter-col">
+                    <label for="ebat" class="form-label">EBAT</label>
+                    <input type="text" class="form-control" id="ebat" name="ebat" value="{{ filters.ebat }}" placeholder="205/55R16...">
+                </div>
+                {% if not is_misafir %}
+                <div class="col-md-2 col-6 filter-col">
+                    <label for="filterDepot" class="form-label">AMBAR (DEPO)</label>
+                    <select class="form-select" id="filterDepot" name="depo_konumu" data-depot-select>
+                        {% include 'dashboard/_used_tire_depot_options.html' %}
+                    </select>
+                </div>
+                {% endif %}
+                <div class="col-md-2 col-6 filter-col">
+                    <label for="mevsim" class="form-label">MEVSİM</label>
+                    <select class="form-select" id="mevsim" name="mevsim">
+                        <option value="">Tümü</option>
+                        {% for value, label in mevsim_choices %}
+                        <option value="{{ value }}" {% if filters.mevsim == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2 col-12 filter-col d-flex align-items-end">
+                    <div class="d-flex gap-2 w-100">
+                        <button type="submit" class="btn btn-primary flex-fill">
+                            <i class="bi bi-funnel me-1"></i>
+                            Filtrele
+                        </button>
+                        <a href="{% url 'dashboard:cikma_lastikler' %}" class="btn btn-outline-secondary" aria-label="Filtreleri temizle" title="Filtreleri temizle">
+                            <i class="bi bi-arrow-clockwise"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Main Content Section -->
+{% include 'dashboard/_used_tire_depot_summary.html' %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+            <h6 class="card-title mb-1">Çıkma Lastik Listesi</h6>
+            <div class="small depot-stock-total" id="filteredStockTotal">{{ stats.toplam_kayit }} kayıt · <strong>{{ stats.toplam_adet }} lastik</strong>{% if filters.depo_konumu %} · {{ filters.depo_konumu }}{% endif %}</div>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'dashboard:export_cikma_lastikler_excel' %}{% if filter_query_string %}?{{ filter_query_string }}{% endif %}"
+               class="btn btn-warning btn-sm d-none d-md-inline-block">
+                <i class="bi bi-file-earmark-excel me-1"></i>
+                Excel'e Aktar
+            </a>
+        </div>
+    </div>
+    
+    <!-- Desktop Table View -->
+    <div class="card-body p-0 desktop-table-view">
+        <div class="table-responsive" style="overflow-x: auto;">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="min-width: 50px;" class="text-center text-muted">#ID</th>
+                        {% if not is_misafir %}
+                        <th style="min-width: 80px;">KALİTE</th>
+                        {% endif %}
+                        <th style="min-width: 100px;">EBAT</th>
+                        <th style="min-width: 150px;">MARKA/MODEL</th>
+                        <th style="min-width: 60px;" class="text-center">MEVSİM</th>
+                        <th style="min-width: 60px;">ADET</th>
+                        {% if not is_misafir %}
+                        <th style="min-width: 120px;">AMBAR (DEPO)</th>
+                        {% endif %}
+                        <th style="min-width: 250px;">AÇIKLAMA</th>
+                        {% if can_edit_admin_note %}
+                        <th style="min-width: 220px;"><i class="bi bi-lock me-1" aria-hidden="true"></i>ADMIN AÇIKLAMASI</th>
+                        {% endif %}
+                        <th style="min-width: 100px;">GİRİŞ TARİHİ</th>
+                        {% if not is_misafir %}
+                        <th style="min-width: 120px;">İŞLEMLER</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for lastik in cikma_lastikler %}
+                    <tr>
+                        <td class="text-center fw-bold" style="color:#d60000; font-size:0.95rem;">#{{ lastik.id }}</td>
+                        {% if not is_misafir %}
+                        <td>
+                            {% if lastik.kalite_notu %}
+                                <span class="badge bg-{{ lastik.get_kalite_display_color }}">{{ lastik.get_kalite_display }}</span>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        {% endif %}
+                        <td><code style="font-size: 1.1em; font-weight: 600;">{{ lastik.ebat }}</code></td>
+                        <td>
+                            <strong>{{ lastik.marka }}</strong>
+                            {% if lastik.model %}
+                                <br><small class="text-muted">{{ lastik.model }}</small>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if lastik.mevsim == 'yaz' %}
+                                <img src="{% static 'images/yaz.png' %}" alt="Yaz" title="Yaz Lastiği" 
+                                     style="width: 24px; height: 24px; object-fit: contain; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+                            {% elif lastik.mevsim == 'kis' %}
+                                <img src="{% static 'images/kis.png' %}" alt="Kış" title="Kış Lastiği" 
+                                     style="width: 24px; height: 24px; object-fit: contain; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+                            {% elif lastik.mevsim == 'dort-mevsim' %}
+                                <img src="{% static 'images/dörtmevsim.png' %}" alt="4 Mevsim" title="4 Mevsim Lastiği" 
+                                     style="width: 24px; height: 24px; object-fit: contain; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td><strong>{{ lastik.adet }}</strong></td>
+                        {% if not is_misafir %}
+                        <td>
+                            {% if lastik.depot_name %}
+                                <span class="badge bg-info">{{ lastik.depot_name }}</span>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        {% endif %}
+                        <td>
+                            {% if lastik.aciklama %}
+                                <span title="{{ lastik.aciklama }}">
+                                    {{ lastik.aciklama }}
+                                </span>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        {% if can_edit_admin_note %}
+                        <td class="admin-note" style="min-width: 220px; max-width: 320px; white-space: normal; overflow-wrap: anywhere;">
+                            {{ lastik.admin_aciklama|default:"-"|linebreaksbr }}
+                        </td>
+                        {% endif %}
+                        <td>{{ lastik.olusturma_tarihi|date:"d.m.Y" }}</td>
+                        {% if not is_misafir %}
+                        <td>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button" class="btn btn-success btn-sm" title="Sat" 
+                                        data-bs-toggle="modal" data-bs-target="#satisModal{{ lastik.id }}">
+                                    <i class="bi bi-currency-dollar"></i> Sat
+                                </button>
+                                <button type="button" class="btn btn-warning btn-sm" title="Düzenle"
+                                        data-edit-url="{% url 'dashboard:cikma_lastik_duzenle' lastik.id %}">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button type="button" class="btn btn-secondary btn-sm" title="Yazdır"
+                                        onclick="yazdir({{ lastik.id }}, '{{ lastik.ebat|escapejs }}', '{{ lastik.marka|escapejs }}', '{{ lastik.model|default:''|escapejs }}', '{{ lastik.get_mevsim_display|escapejs }}', '{{ lastik.aciklama|default:''|escapejs }}', '{{ lastik.diş_derinligi|default:''|escapejs }}', {{ lastik.adet }})">
+                                    <i class="bi bi-printer"></i>
+                                </button>
+                                <button type="button" class="btn btn-danger btn-sm" title="Sil" 
+                                        data-delete-url="{% url 'dashboard:cikma_lastik_sil' lastik.id %}"
+                                        data-confirm-message="Bu kaydı silmek istediğinizden emin misiniz?">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="{% if can_edit_admin_note %}11{% elif is_misafir %}7{% else %}10{% endif %}" class="text-center text-muted py-4">
+                            <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                            Henüz çıkma lastik kaydı bulunmuyor.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Mobile Card View -->
+    <div class="mobile-card-view">
+        <div class="p-3">
+            {% for lastik in cikma_lastikler %}
+            <div class="lastik-card">
+                <div class="lastik-card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong class="text-primary">{{ lastik.marka }}</strong>
+                            {% if lastik.model %}
+                                <small class="text-muted d-block">{{ lastik.model }}</small>
+                            {% endif %}
+                            <small class="fw-bold" style="color:#333; font-size:0.9rem;">#{{ lastik.id }}</small>
+                        </div>
+                        <div class="text-end">
+                            <span class="ebat-code">{{ lastik.ebat }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="lastik-card-body">
+                    <div class="lastik-info-row">
+                        <span class="info-label">Mevsim:</span>
+                        <span class="info-value">
+                            {% if lastik.mevsim == 'yaz' %}
+                                <img src="{% static 'images/yaz.png' %}" alt="Yaz" class="mevsim-icon">Yaz
+                            {% elif lastik.mevsim == 'kis' %}
+                                <img src="{% static 'images/kis.png' %}" alt="Kış" class="mevsim-icon">Kış
+                            {% elif lastik.mevsim == 'dort-mevsim' %}
+                                <img src="{% static 'images/dörtmevsim.png' %}" alt="4 Mevsim" class="mevsim-icon">4 Mevsim
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="lastik-info-row">
+                        <span class="info-label">Adet:</span>
+                        <span class="info-value">
+                            <strong class="text-success">{{ lastik.adet }} adet</strong>
+                        </span>
+                    </div>
+                    {% if not is_misafir %}
+                    <div class="lastik-info-row">
+                        <span class="info-label">Kalite:</span>
+                        <span class="info-value">
+                            {% if lastik.kalite_notu %}
+                                <span class="badge bg-{{ lastik.get_kalite_display_color }}">{{ lastik.get_kalite_display }}</span>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    {% endif %}
+                    {% if not is_misafir %}
+                    <div class="lastik-info-row">
+                        <span class="info-label">Depo:</span>
+                        <span class="info-value">
+                            {% if lastik.depot_name %}<span class="badge bg-info">{{ lastik.depot_name }}</span>{% else %}<span class="text-muted">-</span>{% endif %}
+                        </span>
+                    </div>
+                    {% endif %}
+                    <div class="lastik-info-row">
+                        <span class="info-label">Açıklama:</span>
+                        <span class="info-value" title="{{ lastik.aciklama|default:'' }}">
+                            {{ lastik.aciklama|default:"-" }}
+                        </span>
+                    </div>
+                    {% if can_edit_admin_note %}
+                    <div class="lastik-info-row admin-note" style="display: block;">
+                        <span class="info-label d-block mb-1"><i class="bi bi-lock me-1" aria-hidden="true"></i>Admin Açıklaması:</span>
+                        <span class="info-value d-block text-start fw-normal" style="white-space: normal; overflow-wrap: anywhere;">{{ lastik.admin_aciklama|default:"-"|linebreaksbr }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    {% if not is_misafir %}
+                    <div class="mobile-actions">
+                        <button type="button" class="btn btn-success btn-sm" 
+                                data-bs-toggle="modal" data-bs-target="#satisModal{{ lastik.id }}">
+                            <i class="bi bi-currency-dollar"></i> Sat
+                        </button>
+                        <button type="button" class="btn btn-warning btn-sm"
+                                data-edit-url="{% url 'dashboard:cikma_lastik_duzenle' lastik.id %}">
+                            <i class="bi bi-pencil"></i> Düzenle
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm"
+                                onclick="yazdir({{ lastik.id }}, '{{ lastik.ebat|escapejs }}', '{{ lastik.marka|escapejs }}', '{{ lastik.model|default:''|escapejs }}', '{{ lastik.get_mevsim_display|escapejs }}', '{{ lastik.aciklama|default:''|escapejs }}', '{{ lastik.diş_derinligi|default:''|escapejs }}', {{ lastik.adet }})">
+                            <i class="bi bi-printer"></i> Yazdır
+                        </button>
+                        <button type="button" class="btn btn-danger btn-sm" 
+                                data-delete-url="{% url 'dashboard:cikma_lastik_sil' lastik.id %}"
+                                data-confirm-message="Bu kaydı silmek istediğinizden emin misiniz?">
+                            <i class="bi bi-trash"></i> Sil
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center text-muted py-5">
+                <i class="bi bi-inbox" style="font-size: 3rem; display: block; margin-bottom: 1rem;"></i>
+                <h6>Henüz çıkma lastik kaydı bulunmuyor.</h6>
+                <p class="small">Yeni kayıt eklemek için + butonuna tıklayın.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <!-- Pagination -->
+    <div class="card-footer">
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+            <div class="text-muted small">
+                {% if cikma_lastikler.has_other_pages %}
+                    Sayfa {{ cikma_lastikler.number }} / {{ cikma_lastikler.paginator.num_pages }} - 
+                    {{ cikma_lastikler.start_index }}-{{ cikma_lastikler.end_index }} arası kayıtlar (Toplam: {{ cikma_lastikler.paginator.count }})
+                {% else %}
+                    Toplam <strong>{{ cikma_lastikler.paginator.count }}</strong> kayıt gösteriliyor
+                {% endif %}
+            </div>
+            {% if cikma_lastikler.has_other_pages %}
+            <nav aria-label="Page navigation" class="mt-2 mt-md-0">
+                <ul class="pagination pagination-sm mb-0">
+                    {% if cikma_lastikler.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ cikma_lastikler.previous_page_number }}{% if filter_query_string %}&{{ filter_query_string }}{% endif %}">Önceki</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#" tabindex="-1">Önceki</a>
+                        </li>
+                    {% endif %}
+                    
+                    {% for num in cikma_lastikler.paginator.page_range %}
+                        {% if cikma_lastikler.number == num %}
+                            <li class="page-item active">
+                                <a class="page-link" href="#">{{ num }}</a>
+                            </li>
+                        {% else %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}{% if filter_query_string %}&{{ filter_query_string }}{% endif %}">{{ num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if cikma_lastikler.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ cikma_lastikler.next_page_number }}{% if filter_query_string %}&{{ filter_query_string }}{% endif %}">Sonraki</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#" tabindex="-1">Sonraki</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Floating Action Button (Mobile) -->
+{% if not is_misafir %}
+<button type="button" class="fab d-md-none" data-bs-toggle="modal" data-bs-target="#yeniKayitModal">
+    <i class="bi bi-plus-lg"></i>
+</button>
+{% endif %}
+
+<!-- Yeni Kayıt Modal -->
+<div class="modal fade" id="yeniKayitModal" tabindex="-1" aria-labelledby="yeniKayitModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="yeniKayitModalLabel">
+                    <i class="bi bi-plus-lg me-2"></i>
+                    Yeni Çıkma Lastik Kaydı
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label for="marka" class="form-label">Marka *</label>
+                            <input type="text" class="form-control" id="marka" name="marka" required>
+                        </div>
+                        <div class="col-6">
+                            <label for="model" class="form-label">Model</label>
+                            <input type="text" class="form-control" id="model" name="model" placeholder="Lastik modeli">
+                        </div>
+                        <div class="col-6">
+                            <label for="ebat" class="form-label">Ebat *</label>
+                            <input type="text" class="form-control" id="ebat" name="ebat" placeholder="205/55R16" required>
+                            <small class="text-muted">Örnek: 205/55R16</small>
+                        </div>
+                        <div class="col-6">
+                            <label for="mevsim" class="form-label">Mevsim *</label>
+                            <select class="form-select" id="mevsim" name="mevsim" required>
+                                <option value="">Seçiniz</option>
+                                {% for value, label in mevsim_choices %}
+                                <option value="{{ value }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label for="adet" class="form-label">Adet *</label>
+                            <input type="number" class="form-control" id="adet" name="adet" min="1" value="1" required>
+                        </div>
+                        <div class="col-6">
+                            <label for="kalite_notu" class="form-label">Kalite</label>
+                            <select class="form-select" id="kalite_notu" name="kalite_notu">
+                                <option value="">Seçiniz</option>
+                                {% for value, label in kalite_choices %}
+                                <option value="{{ value }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label for="durum" class="form-label">Durum</label>
+                            <select class="form-select" id="durum" name="durum">
+                                <option value="depolandi" selected>Depolandı</option>
+                                <option value="satildi">Satıldı</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label for="depo_konumu" class="form-label">Depo Konumu</label>
+                            <input type="text" class="form-control" id="depo_konumu" name="depo_konumu" placeholder="Raf A-1">
+                        </div>
+                        
+                        <!-- Satış Bilgileri - Sadece durum "satildi" ise göster -->
+                        <div class="col-6" id="satis_fiyati_field_new" style="display: none;">
+                            <label for="satis_fiyati_new" class="form-label">Satış Fiyatı (₺)</label>
+                            <input type="number" class="form-control" id="satis_fiyati_new" name="satis_fiyati" step="0.01" min="0">
+                        </div>
+                        <div class="col-12" id="odeme_secenekleri_field_new" style="display: none;">
+                            <label class="form-label">Ödeme Seçenekleri</label>
+                            <div class="d-flex gap-3 flex-wrap">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="mehmet_havale_new" name="mehmet_havale">
+                                    <label class="form-check-label" for="mehmet_havale_new">
+                                        Mehmet Havale
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="canta_new" name="canta">
+                                    <label class="form-check-label" for="canta_new">
+                                        Çanta
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="cari_new" name="cari">
+                                    <label class="form-check-label" for="cari_new">
+                                        Cari
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6" id="satis_tarihi_field_new" style="display: none;">
+                            <label for="satis_tarihi_new" class="form-label">Satış Tarihi</label>
+                            <input type="date" class="form-control" id="satis_tarihi_new" name="satis_tarihi">
+                        </div>
+                        
+                        <div class="col-12">
+                            <label for="aciklama" class="form-label">Açıklama</label>
+                            <textarea class="form-control" id="aciklama" name="aciklama" rows="2" placeholder="Ek notlar..."></textarea>
+                        </div>
+                        {% if can_edit_admin_note %}
+                        <div class="col-12">
+                            <label for="admin_aciklama" class="form-label"><i class="bi bi-lock me-1" aria-hidden="true"></i>Admin Açıklaması</label>
+                            <textarea class="form-control" id="admin_aciklama" name="admin_aciklama" rows="3"></textarea>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg me-1"></i>
+                        İptal
+                    </button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check-lg me-1"></i>
+                        Kaydet
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Satış Modalları -->
+{% for lastik in cikma_lastikler %}
+<div class="modal fade" id="satisModal{{ lastik.id }}" tabindex="-1" aria-labelledby="satisModalLabel{{ lastik.id }}" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable modal-fullscreen-sm-down">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="satisModalLabel{{ lastik.id }}">
+                    <i class="bi bi-currency-dollar me-2"></i>
+                    Çıkma Lastik Satışı
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{% url 'dashboard:cikma_lastik_sat' lastik.id %}" id="satisForm{{ lastik.id }}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <!-- Ürün Bilgisi -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="card-title mb-0">
+                                <i class="bi bi-info-circle me-2"></i>
+                                Ürün Bilgisi
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <strong>Marka/Model:</strong><br>
+                                    <span class="text-primary">{{ lastik.marka }}</span>
+                                    {% if lastik.model %}
+                                        <br><small class="text-muted">{{ lastik.model }}</small>
+                                    {% endif %}
+                                </div>
+                                <div class="col-6">
+                                    <strong>Ebat:</strong><br>
+                                    <code class="ebat-code">{{ lastik.ebat }}</code>
+                                </div>
+                                <div class="col-6 mt-2">
+                                    <strong>Mevsim:</strong><br>
+                                    {% if lastik.mevsim == 'yaz' %}
+                                        <img src="{% static 'images/yaz.png' %}" alt="Yaz" class="mevsim-icon">
+                                        Yaz
+                                    {% elif lastik.mevsim == 'kis' %}
+                                        <img src="{% static 'images/kis.png' %}" alt="Kış" class="mevsim-icon">
+                                        Kış
+                                    {% elif lastik.mevsim == 'dort-mevsim' %}
+                                        <img src="{% static 'images/dörtmevsim.png' %}" alt="4 Mevsim" class="mevsim-icon">
+                                        4 Mevsim
+                                    {% endif %}
+                                </div>
+                                {% if not is_misafir %}
+                                <div class="col-6 mt-2">
+                                    <strong>Kalite:</strong><br>
+                                    {{ lastik.get_kalite_display }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Satış Bilgileri -->
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label for="satis_adet_{{ lastik.id }}" class="form-label">Satılacak Adet *</label>
+                            <input type="number" class="form-control" id="satis_adet_{{ lastik.id }}" name="satis_adet" 
+                                   min="1" max="{{ lastik.adet }}" value="{{ lastik.adet }}" required>
+                            <small class="text-muted">Mevcut: <strong>{{ lastik.adet }} adet</strong></small>
+                        </div>
+                        <div class="col-12">
+                            <label for="satis_fiyati_{{ lastik.id }}" class="form-label">Satış Fiyatı (₺) *</label>
+                            <input type="number" class="form-control" id="satis_fiyati_{{ lastik.id }}" name="satis_fiyati" 
+                                   step="0.01" min="0" required placeholder="0.00">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Ödeme Seçenekleri</label>
+                            <div class="d-flex gap-3 flex-wrap">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="mehmet_havale_{{ lastik.id }}" name="mehmet_havale">
+                                    <label class="form-check-label" for="mehmet_havale_{{ lastik.id }}">Mehmet Havale</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="canta_{{ lastik.id }}" name="canta">
+                                    <label class="form-check-label" for="canta_{{ lastik.id }}">Çanta</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="cari_{{ lastik.id }}" name="cari">
+                                    <label class="form-check-label" for="cari_{{ lastik.id }}">Cari</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label for="satis_tarihi_{{ lastik.id }}" class="form-label">Satış Tarihi</label>
+                            <input type="date" class="form-control" id="satis_tarihi_{{ lastik.id }}" name="satis_tarihi" 
+                                   value="{{ 'now'|date:'Y-m-d' }}">
+                        </div>
+                        <div class="col-12 pb-2">
+                            <label for="satis_aciklama_{{ lastik.id }}" class="form-label">Satış Açıklaması</label>
+                            <textarea class="form-control" id="satis_aciklama_{{ lastik.id }}" name="satis_aciklama" 
+                                      rows="3" placeholder="Müşteri bilgisi, ödeme şekli vb."></textarea>
+                        </div>
+                    </div>
+                </div>
+            </form>
+            <div class="modal-footer gap-2">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i>İptal
+                </button>
+                <button type="submit" form="satisForm{{ lastik.id }}" class="btn btn-success">
+                    <i class="bi bi-check-lg me-1"></i>
+                    Satışı Tamamla
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function yazdir(id, ebat, marka, model, mevsim, aciklama, disDerinligi, adet) {
+    adet = adet || 1;
+    var markaModel = marka + (model ? ' ' + model : '');
+    var etiketIcerigi = '<div class="satir">' + ebat + '</div>' +
+        '<div class="ayrac"></div>' +
+        '<div class="satir">' + markaModel + '</div>' +
+        '<div class="ayrac"></div>' +
+        '<div class="satir">' + mevsim + '</div>' +
+        (aciklama ? '<div class="ayrac"></div><div class="satir kucuk">' + aciklama + '</div>' : '') +
+        (disDerinligi ? '<div class="ayrac"></div><div class="satir kucuk">' + disDerinligi + ' MM</div>' : '') +
+        '<div class="ayrac"></div><div class="satir">#' + id + '</div>';
+
+    // Her sayfaya 2 etiket sığar; adet kadar etiket üret
+    var tumEtiketler = '';
+    for (var i = 0; i < adet; i++) {
+        // Her 2 etikette bir yeni sayfa aç
+        if (i % 2 === 0) {
+            if (i > 0) tumEtiketler += '</div>';  // önceki sayfayı kapat
+            tumEtiketler += '<div class="sayfa">';
+        }
+        tumEtiketler += '<div class="etiket">' + etiketIcerigi + '</div>';
+        // Son etiket tek kaldıysa (çift değilse) boş etiket ekle
+        if (i === adet - 1 && adet % 2 !== 0) {
+            tumEtiketler += '<div class="etiket bos"></div>';
+        }
+    }
+    if (adet > 0) tumEtiketler += '</div>';  // son sayfayı kapat
+
+    var icerik = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Lastik Etiketi</title><style>' +
+        '*{box-sizing:border-box;margin:0;padding:0;}' +
+        'body{font-family:Arial,sans-serif;background:#fff;}' +
+        '@page{size:A4 portrait;margin:10mm;}' +
+        '.sayfa{width:100%;height:100vh;display:flex;flex-direction:column;justify-content:space-around;page-break-after:always;}' +
+        '.sayfa:last-child{page-break-after:avoid;}' +
+        '.etiket{text-align:center;padding:20px 40px;flex:1;display:flex;flex-direction:column;justify-content:center;border:1px dashed #ccc;}' +
+        '.etiket:first-child{border-bottom:2px dashed #999;}' +
+        '.etiket.bos{visibility:hidden;}' +
+        '.satir{font-size:38px;font-weight:bold;margin:12px 0;line-height:1.2;}' +
+        '.satir.kucuk{font-size:28px;}' +
+        '.ayrac{border-top:2px solid #ccc;margin:8px 0;}' +
+        '@media print{body{margin:0;}}' +
+        '</style></head><body>' +
+        tumEtiketler +
+        '</body></html>';
+    var pencere = window.open('', '_blank', 'width=700,height=900');
+    pencere.document.write(icerik);
+    pencere.document.close();
+    pencere.focus();
+    setTimeout(function() { pencere.print(); }, 300);
+}
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Çıkma Lastikler sayfası yüklendi');
+    
+    // Mobil dokunmatik optimizasyonları
+    if ('ontouchstart' in window) {
+        // Touch cihazlarda hover efektlerini devre dışı bırak
+        document.body.classList.add('touch-device');
+    }
+    
+    // Quick filter butonları - Ebat filtresini koruyarak çalış
+    document.querySelectorAll('.quick-filter-btn').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Mevcut ebat ve diğer filtreleri al
+            const ebatInput = document.getElementById('mobileEbatInput');
+            const markaInput = document.getElementById('mobileMarkaInput');
+            const depoInput = document.getElementById('mobileDepoInput');
+            const mevsimInput = document.getElementById('mobileMevsimInput');
+            
+            // Seçilen mevsimi al
+            const selectedMevsim = this.getAttribute('data-mevsim');
+            
+            // Mevsim inputunu güncelle
+            mevsimInput.value = selectedMevsim;
+            
+            // Aktif class'ı güncelle
+            document.querySelectorAll('.quick-filter-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Loading state
+            const originalText = this.innerHTML;
+            this.innerHTML = '<i class="bi bi-hourglass-split"></i>';
+            this.style.pointerEvents = 'none';
+            
+            // Formu submit et
+            document.getElementById('mobileFilterForm').submit();
+        });
+    });
+    
+    // Ebat inputu değiştiğinde quick filter'ları vurgula
+    const ebatInput = document.getElementById('mobileEbatInput');
+    if (ebatInput) {
+        ebatInput.addEventListener('input', function() {
+            const quickFilters = document.querySelector('.quick-filters');
+            if (this.value.trim()) {
+                // Ebat girildiğinde quick filter'ları vurgula
+                quickFilters.style.border = '2px solid #007bff';
+                quickFilters.style.padding = '7px';
+                quickFilters.style.borderRadius = '8px';
+                quickFilters.style.background = '#e7f3ff';
+            } else {
+                // Ebat silindiğinde normal hale getir
+                quickFilters.style.border = '';
+                quickFilters.style.padding = '5px 0';
+                quickFilters.style.background = '';
+            }
+        });
+        
+        // Sayfa yüklendiğinde ebat varsa vurgula
+        if (ebatInput.value.trim()) {
+            const quickFilters = document.querySelector('.quick-filters');
+            quickFilters.style.border = '2px solid #007bff';
+            quickFilters.style.padding = '7px';
+            quickFilters.style.borderRadius = '8px';
+            quickFilters.style.background = '#e7f3ff';
+        }
+    }
+    
+    // Temizle butonu - tüm filtreleri ve quick filter vurgusunu temizle
+    const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+    if (clearFiltersBtn) {
+        clearFiltersBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Tüm inputları temizle
+            document.getElementById('mobileIdInput').value = '';
+            document.getElementById('mobileMarkaInput').value = '';
+            document.getElementById('mobileEbatInput').value = '';
+            if (document.getElementById('mobileDepoInput')) {
+                document.getElementById('mobileDepoInput').value = '';
+            }
+            document.getElementById('mobileMevsimInput').value = '';
+            
+            // Quick filter vurgusunu kaldır
+            const quickFilters = document.querySelector('.quick-filters');
+            quickFilters.style.border = '';
+            quickFilters.style.padding = '5px 0';
+            quickFilters.style.background = '';
+            
+            // Ana sayfaya yönlendir
+            window.location.href = this.getAttribute('href');
+        });
+    }
+    
+    // Yeni kayıt formunda satış alanları kontrolü
+    const durumSelectNew = document.getElementById('durum');
+    const satisFiyatiFieldNew = document.getElementById('satis_fiyati_field_new');
+    const odemeSecenekleriFieldNew = document.getElementById('odeme_secenekleri_field_new');
+    const satisTarihiFieldNew = document.getElementById('satis_tarihi_field_new');
+    const satisFiyatiInputNew = document.getElementById('satis_fiyati_new');
+    const satisTarihiInputNew = document.getElementById('satis_tarihi_new');
+    
+    function toggleSatisFieldsNew() {
+        if (durumSelectNew && durumSelectNew.value === 'satildi') {
+            satisFiyatiFieldNew.style.display = 'block';
+            odemeSecenekleriFieldNew.style.display = 'block';
+            satisTarihiFieldNew.style.display = 'block';
+            
+            // Satış tarihi boşsa bugünün tarihini set et
+            if (!satisTarihiInputNew.value) {
+                const today = new Date().toISOString().split('T')[0];
+                satisTarihiInputNew.value = today;
+            }
+        } else {
+            satisFiyatiFieldNew.style.display = 'none';
+            odemeSecenekleriFieldNew.style.display = 'none';
+            satisTarihiFieldNew.style.display = 'none';
+            
+            // Depolandı durumunda satış bilgilerini temizle
+            satisFiyatiInputNew.value = '';
+            satisTarihiInputNew.value = '';
+        }
+    }
+    
+    if (durumSelectNew) {
+        // Sayfa yüklendiğinde kontrol et
+        toggleSatisFieldsNew();
+        
+        // Durum değiştiğinde kontrol et
+        durumSelectNew.addEventListener('change', toggleSatisFieldsNew);
+    }
+    
+    // Mobil kart animasyonları
+    const lastikCards = document.querySelectorAll('.lastik-card');
+    lastikCards.forEach(function(card, index) {
+        // Staggered animation
+        card.style.animationDelay = (index * 0.1) + 's';
+        card.classList.add('fade-in-up');
+    });
+    
+    // Form validation improvements
+    const forms = document.querySelectorAll('form');
+    forms.forEach(function(form) {
+        form.addEventListener('submit', function(e) {
+            const submitBtn = form.querySelector('button[type="submit"]');
+            
+            // Form validasyonu kontrol et
+            if (!form.checkValidity()) {
+                e.preventDefault();
+                e.stopPropagation();
+                form.classList.add('was-validated');
+                
+                // İlk hatalı alanı bul ve focus et
+                const firstInvalid = form.querySelector(':invalid');
+                if (firstInvalid) {
+                    firstInvalid.focus();
+                    firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+                return false;
+            }
+            
+            if (submitBtn && !submitBtn.classList.contains('processing')) {
+                submitBtn.classList.add('processing');
+                submitBtn.disabled = true;
+                const originalHTML = submitBtn.innerHTML;
+                submitBtn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Kaydediliyor...';
+                
+                // Re-enable after 5 seconds (fallback in case of error)
+                setTimeout(() => {
+                    submitBtn.disabled = false;
+                    submitBtn.classList.remove('processing');
+                    submitBtn.innerHTML = originalHTML;
+                }, 5000);
+            }
+        });
+    });
+    
+    // Swipe gestures for mobile cards
+    if ('ontouchstart' in window) {
+        let startX, startY, currentCard;
+        
+        lastikCards.forEach(function(card) {
+            card.addEventListener('touchstart', function(e) {
+                startX = e.touches[0].clientX;
+                startY = e.touches[0].clientY;
+                currentCard = this;
+            });
+            
+            card.addEventListener('touchmove', function(e) {
+                if (!startX || !startY) return;
+                
+                const currentX = e.touches[0].clientX;
+                const currentY = e.touches[0].clientY;
+                const diffX = startX - currentX;
+                const diffY = startY - currentY;
+                
+                // Horizontal swipe detection
+                if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
+                    e.preventDefault();
+                    
+                    if (diffX > 0) {
+                        // Swipe left - show actions
+                        this.style.transform = 'translateX(-20px)';
+                        this.style.backgroundColor = '#f8f9fa';
+                    } else {
+                        // Swipe right - hide actions
+                        this.style.transform = 'translateX(0)';
+                        this.style.backgroundColor = 'white';
+                    }
+                }
+            });
+            
+            card.addEventListener('touchend', function() {
+                startX = null;
+                startY = null;
+                
+                // Reset transform after a delay
+                setTimeout(() => {
+                    this.style.transform = 'translateX(0)';
+                    this.style.backgroundColor = 'white';
+                }, 2000);
+            });
+        });
+    }
+    
+    // Auto-focus on search inputs in compact filter
+    const markaInput = document.querySelector('.compact-mobile-filter input[name="marka"]');
+    
+    if (markaInput && window.innerWidth <= 768) {
+        // Sayfa yüklendiğinde focus ver
+        setTimeout(() => {
+            markaInput.focus();
+        }, 500);
+    }
+    
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        // Ctrl/Cmd + N for new record
+        if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+            e.preventDefault();
+            const newRecordBtn = document.querySelector('[data-bs-target="#yeniKayitModal"]');
+            if (newRecordBtn) {
+                newRecordBtn.click();
+            }
+        }
+        
+        // Escape to close modals
+        if (e.key === 'Escape') {
+            const openModals = document.querySelectorAll('.modal.show');
+            openModals.forEach(modal => {
+                const bsModal = bootstrap.Modal.getInstance(modal);
+                if (bsModal) bsModal.hide();
+            });
+        }
+    });
+});
+
+// WhatsApp mesaj gönderme fonksiyonu (mobil optimized)
+function whatsappGonder(telefon, musteriAdi, lastikBilgisi) {
+    // Telefon numarasını temizle ve formatla
+    let cleanTelefon = telefon.toString().replace(/\D/g, '');
+    
+    // Türkiye telefon numarası formatı kontrolü
+    if (cleanTelefon.startsWith('0')) {
+        cleanTelefon = '90' + cleanTelefon.substring(1);
+    } else if (!cleanTelefon.startsWith('90')) {
+        cleanTelefon = '90' + cleanTelefon;
+    }
+    
+    // Mesaj formatı
+    const mesaj = `*MesTakip - Çıkma Lastik*
+
+Sayın ${musteriAdi},
+
+Aracınızdan çıkan lastik bilgileri:
+*Lastik:* ${lastikBilgisi}
+
+Lastikleriniz güvenli bir şekilde depolanmıştır.
+
+İyi günler dileriz.`;
+    
+    console.log('WhatsApp mesajı gönderiliyor:', mesaj);
+    
+    // WhatsApp URL'si oluştur
+    const whatsappUrl = `https://wa.me/${cleanTelefon}?text=${encodeURIComponent(mesaj)}`;
+    
+    // Mobil cihazlarda aynı sekmede aç, desktop'ta yeni sekmede
+    if (window.innerWidth <= 768) {
+        window.location.href = whatsappUrl;
+    } else {
+        window.open(whatsappUrl, '_blank');
+    }
+}
+
+// Düzenle ve Sil butonları için event handler'lar
+document.addEventListener('DOMContentLoaded', function() {
+    // Düzenle butonları
+    document.querySelectorAll('[data-edit-url]').forEach(function(button) {
+        button.addEventListener('click', function() {
+            // Loading state
+            const originalHTML = this.innerHTML;
+            this.innerHTML = '<i class="bi bi-hourglass-split"></i>';
+            this.disabled = true;
+            
+            // Navigate
+            window.location.href = this.getAttribute('data-edit-url');
+        });
+    });
+    
+    // Sil butonları
+    document.querySelectorAll('[data-delete-url]').forEach(function(button) {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const message = this.getAttribute('data-confirm-message');
+            const deleteUrl = this.getAttribute('data-delete-url');
+            
+            // Mobil cihazlarda daha büyük confirm dialog
+            if (window.innerWidth <= 768) {
+                // Custom mobile-friendly confirm
+                const result = confirm(message + '\n\nBu işlem geri alınamaz!');
+                if (result) {
+                    // Loading state
+                    const originalHTML = this.innerHTML;
+                    this.innerHTML = '<i class="bi bi-hourglass-split"></i>';
+                    this.disabled = true;
+                    
+                    // POST request ile silme işlemi
+                    sendDeleteRequest(deleteUrl);
+                }
+            } else {
+                if (confirm(message)) {
+                    // POST request ile silme işlemi
+                    sendDeleteRequest(deleteUrl);
+                }
+            }
+        });
+    });
+    
+    // POST request gönderme fonksiyonu
+    function sendDeleteRequest(url) {
+        // Form oluştur ve gönder
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = url;
+        
+        // CSRF token ekle
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (csrfToken) {
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrfmiddlewaretoken';
+            csrfInput.value = csrfToken.value;
+            form.appendChild(csrfInput);
+        }
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+    
+    // Haptic feedback for mobile (if supported)
+    if ('vibrate' in navigator && window.innerWidth <= 768) {
+        document.querySelectorAll('.btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.vibrate(50); // Short vibration
+            });
+        });
+    }
+});
+
+// Add CSS animations
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .fade-in-up {
+        animation: fadeInUp 0.5s ease-out forwards;
+    }
+    
+    .touch-device .btn:hover {
+        transform: none !important;
+    }
+    
+    @media (max-width: 768px) {
+        .btn {
+            transition: all 0.2s ease;
+        }
+        
+        .btn:active {
+            transform: scale(0.95);
+        }
+        
+        .lastik-card {
+            transition: all 0.3s ease;
+        }
+        
+        .lastik-card:active {
+            transform: scale(0.98);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+    }
+`;
+document.head.appendChild(style);
+</script>
+{% endblock %}

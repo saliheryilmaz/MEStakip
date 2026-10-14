@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 from django.db import models
 from django.core.validators import MinValueValidator
 from django.utils import timezone
@@ -1160,3 +1161,998 @@ class LastikOteliHareket(models.Model):
 
     def __str__(self):
         return f"{self.get_hareket_tipi_display()} – {self.kayit} – {self.tarih:%d.%m.%Y}"
+=======
+from django.db import models
+from django.core.validators import MinValueValidator
+from django.utils import timezone
+from django.contrib.auth.models import User
+from decimal import Decimal
+import json
+
+class UserProfile(models.Model):
+    """Kullanıcı profil modeli - rol yönetimi için"""
+    
+    ROLE_CHOICES = [
+        ('admin', 'Admin'),
+        ('yonetici', 'Yönetici'),
+        ('misafir', 'Misafir'),
+    ]
+    
+    user = models.OneToOneField(User, on_delete=models.CASCADE, verbose_name="Kullanıcı")
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='yonetici', verbose_name="Rol")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Oluşturulma Tarihi")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Güncellenme Tarihi")
+    
+    class Meta:
+        verbose_name = "Kullanıcı Profili"
+        verbose_name_plural = "Kullanıcı Profilleri"
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.get_role_display()}"
+    
+    def is_admin(self):
+        """Admin rolü kontrolü"""
+        return self.role == 'admin'
+    
+    def is_yonetici(self):
+        """Yönetici rolü kontrolü"""
+        return self.role == 'yonetici'
+    
+    def is_misafir(self):
+        """Misafir rolü kontrolü"""
+        return self.role == 'misafir'
+
+class Siparis(models.Model):
+    """Sipariş modeli - Lastik, Akü, Jant siparişleri"""
+    
+    GRUP_CHOICES = [
+        ('ticari', 'Ticari'),
+        ('binek', 'Binek'),
+        ('aku', 'Akü'),
+        ('jant', 'Jant'),
+    ]
+    
+    MEVSIM_CHOICES = [
+        ('kis', 'Kış'),
+        ('yaz', 'Yaz'),
+        ('dort-mevsim', '4 Mevsim'),
+    ]
+    
+    DURUM_CHOICES = [
+        ('yolda', 'Yolda'),
+        ('takildi-ft-islendi-islem-devam', 'Takıldı / FT İşlendi / İşlem Devam...'),
+        ('islemde', 'Takıldı-Faturası gelmedi'),
+        ('teslim', 'Teslim Edildi'),
+        ('kontrol', 'Kontrol Edildi'),
+        ('iptal', 'İptal Edildi'),
+        ('yolda-fatura-islendi', 'Yolda/Fatura İşlendi'),
+        ('takilacak-faturasi-islendi', 'Takılacak/Faturası İşlendi'),
+        ('islemde-faturasi-islendi', 'İşlem devam.../Faturası İşlendi'),
+        
+        
+    ]
+    
+    ODEME_CHOICES = [
+        ('kredi-karti', 'Kredi Kartı'),
+        ('havale', 'Havale'),
+        ('cari', 'Cari'),
+    ]
+    
+    SMS_CHOICES = [
+        ('gonderilmedi', 'Gönderilmedi'),
+        ('gonderildi', 'Gönderildi'),
+    ]
+    
+    AMBAR_CHOICES = [
+        ('stok', 'Stok'),
+        ('satis', 'Satış'),
+    ]
+    
+    # Kullanıcı bilgisi - Her sipariş bir kullanıcıya ait
+    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Kullanıcı", related_name='siparisler', null=True, blank=True)
+    
+    # Temel Bilgiler
+    cari_firma = models.CharField(max_length=200, verbose_name="CARI (FIRMA)")
+    marka = models.CharField(max_length=100, verbose_name="MARKA")
+    urun = models.CharField(max_length=300, verbose_name="ÜRÜN (LASTIK MARKA MODEL)")
+    
+    # Kategori Bilgileri
+    grup = models.CharField(max_length=20, choices=GRUP_CHOICES, verbose_name="GRUP")
+    mevsim = models.CharField(max_length=20, choices=MEVSIM_CHOICES, verbose_name="MEVSİM", blank=True, null=True)
+    
+    # Miktar ve Fiyat
+    adet = models.PositiveIntegerField(
+        validators=[MinValueValidator(1)], 
+        verbose_name="ADET"
+    )
+    birim_fiyat = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        validators=[MinValueValidator(0)], 
+        verbose_name="BİRİM FİYAT"
+    )
+    toplam_fiyat = models.DecimalField(
+        max_digits=12, 
+        decimal_places=2, 
+        validators=[MinValueValidator(0)], 
+        verbose_name="TOPLAM FİYAT"
+    )
+    
+    # Durum Bilgileri
+    durum = models.CharField(max_length=30, choices=DURUM_CHOICES, default='yolda', verbose_name="DURUM")
+    ambar = models.CharField(max_length=20, choices=AMBAR_CHOICES, default='stok', verbose_name="AMBAR")
+    
+    # Ödeme ve İletişim
+    odeme = models.CharField(max_length=20, choices=ODEME_CHOICES, default='cari', verbose_name="ÖDEME")
+    sms_durum = models.CharField(max_length=20, choices=SMS_CHOICES, default='gonderilmedi', verbose_name="SMS")
+    
+    # Ek Bilgiler
+    aciklama = models.TextField(blank=True, null=True, verbose_name="AÇIKLAMA")
+    one_cikar = models.BooleanField(default=False, verbose_name="ÖNE ÇIKAR")
+    iptal_sebebi = models.TextField(blank=True, null=True, verbose_name="İPTAL SEBEBİ")
+    
+    # Müşteri Bilgileri
+    musteri_adi = models.CharField(max_length=200, blank=True, null=True, verbose_name="MÜŞTERİ ADI")
+    musteri_telefon = models.CharField(max_length=20, blank=True, null=True, verbose_name="MÜŞTERİ TELEFON")
+    musteri_odeme_tutari = models.CharField(max_length=100, blank=True, null=True, verbose_name="MÜŞTERİ ÖDEME TUTARI")
+    musteri_aciklama = models.TextField(blank=True, null=True, verbose_name="MÜŞTERİ AÇIKLAMA")
+    
+    # Zaman Damgaları
+    olusturma_tarihi = models.DateTimeField(auto_now_add=True, verbose_name="Oluşturma Tarihi")
+    guncelleme_tarihi = models.DateTimeField(auto_now=True, verbose_name="Güncelleme Tarihi")
+    
+    class Meta:
+        verbose_name = "Sipariş"
+        verbose_name_plural = "Siparişler"
+        ordering = ['-olusturma_tarihi']
+    
+    def __str__(self):
+        return f"{self.cari_firma} - {self.urun} ({self.adet} adet)"
+    
+    def save(self, *args, **kwargs):
+        # Toplam fiyatı otomatik hesapla
+        self.toplam_fiyat = self.adet * self.birim_fiyat
+        super().save(*args, **kwargs)
+    
+    def get_grup_display_color(self):
+        """Grup için renk döndür"""
+        colors = {
+            'ticari': 'warning',
+            'binek': 'success',
+            'aku': 'warning',
+            'jant': 'info',
+        }
+        return colors.get(self.grup, 'secondary')
+    
+    def get_durum_display_color(self):
+        """Durum için renk döndür"""
+        colors = {
+            'yolda': 'danger',
+            'islemde': 'primary',
+            'teslim': 'success',
+            'kontrol': 'warning',
+            'iptal': 'danger',
+            'yolda-fatura-islendi': 'danger',
+            'takilacak-faturasi-islendi': 'warning',
+            'islemde-faturasi-islendi': 'info',
+            'takildi-ft-islendi-islem-devam': 'success',
+        }
+        return colors.get(self.durum, 'secondary')
+    
+    def get_mevsim_display_color(self):
+        """Mevsim için renk döndür"""
+        colors = {
+            'kis': 'info',
+            'yaz': 'warning',
+            'dort-mevsim': 'primary',
+        }
+        return colors.get(self.mevsim, 'secondary')
+    
+    def get_sms_display_color(self):
+        """SMS durumu için renk döndür"""
+        colors = {
+            'gonderildi': 'success',
+            'gonderilmedi': 'danger',
+        }
+        return colors.get(self.sms_durum, 'secondary')
+    
+    def get_ambar_display_color(self):
+        """Ambar için renk döndür"""
+        colors = {
+            'stok': 'primary',
+            'satis': 'success',
+        }
+        return colors.get(self.ambar, 'secondary')
+    
+    def get_musteri_odeme_tutari_display(self):
+        """Müşteri ödeme tutarı için display değeri döndür"""
+        return self.musteri_odeme_tutari if self.musteri_odeme_tutari else None
+
+class Event(models.Model):
+    """Takvim etkinlikleri modeli"""
+    
+    TYPE_CHOICES = [
+        ('reminder', 'Hatırlatıcı'),
+    ]
+    
+    PRIORITY_CHOICES = [
+        ('low', 'Düşük'),
+        ('medium', 'Orta'),
+        ('high', 'Yüksek'),
+    ]
+    
+    RECURRENCE_CHOICES = [
+        ('none', 'Tekrarlanmaz'),
+        ('daily', 'Günlük'),
+        ('weekly', 'Haftalık'),
+        ('biweekly', '2 Haftada Bir'),
+        ('monthly', 'Aylık'),
+        ('yearly', 'Yıllık'),
+    ]
+    
+    # Temel Bilgiler
+    title = models.CharField(max_length=200, verbose_name="Başlık")
+    description = models.TextField(blank=True, null=True, verbose_name="Açıklama")
+    type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='reminder', verbose_name="Tür")
+    priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='medium', verbose_name="Öncelik")
+    
+    # Tarih ve Zaman
+    date = models.DateField(verbose_name="Tarih")
+    time = models.TimeField(verbose_name="Başlangıç Saati")
+    duration = models.PositiveIntegerField(default=60, verbose_name="Süre (dakika)")
+    
+    # Konum ve Katılımcılar
+    location = models.CharField(max_length=300, blank=True, null=True, verbose_name="Konum")
+    attendees = models.TextField(blank=True, null=True, verbose_name="Katılımcılar")
+    
+    # Tekrarlama
+    recurring = models.BooleanField(default=False, verbose_name="Tekrarlanan")
+    recurrence = models.CharField(max_length=20, choices=RECURRENCE_CHOICES, default='none', verbose_name="Tekrar Deseni")
+    
+    # Hatırlatıcılar (JSON formatında)
+    reminders = models.TextField(blank=True, null=True, verbose_name="Hatırlatıcılar")
+    
+    # Oluşturan kullanıcı
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Oluşturan")
+    
+    # Zaman Damgaları
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Oluşturulma Tarihi")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Güncellenme Tarihi")
+    
+    class Meta:
+        verbose_name = "Etkinlik"
+        verbose_name_plural = "Etkinlikler"
+        ordering = ['date', 'time']
+    
+    def __str__(self):
+        return f"{self.title} - {self.date} {self.time}"
+    
+    def get_type_color(self):
+        """Etkinlik türü için renk döndür"""
+        colors = {
+            'reminder': '#8b5cf6'
+        }
+        return colors.get(self.type, '#8b5cf6')
+    
+    def get_priority_color(self):
+        """Öncelik için renk döndür"""
+        colors = {
+            'low': '#10b981',
+            'medium': '#f59e0b',
+            'high': '#ef4444'
+        }
+        return colors.get(self.priority, '#6b7280')
+    
+    def get_duration_display(self):
+        """Süreyi okunabilir formatta döndür"""
+        if self.duration == 480:
+            return 'Tüm gün'
+        hours = self.duration // 60
+        minutes = self.duration % 60
+        
+        if hours == 0:
+            return f'{minutes} dakika'
+        elif minutes == 0:
+            return f'{hours} saat'
+        else:
+            return f'{hours}s {minutes}d'
+
+class Notification(models.Model):
+    """Bildirim modeli - Etkinlik hatırlatıcıları ve sistem bildirimleri"""
+    
+    TYPE_CHOICES = [
+        ('event_reminder', 'Etkinlik Hatırlatıcısı'),
+        ('event_start', 'Etkinlik Başlangıcı'),
+        ('event_created', 'Etkinlik Oluşturuldu'),
+        ('system', 'Sistem Bildirimi'),
+        ('info', 'Bilgi'),
+        ('warning', 'Uyarı'),
+        ('error', 'Hata'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('pending', 'Bekliyor'),
+        ('sent', 'Gönderildi'),
+        ('read', 'Okundu'),
+        ('dismissed', 'Kapatıldı'),
+        ('snoozed', 'Ertelendi'),
+    ]
+    
+    # Temel Bilgiler
+    title = models.CharField(max_length=200, verbose_name="Başlık")
+    message = models.TextField(verbose_name="Mesaj")
+    type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='info', verbose_name="Tür")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name="Durum")
+    
+    # İlişkili Etkinlik (opsiyonel) - Geçici olarak devre dışı
+    # event = models.ForeignKey(Event, on_delete=models.CASCADE, blank=True, null=True, verbose_name="İlişkili Etkinlik")
+    
+    # Hedef Kullanıcı
+    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Kullanıcı")
+    
+    # Zamanlar
+    scheduled_time = models.DateTimeField(verbose_name="Planlanmış Zaman")
+    sent_time = models.DateTimeField(blank=True, null=True, verbose_name="Gönderilme Zamanı")
+    read_time = models.DateTimeField(blank=True, null=True, verbose_name="Okunma Zamanı")
+    
+    # Erteleme (Snooze)
+    snoozed_until = models.DateTimeField(blank=True, null=True, verbose_name="Ertelenme Zamanı")
+    snooze_count = models.IntegerField(default=0, verbose_name="Erteleme Sayısı")
+    
+    # Ek Veriler (JSON formatında)
+    extra_data = models.TextField(blank=True, null=True, verbose_name="Ek Veriler")
+    
+    # Zaman Damgaları
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Oluşturulma Tarihi")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Güncellenme Tarihi")
+    
+    class Meta:
+        verbose_name = "Bildirim"
+        verbose_name_plural = "Bildirimler"
+        ordering = ['-scheduled_time']
+    
+    def __str__(self):
+        return f"{self.title} - {self.user.username}"
+    
+    def get_type_icon(self):
+        """Bildirim türü için ikon döndür"""
+        icons = {
+            'event_reminder': 'bi-bell',
+            'event_start': 'bi-calendar-event',
+            'event_created': 'bi-calendar-check',
+            'system': 'bi-gear',
+            'info': 'bi-info-circle',
+            'warning': 'bi-exclamation-triangle',
+            'error': 'bi-x-circle',
+        }
+        return icons.get(self.type, 'bi-bell')
+    
+    def get_type_color(self):
+        """Bildirim türü için renk döndür"""
+        colors = {
+            'event_reminder': '#3b82f6',
+            'event_start': '#10b981',
+            'event_created': '#8b5cf6',
+            'system': '#6b7280',
+            'info': '#06b6d4',
+            'warning': '#f59e0b',
+            'error': '#ef4444',
+        }
+        return colors.get(self.type, '#6b7280')
+    
+    def mark_as_read(self):
+        """Bildirimi okundu olarak işaretle"""
+        if self.status != 'read':
+            self.status = 'read'
+            self.read_time = timezone.now()
+            self.save()
+    
+    def mark_as_sent(self):
+        """Bildirimi gönderildi olarak işaretle"""
+        if self.status == 'pending':
+            self.status = 'sent'
+            self.sent_time = timezone.now()
+            self.save()
+    
+    def is_overdue(self):
+        """Bildirimin zamanı geçmiş mi kontrol et"""
+        return timezone.now() > self.scheduled_time and self.status == 'pending'
+    
+    def snooze(self, minutes):
+        """Bildirimi belirtilen dakika kadar ertele"""
+        from datetime import timedelta
+        self.status = 'snoozed'
+        self.snoozed_until = timezone.now() + timedelta(minutes=minutes)
+        self.snooze_count += 1
+        self.save()
+    
+    def is_snoozed(self):
+        """Bildirim ertelenmiş mi kontrol et"""
+        if self.status == 'snoozed' and self.snoozed_until:
+            if timezone.now() >= self.snoozed_until:
+                # Erteleme süresi doldu, tekrar pending yap
+                self.status = 'pending'
+                self.snoozed_until = None
+                self.save()
+                return False
+            return True
+        return False
+    
+    def get_extra_data_dict(self):
+        """Ek verileri dict olarak döndür"""
+        if self.extra_data:
+            try:
+                return json.loads(self.extra_data)
+            except json.JSONDecodeError:
+                return {}
+        return {}
+    
+    def set_extra_data(self, data_dict):
+        """Ek verileri dict'ten JSON'a çevir"""
+        self.extra_data = json.dumps(data_dict) if data_dict else None
+
+
+class TransactionCategory(models.Model):
+    """Gelir/Gider kategori modeli (çok seviyeli hiyerarşi destekler)"""
+    name = models.CharField(max_length=100, verbose_name="Kategori Adı")
+    parent = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE, related_name='children', verbose_name="Üst Kategori")
+    order = models.PositiveIntegerField(default=0, verbose_name="Sıra")
+    
+    # Kullanıcı ve zaman bilgileri
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Oluşturan")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Oluşturulma Tarihi")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Güncellenme Tarihi")
+
+    class Meta:
+        verbose_name = "Kategori"
+        verbose_name_plural = "Kategoriler"
+        ordering = ['parent__id', 'order', 'name']
+
+    def __str__(self):
+        if self.parent:
+            return f"{self.parent} / {self.name}"
+        return self.name
+    
+    def get_created_by_display(self):
+        """Oluşturan kullanıcının adını döndür"""
+        if self.created_by:
+            return self.created_by.get_full_name() or self.created_by.username
+        return "Sistem"
+
+
+class Transaction(models.Model):
+    """Gelir/Gider işlemleri"""
+    TYPE_CHOICES = [
+        ('gelir', 'Gelir'),
+        ('gider', 'Gider'),
+    ]
+    KASA_CHOICES = [
+        ('servis', 'Servis'),
+        ('merkez-satis', 'Merkez Satış'),
+        ('virman', 'Virman'),
+        ('joker-satis', 'Joker Satış'),
+    ]
+
+    hareket_tipi = models.CharField(max_length=10, choices=TYPE_CHOICES, default='gelir', verbose_name="Hareket Tipi")
+    tarih = models.DateField(default=timezone.now, verbose_name="Tarih")
+
+    kasa_adi = models.CharField(max_length=20, choices=KASA_CHOICES, default='servis', verbose_name="Kasa Adı")
+    nakit = models.DecimalField(max_digits=12, decimal_places=2, default=0, validators=[MinValueValidator(0)], verbose_name="Nakit")
+    kredi_karti = models.DecimalField(max_digits=12, decimal_places=2, default=0, validators=[MinValueValidator(0)], verbose_name="Kredi Kartı")
+    cari = models.DecimalField(max_digits=12, decimal_places=2, default=0, validators=[MinValueValidator(0)], verbose_name="Cari")
+    sanal_pos = models.DecimalField(max_digits=12, decimal_places=2, default=0, validators=[MinValueValidator(0)], verbose_name="Sanal Pos")
+    mehmet_havale = models.DecimalField(max_digits=12, decimal_places=2, default=0, validators=[MinValueValidator(0)], verbose_name="Mehmet Havale")
+    banka_havale = models.DecimalField(max_digits=12, decimal_places=2, default=0, validators=[MinValueValidator(0)], verbose_name="Banka Havale")
+    pafgo = models.DecimalField(max_digits=12, decimal_places=2, default=0, validators=[MinValueValidator(0)], verbose_name="Pafgo")
+    canta_cikis = models.DecimalField(max_digits=12, decimal_places=2, default=0, validators=[MinValueValidator(0)], verbose_name="Çanta Çıkış")
+    aciklama = models.CharField(max_length=255, blank=True, null=True, verbose_name="Açıklama")
+
+    kategori1 = models.ForeignKey(TransactionCategory, on_delete=models.SET_NULL, null=True, blank=True, related_name='level1_transactions', verbose_name="1. Kategori")
+    kategori2 = models.ForeignKey(TransactionCategory, on_delete=models.SET_NULL, null=True, blank=True, related_name='level2_transactions', verbose_name="2. Kategori")
+    kategori3 = models.ForeignKey(TransactionCategory, on_delete=models.SET_NULL, null=True, blank=True, related_name='level3_transactions', verbose_name="3. Kategori")
+
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Oluşturan")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Oluşturulma Tarihi")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Güncellenme Tarihi")
+
+    class Meta:
+        verbose_name = "İşlem"
+        verbose_name_plural = "İşlemler"
+        ordering = ['-tarih', '-id']
+
+    def __str__(self):
+        return f"{self.get_hareket_tipi_display()} - {self.tarih}"
+
+    @property
+    def toplam(self):
+        return (
+            (self.nakit or 0)
+            + (self.kredi_karti or 0)
+            + (self.sanal_pos or 0)
+            + (self.cari or 0)
+            + (self.mehmet_havale or 0)
+            + (self.banka_havale or 0)
+            + (self.pafgo or 0)
+            + (self.canta_cikis or 0)
+        )
+
+class CikmaLastik(models.Model):
+    """Müşterilerden çıkan lastiklerin kaydı"""
+    
+    DURUM_CHOICES = [
+        ('cikti', 'Çıktı'),
+        ('depolandi', 'Depolandı'),
+        ('satildi', 'Satıldı'),
+        ('imha', 'İmha Edildi'),
+    ]
+    
+    MEVSIM_CHOICES = [
+        ('kis', 'Kış'),
+        ('yaz', 'Yaz'),
+        ('dort-mevsim', '4 Mevsim'),
+    ]
+    
+    ARAC_TIPI_CHOICES = [
+        ('binek', 'Binek'),
+        ('ticari', 'Ticari'),
+        ('motosiklet', 'Motosiklet'),
+    ]
+    
+    KALITE_CHOICES = [
+        ('100', '%100'),
+        ('95', '%95'),
+        ('90', '%90'),
+        ('85', '%85'),
+        ('80', '%80'),
+        ('75', '%75'),
+        ('70', '%70'),
+        ('65', '%65'),
+        ('60', '%60'),
+        ('55', '%55'),
+        ('50', '%50'),
+    ]
+    
+    # Kullanıcı bilgisi
+    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Kullanıcı", related_name='cikma_lastikler')
+    
+    # Müşteri Bilgileri
+    musteri_adi = models.CharField(max_length=200, verbose_name="Müşteri Adı")
+    musteri_telefon = models.CharField(max_length=20, blank=True, null=True, verbose_name="Telefon")
+    musteri_plaka = models.CharField(max_length=20, blank=True, null=True, verbose_name="Araç Plakası")
+    
+    # Lastik Bilgileri
+    marka = models.CharField(max_length=100, verbose_name="Marka")
+    model = models.CharField(max_length=100, blank=True, null=True, verbose_name="Model")
+    ebat = models.CharField(max_length=50, verbose_name="Ebat (örn: 205/55R16)")
+    mevsim = models.CharField(max_length=20, choices=MEVSIM_CHOICES, verbose_name="Mevsim")
+    arac_tipi = models.CharField(max_length=20, choices=ARAC_TIPI_CHOICES, default='binek', verbose_name="Araç Tipi")
+    
+    # Miktar ve Durum
+    adet = models.PositiveIntegerField(validators=[MinValueValidator(1)], verbose_name="Adet")
+    durum = models.CharField(max_length=20, choices=DURUM_CHOICES, default='cikti', verbose_name="Durum")
+    
+    # Kalite ve Değerlendirme
+    diş_derinligi = models.CharField(max_length=50, blank=True, null=True, verbose_name="Diş Derinliği (mm)")
+    kalite_notu = models.CharField(max_length=20, choices=KALITE_CHOICES, blank=True, null=True, verbose_name="Kalite")
+    hasar_durumu = models.TextField(blank=True, null=True, verbose_name="Hasar Durumu")
+    
+    # Fiyat Bilgileri
+    tahmini_deger = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, verbose_name="Tahmini Değer")
+    satis_fiyati = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, verbose_name="Satış Fiyatı")
+    
+    # Ödeme Seçenekleri
+    mehmet_havale = models.BooleanField(default=False, verbose_name="Mehmet Havale")
+    canta = models.BooleanField(default=False, verbose_name="Çanta")
+    cari = models.BooleanField(default=False, verbose_name="Cari")
+    
+    # Ek Bilgiler
+    aciklama = models.TextField(blank=True, null=True, verbose_name="Açıklama")
+    admin_aciklama = models.TextField(blank=True, default='', verbose_name="Admin Açıklaması")
+    depo_konumu = models.CharField(max_length=100, blank=True, null=True, verbose_name="Depo Konumu")
+    
+    # Zaman Damgaları
+    cikis_tarihi = models.DateField(default=timezone.now, verbose_name="Çıkış Tarihi")
+    satis_tarihi = models.DateField(blank=True, null=True, verbose_name="Satış Tarihi")
+    olusturma_tarihi = models.DateTimeField(auto_now_add=True, verbose_name="Kayıt Tarihi")
+    guncelleme_tarihi = models.DateTimeField(auto_now=True, verbose_name="Güncelleme Tarihi")
+    
+    class Meta:
+        verbose_name = "Çıkma Lastik"
+        verbose_name_plural = "Çıkma Lastikler"
+        ordering = ['-cikis_tarihi', '-olusturma_tarihi']
+    
+    def __str__(self):
+        return f"{self.musteri_adi} - {self.marka} {self.ebat} ({self.adet} adet)"
+    
+    def get_durum_display_color(self):
+        """Durum için renk döndür"""
+        colors = {
+            'cikti': 'warning',
+            'depolandi': 'info',
+            'satildi': 'success',
+            'imha': 'danger',
+        }
+        return colors.get(self.durum, 'secondary')
+    
+    def get_mevsim_display_color(self):
+        """Mevsim için renk döndür"""
+        colors = {
+            'kis': 'info',
+            'yaz': 'warning',
+            'dort-mevsim': 'primary',
+        }
+        return colors.get(self.mevsim, 'secondary')
+    
+    def get_arac_tipi_display_color(self):
+        """Araç tipi için renk döndür"""
+        colors = {
+            'binek': 'success',
+            'ticari': 'warning',
+            'motosiklet': 'info',
+        }
+        return colors.get(self.arac_tipi, 'secondary')
+    
+    def get_kalite_display(self):
+        """Kalite notunu görsel olarak döndür"""
+        if self.kalite_notu:
+            return self.get_kalite_notu_display()
+        return "-"
+    
+    def get_kalite_display_color(self):
+        """Kalite için renk döndür"""
+        if not self.kalite_notu:
+            return 'secondary'
+        
+        try:
+            kalite_deger = int(self.kalite_notu)
+            if kalite_deger >= 85:
+                return 'success'  # Yeşil - %85 ve üzeri
+            elif kalite_deger >= 70:
+                return 'warning'  # Sarı - %70-84 arası
+            else:
+                return 'danger'   # Kırmızı - %50-69 arası
+        except (ValueError, TypeError):
+            return 'secondary'
+
+
+class FiloArac(models.Model):
+    """Filo Yönetimi — araç lastik takip modeli"""
+
+    DURUM_CHOICES = [
+        ('saklamada', 'Saklamada'),
+        ('degisim_yapildi', 'Değişim Yapıldı'),
+        ('kullanicida', 'Kullanıcıya Teslim Edildi'),
+        ('otl', 'ÖTL'),
+    ]
+
+    MEVSIM_CHOICES = [
+        ('kis', 'Kış'),
+        ('yaz', 'Yaz'),
+        ('dort-mevsim', '4 Mevsim'),
+    ]
+
+    AMBAR_CHOICES = [
+        ('stok', 'Stok'),
+        ('satis', 'Satış'),
+    ]
+
+    RAF_CHOICES = [
+        ('', 'Seçiniz'),
+        ('RAF 1', 'RAF 1'),
+        ('RAF 2', 'RAF 2'),
+        ('RAF 3', 'RAF 3'),
+    ]
+
+    user             = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Kullanıcı", related_name='filo_araclar')
+    plaka            = models.CharField(max_length=20, verbose_name="Plaka")
+    ambar            = models.CharField(max_length=20, choices=AMBAR_CHOICES, default='stok', verbose_name="Ambar")
+    adet             = models.PositiveIntegerField(validators=[MinValueValidator(1)], verbose_name="Adet")
+    durum            = models.CharField(max_length=20, choices=DURUM_CHOICES, default='saklamada', verbose_name="Durum")
+    ebat             = models.CharField(max_length=50, blank=True, null=True, verbose_name="Ebat")
+    mevsim           = models.CharField(max_length=20, choices=MEVSIM_CHOICES, blank=True, null=True, verbose_name="Mevsim")
+    aciklama         = models.TextField(blank=True, null=True, verbose_name="Açıklama")
+    raf              = models.CharField(max_length=50, blank=True, null=True, verbose_name="Raf")
+    olusturma_tarihi = models.DateTimeField(auto_now_add=True, verbose_name="Oluşturma Tarihi")
+    guncelleme_tarihi = models.DateTimeField(auto_now=True, verbose_name="Güncelleme Tarihi")
+
+    class Meta:
+        verbose_name = "Filo Aracı"
+        verbose_name_plural = "Filo Araçları"
+        ordering = ['-olusturma_tarihi']
+
+    def __str__(self):
+        return f"{self.plaka} - {self.ebat or '-'} ({self.get_durum_display()})"
+
+    def get_durum_display_color(self):
+        colors = {
+            'saklamada':       'secondary',
+            'degisim_yapildi': 'primary',
+            'kullanicida':     'success',
+            'otl':             'warning',
+        }
+        return colors.get(self.durum, 'secondary')
+
+    def get_ambar_display_color(self):
+        return 'primary' if self.ambar == 'stok' else 'success'
+
+    def get_mevsim_display_color(self):
+        colors = {
+            'kis':         'info',
+            'yaz':         'warning',
+            'dort-mevsim': 'primary',
+        }
+        return colors.get(self.mevsim, 'secondary')
+
+
+class MalzemeDosya(models.Model):
+    dosya_adi = models.CharField(max_length=200)
+    yukleme_tarihi = models.DateTimeField(auto_now_add=True)
+    kullanici = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    def __str__(self):
+        return f"{self.dosya_adi} - {self.yukleme_tarihi}" 
+
+class MalzemeHareketi(models.Model):
+    dosya = models.ForeignKey('MalzemeDosya', on_delete=models.CASCADE, related_name='satirlar', null=True, blank=True)
+    tarih = models.DateField()
+    faturano = models.CharField(max_length=100)
+    musteri = models.CharField(max_length=255)
+    kategori = models.CharField(max_length=255, blank=True, null=True)
+    marka = models.CharField(max_length=255, blank=True, null=True)
+    urun = models.CharField(max_length=255)
+    tutar = models.DecimalField(max_digits=14, decimal_places=2)
+    odeme_sekli = models.CharField(max_length=100)
+    ref = models.CharField(max_length=100, blank=True, null=True, verbose_name="REF")
+    kullanici = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    eklenme_zamani = models.DateTimeField(auto_now_add=True)
+    def __str__(self):
+        return f'{self.tarih} - {self.urun} - {self.tutar}'
+
+
+class JokerSatisDosya(models.Model):
+    """Joker Satış Excel dosyaları"""
+    dosya_adi = models.CharField(max_length=200, verbose_name="Dosya Adı")
+    yukleme_tarihi = models.DateTimeField(auto_now_add=True, verbose_name="Yükleme Tarihi")
+    kullanici = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, verbose_name="Yükleyen Kullanıcı")
+    
+    class Meta:
+        verbose_name = "Joker Satış Dosyası"
+        verbose_name_plural = "Joker Satış Dosyaları"
+        ordering = ['-yukleme_tarihi']
+    
+    def __str__(self):
+        return f"{self.dosya_adi} - {self.yukleme_tarihi.strftime('%d.%m.%Y %H:%M')}"
+
+
+class JokerSatisHareketi(models.Model):
+    """Joker Satış Excel satırları"""
+    dosya = models.ForeignKey('JokerSatisDosya', on_delete=models.CASCADE, related_name='satirlar', verbose_name="Dosya")
+    tarih = models.DateField(verbose_name="Tarih")
+    cari = models.CharField(max_length=255, blank=True, null=True, verbose_name="Cari")
+    kategori = models.CharField(max_length=255, blank=True, null=True, verbose_name="Kategori")
+    marka = models.CharField(max_length=255, blank=True, null=True, verbose_name="Marka")
+    urun_kodu = models.CharField(max_length=255, blank=True, null=True, verbose_name="Ürün Kodu")
+    urun = models.CharField(max_length=255, blank=True, null=True, verbose_name="Ürün")
+    miktar = models.DecimalField(max_digits=10, decimal_places=2, default=1, verbose_name="Miktar")
+    alis_fiyati = models.DecimalField(max_digits=14, decimal_places=2, default=0, verbose_name="Alış Fiyatı")
+    satis_fiyati = models.DecimalField(max_digits=14, decimal_places=2, default=0, verbose_name="Satış Fiyatı")
+    kar_tutari = models.DecimalField(max_digits=14, decimal_places=2, default=0, verbose_name="Kar Tutarı")
+    kullanici = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Ekleyen Kullanıcı")
+    eklenme_zamani = models.DateTimeField(auto_now_add=True, verbose_name="Eklenme Zamanı")
+    
+    class Meta:
+        verbose_name = "Joker Satış Hareketi"
+        verbose_name_plural = "Joker Satış Hareketleri"
+        ordering = ['-tarih', '-eklenme_zamani']
+    
+    def save(self, *args, **kwargs):
+        # Yeni kar hesaplama: (Satış × 1.20 - Alış) × Miktar
+        if self.satis_fiyati and self.alis_fiyati and self.miktar:
+            kar_per_unit = (self.satis_fiyati * Decimal('1.20')) - self.alis_fiyati
+            self.kar_tutari = kar_per_unit * self.miktar
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f'{self.tarih.strftime("%d.%m.%Y")} - {self.cari} - {self.urun} - Kar: {self.kar_tutari} TL'
+    
+    def __str__(self):
+        return f'{self.tarih.strftime("%d.%m.%Y")} - {self.cari} - {self.urun} - Kar: {self.kar_tutari} TL'
+
+
+class Quotation(models.Model):
+    """Teklif modeli"""
+    
+    STATUS_CHOICES = [
+        ('acik', 'Açık Teklif'),
+        ('onaylandi', 'Onaylı'),
+        ('reddedildi', 'Reddedildi'),
+    ]
+    
+    # Teklif Bilgileri
+    teklif_no = models.CharField(max_length=50, unique=True, verbose_name="Teklif No")
+    durum = models.CharField(max_length=20, choices=STATUS_CHOICES, default='acik', verbose_name="Durum")
+    
+    # Cari Bilgileri
+    cari = models.CharField(max_length=200, verbose_name="Cari")
+    ilgili_kisi = models.CharField(max_length=200, blank=True, null=True, verbose_name="İlgili Kişi")
+    email = models.EmailField(blank=True, null=True, verbose_name="Email")
+    odeme_sekli = models.CharField(max_length=100, blank=True, null=True, verbose_name="Ödeme Şekli")
+    
+    # Teklif Detayları
+    aciklama = models.TextField(blank=True, null=True, verbose_name="Açıklama")
+    teklif_tarihi = models.DateField(verbose_name="Teklif Tarihi")
+    gecerlilik_tarihi = models.DateField(blank=True, null=True, verbose_name="Son Geçerlilik Tarihi")
+    
+    # Finansal Bilgiler
+    ara_toplam = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="Ara Toplam (KDV Hariç)")
+    kdv_tutari = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="KDV Tutarı")
+    genel_toplam = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="Genel Toplam")
+    
+    # Ek Bilgiler
+    rezerve = models.BooleanField(default=False, verbose_name="Rezerve")
+    proforma = models.BooleanField(default=False, verbose_name="Proforma")
+    ic_not = models.TextField(blank=True, null=True, verbose_name="İç Not")
+    
+    # Sistem Bilgileri
+    olusturan = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='olusturulan_teklifler', verbose_name="Oluşturan")
+    olusturma_tarihi = models.DateTimeField(auto_now_add=True, verbose_name="Oluşturma Tarihi")
+    guncelleme_tarihi = models.DateTimeField(auto_now=True, verbose_name="Güncellenme Tarihi")
+    
+    class Meta:
+        verbose_name = "Teklif"
+        verbose_name_plural = "Teklifler"
+        ordering = ['-olusturma_tarihi']
+    
+    def __str__(self):
+        return f"{self.teklif_no} - {self.cari}"
+    
+    def kalan_gun(self):
+        """Geçerlilik tarihine kalan gün sayısı"""
+        if self.gecerlilik_tarihi:
+            from datetime import date
+            delta = self.gecerlilik_tarihi - date.today()
+            return delta.days
+        return None
+    
+    def toplam_adet(self):
+        """Toplam ürün adedi"""
+        return sum(item.miktar for item in self.urunler.all())
+
+
+class QuotationItem(models.Model):
+    """Teklif ürün/hizmet kalemleri"""
+    
+    MEVSIM_CHOICES = [
+        ('kis', 'Kış'),
+        ('yaz', 'Yaz'),
+        ('dort-mevsim', '4 Mevsim'),
+    ]
+    
+    teklif = models.ForeignKey(Quotation, on_delete=models.CASCADE, related_name='urunler', verbose_name="Teklif")
+    marka = models.CharField(max_length=100, blank=True, null=True, verbose_name="Marka")
+    urun_adi = models.CharField(max_length=300, verbose_name="Ürün/Hizmet Adı")
+    mevsim = models.CharField(max_length=20, choices=MEVSIM_CHOICES, blank=True, null=True, verbose_name="Mevsim")
+    miktar = models.DecimalField(max_digits=10, decimal_places=2, default=1, verbose_name="Miktar")
+    birim_fiyat = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Birim Fiyat (KDV Dahil)")
+    toplam = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Toplam")
+    sira = models.PositiveIntegerField(default=0, verbose_name="Sıra")
+    
+    class Meta:
+        verbose_name = "Teklif Kalemi"
+        verbose_name_plural = "Teklif Kalemleri"
+        ordering = ['sira']
+    
+    def __str__(self):
+        return f"{self.urun_adi} - {self.miktar} adet"
+    
+    def save(self, *args, **kwargs):
+        # Toplam hesaplama
+        self.toplam = self.miktar * self.birim_fiyat
+        super().save(*args, **kwargs)
+
+
+class GarantiBelgesi(models.Model):
+    """Lastik Satış Garanti Belgesi modeli"""
+    
+    # Belge Bilgileri
+    belge_no = models.CharField(max_length=50, unique=True, verbose_name="Belge No")
+    
+    # Müşteri Bilgileri
+    musteri_adi = models.CharField(max_length=200, verbose_name="Müşteri Adı/Ünvan")
+    musteri_telefon = models.CharField(max_length=20, verbose_name="Müşteri Telefon")
+    
+    # Araç Bilgileri
+    arac_plaka = models.CharField(max_length=20, verbose_name="Araç Plaka")
+    arac_marka_model = models.CharField(max_length=200, verbose_name="Araç Marka/Model")
+    arac_yil = models.CharField(max_length=10, blank=True, null=True, verbose_name="Araç Yıl")
+    arac_km = models.CharField(max_length=20, blank=True, null=True, verbose_name="Araç Km")
+    
+    # Montaj Bilgileri
+    montaj_tarihi = models.DateField(verbose_name="Montaj Tarihi")
+    
+    # Notlar
+    notlar = models.TextField(blank=True, null=True, verbose_name="Notlar")
+    
+    # Sistem Bilgileri
+    olusturan = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='olusturulan_garanti_belgeleri', verbose_name="Oluşturan")
+    olusturma_tarihi = models.DateTimeField(auto_now_add=True, verbose_name="Oluşturma Tarihi")
+    guncelleme_tarihi = models.DateTimeField(auto_now=True, verbose_name="Güncellenme Tarihi")
+    
+    class Meta:
+        verbose_name = "Garanti Belgesi"
+        verbose_name_plural = "Garanti Belgeleri"
+        ordering = ['-olusturma_tarihi']
+    
+    def __str__(self):
+        return f"{self.belge_no} - {self.musteri_adi}"
+    
+    def toplam_adet(self):
+        """Toplam lastik adedi"""
+        return sum(item.adet for item in self.lastikler.all())
+    
+    def toplam_tutar(self):
+        """Toplam tutar"""
+        return sum(item.toplam_fiyat() for item in self.lastikler.all())
+    
+    def garanti_bitis_tarihi(self):
+        """Garanti bitiş tarihi (2 yıl)"""
+        from datetime import timedelta
+        return self.montaj_tarihi + timedelta(days=730)  # 2 yıl = 730 gün
+
+
+class GarantiBelgesiLastik(models.Model):
+    """Garanti Belgesi Lastik Kalemleri"""
+    
+    belge = models.ForeignKey(GarantiBelgesi, on_delete=models.CASCADE, related_name='lastikler', verbose_name="Garanti Belgesi")
+    marka = models.CharField(max_length=100, verbose_name="Marka")
+    ebat = models.CharField(max_length=100, verbose_name="Ebat")
+    adet = models.PositiveIntegerField(default=1, verbose_name="Adet")
+    fiyat = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Fiyat")
+    sira = models.PositiveIntegerField(default=0, verbose_name="Sıra")
+    
+    class Meta:
+        verbose_name = "Garanti Belgesi Lastik"
+        verbose_name_plural = "Garanti Belgesi Lastikler"
+        ordering = ['sira']
+    
+    def __str__(self):
+        return f"{self.marka} {self.ebat} - {self.adet} adet"
+    
+    def toplam_fiyat(self):
+        """Toplam fiyat hesaplama"""
+        return self.adet * self.fiyat
+
+
+class LastikModelBilgisi(models.Model):
+    """
+    Lastik model adı → mevsim eşleştirmesi.
+    AI yanlış tahmin ettiğinde kullanıcı düzeltirse buraya kaydedilir.
+    Bir sonraki girişte veritabanından doğrudan gelir.
+    """
+    MEVSIM_CHOICES = [
+        ('kis', 'Kış'),
+        ('yaz', 'Yaz'),
+        ('dort-mevsim', '4 Mevsim'),
+    ]
+
+    # Model adı (örn: "TS870", "Turanza T005", "Alpin 5")
+    model_adi = models.CharField(max_length=200, unique=True, verbose_name="Model Adı")
+    mevsim = models.CharField(max_length=20, choices=MEVSIM_CHOICES, verbose_name="Mevsim")
+
+    # Kim ekledi / güncelledi
+    guncelleme_sayisi = models.PositiveIntegerField(default=1, verbose_name="Güncelleme Sayısı")
+    son_guncelleyen = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        verbose_name="Son Güncelleyen"
+    )
+    olusturma_tarihi = models.DateTimeField(auto_now_add=True, verbose_name="Oluşturma Tarihi")
+    guncelleme_tarihi = models.DateTimeField(auto_now=True, verbose_name="Güncelleme Tarihi")
+
+    class Meta:
+        verbose_name = "Lastik Model Bilgisi"
+        verbose_name_plural = "Lastik Model Bilgileri"
+        ordering = ['model_adi']
+
+    def __str__(self):
+        return f"{self.model_adi} → {self.get_mevsim_display()}"
+
+>>>>>>> a1c5e77f71df14e5bfa36b6fc1593c31ab3147a5

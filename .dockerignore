@@ -1,0 +1,16 @@
+.git
+.github
+.venv
+venv
+__pycache__
+*.pyc
+db.sqlite3
+celery_broker.sqlite3
+.env
+.env.*
+node_modules
+dist
+staticfiles
+media
+npm-debug.log
+docker-compose*.yml

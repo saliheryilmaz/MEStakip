@@ -495,6 +495,7 @@ class GarantiBelgesiAdmin(admin.ModelAdmin):
         if not change:  # Yeni kayıt
             obj.olusturan = request.user
         super().save_model(request, obj, form, change)
+<<<<<<< HEAD
 
 
 # ─────────────────────────────────────────────────────────────
@@ -528,3 +529,5 @@ class LastikOteliAdmin(admin.ModelAdmin):
         if not change:
             obj.olusturan = request.user
         super().save_model(request, obj, form, change)
+=======
+>>>>>>> a1c5e77f71df14e5bfa36b6fc1593c31ab3147a5

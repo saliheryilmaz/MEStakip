@@ -101,6 +101,7 @@ urlpatterns = [
     path('health/', views.health_check, name='health_check'),
     path('api/lastik-mevsim-ai/', views.lastik_mevsim_ai, name='lastik_mevsim_ai'),
 
+<<<<<<< HEAD
     # Lastik Saklama (Lastik Oteli)
     path('lastik-saklama/', views.lastik_saklama, name='lastik_saklama'),
     path('lastik-saklama/giris/', views.lastik_saklama_giris, name='lastik_saklama_giris'),
@@ -114,4 +115,6 @@ urlpatterns = [
     path('api/lastik-plaka-sorgula/', views.lastik_plaka_sorgula, name='lastik_plaka_sorgula'),
     path('lastik-saklama/<int:kayit_id>/cikis-fisi/', views.lastik_saklama_cikis_fisi, name='lastik_saklama_cikis_fisi'),
     path('lastik-saklama/<int:kayit_id>/giris-fisi/', views.lastik_saklama_giris_fisi, name='lastik_saklama_giris_fisi'),
+=======
+>>>>>>> a1c5e77f71df14e5bfa36b6fc1593c31ab3147a5
 ]

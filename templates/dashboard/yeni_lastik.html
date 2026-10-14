@@ -542,13 +542,6 @@ document.addEventListener('DOMContentLoaded', function() {
         grupAiInfo.classList.remove('d-none');
     }
 
-<<<<<<< HEAD
-=======
-    const mevsimAiCache = new Map();
-    const devamEdenAiSorgular = new Set();
-    let sonAiIstekNo = 0;
-
->>>>>>> a1c5e77f71df14e5bfa36b6fc1593c31ab3147a5
     async function groqMevsimTespiti() {
         if (mevsimField && mevsimField.style.display === 'none') return;
         if (mevsimSelect && mevsimSelect.dataset.manual === '1' && grupSelect && grupSelect.dataset.manual === '1') return;
@@ -559,22 +552,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (!urunText && !markaText) return;
 
-<<<<<<< HEAD
-=======
-        const sorguAnahtari = JSON.stringify([markaText.toLocaleLowerCase('tr-TR'), urunText.toLocaleLowerCase('tr-TR')]);
-        if (devamEdenAiSorgular.has(sorguAnahtari)) return;
-        const istekNo = ++sonAiIstekNo;
-        const onbellekliSonuc = mevsimAiCache.get(sorguAnahtari);
-        if (onbellekliSonuc) {
-            setMevsimFromAI(onbellekliSonuc.mevsim, onbellekliSonuc.mevsim_kaynagi || onbellekliSonuc.kaynak);
-            setGrupFromAI(onbellekliSonuc.grup, onbellekliSonuc.grup_kaynagi || onbellekliSonuc.kaynak);
-            mevsimAiSpinner.classList.add('d-none');
-            grupAiSpinner.classList.add('d-none');
-            return;
-        }
-        devamEdenAiSorgular.add(sorguAnahtari);
-
->>>>>>> a1c5e77f71df14e5bfa36b6fc1593c31ab3147a5
         // Spinnerlar
         mevsimAiSpinner.classList.remove('d-none');
         grupAiSpinner.classList.remove('d-none');
@@ -595,20 +572,12 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             if (!resp.ok) throw new Error('Sunucu hatası');
             const data = await resp.json();
-<<<<<<< HEAD
             setMevsimFromAI(data.mevsim, data.kaynak);
             setGrupFromAI(data.grup, data.kaynak);
-=======
-            mevsimAiCache.set(sorguAnahtari, data);
-            if (istekNo !== sonAiIstekNo) return;
-            setMevsimFromAI(data.mevsim, data.mevsim_kaynagi || data.kaynak);
-            setGrupFromAI(data.grup, data.grup_kaynagi || data.kaynak);
->>>>>>> a1c5e77f71df14e5bfa36b6fc1593c31ab3147a5
             console.log('AI tespiti:', data);
         } catch (err) {
             console.warn('Groq tespiti başarısız:', err);
         } finally {
-<<<<<<< HEAD
             mevsimAiSpinner.classList.add('d-none');
             grupAiSpinner.classList.add('d-none');
         }
@@ -619,21 +588,6 @@ document.addEventListener('DOMContentLoaded', function() {
     function tetikleAiTespiti() {
         clearTimeout(urunDebounce);
         urunDebounce = setTimeout(groqMevsimTespiti, 600);
-=======
-            devamEdenAiSorgular.delete(sorguAnahtari);
-            if (istekNo === sonAiIstekNo) {
-                mevsimAiSpinner.classList.add('d-none');
-                grupAiSpinner.classList.add('d-none');
-            }
-        }
-    }
-
-    // Ürün veya marka değişiminden sonra tahmini gecikmeli hesapla.
-    let urunDebounce = null;
-    function tetikleAiTespiti() {
-        clearTimeout(urunDebounce);
-        urunDebounce = setTimeout(groqMevsimTespiti, 900);
->>>>>>> a1c5e77f71df14e5bfa36b6fc1593c31ab3147a5
     }
 
     if (urunInput) {

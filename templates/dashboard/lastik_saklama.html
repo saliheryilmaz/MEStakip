@@ -203,6 +203,9 @@
                         <td>
                             <div class="d-flex gap-1">
                                 {% if k.durum == 'depoda' %}
+                                <a href="{% url 'dashboard:lastik_plaka_ciktisi' k.pk %}" target="_blank" class="btn btn-sm btn-outline-primary" title="Plaka Çıkart">
+                                    <i class="bi bi-tag"></i>
+                                </a>
                                 <a href="{% url 'dashboard:lastik_saklama_cikis' k.pk %}" class="btn btn-sm btn-outline-success" title="Teslim Et">
                                     <i class="bi bi-box-arrow-up"></i>
                                 </a>
@@ -210,6 +213,13 @@
                                 <a href="{% url 'dashboard:lastik_saklama_duzenle' k.pk %}" class="btn btn-sm btn-outline-secondary" title="Düzenle">
                                     <i class="bi bi-pencil"></i>
                                 </a>
+                                <form method="post" action="{% url 'dashboard:lastik_saklama_cikma_aktar' k.pk %}" style="display:inline"
+                                      onsubmit="return confirm('{{ k.musteri_adi }} – {{ k.plaka }} lastikleri çıkma lastik envanterine eklensin mi?')">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-outline-warning" title="Çıkma Lastiğe Aktar">
+                                        <i class="bi bi-arrow-left-right"></i>
+                                    </button>
+                                </form>
                                 {% if k.durum == 'depoda' and k.wa_link %}
                                 <a href="{{ k.wa_link }}" target="_blank" class="btn btn-sm" title="WhatsApp Gönder" style="background-color:#25d366;border-color:#25d366;color:#fff">
                                     <i class="bi bi-whatsapp"></i>

@@ -114,4 +114,6 @@ urlpatterns = [
     path('api/lastik-plaka-sorgula/', views.lastik_plaka_sorgula, name='lastik_plaka_sorgula'),
     path('lastik-saklama/<int:kayit_id>/cikis-fisi/', views.lastik_saklama_cikis_fisi, name='lastik_saklama_cikis_fisi'),
     path('lastik-saklama/<int:kayit_id>/giris-fisi/', views.lastik_saklama_giris_fisi, name='lastik_saklama_giris_fisi'),
+    path('lastik-saklama/<int:kayit_id>/plaka-ciktisi/', views.lastik_plaka_ciktisi, name='lastik_plaka_ciktisi'),
+    path('lastik-saklama/<int:kayit_id>/cikma-aktar/', views.lastik_saklama_cikma_aktar, name='lastik_saklama_cikma_aktar'),
 ]

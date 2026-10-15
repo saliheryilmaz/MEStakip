@@ -8112,3 +8112,59 @@ def lastik_saklama_giris_fisi(request, kayit_id):
         pk=kayit_id,
     )
     return render(request, 'dashboard/lastik_saklama_giris_fisi.html', {'kayit': kayit})
+
+
+@login_required
+def lastik_plaka_ciktisi(request, kayit_id):
+    """Plaka etiketi çıktısı — 1 sayfada 2 etiket."""
+    kayit = get_object_or_404(
+        LastikOteli.objects.select_related('depo').prefetch_related('lastikler'),
+        pk=kayit_id,
+    )
+    return render(request, 'dashboard/lastik_plaka_ciktisi.html', {'kayit': kayit})
+
+
+@login_required
+@require_POST
+def lastik_saklama_cikma_aktar(request, kayit_id):
+    """Lastik saklama kaydını çıkma lastiğe aktar."""
+    from .models import CikmaLastik, LastikOteliLastik
+
+    kayit = get_object_or_404(LastikOteli, pk=kayit_id)
+
+    # İlk lastik satırından bilgi al, yoksa ana kayıttan
+    ilk = kayit.lastikler.first()
+    marka = (ilk.marka if ilk and ilk.marka else kayit.marka) or 'Belirtilmemiş'
+    ebat  = (ilk.ebat  if ilk and ilk.ebat  else kayit.ebat)  or 'Belirtilmemiş'
+    model_val = (ilk.desen if ilk and ilk.desen else '') or ''
+
+    # Mevsim dönüşümü (LastikOteli → CikmaLastik)
+    mevsim_map = {'kis': 'kis', 'yaz': 'yaz', 'dort_mevsim': 'dort-mevsim'}
+    mevsim = mevsim_map.get(kayit.mevsim, 'yaz')
+
+    cikma = CikmaLastik(
+        user=request.user,
+        musteri_adi=kayit.musteri_adi,
+        musteri_telefon=kayit.musteri_telefon or '',
+        musteri_plaka=kayit.plaka or '',
+        marka=marka,
+        model=model_val,
+        ebat=ebat,
+        mevsim=mevsim,
+        arac_tipi='binek',
+        adet=kayit.adet,
+        durum='depolandi',
+        admin_aciklama=(
+            f"Müşteri: {kayit.musteri_adi} | "
+            f"Telefon: {kayit.musteri_telefon or '–'} | "
+            f"Plaka: {kayit.plaka or '–'}"
+        ),
+    )
+    cikma.save()
+
+    messages.success(
+        request,
+        f"{kayit.musteri_adi} – {kayit.plaka} lastikleri çıkma lastik envanterine eklendi. "
+        f"(#{cikma.pk})"
+    )
+    return redirect('dashboard:lastik_saklama')

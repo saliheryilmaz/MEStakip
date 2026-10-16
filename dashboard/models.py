@@ -827,6 +827,7 @@ class Quotation(models.Model):
     rezerve = models.BooleanField(default=False, verbose_name="Rezerve")
     proforma = models.BooleanField(default=False, verbose_name="Proforma")
     ic_not = models.TextField(blank=True, null=True, verbose_name="İç Not")
+    e_teklif = models.BooleanField(default=False, verbose_name="E-Teklif")
     
     # Sistem Bilgileri
     olusturan = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='olusturulan_teklifler', verbose_name="Oluşturan")

@@ -65,11 +65,7 @@
                                 <a href="{% url 'dashboard:e_teklif_goruntule' t.teklif_no %}" target="_blank" class="btn btn-sm btn-outline-primary" title="Önizle">
                                     <i class="bi bi-eye"></i>
                                 </a>
-                                <!-- PDF indir -->
-                                <a href="{% url 'dashboard:quotation_pdf' t.pk %}" target="_blank" class="btn btn-sm btn-outline-secondary" title="PDF İndir">
-                                    <i class="bi bi-file-earmark-pdf"></i>
-                                </a>
-                                <!-- WhatsApp — müşteri telefonuna PDF linki gönder -->
+                                <!-- WhatsApp -->
                                 {% if t.wa_link %}
                                 <a href="{{ t.wa_link }}" target="_blank"
                                    class="btn btn-sm" style="background:#25d366;border-color:#25d366;color:#fff" title="WhatsApp ile gönder">
@@ -120,10 +116,6 @@
                         <label class="form-label fw-semibold">Telefon</label>
                         <input type="text" id="et-telefon" class="form-control" placeholder="05xx xxx xx xx">
                     </div>
-                    <div class="col-md-3">
-                        <label class="form-label fw-semibold">Lastik Ebatı</label>
-                        <input type="text" id="et-ebat" class="form-control" placeholder="205/55R16">
-                    </div>
                     <div class="col-md-2">
                         <label class="form-label fw-semibold">Mevsim</label>
                         <select id="et-mevsim-genel" class="form-select">
@@ -136,10 +128,6 @@
                     <div class="col-md-3">
                         <label class="form-label fw-semibold">Teklif Tarihi</label>
                         <input type="date" id="et-tarih" class="form-control" value="">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label fw-semibold">Ödeme Şekli</label>
-                        <input type="text" id="et-odeme" class="form-control" placeholder="Nakit, Havale...">
                     </div>
                 </div>
 
@@ -227,7 +215,7 @@ function yeniSatir() {
     document.getElementById('urunTbody').appendChild(tr);
 
     // Otomatik doldur: ebat
-    const ebat = document.getElementById('et-ebat').value.trim();
+    const ebat = '';
     if (ebat) document.getElementById('urun-' + idx).value = ebat;
 
     // Event listener
@@ -287,7 +275,7 @@ document.getElementById('etKaydetBtn').addEventListener('click', function () {
         items.push({
             marka:       document.getElementById('marka-'  + idx)?.value || '',
             urun_adi:    document.getElementById('urun-'   + idx)?.value || '',
-            mevsim:      '',
+            mevsim:      document.getElementById('et-mevsim-genel')?.value || '',
             miktar:      parseFloat(document.getElementById('miktar-' + idx)?.value) || 1,
             birim_fiyat: parseFloat(document.getElementById('fiyat-'  + idx)?.value) || 0,
             toplam:      parseFloat(document.getElementById('toplam-' + idx)?.value) || 0,
@@ -302,7 +290,7 @@ document.getElementById('etKaydetBtn').addEventListener('click', function () {
         cari:              cari,
         ilgili_kisi:       document.getElementById('et-telefon').value.trim(),
         teklif_tarihi:     document.getElementById('et-tarih').value,
-        odeme_sekli:       document.getElementById('et-odeme').value.trim(),
+        odeme_sekli:       '',
         durum:             'acik',
         ara_toplam:        ara.toFixed(2),
         kdv_tutari:        kdv.toFixed(2),
@@ -315,7 +303,7 @@ document.getElementById('etKaydetBtn').addEventListener('click', function () {
     this.disabled = true;
     this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Kaydediliyor...';
 
-    fetch('{% url "dashboard:save_quotation" %}', {
+    fetch('{% url "dashboard:save_e_teklif" %}', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

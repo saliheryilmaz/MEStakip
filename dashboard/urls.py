@@ -118,4 +118,5 @@ urlpatterns = [
     path('lastik-saklama/<int:kayit_id>/cikma-aktar/', views.lastik_saklama_cikma_aktar, name='lastik_saklama_cikma_aktar'),
     path('e-teklif/', views.e_teklif_liste, name='e_teklif_liste'),
     path('e-teklif/<str:teklif_no>/', views.e_teklif_goruntule, name='e_teklif_goruntule'),
+    path('api/e-teklif/save/', views.save_e_teklif, name='save_e_teklif'),
 ]

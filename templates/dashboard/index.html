@@ -9,77 +9,45 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h1 class="h3 mb-0">Dashboard</h1>
-       
     </div>
-    
+    <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#hizliErisimModal">
+        <i class="bi bi-grid me-1"></i>Hızlı Erişimi Özelleştir
+    </button>
 </div>
 
-<!-- Quick Action Cards -->
-<div class="row g-3 mb-4">
-    <div class="col-xl-3 col-lg-4 col-md-6">
-        <div class="card quick-action-card bg-primary text-white h-100">
-            <div class="card-body d-flex align-items-center">
-                <div class="flex-shrink-0 me-3">
-                    <div class="quick-action-icon">
-                        <i class="bi bi-plus-circle-fill"></i>
-                    </div>
+<!-- Quick Action Cards — dinamik -->
+<div class="row g-3 mb-4" id="hizliErisimKartlar">
+    <!-- JS ile doldurulur -->
+</div>
+
+<!-- Hızlı Erişim Özelleştirme Modal -->
+<div class="modal fade" id="hizliErisimModal" tabindex="-1" aria-labelledby="hizliErisimModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width:520px">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <div>
+                    <h5 class="modal-title fw-bold" id="hizliErisimModalLabel">Hızlı Erişim Kutucukları</h5>
+                    <p class="text-muted small mb-0"> İstediğiniz kadar kutucuk seçin. Togglea tıklayarak açıp kapatın.</p>
                 </div>
-                <div class="flex-grow-1">
-                    <h6 class="card-title mb-1">Yeni Sipariş Ekle</h6>
-                    <small class="opacity-75">Lastik siparişi oluştur</small>
-                </div>
-                <a href="{% url 'dashboard:yeni_lastik' %}" class="stretched-link"></a>
+                <button type="button" class="btn-close ms-3" data-bs-dismiss="modal"></button>
             </div>
-        </div>
-    </div>
-    
-    <div class="col-xl-3 col-lg-4 col-md-6">
-        <div class="card quick-action-card bg-success text-white h-100">
-            <div class="card-body d-flex align-items-center">
-                <div class="flex-shrink-0 me-3">
-                    <div class="quick-action-icon">
-                        <i class="bi bi-cash-coin"></i>
-                    </div>
+            <div class="modal-body pt-2">
+                <!-- Seçili kutucuklar -->
+                <div class="text-primary fw-semibold small mb-2" style="letter-spacing:.05em">AÇIK KUTUCUKLAR</div>
+                <div id="seciliListe" class="mb-4">
+                    <!-- JS ile doldurulur -->
                 </div>
-                <div class="flex-grow-1">
-                    <h6 class="card-title mb-1">İşlem Ekle</h6>
-                    <small class="opacity-75">Gelir/Gider kaydı</small>
+                <!-- Tüm sayfalar -->
+                <div class="text-muted fw-semibold small mb-2" style="letter-spacing:.05em">TÜM SAYFALAR</div>
+                <input type="text" id="sayfaAra" class="form-control form-control-sm mb-2" placeholder="🔍 Sayfa ara...">
+                <div id="tumSayfaListe">
+                    <!-- JS ile doldurulur -->
                 </div>
-                <a href="{% url 'dashboard:finance' %}" class="stretched-link"></a>
             </div>
-        </div>
-    </div>
-    
-    <div class="col-xl-3 col-lg-4 col-md-6">
-        <div class="card quick-action-card bg-info text-white h-100">
-            <div class="card-body d-flex align-items-center">
-                <div class="flex-shrink-0 me-3">
-                    <div class="quick-action-icon">
-                        <i class="bi bi-wallet2"></i>
-                    </div>
-                </div>
-                <div class="flex-grow-1">
-                    <h6 class="card-title mb-1">Kasa Toplamları</h6>
-                    <small class="opacity-75">Nakit durumu</small>
-                </div>
-                <a href="{% url 'dashboard:messages' %}" class="stretched-link"></a>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-xl-3 col-lg-4 col-md-6">
-        <div class="card quick-action-card bg-warning text-white h-100">
-            <div class="card-body d-flex align-items-center">
-                <div class="flex-shrink-0 me-3">
-                    <div class="quick-action-icon">
-                        <i class="bi bi-arrow-left-right"></i>
-                    </div>
-                </div>
-                <div class="flex-grow-1">
-                    <h6 class="card-title mb-1">Sipariş Hareketleri</h6>
-                    <small class="opacity-75">Sipariş takibi</small>
-                </div>
-                <a href="{% url 'dashboard:elements' %}" class="stretched-link"></a>
+            <div class="modal-footer border-0 pt-0">
+                <small class="text-muted me-auto" id="secimSayisi">0 / 4 kutucuk açık</small>
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Vazgeç</button>
+                <button type="button" class="btn btn-primary px-4" id="hizliKaydetBtn">Kaydet</button>
             </div>
         </div>
     </div>
@@ -1339,5 +1307,158 @@
         }
 
     });
+</script>
+
+<script>
+// ─── Hızlı Erişim Kutucukları ───────────────────────────────
+const HIZLI_KEY = 'mestakip_hizli_erisim';
+const MAX_KART = 999;
+
+// Sistemdeki tüm sayfalar
+const TUM_SAYFALAR = [
+    { id: 'yeni_siparis',     baslik: 'Yeni Sipariş Ekle',      alt: 'Lastik siparişi oluştur',   url: '{% url "dashboard:yeni_lastik" %}',        ikon: 'bi-plus-circle-fill',  renk: 'bg-primary' },
+    { id: 'islem_ekle',       baslik: 'İşlem Ekle',             alt: 'Gelir/Gider kaydı',         url: '{% url "dashboard:finance" %}',             ikon: 'bi-cash-coin',         renk: 'bg-success' },
+    { id: 'kasa',             baslik: 'Kasa Toplamları',         alt: 'Nakit durumu',              url: '{% url "dashboard:finance" %}',             ikon: 'bi-wallet2',           renk: 'bg-info'    },
+    { id: 'siparisler',       baslik: 'Siparişler',             alt: 'Sipariş takibi',            url: '{% url "dashboard:orders" %}',              ikon: 'bi-bag-check',         renk: 'bg-warning' },
+    { id: 'lastik_saklama',   baslik: 'Lastik Saklama',         alt: 'Lastik oteli',              url: '{% url "dashboard:lastik_saklama" %}',      ikon: 'bi-archive',           renk: 'bg-secondary' },
+    { id: 'cikma_lastikler',  baslik: 'Çıkma Lastikler',        alt: 'Çıkma lastik envanteri',    url: '{% url "dashboard:cikma_lastikler" %}',     ikon: 'bi-recycle',           renk: 'bg-danger'  },
+    { id: 'filo',             baslik: 'Filo Yönetimi',          alt: 'Araç takibi',               url: '{% url "dashboard:filo_yonetimi" %}',       ikon: 'bi-truck',             renk: 'bg-primary' },
+    { id: 'teklifler',        baslik: 'Teklifler',              alt: 'Teklif yönetimi',           url: '{% url "dashboard:quotations" %}',          ikon: 'bi-file-earmark-text', renk: 'bg-info'    },
+    { id: 'e_teklif',         baslik: 'E-Teklif',               alt: 'Online teklif',             url: '{% url "dashboard:e_teklif_liste" %}',      ikon: 'bi-send',              renk: 'bg-success' },
+    { id: 'garanti',          baslik: 'Garanti Belgeleri',      alt: 'Garanti takibi',            url: '{% url "dashboard:garanti_belgeleri" %}',   ikon: 'bi-shield-check',      renk: 'bg-warning' },
+    { id: 'raporlar',         baslik: 'Raporlar',               alt: 'Analiz ve raporlar',        url: '{% url "dashboard:reports" %}',             ikon: 'bi-bar-chart',         renk: 'bg-primary' },
+    { id: 'analytics',        baslik: 'Analitik',               alt: 'Satış analizleri',          url: '{% url "dashboard:analytics" %}',           ikon: 'bi-graph-up',          renk: 'bg-success' },
+    { id: 'finans',           baslik: 'Finans',                 alt: 'Gelir/Gider raporu',        url: '{% url "dashboard:income_expense_report" %}', ikon: 'bi-cash-stack',      renk: 'bg-danger'  },
+    { id: 'takvim',           baslik: 'Takvim',                 alt: 'Etkinlik takibi',           url: '{% url "dashboard:calendar" %}',            ikon: 'bi-calendar3',         renk: 'bg-info'    },
+    { id: 'kullanicilar',     baslik: 'Kullanıcılar',           alt: 'Kullanıcı yönetimi',        url: '{% url "dashboard:users" %}',               ikon: 'bi-people',            renk: 'bg-secondary' },
+];
+
+// Varsayılan 4 seçim
+const VARSAYILAN = ['yeni_siparis', 'islem_ekle', 'kasa', 'siparisler'];
+
+function secilenleriOku() {
+    try {
+        const kayit = localStorage.getItem(HIZLI_KEY);
+        if (kayit) return JSON.parse(kayit);
+    } catch(e) {}
+    return [...VARSAYILAN];
+}
+
+function secilenleriyaz(liste) {
+    localStorage.setItem(HIZLI_KEY, JSON.stringify(liste));
+}
+
+function kartlariRender() {
+    const secili = secilenleriOku();
+    const container = document.getElementById('hizliErisimKartlar');
+    const renkler = ['bg-primary','bg-success','bg-info','bg-warning'];
+    container.innerHTML = '';
+    secili.slice(0, MAX_KART).forEach((id, idx) => {
+        const sayfa = TUM_SAYFALAR.find(s => s.id === id);
+        if (!sayfa) return;
+        const renk = renkler[idx] || sayfa.renk;
+        container.innerHTML += `
+        <div class="col-xl-3 col-lg-4 col-md-6">
+            <div class="card quick-action-card ${renk} text-white h-100">
+                <div class="card-body d-flex align-items-center">
+                    <div class="flex-shrink-0 me-3">
+                        <div class="quick-action-icon">
+                            <i class="bi ${sayfa.ikon}"></i>
+                        </div>
+                    </div>
+                    <div class="flex-grow-1">
+                        <h6 class="card-title mb-1">${sayfa.baslik}</h6>
+                        <small class="opacity-75">${sayfa.alt}</small>
+                    </div>
+                    <a href="${sayfa.url}" class="stretched-link"></a>
+                </div>
+            </div>
+        </div>`;
+    });
+}
+
+// Modal içeriği render
+function modalRender() {
+    const secili = secilenleriOku();
+    // Açık kutucuklar
+    const seciliDiv = document.getElementById('seciliListe');
+    seciliDiv.innerHTML = '';
+    secili.forEach(id => {
+        const s = TUM_SAYFALAR.find(p => p.id === id);
+        if (!s) return;
+        seciliDiv.innerHTML += `
+        <div class="d-flex align-items-center border rounded px-3 py-2 mb-2 bg-light">
+            <i class="bi ${s.ikon} text-primary me-2 fs-5"></i>
+            <div class="flex-grow-1">
+                <div class="fw-semibold small">${s.baslik}</div>
+                <div class="text-muted" style="font-size:11px">${s.alt}</div>
+            </div>
+            <div class="form-check form-switch mb-0">
+                <input class="form-check-input kart-toggle" type="checkbox" checked data-id="${id}" style="width:2.5em;height:1.3em;cursor:pointer">
+            </div>
+        </div>`;
+    });
+
+    // Tüm sayfalar (seçili olmayanlar)
+    tumSayfaRender(secili, '');
+    sayiGuncelle(secili.length);
+}
+
+function tumSayfaRender(secili, filtre) {
+    const div = document.getElementById('tumSayfaListe');
+    div.innerHTML = '';
+    TUM_SAYFALAR
+        .filter(s => !secili.includes(s.id))
+        .filter(s => !filtre || s.baslik.toLowerCase().includes(filtre.toLowerCase()))
+        .forEach(s => {
+            div.innerHTML += `
+            <div class="d-flex align-items-center border rounded px-3 py-2 mb-2">
+                <i class="bi ${s.ikon} text-secondary me-2 fs-5"></i>
+                <div class="flex-grow-1">
+                    <div class="fw-semibold small">${s.baslik}</div>
+                    <div class="text-muted" style="font-size:11px">${s.alt}</div>
+                </div>
+                <div class="form-check form-switch mb-0">
+                    <input class="form-check-input kart-toggle" type="checkbox" data-id="${s.id}" style="width:2.5em;height:1.3em;cursor:pointer">
+                </div>
+            </div>`;
+        });
+}
+
+function sayiGuncelle(n) {
+    document.getElementById('secimSayisi').textContent = `${n} kutucuk açık`;
+}
+
+// Toggle event (delegated)
+document.addEventListener('change', function(e) {
+    if (!e.target.classList.contains('kart-toggle')) return;
+    let secili = secilenleriOku();
+    const id = e.target.dataset.id;
+    if (e.target.checked) {
+        if (!secili.includes(id)) secili.push(id);
+    } else {
+        secili = secili.filter(s => s !== id);
+    }
+    secilenleriyaz(secili);
+    modalRender();
+});
+
+// Arama
+document.getElementById('sayfaAra').addEventListener('input', function() {
+    const secili = secilenleriOku();
+    tumSayfaRender(secili, this.value);
+});
+
+// Kaydet
+document.getElementById('hizliKaydetBtn').addEventListener('click', function() {
+    kartlariRender();
+    bootstrap.Modal.getInstance(document.getElementById('hizliErisimModal')).hide();
+});
+
+// Modal açılınca render et
+document.getElementById('hizliErisimModal').addEventListener('show.bs.modal', modalRender);
+
+// Sayfa yüklenince kartları çiz
+kartlariRender();
 </script>
 {% endblock %}

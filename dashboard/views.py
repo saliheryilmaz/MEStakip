@@ -2801,8 +2801,8 @@ def quotations(request):
     from datetime import date
     from .models import Quotation
     
-    # Tüm teklifleri getir
-    quotations_list = Quotation.objects.filter(olusturan=request.user).select_related('olusturan')
+    # Tüm teklifleri getir — e-teklif olanları hariç tut
+    quotations_list = Quotation.objects.filter(olusturan=request.user, e_teklif=False).select_related('olusturan')
     
     context = {
         'page_title': 'Teklifler',
@@ -7531,10 +7531,27 @@ def lastik_saklama(request):
     if mevsim:
         kayitlar = kayitlar.filter(mevsim=mevsim)
 
-    # Özet istatistikler
+    # Özet istatistikler — LastikOteliLastik'ten toplam adet
+    from .models import LastikOteliLastik
+    from django.db.models import Sum
+
     toplam_plaka = LastikOteli.objects.filter(durum='depoda').values('plaka').distinct().count()
-    toplam_kislik = LastikOteli.objects.filter(durum='depoda', mevsim='kis').count()
-    toplam_yazlik = LastikOteli.objects.filter(durum='depoda', mevsim='yaz').count()
+
+    kislik_adet = LastikOteliLastik.objects.filter(
+        kayit__durum='depoda', kayit__mevsim='kis'
+    ).count()
+    # Lastik satırı girilmemişse ana kayıttaki adet alanından topla
+    kislik_adet += LastikOteli.objects.filter(
+        durum='depoda', mevsim='kis', lastikler__isnull=True
+    ).aggregate(t=Sum('adet'))['t'] or 0
+
+    yazlik_adet = LastikOteliLastik.objects.filter(
+        kayit__durum='depoda', kayit__mevsim='yaz'
+    ).count()
+    yazlik_adet += LastikOteli.objects.filter(
+        durum='depoda', mevsim='yaz', lastikler__isnull=True
+    ).aggregate(t=Sum('adet'))['t'] or 0
+
     depolar = LastikDepo.objects.filter(aktif=True)
 
     # Queryset'i listeye çevir, sonra wa_link ekle
@@ -7564,8 +7581,8 @@ def lastik_saklama(request):
     context = {
         'kayitlar': kayitlar,
         'toplam_plaka': toplam_plaka,
-        'toplam_kislik': toplam_kislik,
-        'toplam_yazlik': toplam_yazlik,
+        'toplam_kislik': kislik_adet,
+        'toplam_yazlik': yazlik_adet,
         'depolar': depolar,
         'filters': {
             'durum': durum,
@@ -8175,7 +8192,7 @@ def e_teklif_liste(request):
     """E-Teklif listesi ve yeni e-teklif oluşturma."""
     from .models import Quotation
     from urllib.parse import quote
-    teklifler = Quotation.objects.filter(olusturan=request.user).order_by('-olusturma_tarihi')
+    teklifler = Quotation.objects.filter(olusturan=request.user, e_teklif=True).order_by('-olusturma_tarihi')
 
     # Her teklif için WhatsApp linki hazırla
     host = request.build_absolute_uri('/')[:-1]
@@ -8187,11 +8204,7 @@ def e_teklif_liste(request):
                 tel = '90' + tel[1:]
             elif not tel.startswith('90'):
                 tel = '90' + tel
-            mesaj = (
-                f"Merhaba, MESLAS OTOMOTİV olarak hazırladığımız teklifinizi "
-                f"aşağıdaki linkten inceleyebilirsiniz:\n{pdf_url}"
-            )
-            t.wa_link = f"https://wa.me/{tel}?text={quote(mesaj)}"
+            t.wa_link = f"https://wa.me/{tel}"
         else:
             t.wa_link = None
 
@@ -8204,3 +8217,51 @@ def e_teklif_goruntule(request, teklif_no):
     from .models import Quotation
     teklif = get_object_or_404(Quotation.objects.prefetch_related('urunler'), teklif_no=teklif_no)
     return render(request, 'dashboard/e_teklif_goruntule.html', {'teklif': teklif})
+
+
+@login_required
+@require_POST
+def save_e_teklif(request):
+    """E-Teklif kaydetme — e_teklif=True olarak işaretler."""
+    try:
+        data = json.loads(request.body)
+        from .models import Quotation, QuotationItem
+        from datetime import datetime
+
+        last_q = Quotation.objects.order_by('-id').first()
+        if last_q and last_q.teklif_no.isdigit():
+            teklif_no = str(int(last_q.teklif_no) + 1)
+        else:
+            teklif_no = "1000"
+
+        quotation = Quotation.objects.create(
+            teklif_no=teklif_no,
+            cari=data.get('cari', ''),
+            ilgili_kisi=data.get('ilgili_kisi', ''),
+            teklif_tarihi=datetime.strptime(data.get('teklif_tarihi'), '%Y-%m-%d').date(),
+            durum='acik',
+            ara_toplam=Decimal(str(data.get('ara_toplam', 0))),
+            kdv_tutari=Decimal(str(data.get('kdv_tutari', 0))),
+            genel_toplam=Decimal(str(data.get('genel_toplam', 0))),
+            rezerve=False,
+            proforma=False,
+            e_teklif=True,
+            olusturan=request.user,
+        )
+
+        for idx, item in enumerate(data.get('items', [])):
+            QuotationItem.objects.create(
+                teklif=quotation,
+                marka=item.get('marka', ''),
+                urun_adi=item.get('urun_adi', ''),
+                mevsim=item.get('mevsim', ''),
+                miktar=Decimal(str(item.get('miktar', 1))),
+                birim_fiyat=Decimal(str(item.get('birim_fiyat', 0))),
+                toplam=Decimal(str(item.get('toplam', 0))),
+                sira=idx,
+            )
+
+        return JsonResponse({'success': True, 'teklif_no': teklif_no})
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)

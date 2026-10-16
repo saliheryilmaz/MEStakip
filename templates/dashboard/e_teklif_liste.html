@@ -1,0 +1,360 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}E-Teklif - Mestakip{% endblock %}
+{% block page_name %}quotations{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0"><i class="bi bi-send me-2 text-primary"></i>E-Teklif</h1>
+        <p class="text-muted small mb-0">Müşterilere online teklif linki gönderin</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'dashboard:quotations' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Geri
+        </a>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#eTeklifModal">
+            <i class="bi bi-plus-circle me-1"></i>E-Teklif Oluştur
+        </button>
+    </div>
+</div>
+
+<!-- Bilgi kartı -->
+<div class="alert alert-primary d-flex gap-3 align-items-start mb-4">
+    <i class="bi bi-info-circle-fill fs-5 mt-1"></i>
+    <div>
+        <strong>E-Teklif nasıl çalışır?</strong><br>
+        Her teklifin kendine özel bir bağlantısı var. Bu bağlantıyı WhatsApp, SMS veya e-posta ile müşteriye gönderin.
+        Müşteri linke tıklayınca login olmadan teklifini görebilir.
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Teklif No</th>
+                        <th>Müşteri</th>
+                        <th>Tarih</th>
+                        <th>Tutar</th>
+                        <th>Durum</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in teklifler %}
+                    <tr>
+                        <td><span class="fw-semibold">{{ t.teklif_no }}</span></td>
+                        <td>
+                            <div>{{ t.cari }}</div>
+                            {% if t.ilgili_kisi %}<small class="text-muted"><i class="bi bi-telephone me-1"></i>{{ t.ilgili_kisi }}</small>{% endif %}
+                        </td>
+                        <td><small>{{ t.teklif_tarihi|date:"d.m.Y" }}</small></td>
+                        <td><span class="fw-semibold">₺{{ t.genel_toplam|floatformat:2 }}</span></td>
+                        <td>
+                            {% if t.durum == 'acik' %}<span class="badge bg-primary">Açık</span>
+                            {% elif t.durum == 'onaylandi' %}<span class="badge bg-success">Onaylı</span>
+                            {% else %}<span class="badge bg-danger">Reddedildi</span>{% endif %}
+                        </td>
+                        <td>
+                            <div class="d-flex gap-1">
+                                <!-- Önizle -->
+                                <a href="{% url 'dashboard:e_teklif_goruntule' t.teklif_no %}" target="_blank" class="btn btn-sm btn-outline-primary" title="Önizle">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <!-- PDF indir -->
+                                <a href="{% url 'dashboard:quotation_pdf' t.pk %}" target="_blank" class="btn btn-sm btn-outline-secondary" title="PDF İndir">
+                                    <i class="bi bi-file-earmark-pdf"></i>
+                                </a>
+                                <!-- WhatsApp — müşteri telefonuna PDF linki gönder -->
+                                {% if t.wa_link %}
+                                <a href="{{ t.wa_link }}" target="_blank"
+                                   class="btn btn-sm" style="background:#25d366;border-color:#25d366;color:#fff" title="WhatsApp ile gönder">
+                                    <i class="bi bi-whatsapp"></i>
+                                </a>
+                                {% else %}
+                                <button class="btn btn-sm btn-outline-secondary" disabled title="Telefon numarası yok">
+                                    <i class="bi bi-whatsapp"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5 text-muted">
+                            <i class="bi bi-file-earmark-text fs-1 d-block mb-2"></i>
+                            Henüz teklif yok. E-Teklif Oluştur butonuna tıklayın.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ─── E-Teklif Oluştur Modal ─────────────────────────────── -->
+<div class="modal fade" id="eTeklifModal" tabindex="-1" aria-labelledby="eTeklifModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="eTeklifModalLabel">
+                    <i class="bi bi-plus-circle me-2 text-primary"></i>E-Teklif Oluştur
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                {% csrf_token %}
+                <!-- Müşteri Bilgileri -->
+                <h6 class="fw-bold mb-3 text-primary"><i class="bi bi-person me-1"></i>Müşteri Bilgileri</h6>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Müşteri Adı <span class="text-danger">*</span></label>
+                        <input type="text" id="et-cari" class="form-control" placeholder="Ad Soyad veya Firma">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">Telefon</label>
+                        <input type="text" id="et-telefon" class="form-control" placeholder="05xx xxx xx xx">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">Lastik Ebatı</label>
+                        <input type="text" id="et-ebat" class="form-control" placeholder="205/55R16">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label fw-semibold">Mevsim</label>
+                        <select id="et-mevsim-genel" class="form-select">
+                            <option value="">–</option>
+                            <option value="kis">❄️ Kış</option>
+                            <option value="yaz">☀️ Yaz</option>
+                            <option value="dort-mevsim">🔄 4 Mevsim</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">Teklif Tarihi</label>
+                        <input type="date" id="et-tarih" class="form-control" value="">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">Ödeme Şekli</label>
+                        <input type="text" id="et-odeme" class="form-control" placeholder="Nakit, Havale...">
+                    </div>
+                </div>
+
+                <!-- Ürün/Hizmet Bilgileri -->
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="fw-bold mb-0 text-primary"><i class="bi bi-box-seam me-1"></i>Ürün/Hizmet Bilgileri</h6>
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="satirEkleBtn">
+                        <i class="bi bi-plus-circle me-1"></i>Satır Ekle
+                    </button>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-bordered align-middle mb-0" id="urunTablosu">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:130px">MARKA</th>
+                                <th>ÜRÜN/HİZMET</th>
+                                <th style="width:90px">MİKTAR</th>
+                                <th style="width:150px">BİRİM FİYAT (KDV DAHİL)</th>
+                                <th style="width:110px">TOPLAM</th>
+                                <th style="width:50px">İŞLEM</th>
+                            </tr>
+                        </thead>
+                        <tbody id="urunTbody">
+                            <!-- Satırlar JS ile eklenir -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Toplamlar -->
+                <div class="d-flex justify-content-end mt-3">
+                    <div style="min-width:320px">
+                        <div class="d-flex justify-content-between py-2 border-bottom">
+                            <span class="text-muted">Ara Toplam (KDV Hariç):</span>
+                            <span class="fw-semibold" id="araToplam">0.00 TL</span>
+                        </div>
+                        <div class="d-flex justify-content-between py-2 border-bottom">
+                            <span class="text-muted">KDV (%20):</span>
+                            <span class="fw-semibold" id="kdvToplam">0.00 TL</span>
+                        </div>
+                        <div class="d-flex justify-content-between py-2">
+                            <span class="fw-bold">Genel Toplam:</span>
+                            <span class="fw-bold fs-5 text-primary" id="genelToplam">0.00 TL</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="et-hata" class="alert alert-danger mt-3" style="display:none"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-primary px-4" id="etKaydetBtn">
+                    <i class="bi bi-check-circle me-1"></i>Teklif Oluştur
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ─── Bugünün tarihi ───
+document.getElementById('et-tarih').value = new Date().toISOString().split('T')[0];
+
+// ─── Satır oluştur ───
+let satirSayac = 0;
+
+function yeniSatir() {
+    satirSayac++;
+    const idx = satirSayac;
+    const tr = document.createElement('tr');
+    tr.id = 'satir-' + idx;
+    tr.innerHTML = `
+        <td><input type="text" class="form-control form-control-sm" placeholder="Marka" id="marka-${idx}"></td>
+        <td><input type="text" class="form-control form-control-sm" placeholder="Ürün/Hizmet adı" id="urun-${idx}"></td>
+        <td><input type="number" class="form-control form-control-sm miktar-input" id="miktar-${idx}" value="1" min="1" data-idx="${idx}"></td>
+        <td><input type="number" class="form-control form-control-sm fiyat-input" id="fiyat-${idx}" value="0.00" step="0.01" min="0" data-idx="${idx}"></td>
+        <td><input type="text" class="form-control form-control-sm" id="toplam-${idx}" value="0.00" readonly style="background:#f9fafb"></td>
+        <td>
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="satirSil(${idx})">
+                <i class="bi bi-trash"></i>
+            </button>
+        </td>`;
+    document.getElementById('urunTbody').appendChild(tr);
+
+    // Otomatik doldur: ebat
+    const ebat = document.getElementById('et-ebat').value.trim();
+    if (ebat) document.getElementById('urun-' + idx).value = ebat;
+
+    // Event listener
+    ['miktar-' + idx, 'fiyat-' + idx].forEach(id => {
+        document.getElementById(id).addEventListener('input', () => {
+            hesaplaSatir(idx);
+            hesaplaToplam();
+        });
+    });
+}
+
+function satirSil(idx) {
+    const tr = document.getElementById('satir-' + idx);
+    if (tr) tr.remove();
+    hesaplaToplam();
+}
+
+function hesaplaSatir(idx) {
+    const miktar = parseFloat(document.getElementById('miktar-' + idx).value) || 0;
+    const fiyat  = parseFloat(document.getElementById('fiyat-'  + idx).value) || 0;
+    document.getElementById('toplam-' + idx).value = (miktar * fiyat).toFixed(2);
+}
+
+function hesaplaToplam() {
+    let genel = 0;
+    document.querySelectorAll('#urunTbody tr').forEach(tr => {
+        const idx = tr.id.replace('satir-', '');
+        const t = parseFloat(document.getElementById('toplam-' + idx)?.value) || 0;
+        genel += t;
+    });
+    // KDV dahil fiyatlardan KDV hariç hesapla
+    const ara  = genel / 1.20;
+    const kdv  = genel - ara;
+    document.getElementById('araToplam').textContent  = ara.toFixed(2)   + ' TL';
+    document.getElementById('kdvToplam').textContent  = kdv.toFixed(2)   + ' TL';
+    document.getElementById('genelToplam').textContent = genel.toFixed(2) + ' TL';
+}
+
+// Başlangıçta 1 satır ekle
+document.getElementById('satirEkleBtn').addEventListener('click', yeniSatir);
+yeniSatir();
+
+// ─── Kaydet ───
+document.getElementById('etKaydetBtn').addEventListener('click', function () {
+    const cari = document.getElementById('et-cari').value.trim();
+    if (!cari) {
+        document.getElementById('et-hata').textContent = 'Müşteri adı zorunludur.';
+        document.getElementById('et-hata').style.display = 'block';
+        return;
+    }
+    document.getElementById('et-hata').style.display = 'none';
+
+    // Satırları topla
+    const items = [];
+    document.querySelectorAll('#urunTbody tr').forEach(tr => {
+        const idx = tr.id.replace('satir-', '');
+        items.push({
+            marka:       document.getElementById('marka-'  + idx)?.value || '',
+            urun_adi:    document.getElementById('urun-'   + idx)?.value || '',
+            mevsim:      '',
+            miktar:      parseFloat(document.getElementById('miktar-' + idx)?.value) || 1,
+            birim_fiyat: parseFloat(document.getElementById('fiyat-'  + idx)?.value) || 0,
+            toplam:      parseFloat(document.getElementById('toplam-' + idx)?.value) || 0,
+        });
+    });
+
+    const genel = items.reduce((s, i) => s + i.toplam, 0);
+    const ara   = genel / 1.20;
+    const kdv   = genel - ara;
+
+    const payload = {
+        cari:              cari,
+        ilgili_kisi:       document.getElementById('et-telefon').value.trim(),
+        teklif_tarihi:     document.getElementById('et-tarih').value,
+        odeme_sekli:       document.getElementById('et-odeme').value.trim(),
+        durum:             'acik',
+        ara_toplam:        ara.toFixed(2),
+        kdv_tutari:        kdv.toFixed(2),
+        genel_toplam:      genel.toFixed(2),
+        rezerve:           false,
+        proforma:          false,
+        items:             items,
+    };
+
+    this.disabled = true;
+    this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Kaydediliyor...';
+
+    fetch('{% url "dashboard:save_quotation" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]') ?
+                document.querySelector('[name=csrfmiddlewaretoken]').value :
+                '{{ csrf_token }}',
+        },
+        body: JSON.stringify(payload),
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('eTeklifModal')).hide();
+            window.location.reload();
+        } else {
+            document.getElementById('et-hata').textContent = data.error || 'Bir hata oluştu.';
+            document.getElementById('et-hata').style.display = 'block';
+        }
+    })
+    .catch(() => {
+        document.getElementById('et-hata').textContent = 'Bağlantı hatası.';
+        document.getElementById('et-hata').style.display = 'block';
+    })
+    .finally(() => {
+        this.disabled = false;
+        this.innerHTML = '<i class="bi bi-check-circle me-1"></i>Teklif Oluştur';
+    });
+});
+
+// ─── Kopyala ───
+function kopyala(id) {
+    const input = document.getElementById(id);
+    input.select();
+    navigator.clipboard.writeText(input.value).then(() => {
+        const btn = input.nextElementSibling;
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<i class="bi bi-check text-success"></i>';
+        setTimeout(() => btn.innerHTML = orig, 1500);
+    });
+}
+</script>
+{% endblock %}

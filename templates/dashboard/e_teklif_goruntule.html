@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teklif {{ teklif.teklif_no }} – MESLAS OTOMOTİV</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body { background: #f1f5f9; font-family: 'Segoe UI', sans-serif; }
+
+        .teklif-wrapper {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 0 16px 60px;
+        }
+
+        /* Üst firma bandı */
+        .firma-bant {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: #fff;
+            border-radius: 16px 16px 0 0;
+            padding: 32px 40px 24px;
+        }
+        .firma-bant .firma-adi { font-size: 26px; font-weight: 800; letter-spacing: .02em; }
+        .firma-bant .firma-alt { font-size: 13px; opacity: .8; margin-top: 2px; }
+        .firma-bant .teklif-no-badge {
+            background: rgba(255,255,255,.2);
+            border: 1px solid rgba(255,255,255,.3);
+            border-radius: 30px;
+            padding: 6px 18px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        /* Kart */
+        .teklif-kart {
+            background: #fff;
+            border-radius: 0 0 16px 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,.08);
+            padding: 36px 40px;
+        }
+
+        /* Müşteri & teklif bilgi grid */
+        .bilgi-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 32px;
+        }
+        @media(max-width:600px) { .bilgi-grid { grid-template-columns: 1fr; } }
+
+        .bilgi-kutu {
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            padding: 14px 18px;
+        }
+        .bilgi-kutu .etiket {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: .1em;
+            color: #9ca3af;
+            margin-bottom: 4px;
+        }
+        .bilgi-kutu .deger { font-size: 15px; font-weight: 600; color: #111827; }
+
+        /* Durum rozeti */
+        .durum-acik { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+        .durum-onay { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+        .durum-red  { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+        .durum-rozet { display:inline-block; padding: 4px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; }
+
+        /* Ürün tablosu */
+        .urun-baslik {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            color: #6b7280;
+            font-weight: 600;
+            padding: 10px 0;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        .urun-satir {
+            padding: 14px 0;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        .urun-satir:last-child { border-bottom: none; }
+        .urun-adi { font-weight: 600; font-size: 15px; color: #111827; }
+        .urun-alt { font-size: 12px; color: #6b7280; margin-top: 2px; }
+        .mevsim-rozet {
+            display: inline-block;
+            font-size: 11px;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-weight: 500;
+        }
+        .mevsim-kis { background: #eff6ff; color: #1d4ed8; }
+        .mevsim-yaz { background: #fffbeb; color: #d97706; }
+        .mevsim-4  { background: #f3f4f6; color: #374151; }
+
+        /* Toplam */
+        .toplam-alan {
+            background: #f9fafb;
+            border-radius: 10px;
+            padding: 20px 24px;
+            margin-top: 24px;
+        }
+        .toplam-satir { display: flex; justify-content: space-between; padding: 5px 0; font-size: 14px; color: #374151; }
+        .toplam-satir.genel { font-size: 18px; font-weight: 800; color: #111827; border-top: 2px solid #e5e7eb; padding-top: 12px; margin-top: 6px; }
+
+        /* Açıklama */
+        .aciklama-kutu {
+            background: #fefce8;
+            border: 1px solid #fde68a;
+            border-radius: 10px;
+            padding: 16px 20px;
+            margin-top: 24px;
+            font-size: 14px;
+            color: #78350f;
+        }
+
+        /* Alt bilgi */
+        .alt-bilgi {
+            text-align: center;
+            font-size: 12px;
+            color: #9ca3af;
+            margin-top: 32px;
+        }
+
+        /* Geçerlilik uyarısı */
+        .gecerlilik-bar {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 10px;
+            padding: 12px 18px;
+            font-size: 13px;
+            color: #1d4ed8;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="teklif-wrapper">
+
+    <!-- Firma Bandı -->
+    <div class="firma-bant d-flex justify-content-between align-items-start flex-wrap gap-3">
+        <div>
+            <div class="firma-adi">MESLAS OTOMOTİV</div>
+            <div class="firma-alt">Lastik &amp; Otomotiv Hizmetleri</div>
+        </div>
+        <div class="text-end">
+            <div class="teklif-no-badge mb-1">{{ teklif.teklif_no }}</div>
+            <div style="font-size:12px;opacity:.7">{{ teklif.teklif_tarihi|date:"d.m.Y" }}</div>
+        </div>
+    </div>
+
+    <!-- Ana Kart -->
+    <div class="teklif-kart">
+
+        <!-- Geçerlilik -->
+        {% if teklif.gecerlilik_tarihi %}
+        <div class="gecerlilik-bar">
+            <i class="bi bi-clock"></i>
+            Bu teklif <strong>{{ teklif.gecerlilik_tarihi|date:"d.m.Y" }}</strong> tarihine kadar geçerlidir.
+        </div>
+        {% endif %}
+
+        <!-- Bilgi Grid -->
+        <div class="bilgi-grid">
+            <div class="bilgi-kutu">
+                <div class="etiket">Müşteri / Cari</div>
+                <div class="deger">{{ teklif.cari }}</div>
+                {% if teklif.ilgili_kisi %}<div style="font-size:13px;color:#6b7280;margin-top:2px">{{ teklif.ilgili_kisi }}</div>{% endif %}
+            </div>
+            <div class="bilgi-kutu">
+                <div class="etiket">Mevsim</div>
+                <div class="deger">
+                    {% with ilk=teklif.urunler.first %}
+                    {% if ilk and ilk.mevsim == 'kis' %}<span class="mevsim-rozet mevsim-kis">❄️ Kış</span>
+                    {% elif ilk and ilk.mevsim == 'yaz' %}<span class="mevsim-rozet mevsim-yaz">☀️ Yaz</span>
+                    {% elif ilk and ilk.mevsim %}<span class="mevsim-rozet mevsim-4">🔄 4 Mevsim</span>
+                    {% else %}–{% endif %}
+                    {% endwith %}
+                </div>
+            </div>
+            <div class="bilgi-kutu">
+                <div class="etiket">Teklif Tarihi</div>
+                <div class="deger">{{ teklif.teklif_tarihi|date:"d.m.Y" }}</div>
+            </div>
+        </div>
+
+        <!-- Ürün Listesi -->
+        <div class="urun-baslik row g-0">
+            <div class="col-6">Ürün / Hizmet</div>
+            <div class="col-2 text-center">Miktar</div>
+            <div class="col-2 text-end">Birim Fiyat</div>
+            <div class="col-2 text-end">Toplam</div>
+        </div>
+
+        {% for urun in teklif.urunler.all %}
+        <div class="urun-satir row g-0 align-items-center">
+            <div class="col-6">
+                <div class="urun-adi">
+                    {% if urun.marka %}<span style="color:#4f46e5">{{ urun.marka }}</span> – {% endif %}
+                    {{ urun.urun_adi }}
+                </div>
+                {% if urun.mevsim %}
+                <div class="urun-alt">
+                    {% if urun.mevsim == 'kis' %}<span class="mevsim-rozet mevsim-kis">❄️ Kış</span>
+                    {% elif urun.mevsim == 'yaz' %}<span class="mevsim-rozet mevsim-yaz">☀️ Yaz</span>
+                    {% else %}<span class="mevsim-rozet mevsim-4">🔄 4 Mevsim</span>{% endif %}
+                </div>
+                {% endif %}
+            </div>
+            <div class="col-2 text-center" style="font-size:14px;color:#374151">{{ urun.miktar|floatformat:0 }} adet</div>
+            <div class="col-2 text-end" style="font-size:14px;color:#374151">₺{{ urun.birim_fiyat|floatformat:2 }}</div>
+            <div class="col-2 text-end fw-semibold" style="font-size:15px">₺{{ urun.toplam|floatformat:2 }}</div>
+        </div>
+        {% endfor %}
+
+        <!-- Açıklama -->
+        {% if teklif.aciklama %}
+        <div class="aciklama-kutu">
+            <strong><i class="bi bi-chat-text me-1"></i>Açıklama:</strong><br>
+            {{ teklif.aciklama }}
+        </div>
+        {% endif %}
+
+        <!-- Alt bilgi -->
+        <div class="alt-bilgi">
+            <i class="bi bi-geo-alt me-1"></i>
+            <a href="https://www.google.com/maps/dir/?api=1&destination=40.9990577,29.2539532" target="_blank" style="color:#4f46e5;text-decoration:none">
+                Konumumuz için tıklayın
+            </a>
+            &nbsp;·&nbsp;
+            MESLAS OTOMOTİV &nbsp;·&nbsp; {{ teklif.teklif_no }}
+        </div>
+
+    </div>
+</div>
+
+</body>
+</html>

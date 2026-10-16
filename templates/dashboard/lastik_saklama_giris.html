@@ -248,13 +248,19 @@ document.getElementById('kopyalaBtn').addEventListener('click', function () {
 });
 
 // Adet değişince satırları göster/gizle
-document.getElementById('adetInput').addEventListener('change', function () {
-    const adet = parseInt(this.value) || 4;
+function adetGuncelle() {
+    const adet = parseInt(document.getElementById('adetInput').value) || 4;
     const rows = document.querySelectorAll('#lastikTablosu tbody tr');
     rows.forEach((row, idx) => {
         row.style.display = (idx < adet) ? '' : 'none';
     });
-});
+}
+
+document.getElementById('adetInput').addEventListener('change', adetGuncelle);
+document.getElementById('adetInput').addEventListener('input', adetGuncelle);
+
+// Sayfa açılınca mevcut adete göre uygula
+adetGuncelle();
 
 // Depo ekleme
 const depoEkleBtn  = document.getElementById('depoEkleBtn');

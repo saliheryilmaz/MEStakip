@@ -7662,7 +7662,7 @@ def lastik_saklama_giris(request):
         'depolar': depolar,
         'mevsim_choices': LastikOteli.MEVSIM_CHOICES,
         'bugun': timezone.now().date().isoformat(),
-        'lastik_sayilari': range(1, 5),
+        'lastik_sayilari': range(1, 9),
     }
     return render(request, 'dashboard/lastik_saklama_giris.html', context)
 
@@ -8168,3 +8168,39 @@ def lastik_saklama_cikma_aktar(request, kayit_id):
         f"(#{cikma.pk})"
     )
     return redirect('dashboard:lastik_saklama')
+
+
+@login_required
+def e_teklif_liste(request):
+    """E-Teklif listesi ve yeni e-teklif oluşturma."""
+    from .models import Quotation
+    from urllib.parse import quote
+    teklifler = Quotation.objects.filter(olusturan=request.user).order_by('-olusturma_tarihi')
+
+    # Her teklif için WhatsApp linki hazırla
+    host = request.build_absolute_uri('/')[:-1]
+    for t in teklifler:
+        pdf_url = f"{host}/dashboard/quotations/{t.pk}/pdf/"
+        if t.ilgili_kisi:
+            tel = t.ilgili_kisi.strip().replace(' ', '').replace('-', '')
+            if tel.startswith('0'):
+                tel = '90' + tel[1:]
+            elif not tel.startswith('90'):
+                tel = '90' + tel
+            mesaj = (
+                f"Merhaba, MESLAS OTOMOTİV olarak hazırladığımız teklifinizi "
+                f"aşağıdaki linkten inceleyebilirsiniz:\n{pdf_url}"
+            )
+            t.wa_link = f"https://wa.me/{tel}?text={quote(mesaj)}"
+        else:
+            t.wa_link = None
+
+    context = {'teklifler': teklifler}
+    return render(request, 'dashboard/e_teklif_liste.html', context)
+
+
+def e_teklif_goruntule(request, teklif_no):
+    """Müşteriye gösterilecek public e-teklif sayfası — login gerektirmez."""
+    from .models import Quotation
+    teklif = get_object_or_404(Quotation.objects.prefetch_related('urunler'), teklif_no=teklif_no)
+    return render(request, 'dashboard/e_teklif_goruntule.html', {'teklif': teklif})

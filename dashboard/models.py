@@ -1080,6 +1080,7 @@ class LastikOteli(models.Model):
 
     # Ücret
     saklama_ucreti = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Saklama Ücreti (₺)")
+    degisim_ucreti = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Değişim Ücreti (₺)")
 
     # Ekstra
     aciklama = models.TextField(blank=True, verbose_name="Açıklama")

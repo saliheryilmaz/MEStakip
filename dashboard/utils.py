@@ -161,28 +161,31 @@ def create_turkish_search_variants(text):
 def format_tire_size(ebat_input):
     """
     Lastik ebat girişini otomatik formatlar.
-    Örnek: '2055516' -> '205/55R16'
+    Örnek: '2055516' -> '205/55R16', '205/5516' -> '205/55R16'
     """
     if not ebat_input:
         return ebat_input
-    
+
     # Boşlukları temizle
     ebat = str(ebat_input).strip()
-    
-    # Eğer zaten doğru formatta ise (/ ve R içeriyorsa) olduğu gibi döndür
-    if '/' in ebat and 'R' in ebat.upper():
+
+    # Zaten tam formatta ise (/ ve R içeriyorsa) olduğu gibi döndür
+    if '/' in ebat and ('R' in ebat.upper() or 'r' in ebat):
         return ebat
-    
+
+    # Slash var ama R yok: örn. '205/5516' → sadece rakamları al ve yeniden formatla
+    if '/' in ebat:
+        ebat = ebat.replace('/', '')
+
     # Sadece rakamlardan oluşan 6-7 haneli girişleri formatla
-    if ebat.isdigit() and len(ebat) in [6, 7]:
-        if len(ebat) == 6:
-            # 205516 -> 205/55R16
-            return f"{ebat[:3]}/{ebat[3:5]}R{ebat[5:]}"
-        elif len(ebat) == 7:
-            # 2055516 -> 205/55R16 veya 22555R16 gibi
-            # İlk 3 hane genişlik, sonraki 2 hane yükseklik oranı, kalan çap
-            return f"{ebat[:3]}/{ebat[3:5]}R{ebat[5:]}"
-    
+    digits = ''.join(c for c in ebat if c.isdigit())
+    if len(digits) == 6:
+        # 205516 → 205/55R16
+        return f"{digits[:3]}/{digits[3:5]}R{digits[5:]}"
+    elif len(digits) == 7:
+        # 2055516 → 205/55R16
+        return f"{digits[:3]}/{digits[3:5]}R{digits[5:]}"
+
     # Diğer durumlarda olduğu gibi döndür
     return ebat
 

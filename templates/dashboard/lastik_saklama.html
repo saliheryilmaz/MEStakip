@@ -4,6 +4,28 @@
 {% block title %}Lastik Saklama - Mestakip{% endblock %}
 {% block page_name %}lastik_saklama{% endblock %}
 
+{% block extra_css %}
+<style>
+.uc-nokta-wrap { position: relative; display: inline-block; }
+.uc-nokta-menu {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 100%;
+    z-index: 9999;
+    min-width: 220px;
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,.15);
+    padding: 4px 0;
+}
+[data-bs-theme=dark] .uc-nokta-menu { background: #1e293b; border-color: #334155; }
+.uc-nokta-wrap:focus-within .uc-nokta-menu { display: block; }
+.uc-nokta-btn:focus { outline: none; box-shadow: none; }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
@@ -116,12 +138,13 @@
 <!-- Tablo -->
 <div class="card">
     <div class="card-body p-0">
-        <div class="table-responsive">
+        <div class="table-responsive" style="overflow:visible">
             <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
                     <tr>
                         <th>Müşteri</th>
                         <th>Plaka</th>
+                        <th>Saklama Ücreti</th>
+                        <th>Değişim Ücreti</th>
                         <th>Ebat / Marka</th>
                         <th>Mevsim</th>
                         <th>Depo / Raf</th>
@@ -165,6 +188,20 @@
                             </span>
                         </td>
                         <td>
+                            {% if k.saklama_ucreti %}
+                            <span class="fw-semibold">₺{{ k.saklama_ucreti }}</span>
+                            {% else %}
+                            <span class="text-muted">–</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if k.degisim_ucreti %}
+                            <span class="fw-semibold">₺{{ k.degisim_ucreti }}</span>
+                            {% else %}
+                            <span class="text-muted">–</span>
+                            {% endif %}
+                        </td>
+                        <td>
                             <div>{{ k.ebat|default:"–" }}</div>
                             <small class="text-muted">{{ k.marka|default:"" }}</small>
                         </td>
@@ -201,30 +238,49 @@
                             {% endif %}
                         </td>
                         <td>
-                            <div class="d-flex gap-1">
-                                {% if k.durum == 'depoda' %}
-                                <a href="{% url 'dashboard:lastik_plaka_ciktisi' k.pk %}" target="_blank" class="btn btn-sm btn-outline-primary" title="Plaka Çıkart">
-                                    <i class="bi bi-tag"></i>
-                                </a>
-                                <a href="{% url 'dashboard:lastik_saklama_cikis' k.pk %}" class="btn btn-sm btn-outline-success" title="Teslim Et">
-                                    <i class="bi bi-box-arrow-up"></i>
-                                </a>
-                                {% endif %}
-                                <a href="{% url 'dashboard:lastik_saklama_duzenle' k.pk %}" class="btn btn-sm btn-outline-secondary" title="Düzenle">
-                                    <i class="bi bi-pencil"></i>
-                                </a>
-                                <form method="post" action="{% url 'dashboard:lastik_saklama_cikma_aktar' k.pk %}" style="display:inline"
-                                      onsubmit="return confirm('{{ k.musteri_adi }} – {{ k.plaka }} lastikleri çıkma lastik envanterine eklensin mi?')">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-sm btn-outline-warning" title="Çıkma Lastiğe Aktar">
-                                        <i class="bi bi-arrow-left-right"></i>
-                                    </button>
-                                </form>
-                                {% if k.durum == 'depoda' and k.wa_link %}
-                                <a href="{{ k.wa_link }}" target="_blank" class="btn btn-sm" title="WhatsApp Gönder" style="background-color:#25d366;border-color:#25d366;color:#fff">
-                                    <i class="bi bi-whatsapp"></i>
-                                </a>
-                                {% endif %}
+                            <div class="uc-nokta-wrap">
+                                <button class="btn btn-sm btn-outline-secondary uc-nokta-btn" title="İşlemler">
+                                    <i class="bi bi-three-dots"></i>
+                                </button>
+                                <div class="uc-nokta-menu">
+                                    <div class="px-3 py-2 text-muted small fw-semibold border-bottom text-truncate">
+                                        {{ k.musteri_adi }} – {{ k.plaka }}
+                                    </div>
+                                    <a class="dropdown-item py-2" href="{% url 'dashboard:lastik_saklama_detay' k.pk %}">
+                                        <i class="bi bi-eye me-2 text-primary"></i>Detay
+                                    </a>
+                                    {% if k.durum == 'depoda' %}
+                                    <a class="dropdown-item py-2" href="{% url 'dashboard:lastik_plaka_ciktisi' k.pk %}" target="_blank">
+                                        <i class="bi bi-tag me-2 text-primary"></i>Plaka Çıkart
+                                    </a>
+                                    <a class="dropdown-item py-2" href="{% url 'dashboard:lastik_saklama_cikis' k.pk %}">
+                                        <i class="bi bi-box-arrow-up me-2 text-success"></i>Teslim Et
+                                    </a>
+                                    <a class="dropdown-item py-2" href="{% url 'dashboard:lastik_saklama_giris_fisi' k.pk %}" target="_blank">
+                                        <i class="bi bi-printer me-2 text-secondary"></i>Giriş Fişi
+                                    </a>
+                                    {% else %}
+                                    <a class="dropdown-item py-2" href="{% url 'dashboard:lastik_saklama_cikis_fisi' k.pk %}" target="_blank">
+                                        <i class="bi bi-printer me-2 text-secondary"></i>Çıkış Fişi
+                                    </a>
+                                    {% endif %}
+                                    <a class="dropdown-item py-2" href="{% url 'dashboard:lastik_saklama_duzenle' k.pk %}">
+                                        <i class="bi bi-pencil me-2 text-secondary"></i>Düzenle
+                                    </a>
+                                    <div class="dropdown-divider"></div>
+                                    <form method="post" action="{% url 'dashboard:lastik_saklama_cikma_aktar' k.pk %}"
+                                          onsubmit="return confirm('Çıkma lastik envanterine eklensin mi?')">
+                                        {% csrf_token %}
+                                        <button type="submit" class="dropdown-item py-2">
+                                            <i class="bi bi-arrow-left-right me-2 text-warning"></i>Çıkma Lastiğe Aktar
+                                        </button>
+                                    </form>
+                                    {% if k.durum == 'depoda' and k.wa_link %}
+                                    <a class="dropdown-item py-2" href="{{ k.wa_link }}" target="_blank">
+                                        <i class="bi bi-whatsapp me-2" style="color:#25d366"></i>WhatsApp Gönder
+                                    </a>
+                                    {% endif %}
+                                </div>
                             </div>
                         </td>
                     </tr>
@@ -456,5 +512,11 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 });
+</script>
+
+<script>
+// ─── Custom dropdown menü ───────────────────────────────────
+// dropdown-init.js içinde tanımlı
+
 </script>
 {% endblock %}

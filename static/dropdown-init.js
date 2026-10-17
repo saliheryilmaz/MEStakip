@@ -36,3 +36,47 @@
     // Biraz gecikmeyle tekrar dene (custom JS yüklendikten sonra)
     setTimeout(initDropdowns, 500);
 })();
+
+// ─── Lastik Saklama — Üç Nokta Menü ───────────────────────
+(function() {
+    'use strict';
+
+    function acilirMenuKapat() {
+        document.querySelectorAll('.acilir-menu').forEach(function(m) {
+            m.style.display = 'none';
+        });
+    }
+
+    function acilirMenuAc(btn, menuId) {
+        var menu = document.getElementById(menuId);
+        if (!menu) return;
+        var isOpen = menu.style.display === 'block';
+        acilirMenuKapat();
+        if (isOpen) return;
+        var rect = btn.getBoundingClientRect();
+        var menuW = 230;
+        var menuH = 320;
+        var top  = rect.bottom + window.scrollY + 4;
+        var left = rect.right  + window.scrollX - menuW;
+        if (left < 8) left = 8;
+        if (rect.bottom + menuH > window.innerHeight) {
+            top = rect.top + window.scrollY - menuH - 4;
+        }
+        menu.style.position = 'absolute';
+        menu.style.top  = top  + 'px';
+        menu.style.left = left + 'px';
+        menu.style.display = 'block';
+    }
+
+    // Butonlara event ekle (delegated — dinamik içerik için)
+    document.addEventListener('click', function(e) {
+        var btn = e.target.closest('.acilir-menu-btn');
+        if (btn) {
+            var menuId = 'menu-' + btn.getAttribute('data-kayit');
+            acilirMenuAc(btn, menuId);
+            e.stopPropagation();
+        } else if (!e.target.closest('.acilir-menu')) {
+            acilirMenuKapat();
+        }
+    });
+})();

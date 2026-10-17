@@ -7621,6 +7621,7 @@ def lastik_saklama_giris(request):
             giris_tarihi=request.POST.get('giris_tarihi'),
             tahmini_cikis=request.POST.get('tahmini_cikis') or None,
             saklama_ucreti=request.POST.get('saklama_ucreti') or None,
+            degisim_ucreti=request.POST.get('degisim_ucreti') or None,
             aciklama=request.POST.get('aciklama', '').strip(),
             durum='depoda',
             olusturan=request.user,

@@ -53,7 +53,27 @@ def filter_inventory(stock, filters, include_depot=True):
             query |= Q(marka__icontains=variant)
         stock = stock.filter(query)
     if filters['ebat']:
-        stock = stock.filter(ebat__icontains=format_tire_size(filters['ebat']))
+        ebat_raw = filters['ebat'].strip()
+        from django.db.models import Q as DQ
+
+        # Tüm olası formatları üret
+        arama_terimleri = set()
+        arama_terimleri.add(ebat_raw)
+        arama_terimleri.add(format_tire_size(ebat_raw))
+
+        # Rakamları sıyır, farklı kombinasyonlar dene
+        digits = ''.join(c for c in ebat_raw if c.isdigit())
+        if len(digits) in [6, 7]:
+            # 2055516 → 205/55R16, 205/5516, 20555R16 vb.
+            arama_terimleri.add(f"{digits[:3]}/{digits[3:5]}R{digits[5:]}")  # 205/55R16
+            arama_terimleri.add(f"{digits[:3]}/{digits[3:]}")                # 205/5516
+            arama_terimleri.add(digits)                                       # 2055516
+
+        ebat_q = DQ()
+        for terim in arama_terimleri:
+            if terim:
+                ebat_q |= DQ(ebat__icontains=terim)
+        stock = stock.filter(ebat_q)
     for field in ('mevsim', 'arac_tipi'):
         if filters[field]:
             stock = stock.filter(**{field: filters[field]})

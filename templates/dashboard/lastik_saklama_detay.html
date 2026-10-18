@@ -128,6 +128,8 @@
                     <dd class="col-7"><span class="badge bg-warning text-dark">{{ kayit.depoda_kac_gun }} gün</span></dd>
                     <dt class="col-5 text-muted">Saklama Ücreti</dt>
                     <dd class="col-7">{% if kayit.saklama_ucreti %}₺{{ kayit.saklama_ucreti }}{% else %}–{% endif %}</dd>
+                    <dt class="col-5 text-muted">Değişim Ücreti</dt>
+                    <dd class="col-7">{% if kayit.degisim_ucreti %}₺{{ kayit.degisim_ucreti }}{% else %}–{% endif %}</dd>
                     <dt class="col-5 text-muted">Durum</dt>
                     <dd class="col-7">
                         {% if kayit.durum == 'depoda' %}

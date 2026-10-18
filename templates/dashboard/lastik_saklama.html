@@ -6,23 +6,39 @@
 
 {% block extra_css %}
 <style>
-.uc-nokta-wrap { position: relative; display: inline-block; }
-.uc-nokta-menu {
-    display: none;
+/* Dropdown ok işaretini gizle */
+.dropdown-toggle-no-caret::after { display: none !important; }
+
+/* ─── İşlem Menüsü — details/summary ─── */
+.islem-details { position: relative; display: inline-block; }
+.islem-details summary { list-style: none; cursor: pointer; }
+.islem-details summary::-webkit-details-marker { display: none; }
+.islem-panel {
     position: absolute;
     right: 0;
-    top: 100%;
+    top: calc(100% + 4px);
     z-index: 9999;
-    min-width: 220px;
     background: #fff;
     border: 1px solid #dee2e6;
     border-radius: 8px;
-    box-shadow: 0 4px 20px rgba(0,0,0,.15);
-    padding: 4px 0;
+    box-shadow: 0 4px 16px rgba(0,0,0,.15);
+    min-width: 200px;
+    padding: 6px 0;
 }
-[data-bs-theme=dark] .uc-nokta-menu { background: #1e293b; border-color: #334155; }
-.uc-nokta-wrap:focus-within .uc-nokta-menu { display: block; }
-.uc-nokta-btn:focus { outline: none; box-shadow: none; }
+[data-bs-theme=dark] .islem-panel {
+    background: #1e293b;
+    border-color: #334155;
+}
+.islem-link {
+    display: block;
+    padding: 7px 16px;
+    color: inherit;
+    text-decoration: none;
+    font-size: 14px;
+    white-space: nowrap;
+}
+.islem-link:hover { background: #f3f4f6; color: inherit; }
+[data-bs-theme=dark] .islem-link:hover { background: #334155; }
 </style>
 {% endblock %}
 
@@ -139,7 +155,7 @@
 <div class="card">
     <div class="card-body p-0">
         <div class="table-responsive" style="overflow:visible">
-            <table class="table table-hover align-middle mb-0">
+            <table class="table table-hover align-middle mb-0" style="overflow:visible">
                     <tr>
                         <th>Müşteri</th>
                         <th>Plaka</th>
@@ -238,50 +254,31 @@
                             {% endif %}
                         </td>
                         <td>
-                            <div class="uc-nokta-wrap">
-                                <button class="btn btn-sm btn-outline-secondary uc-nokta-btn" title="İşlemler">
+                        <td>
+                            <details class="islem-details">
+                                <summary class="btn btn-sm btn-outline-secondary">
                                     <i class="bi bi-three-dots"></i>
-                                </button>
-                                <div class="uc-nokta-menu">
-                                    <div class="px-3 py-2 text-muted small fw-semibold border-bottom text-truncate">
-                                        {{ k.musteri_adi }} – {{ k.plaka }}
-                                    </div>
-                                    <a class="dropdown-item py-2" href="{% url 'dashboard:lastik_saklama_detay' k.pk %}">
-                                        <i class="bi bi-eye me-2 text-primary"></i>Detay
-                                    </a>
+                                </summary>
+                                <div class="islem-panel">
+                                    <a href="{% url 'dashboard:lastik_saklama_detay' k.pk %}" class="islem-link"><i class="bi bi-eye text-primary"></i> Detay</a>
                                     {% if k.durum == 'depoda' %}
-                                    <a class="dropdown-item py-2" href="{% url 'dashboard:lastik_plaka_ciktisi' k.pk %}" target="_blank">
-                                        <i class="bi bi-tag me-2 text-primary"></i>Plaka Çıkart
-                                    </a>
-                                    <a class="dropdown-item py-2" href="{% url 'dashboard:lastik_saklama_cikis' k.pk %}">
-                                        <i class="bi bi-box-arrow-up me-2 text-success"></i>Teslim Et
-                                    </a>
-                                    <a class="dropdown-item py-2" href="{% url 'dashboard:lastik_saklama_giris_fisi' k.pk %}" target="_blank">
-                                        <i class="bi bi-printer me-2 text-secondary"></i>Giriş Fişi
-                                    </a>
+                                    <a href="{% url 'dashboard:lastik_plaka_ciktisi' k.pk %}" target="_blank" class="islem-link"><i class="bi bi-tag text-primary"></i> Plaka Çıkart</a>
+                                    <a href="{% url 'dashboard:lastik_saklama_cikis' k.pk %}" class="islem-link"><i class="bi bi-box-arrow-up text-success"></i> Teslim Et</a>
+                                    <a href="{% url 'dashboard:lastik_saklama_giris_fisi' k.pk %}" target="_blank" class="islem-link"><i class="bi bi-printer text-secondary"></i> Giriş Fişi</a>
                                     {% else %}
-                                    <a class="dropdown-item py-2" href="{% url 'dashboard:lastik_saklama_cikis_fisi' k.pk %}" target="_blank">
-                                        <i class="bi bi-printer me-2 text-secondary"></i>Çıkış Fişi
-                                    </a>
+                                    <a href="{% url 'dashboard:lastik_saklama_cikis_fisi' k.pk %}" target="_blank" class="islem-link"><i class="bi bi-printer text-secondary"></i> Çıkış Fişi</a>
                                     {% endif %}
-                                    <a class="dropdown-item py-2" href="{% url 'dashboard:lastik_saklama_duzenle' k.pk %}">
-                                        <i class="bi bi-pencil me-2 text-secondary"></i>Düzenle
-                                    </a>
-                                    <div class="dropdown-divider"></div>
-                                    <form method="post" action="{% url 'dashboard:lastik_saklama_cikma_aktar' k.pk %}"
-                                          onsubmit="return confirm('Çıkma lastik envanterine eklensin mi?')">
+                                    <a href="{% url 'dashboard:lastik_saklama_duzenle' k.pk %}" class="islem-link"><i class="bi bi-pencil text-secondary"></i> Düzenle</a>
+                                    <hr style="margin:4px 0">
+                                    <form method="post" action="{% url 'dashboard:lastik_saklama_cikma_aktar' k.pk %}" onsubmit="return confirm('Çıkma lastik envanterine eklensin mi?')">
                                         {% csrf_token %}
-                                        <button type="submit" class="dropdown-item py-2">
-                                            <i class="bi bi-arrow-left-right me-2 text-warning"></i>Çıkma Lastiğe Aktar
-                                        </button>
+                                        <button type="submit" class="islem-link" style="width:100%;text-align:left;background:none;border:none;padding:0;cursor:pointer"><i class="bi bi-arrow-left-right text-warning"></i> Çıkma Lastiğe Aktar</button>
                                     </form>
                                     {% if k.durum == 'depoda' and k.wa_link %}
-                                    <a class="dropdown-item py-2" href="{{ k.wa_link }}" target="_blank">
-                                        <i class="bi bi-whatsapp me-2" style="color:#25d366"></i>WhatsApp Gönder
-                                    </a>
+                                    <a href="{{ k.wa_link }}" target="_blank" class="islem-link"><i class="bi bi-whatsapp" style="color:#25d366"></i> WhatsApp</a>
                                     {% endif %}
                                 </div>
-                            </div>
+                            </details>
                         </td>
                     </tr>
                     {% empty %}
@@ -517,6 +514,14 @@ document.addEventListener('DOMContentLoaded', function () {
 <script>
 // ─── Custom dropdown menü ───────────────────────────────────
 // dropdown-init.js içinde tanımlı
+
+// ─── details menü: başka biri açılınca diğerlerini kapat ───
+document.addEventListener('click', function(e) {
+    var clicked = e.target.closest('.islem-details');
+    document.querySelectorAll('.islem-details[open]').forEach(function(d) {
+        if (d !== clicked) d.removeAttribute('open');
+    });
+});
 
 </script>
 {% endblock %}

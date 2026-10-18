@@ -7754,6 +7754,7 @@ def lastik_saklama_duzenle(request, kayit_id):
         kayit.dis_derinligi = request.POST.get('dis_derinligi') or None
         kayit.tahmini_cikis = request.POST.get('tahmini_cikis') or None
         kayit.saklama_ucreti = request.POST.get('saklama_ucreti') or None
+        kayit.degisim_ucreti = request.POST.get('degisim_ucreti') or None
         kayit.aciklama = request.POST.get('aciklama', '').strip()
 
         depo_id = request.POST.get('depo')

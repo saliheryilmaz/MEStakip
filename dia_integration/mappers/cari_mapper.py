@@ -50,6 +50,8 @@ def _dia_tip_to_model(dia_tip: str) -> str:
     """DİA carikarttipi → CariTip seçeneği."""
     mapping = {
         'AL': CariTip.ALICI,
+        'ST': CariTip.SATICI,
+        # Eski/özel DIA kurulumlarından gelebilecek kodu da geriye dönük destekle.
         'SA': CariTip.SATICI,
         'AS': CariTip.ALICI_SATICI,
     }
@@ -117,7 +119,8 @@ class CariMapper:
             'adres1': _to_text(d.get('adres1'), 200),
             'adres2': _to_text(d.get('adres2'), 200),
             'ilce': _to_text(d.get('ilce'), 100),
-            'sehir': _to_text(d.get('sehir'), 100),
+            # ScfCarikartModel şehir bilgisini `il` alanında döndürür.
+            'sehir': _to_text(d.get('il') or d.get('sehir'), 100),
             'posta_kodu': _to_text(d.get('postakodu'), 10),
             'ulke': _to_text(d.get('ulke'), 100, default='TÜRKİYE'),
             'risk_limiti': _to_decimal(d.get('risklimiti')),

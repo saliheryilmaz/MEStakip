@@ -81,8 +81,12 @@
                             <input type="date" name="tahmini_cikis" class="form-control" value="{{ kayit.tahmini_cikis|date:'Y-m-d'|default:'' }}">
                         </div>
                         <div class="col-md-2">
-                            <label class="form-label fw-semibold">Ücret (₺)</label>
+                            <label class="form-label fw-semibold">Saklama Ücreti (₺)</label>
                             <input type="number" name="saklama_ucreti" class="form-control" step="0.01" value="{{ kayit.saklama_ucreti|default:'' }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fw-semibold">Değişim Ücreti (₺)</label>
+                            <input type="number" name="degisim_ucreti" class="form-control" step="0.01" value="{{ kayit.degisim_ucreti|default:'' }}">
                         </div>
                     </div>
 

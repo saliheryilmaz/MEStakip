@@ -331,38 +331,33 @@ def sync_loglar(request):
 def depo_fisi_istek(request, stok_pk):
     """
     Stok listesindeki araba ikonuna tıklandığında çağrılır.
-    Yeni bir DepoFisi + DepoFisiKalemi oluşturur.
+    depo_fisi_id POST parametresi varsa o fişe kalem ekler,
+    yoksa yeni bir DepoFisi + DepoFisiKalemi oluşturur.
     """
     stok = get_object_or_404(StokKart, pk=stok_pk)
-
-    # Her istek için her zaman yeni fiş oluştur
     adet = max(1, int(request.POST.get('adet', 1)))
     cari_post = request.POST.get('cari', '').strip()
     cari = cari_post or request.user.get_full_name() or request.user.username
-    fiyat_str = request.POST.get('fiyat', '').strip()
     aciklama_raw = request.POST.get('aciklama', '').strip()
-    if fiyat_str:
-        try:
-            fiyat_val = float(fiyat_str)
-            aciklama = f'[Fiyat: {fiyat_val:,.2f}₺] {aciklama_raw}'.strip()
-        except ValueError:
-            aciklama = aciklama_raw
+    aciklama = aciklama_raw
+
+    depo_fisi_id = request.POST.get('depo_fisi_id', '').strip()
+    if depo_fisi_id:
+        fis = get_object_or_404(DepoFisi, pk=int(depo_fisi_id))
     else:
-        aciklama = aciklama_raw
-
-    fis = DepoFisi.objects.create(
-        islem_yapan=request.user,
-        cari=cari,
-        plaka=request.POST.get('plaka', '').strip().upper(),
-        arac_marka=request.POST.get('arac_marka', '').strip(),
-        arac_model=request.POST.get('arac_model', '').strip(),
-        aciklama=aciklama,
-    )
+        fis = DepoFisi.objects.create(
+            islem_yapan=request.user,
+            cari=cari,
+            plaka=request.POST.get('plaka', '').strip().upper(),
+            arac_marka=request.POST.get('arac_marka', '').strip(),
+            arac_model=request.POST.get('arac_model', '').strip(),
+            aciklama=aciklama,
+        )
     DepoFisiKalemi.objects.create(fis=fis, stok=stok, adet=adet)
-
     return JsonResponse({
         'basarili': True,
         'fis_no': fis.fis_no,
+        'depo_fisi_id': fis.fis_no,
         'stok_kodu': stok.stok_kodu,
         'aciklama': stok.aciklama,
         'mesaj': f'{stok.stok_kodu} fişe eklendi (Fiş #{fis.fis_no})',
@@ -522,6 +517,67 @@ def depo_fisi_sil(request, pk):
     fis_no = fis.fis_no
     fis.delete()
     return JsonResponse({'basarili': True, 'mesaj': f'Fiş #{fis_no} silindi.'})
+
+
+@login_required
+@require_POST
+def depo_fisi_kalem_ekle(request, pk):
+    """
+    Depo fişi detay sayfasından yeni kalem ekle.
+    POST: stok_pk veya stok_kodu/uretici_kodu, adet, kalem_notu
+    """
+    fis = get_object_or_404(DepoFisi, pk=pk)
+    if fis.durum != 'bekliyor':
+        return JsonResponse({'basarili': False, 'hata': 'Sadece bekliyor durumundaki fişlere kalem eklenebilir.'})
+
+    stok_pk = request.POST.get('stok_pk', '').strip()
+    ara_kodu = request.POST.get('ara_kodu', '').strip()
+    adet = max(1, int(request.POST.get('adet', 1) or 1))
+    kalem_notu = request.POST.get('kalem_notu', '').strip()
+
+    stok = None
+    if stok_pk:
+        stok = get_object_or_404(StokKart, pk=int(stok_pk))
+    elif ara_kodu:
+        stok = StokKart.objects.filter(
+            Q(uretici_kodu__iexact=ara_kodu) | Q(stok_kodu__iexact=ara_kodu)
+        ).first()
+        if not stok:
+            return JsonResponse({'basarili': False, 'hata': f'Kod bulunamadı: {ara_kodu}'})
+    else:
+        return JsonResponse({'basarili': False, 'hata': 'Stok kodu veya üretici kodu gerekli.'})
+
+    kalem = DepoFisiKalemi.objects.create(fis=fis, stok=stok, adet=adet, kalem_notu=kalem_notu)
+    return JsonResponse({
+        'basarili': True,
+        'kalem_pk': kalem.pk,
+        'stok_kodu': stok.stok_kodu,
+        'uretici_kodu': stok.uretici_kodu,
+        'aciklama': stok.aciklama,
+        'marka': stok.marka,
+        'adet': adet,
+        'mesaj': f'{stok.stok_kodu} fişe eklendi.',
+    })
+
+
+@login_required
+def stok_ara_ajax(request):
+    """Depo fişi kalem ekleme formunda stok arama — AJAX."""
+    q = request.GET.get('q', '').strip()
+    if len(q) < 2:
+        return JsonResponse({'sonuclar': []})
+    stoklar = StokKart.objects.filter(
+        Q(uretici_kodu__icontains=q) | Q(stok_kodu__icontains=q) | Q(aciklama__icontains=q)
+    ).filter(durum='A')[:15]
+    sonuclar = [{
+        'pk': s.pk,
+        'stok_kodu': s.stok_kodu,
+        'uretici_kodu': s.uretici_kodu,
+        'aciklama': s.aciklama,
+        'marka': s.marka,
+        'gercek_stok': float(s.gercek_stok),
+    } for s in stoklar]
+    return JsonResponse({'sonuclar': sonuclar})
 
 
 @login_required

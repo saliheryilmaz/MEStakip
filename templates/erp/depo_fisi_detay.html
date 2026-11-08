@@ -37,6 +37,9 @@
     </div>
     <div class="d-flex gap-2">
         {% if fis.durum == 'bekliyor' %}
+        <button class="btn btn-success btn-sm" onclick="urunEkleAc()">
+            <i class="bi bi-plus-circle me-1"></i>Ürün Ekle
+        </button>
         <button class="btn btn-outline-danger btn-sm" onclick="fisIptal({{ fis.fis_no }})">
             <i class="bi bi-x-circle me-1"></i>İptal
         </button>
@@ -53,6 +56,65 @@
 <div class="row g-4">
     <!-- Sol: Ürün kalemleri -->
     <div class="col-lg-8">
+
+        {% if fis.durum == 'bekliyor' %}
+        <!-- Inline kalem ekleme formu -->
+        <div id="kalemEklePanel" class="card border-0 shadow-sm mb-4" style="display:none">
+            <div class="card-header py-2 d-flex justify-content-between align-items-center" style="background:#00695C;color:white">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-plus-circle me-2"></i>Ürün Ekle</h6>
+                <button type="button" class="btn btn-sm btn-outline-light py-0" onclick="urunEkleKapat()">
+                    <i class="bi bi-x"></i>
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-5">
+                        <label class="form-label small fw-semibold">Üretici Kodu / Stok Kodu</label>
+                        <div class="input-group">
+                            <input type="text" id="kalemAraKodu" class="form-control form-control-sm"
+                                   placeholder="Kod ara..." autocomplete="off">
+                            <button class="btn btn-outline-primary btn-sm" type="button" onclick="stokAra()">
+                                <i class="bi bi-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-7">
+                        <div id="kalemAraArama" class="d-none">
+                            <div id="kalemAraYukleniyor" class="text-muted small">Aranıyor...</div>
+                            <div id="kalemAraSonuclar"></div>
+                        </div>
+                    </div>
+                </div>
+                <div id="kalemSeciliStok" class="d-none mt-3">
+                    <div class="border rounded p-2 mb-3" style="background:var(--bs-secondary-bg)">
+                        <div class="fw-semibold" id="kalemSeciliAdi"></div>
+                        <div class="text-muted small" id="kalemSeciliMarka"></div>
+                        <code class="small text-success" id="kalemSeciliKod"></code>
+                    </div>
+                    <input type="hidden" id="kalemStokPk">
+                    <div class="row g-2">
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">Adet</label>
+                            <input type="number" id="kalemAdet" class="form-control form-control-sm" value="1" min="1" max="999">
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label small fw-semibold">Not <small class="text-muted">(isteğe bağlı)</small></label>
+                            <input type="text" id="kalemNot" class="form-control form-control-sm" placeholder="Kalem notu...">
+                        </div>
+                        <div class="col-12">
+                            <button type="button" class="btn btn-success btn-sm px-4" onclick="kalemEkle()">
+                                <i class="bi bi-plus-circle me-1"></i>Bu Fişe Ekle
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="kalemFormSifirla()">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i>Sıfırla
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
         <div class="card border-0 shadow-sm mb-4">
             <div class="card-header py-2 d-flex justify-content-between align-items-center"
                  style="background:#1565C0;color:white">
@@ -292,6 +354,113 @@ function kalemSil(kalemPk) {
         document.getElementById('fisToastBody').textContent = data.mesaj;
         new bootstrap.Toast(document.getElementById('fisToast')).show();
         setTimeout(() => location.reload(), 800);
+    });
+}
+
+function urunEkleAc() {
+    const panel = document.getElementById('kalemEklePanel');
+    if (panel) {
+        panel.style.display = '';
+        panel.scrollIntoView({behavior: 'smooth', block: 'start'});
+    }
+}
+
+function urunEkleKapat() {
+    const panel = document.getElementById('kalemEklePanel');
+    if (panel) panel.style.display = 'none';
+    kalemFormSifirla();
+}
+
+function stokAra() {
+    const q = document.getElementById('kalemAraKodu').value.trim();
+    if (q.length < 2) { alert('En az 2 karakter girin.'); return; }
+    const arama = document.getElementById('kalemAraArama');
+    arama.classList.remove('d-none');
+    document.getElementById('kalemAraYukleniyor').style.display = '';
+    document.getElementById('kalemAraSonuclar').innerHTML = '';
+    document.getElementById('kalemSeciliStok').classList.add('d-none');
+
+    fetch(`{% url 'erp:stok_ara_ajax' %}?q=${encodeURIComponent(q)}`, {
+        headers: {'X-Requested-With': 'XMLHttpRequest'}
+    })
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById('kalemAraYukleniyor').style.display = 'none';
+        if (!data.sonuclar || data.sonuclar.length === 0) {
+            document.getElementById('kalemAraSonuclar').innerHTML = '<p class="text-muted small my-2">Sonuç bulunamadı.</p>';
+            return;
+        }
+        let html = '<div class="list-group list-group-flush mt-1">';
+        data.sonuclar.forEach(s => {
+            html += `<button type="button" class="list-group-item list-group-item-action py-2 px-2 small"
+                onclick="kalemSeciliYap(${s.pk}, '${(s.stok_kodu||'').replace(/'/g,"\\'").replace(/"/g,"&quot;")}', '${(s.uretici_kodu||'').replace(/'/g,"\\'").replace(/"/g,"&quot;")}', '${(s.aciklama||'').replace(/'/g,"\\'").replace(/"/g,"&quot;")}', '${(s.marka||'').replace(/'/g,"\\'").replace(/"/g,"&quot;")}')">
+                <div class="fw-semibold">${s.aciklama || '—'}</div>
+                <div class="text-muted">${s.uretici_kodu || s.stok_kodu} &nbsp;|&nbsp; Stok: ${s.gercek_stok}</div>
+            </button>`;
+        });
+        html += '</div>';
+        document.getElementById('kalemAraSonuclar').innerHTML = html;
+    })
+    .catch(() => {
+        document.getElementById('kalemAraYukleniyor').style.display = 'none';
+        document.getElementById('kalemAraSonuclar').innerHTML = '<p class="text-danger small">Arama hatası.</p>';
+    });
+}
+
+// Enter tuşuyla da arama
+document.addEventListener('DOMContentLoaded', function() {
+    const inp = document.getElementById('kalemAraKodu');
+    if (inp) inp.addEventListener('keydown', function(e) { if (e.key === 'Enter') stokAra(); });
+});
+
+function kalemSeciliYap(pk, stokKodu, ureticiKodu, aciklama, marka) {
+    document.getElementById('kalemStokPk').value = pk;
+    document.getElementById('kalemSeciliAdi').textContent = aciklama || '—';
+    document.getElementById('kalemSeciliMarka').textContent = marka || '';
+    document.getElementById('kalemSeciliKod').textContent = ureticiKodu || stokKodu || '';
+    document.getElementById('kalemSeciliStok').classList.remove('d-none');
+    document.getElementById('kalemAraArama').classList.add('d-none');
+    document.getElementById('kalemAraKodu').value = ureticiKodu || stokKodu || '';
+    document.getElementById('kalemAdet').value = 1;
+    document.getElementById('kalemNot').value = '';
+}
+
+function kalemFormSifirla() {
+    document.getElementById('kalemAraKodu').value = '';
+    document.getElementById('kalemAraArama').classList.add('d-none');
+    document.getElementById('kalemAraSonuclar').innerHTML = '';
+    document.getElementById('kalemSeciliStok').classList.add('d-none');
+    document.getElementById('kalemStokPk').value = '';
+    document.getElementById('kalemAdet').value = 1;
+    document.getElementById('kalemNot').value = '';
+}
+
+function kalemEkle() {
+    const stokPk = document.getElementById('kalemStokPk').value;
+    if (!stokPk) { alert('Önce bir ürün seçin.'); return; }
+    const adet = parseInt(document.getElementById('kalemAdet').value) || 1;
+    const kalemNot = document.getElementById('kalemNot').value;
+
+    fetch(`{% url 'erp:depo_fisi_kalem_ekle' fis.fis_no %}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': '{{csrf_token}}'
+        },
+        body: new URLSearchParams({stok_pk: stokPk, adet, kalem_notu: kalemNot}).toString()
+    })
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById('fisToastBody').textContent = data.mesaj || data.hata;
+        new bootstrap.Toast(document.getElementById('fisToast')).show();
+        if (data.basarili) {
+            urunEkleKapat();
+            setTimeout(() => location.reload(), 800);
+        }
+    })
+    .catch(() => {
+        document.getElementById('fisToastBody').textContent = 'Bağlantı hatası.';
+        new bootstrap.Toast(document.getElementById('fisToast')).show();
     });
 }
 </script>

@@ -34,5 +34,7 @@ urlpatterns = [
     path('depo-fisi/<int:pk>/sil/', views.depo_fisi_sil, name='depo_fisi_sil'),
     path('depo-fisi/<int:pk>/onayla/', views.depo_fisi_onayla, name='depo_fisi_onayla'),
     path('depo-fisi/<int:pk>/iptal/', views.depo_fisi_iptal, name='depo_fisi_iptal'),
+    path('depo-fisi/<int:pk>/kalem-ekle/', views.depo_fisi_kalem_ekle, name='depo_fisi_kalem_ekle'),
+    path('stok/ara/', views.stok_ara_ajax, name='stok_ara_ajax'),
     path('depo-fisi/kalem/<int:kalem_pk>/sil/', views.depo_fisi_kalem_sil, name='depo_fisi_kalem_sil'),
 ]

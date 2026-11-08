@@ -152,17 +152,20 @@
             </div>
             <div class="modal-body">
 
+                <div id="aktifIsEmriBilgi" style="display:none"></div>
+
                 <!-- Ürün Bilgi Kartı -->
-                <div class="border rounded p-3 mb-3 bg-light">
-                    <div class="fw-bold fs-5" id="modalUrunAdi">—</div>
+                <div class="border rounded p-3 mb-3" style="background:var(--bs-secondary-bg);border-color:var(--bs-border-color)!important">
+                    <div class="fw-bold fs-5 text-body" id="modalUrunAdi">—</div>
                     <div class="text-primary fw-bold small mb-2" id="modalMarkaAdi">—</div>
                     <div class="d-flex flex-wrap gap-2" id="modalBadgeContainer">
-                        <span class="badge bg-light text-dark border" id="modalBadgeKod"></span>
-                        <span class="badge bg-light text-dark border d-none" id="modalBadgeDot"></span>
-                        <span class="badge bg-light text-dark border" id="modalBadgeStok"></span>
+                        <span class="badge border text-body" style="background:var(--bs-tertiary-bg)" id="modalBadgeKod"></span>
+                        <span class="badge border text-body d-none" style="background:var(--bs-tertiary-bg)" id="modalBadgeDot"></span>
+                        <span class="badge border text-body" style="background:var(--bs-tertiary-bg)" id="modalBadgeStok"></span>
                     </div>
                 </div>
 
+                <div id="fisEkleForm">
                 <!-- Form Alanları -->
                 <div class="row g-2">
                     <!-- Sol: Üretici Kodu -->
@@ -185,15 +188,7 @@
                         <label class="form-label small fw-semibold">Adet</label>
                         <input type="number" id="modalAdet" class="form-control" value="1" min="1" max="999">
                     </div>
-                    <!-- Sağ: Verilen Fiyat -->
-                    <div class="col-md-6">
-                        <label class="form-label small fw-semibold">Verilen Fiyat (KDV Dahil)</label>
-                        <div class="input-group">
-                            <input type="number" id="modalFiyat" class="form-control" placeholder="0.00" step="0.01" min="0">
-                            <span class="input-group-text">₺</span>
-                        </div>
-                    </div>
-                    <!-- Sol: Plaka -->
+                    <!-- Plaka -->
                     <div class="col-md-6">
                         <label class="form-label small fw-semibold">Plaka</label>
                         <input type="text" id="modalPlaka" class="form-control text-uppercase" placeholder="34 ABC 123" maxlength="15">
@@ -219,6 +214,23 @@
                         <label class="form-label small fw-semibold">Açıklama</label>
                         <textarea id="modalAciklama" class="form-control" rows="3"
                                   placeholder="Opsiyonel açıklama..."></textarea>
+                    </div>
+                </div>
+                </div>
+
+                <div id="fisEkleSonuc" style="display:none" class="text-center py-3">
+                    <div class="mb-3">
+                        <i class="bi bi-check-circle-fill text-success" style="font-size:2.5rem"></i>
+                    </div>
+                    <p class="fw-bold fs-5 text-success sonuc-mesaj mb-1">Ürün iş emrine eklendi</p>
+                    <p class="text-muted small sonuc-urun mb-4"></p>
+                    <div class="d-flex gap-2 justify-content-center">
+                        <button type="button" class="btn btn-outline-primary px-4" id="devamEtBtn">
+                            <i class="bi bi-plus-circle me-1"></i>Devam Et
+                        </button>
+                        <button type="button" class="btn btn-success px-4" id="isEmriniKapatBtn">
+                            <i class="bi bi-check2-all me-1"></i>İş Emrini Kapat
+                        </button>
                     </div>
                 </div>
 
@@ -256,15 +268,12 @@ let aktifStokPk = null;
 function istekAc(stokPk, stokKodu, aciklama, marka, stokAdedi, dot) {
     aktifStokPk = stokPk;
 
-    // Ürün bilgi kartı
     document.getElementById('modalUrunAdi').textContent = aciklama || '—';
     document.getElementById('modalMarkaAdi').textContent = marka || '—';
 
-    // Badge: Üretici Kodu
     const badgeKod = document.getElementById('modalBadgeKod');
     badgeKod.textContent = stokKodu ? ('Üretici: ' + stokKodu) : '';
 
-    // Badge: DOT (varsa göster)
     const badgeDot = document.getElementById('modalBadgeDot');
     if (dot && dot.trim() !== '') {
         badgeDot.textContent = 'DOT: ' + dot;
@@ -274,21 +283,32 @@ function istekAc(stokPk, stokKodu, aciklama, marka, stokAdedi, dot) {
         badgeDot.classList.add('d-none');
     }
 
-    // Badge: Stok adedi
     const badgeStok = document.getElementById('modalBadgeStok');
     badgeStok.textContent = 'Stok: ' + (stokAdedi !== undefined ? stokAdedi : '—');
 
-    // Form alanları
     document.getElementById('modalKod').value = stokKodu || '';
     document.getElementById('modalDot').value = (dot && dot.trim() !== '') ? dot : '';
     document.getElementById('modalUrun').value = aciklama || '';
     document.getElementById('modalAdet').value = 1;
-    document.getElementById('modalFiyat').value = '';
     document.getElementById('modalPlaka').value = '';
     document.getElementById('modalAracMarka').value = '';
     document.getElementById('modalAracModel').value = '';
-    document.getElementById('modalCari').value = '{{ request.user.get_full_name|default:request.user.username }}';
+    document.getElementById('modalCari').value = '{{request.user.get_full_name|default:request.user.username}}';
     document.getElementById('modalAciklama').value = '';
+
+    // Aktif iş emri varsa bilgi göster
+    const aktifId = sessionStorage.getItem('aktifIsEmriId');
+    const aktifBilgi = document.getElementById('aktifIsEmriBilgi');
+    if (aktifId && aktifBilgi) {
+        aktifBilgi.innerHTML = `<div class="alert alert-info py-2 mb-3 small"><i class="bi bi-info-circle me-1"></i>Aktif iş emri: <strong>Fiş #${aktifId}</strong> — Yeni ürün bu fişe eklenecek.</div>`;
+        aktifBilgi.style.display = '';
+    } else if (aktifBilgi) {
+        aktifBilgi.style.display = 'none';
+    }
+
+    // Form göster, sonuç gizle
+    document.getElementById('fisEkleForm').style.display = '';
+    document.getElementById('fisEkleSonuc').style.display = 'none';
 
     new bootstrap.Modal(document.getElementById('depoFisiModal')).show();
 }
@@ -301,32 +321,71 @@ document.getElementById('sepeteEkleBtn').addEventListener('click', function () {
     const aracMarka = document.getElementById('modalAracMarka').value;
     const aracModel = document.getElementById('modalAracModel').value;
     const aciklama  = document.getElementById('modalAciklama').value;
-    const fiyat     = document.getElementById('modalFiyat').value;
 
+    const body = new URLSearchParams({
+        adet,
+        plaka,
+        arac_marka: aracMarka,
+        arac_model: aracModel,
+        cari,
+        aciklama,
+    });
+
+    const aktifId = sessionStorage.getItem('aktifIsEmriId');
+    if (aktifId) {
+        body.set('depo_fisi_id', aktifId);
+    }
+
+    this.disabled = true;
     fetch(`{% url 'erp:depo_fisi_istek' 0 %}`.replace('/0/', `/${aktifStokPk}/`), {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
-            'X-CSRFToken': '{{ csrf_token }}',
+            'X-CSRFToken': '{{csrf_token}}',
         },
-        body: `adet=${adet}&plaka=${encodeURIComponent(plaka)}&arac_marka=${encodeURIComponent(aracMarka)}&arac_model=${encodeURIComponent(aracModel)}&cari=${encodeURIComponent(cari)}&aciklama=${encodeURIComponent(aciklama)}&fiyat=${encodeURIComponent(fiyat)}`
+        body: body.toString()
     })
     .then(r => r.json())
     .then(data => {
-        bootstrap.Modal.getInstance(document.getElementById('depoFisiModal')).hide();
-        const body = document.getElementById('istekToastBody');
-        const kod = document.getElementById('modalKod').value;
+        this.disabled = false;
         if (data.basarili) {
-            body.innerHTML = `<i class="bi bi-truck me-1"></i> <strong>${kod}</strong> fişe eklendi — <a href="{% url 'erp:depo_fisi_listesi' %}" class="text-white fw-bold">Fişi Gör →</a>`;
+            sessionStorage.setItem('aktifIsEmriId', data.depo_fisi_id);
+            // Formu gizle, sonucu göster
+            document.getElementById('fisEkleForm').style.display = 'none';
+            const sonuc = document.getElementById('fisEkleSonuc');
+            sonuc.style.display = '';
+            sonuc.querySelector('.sonuc-mesaj').textContent = `Ürün iş emrine eklendi — Fiş #${data.depo_fisi_id}`;
+            sonuc.querySelector('.sonuc-urun').textContent = data.aciklama || document.getElementById('modalUrun').value;
         } else {
-            body.textContent = '✗ Hata: ' + (data.hata || 'Bilinmeyen');
+            document.getElementById('istekToastBody').textContent = '✗ Hata: ' + (data.hata || 'Bilinmeyen');
+            new bootstrap.Toast(document.getElementById('istekToast'), {delay: 4000}).show();
         }
-        new bootstrap.Toast(document.getElementById('istekToast'), {delay: 4000}).show();
     })
     .catch(() => {
+        this.disabled = false;
         document.getElementById('istekToastBody').textContent = 'Bağlantı hatası.';
         new bootstrap.Toast(document.getElementById('istekToast')).show();
     });
+});
+
+document.getElementById('devamEtBtn').addEventListener('click', function () {
+    // Form alanlarını sıfırla (cari sabit)
+    document.getElementById('modalAdet').value = 1;
+    document.getElementById('modalPlaka').value = '';
+    document.getElementById('modalAracMarka').value = '';
+    document.getElementById('modalAracModel').value = '';
+    document.getElementById('modalAciklama').value = '';
+    // Formu göster, sonucu gizle
+    document.getElementById('fisEkleForm').style.display = '';
+    document.getElementById('fisEkleSonuc').style.display = 'none';
+});
+
+document.getElementById('isEmriniKapatBtn').addEventListener('click', function () {
+    sessionStorage.removeItem('aktifIsEmriId');
+    bootstrap.Modal.getInstance(document.getElementById('depoFisiModal')).hide();
+    const body = document.getElementById('istekToastBody');
+    body.innerHTML = '<i class="bi bi-check-circle me-1"></i> İş emri kapatıldı.';
+    new bootstrap.Toast(document.getElementById('istekToast'), {delay: 3000}).show();
 });
 </script>
 {% csrf_token %}

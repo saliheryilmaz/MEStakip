@@ -19,7 +19,7 @@
         <form method="get" class="row g-2 align-items-end">
             <div class="col-md-5">
                 <input type="text" name="q" value="{{ q }}" class="form-control form-control-sm"
-                    placeholder="Stok kodu, açıklama, barkod, marka...">
+                    placeholder="Üretici kodu, stok kodu, açıklama, barkod, marka...">
             </div>
             <div class="col-md-2">
                 <select name="durum" class="form-select form-select-sm">
@@ -54,9 +54,10 @@
         <table class="table table-hover mb-0 small">
             <thead class="table-light">
                 <tr>
-                    <th>Stok Kodu</th>
+                    <th>Üretici Kodu</th>
                     <th>Ürün</th>
                     <th>Yıl</th>
+                    <th>Mevsim</th>
                     <th>Segment</th>
                     <th>Marka</th>
                     <th class="text-end">Gerçek Stok</th>
@@ -68,9 +69,10 @@
             <tbody>
                 {% for stok in sayfa %}
                 <tr>
-                    <td><code class="text-success">{{ stok.stok_kodu }}</code></td>
+                    <td><code class="text-success">{{ stok.uretici_kodu|default:"—" }}</code></td>
                     <td class="fw-semibold">{{ stok.aciklama }}</td>
                     <td class="text-muted">{{ stok.ozel_kod1|default:"—" }}</td>
+                    <td class="text-muted">{{ stok.mevsim|default:"—" }}</td>
                     <td class="text-muted">{{ stok.ozel_kod2|default:"—" }}</td>
                     <td class="text-muted">{{ stok.marka|default:"—" }}</td>
                     <td class="text-end">
@@ -90,7 +92,7 @@
                     </td>
                     <td class="text-center">
                         <button class="btn btn-istek p-0 border-0 bg-transparent"
-                                onclick="istekAc({{ stok.pk }}, '{{ stok.stok_kodu }}', '{{ stok.aciklama|escapejs }}')"
+                                onclick="istekAc({{ stok.pk }}, '{{ stok.uretici_kodu|escapejs }}', '{{ stok.aciklama|escapejs }}')"
                                 title="{{ stok.aciklama }}" style="cursor:pointer">
                             <i class="bi bi-truck" style="font-size:1.4rem;color:#1565C0"></i>
                         </button>
@@ -152,7 +154,7 @@
                     <input type="text" id="modalUrun" class="form-control" readonly>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Code:</label>
+                    <label class="form-label">Üretici Kodu:</label>
                     <input type="text" id="modalKod" class="form-control" readonly>
                 </div>
                 <div class="mb-3">

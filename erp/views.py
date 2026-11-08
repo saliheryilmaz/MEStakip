@@ -231,6 +231,7 @@ def stok_listesi(request):
     if q:
         qs = qs.filter(
             Q(stok_kodu__icontains=q) |
+            Q(uretici_kodu__icontains=q) |
             Q(aciklama__icontains=q) |
             Q(ana_barkod__icontains=q) |
             Q(marka__icontains=q)
@@ -336,12 +337,16 @@ def depo_fisi_istek(request, stok_pk):
 
     # Her istek için her zaman yeni fiş oluştur
     adet = max(1, int(request.POST.get('adet', 1)))
+    cari_post = request.POST.get('cari', '').strip()
+    cari = cari_post or request.user.get_full_name() or request.user.username
+    aciklama = request.POST.get('aciklama', '').strip()
     fis = DepoFisi.objects.create(
         islem_yapan=request.user,
-        cari=request.user.get_full_name() or request.user.username,
+        cari=cari,
         plaka=request.POST.get('plaka', '').strip().upper(),
         arac_marka=request.POST.get('arac_marka', '').strip(),
         arac_model=request.POST.get('arac_model', '').strip(),
+        aciklama=aciklama,
     )
     DepoFisiKalemi.objects.create(fis=fis, stok=stok, adet=adet)
 

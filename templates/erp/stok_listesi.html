@@ -150,6 +150,11 @@
             </div>
             <div class="modal-body">
                 <div class="mb-3">
+                    <label class="form-label">Cari:</label>
+                    <input type="text" id="modalCari" class="form-control"
+                           value="{{ request.user.get_full_name|default:request.user.username }}">
+                </div>
+                <div class="mb-3">
                     <label class="form-label">Ürün:</label>
                     <input type="text" id="modalUrun" class="form-control" readonly>
                 </div>
@@ -172,6 +177,11 @@
                 <div class="mb-3">
                     <label class="form-label">Araç Model:</label>
                     <input type="text" id="modalAracModel" class="form-control" placeholder="Ör: Corolla">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Açıklama:</label>
+                    <textarea id="modalAciklama" class="form-control" rows="3"
+                              placeholder="Opsiyonel açıklama..."></textarea>
                 </div>
             </div>
             <div class="modal-footer border-top">
@@ -202,6 +212,8 @@ let aktifStokPk = null;
 
 function istekAc(stokPk, stokKodu, aciklama) {
     aktifStokPk = stokPk;
+    document.getElementById('modalCari').value = '{{ request.user.get_full_name|default:request.user.username }}';
+    document.getElementById('modalAciklama').value = '';
     document.getElementById('modalUrun').value = aciklama;
     document.getElementById('modalKod').value = stokKodu;
     document.getElementById('modalAdet').value = 1;
@@ -214,9 +226,11 @@ function istekAc(stokPk, stokKodu, aciklama) {
 document.getElementById('sepeteEkleBtn').addEventListener('click', function () {
     if (!aktifStokPk) return;
     const adet      = parseInt(document.getElementById('modalAdet').value) || 1;
+    const cari      = document.getElementById('modalCari').value;
     const plaka     = document.getElementById('modalPlaka').value.toUpperCase();
     const aracMarka = document.getElementById('modalAracMarka').value;
     const aracModel = document.getElementById('modalAracModel').value;
+    const aciklama  = document.getElementById('modalAciklama').value;
 
     fetch(`{% url 'erp:depo_fisi_istek' 0 %}`.replace('/0/', `/${aktifStokPk}/`), {
         method: 'POST',
@@ -224,7 +238,7 @@ document.getElementById('sepeteEkleBtn').addEventListener('click', function () {
             'Content-Type': 'application/x-www-form-urlencoded',
             'X-CSRFToken': '{{ csrf_token }}',
         },
-        body: `adet=${adet}&plaka=${encodeURIComponent(plaka)}&arac_marka=${encodeURIComponent(aracMarka)}&arac_model=${encodeURIComponent(aracModel)}`
+        body: `adet=${adet}&plaka=${encodeURIComponent(plaka)}&arac_marka=${encodeURIComponent(aracMarka)}&arac_model=${encodeURIComponent(aracModel)}&cari=${encodeURIComponent(cari)}&aciklama=${encodeURIComponent(aciklama)}`
     })
     .then(r => r.json())
     .then(data => {

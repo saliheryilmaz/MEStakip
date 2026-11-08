@@ -339,7 +339,17 @@ def depo_fisi_istek(request, stok_pk):
     adet = max(1, int(request.POST.get('adet', 1)))
     cari_post = request.POST.get('cari', '').strip()
     cari = cari_post or request.user.get_full_name() or request.user.username
-    aciklama = request.POST.get('aciklama', '').strip()
+    fiyat_str = request.POST.get('fiyat', '').strip()
+    aciklama_raw = request.POST.get('aciklama', '').strip()
+    if fiyat_str:
+        try:
+            fiyat_val = float(fiyat_str)
+            aciklama = f'[Fiyat: {fiyat_val:,.2f}₺] {aciklama_raw}'.strip()
+        except ValueError:
+            aciklama = aciklama_raw
+    else:
+        aciklama = aciklama_raw
+
     fis = DepoFisi.objects.create(
         islem_yapan=request.user,
         cari=cari,

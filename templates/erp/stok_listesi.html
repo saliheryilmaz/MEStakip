@@ -92,7 +92,7 @@
                     </td>
                     <td class="text-center">
                         <button class="btn btn-istek p-0 border-0 bg-transparent"
-                                onclick="istekAc({{ stok.pk }}, '{{ stok.uretici_kodu|escapejs }}', '{{ stok.aciklama|escapejs }}')"
+                                onclick="istekAc({{stok.pk}}, '{{stok.uretici_kodu|escapejs}}', '{{stok.aciklama|escapejs}}', '{{stok.marka|escapejs}}', '{{stok.gercek_stok|floatformat:0}}', '')"
                                 title="{{ stok.aciklama }}" style="cursor:pointer">
                             <i class="bi bi-truck" style="font-size:1.4rem;color:#1565C0"></i>
                         </button>
@@ -142,52 +142,95 @@
 {% block extra_js %}
 <!-- Depo Fişi Ekle Modal -->
 <div class="modal fade" id="depoFisiModal" tabindex="-1" aria-labelledby="depoFisiModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header border-bottom">
-                <h5 class="modal-title fw-bold" id="depoFisiModalLabel">Depo Fişi Ekle</h5>
+                <h5 class="modal-title fw-bold" id="depoFisiModalLabel">
+                    <i class="bi bi-truck me-2" style="color:#1565C0"></i>Depo Fişi Ekle
+                </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <div class="mb-3">
-                    <label class="form-label">Cari:</label>
-                    <input type="text" id="modalCari" class="form-control"
-                           value="{{ request.user.get_full_name|default:request.user.username }}">
+
+                <!-- Ürün Bilgi Kartı -->
+                <div class="border rounded p-3 mb-3 bg-light">
+                    <div class="fw-bold fs-5" id="modalUrunAdi">—</div>
+                    <div class="text-primary fw-bold small mb-2" id="modalMarkaAdi">—</div>
+                    <div class="d-flex flex-wrap gap-2" id="modalBadgeContainer">
+                        <span class="badge bg-light text-dark border" id="modalBadgeKod"></span>
+                        <span class="badge bg-light text-dark border d-none" id="modalBadgeDot"></span>
+                        <span class="badge bg-light text-dark border" id="modalBadgeStok"></span>
+                    </div>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label">Ürün:</label>
-                    <input type="text" id="modalUrun" class="form-control" readonly>
+
+                <!-- Form Alanları -->
+                <div class="row g-2">
+                    <!-- Sol: Üretici Kodu -->
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Üretici Kodu</label>
+                        <input type="text" id="modalKod" class="form-control" readonly>
+                    </div>
+                    <!-- Sağ: DOT -->
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">DOT</label>
+                        <input type="text" id="modalDot" class="form-control" readonly placeholder="—">
+                    </div>
+                    <!-- Tam genişlik: Ürün Açıklaması -->
+                    <div class="col-12">
+                        <label class="form-label small fw-semibold">Ürün Açıklaması</label>
+                        <input type="text" id="modalUrun" class="form-control" readonly>
+                    </div>
+                    <!-- Sol: Adet -->
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Adet</label>
+                        <input type="number" id="modalAdet" class="form-control" value="1" min="1" max="999">
+                    </div>
+                    <!-- Sağ: Verilen Fiyat -->
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Verilen Fiyat (KDV Dahil)</label>
+                        <div class="input-group">
+                            <input type="number" id="modalFiyat" class="form-control" placeholder="0.00" step="0.01" min="0">
+                            <span class="input-group-text">₺</span>
+                        </div>
+                    </div>
+                    <!-- Sol: Plaka -->
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Plaka</label>
+                        <input type="text" id="modalPlaka" class="form-control text-uppercase" placeholder="34 ABC 123" maxlength="15">
+                    </div>
+                    <!-- Sağ: Araç Marka -->
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Araç Marka</label>
+                        <input type="text" id="modalAracMarka" class="form-control" placeholder="Ör: Toyota">
+                    </div>
+                    <!-- Tam genişlik: Araç Model -->
+                    <div class="col-12">
+                        <label class="form-label small fw-semibold">Araç Model</label>
+                        <input type="text" id="modalAracModel" class="form-control" placeholder="Ör: Corolla">
+                    </div>
+                    <!-- Tam genişlik: Cari -->
+                    <div class="col-12">
+                        <label class="form-label small fw-semibold">Cari</label>
+                        <input type="text" id="modalCari" class="form-control"
+                               value="{{request.user.get_full_name|default:request.user.username}}">
+                    </div>
+                    <!-- Tam genişlik: Açıklama -->
+                    <div class="col-12">
+                        <label class="form-label small fw-semibold">Açıklama</label>
+                        <textarea id="modalAciklama" class="form-control" rows="3"
+                                  placeholder="Opsiyonel açıklama..."></textarea>
+                    </div>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label">Üretici Kodu:</label>
-                    <input type="text" id="modalKod" class="form-control" readonly>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Adet:</label>
-                    <input type="number" id="modalAdet" class="form-control" value="1" min="1" max="999">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Plaka:</label>
-                    <input type="text" id="modalPlaka" class="form-control text-uppercase" placeholder="34 ABC 123" maxlength="15">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Araç Marka:</label>
-                    <input type="text" id="modalAracMarka" class="form-control" placeholder="Ör: Toyota">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Araç Model:</label>
-                    <input type="text" id="modalAracModel" class="form-control" placeholder="Ör: Corolla">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Açıklama:</label>
-                    <textarea id="modalAciklama" class="form-control" rows="3"
-                              placeholder="Opsiyonel açıklama..."></textarea>
-                </div>
+
             </div>
             <div class="modal-footer border-top">
-                <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">KAPAT</button>
+                <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i>Kapat
+                </button>
                 <button type="button" class="btn px-4 fw-bold text-white" id="sepeteEkleBtn"
-                        style="background:#009688">FİŞE EKLE</button>
+                        style="background:#009688">
+                    <i class="bi bi-truck me-2"></i>Fişe Ekle
+                </button>
             </div>
         </div>
     </div>
@@ -210,16 +253,43 @@
 <script>
 let aktifStokPk = null;
 
-function istekAc(stokPk, stokKodu, aciklama) {
+function istekAc(stokPk, stokKodu, aciklama, marka, stokAdedi, dot) {
     aktifStokPk = stokPk;
-    document.getElementById('modalCari').value = '{{ request.user.get_full_name|default:request.user.username }}';
-    document.getElementById('modalAciklama').value = '';
-    document.getElementById('modalUrun').value = aciklama;
-    document.getElementById('modalKod').value = stokKodu;
+
+    // Ürün bilgi kartı
+    document.getElementById('modalUrunAdi').textContent = aciklama || '—';
+    document.getElementById('modalMarkaAdi').textContent = marka || '—';
+
+    // Badge: Üretici Kodu
+    const badgeKod = document.getElementById('modalBadgeKod');
+    badgeKod.textContent = stokKodu ? ('Üretici: ' + stokKodu) : '';
+
+    // Badge: DOT (varsa göster)
+    const badgeDot = document.getElementById('modalBadgeDot');
+    if (dot && dot.trim() !== '') {
+        badgeDot.textContent = 'DOT: ' + dot;
+        badgeDot.classList.remove('d-none');
+    } else {
+        badgeDot.textContent = '';
+        badgeDot.classList.add('d-none');
+    }
+
+    // Badge: Stok adedi
+    const badgeStok = document.getElementById('modalBadgeStok');
+    badgeStok.textContent = 'Stok: ' + (stokAdedi !== undefined ? stokAdedi : '—');
+
+    // Form alanları
+    document.getElementById('modalKod').value = stokKodu || '';
+    document.getElementById('modalDot').value = (dot && dot.trim() !== '') ? dot : '';
+    document.getElementById('modalUrun').value = aciklama || '';
     document.getElementById('modalAdet').value = 1;
+    document.getElementById('modalFiyat').value = '';
     document.getElementById('modalPlaka').value = '';
     document.getElementById('modalAracMarka').value = '';
     document.getElementById('modalAracModel').value = '';
+    document.getElementById('modalCari').value = '{{ request.user.get_full_name|default:request.user.username }}';
+    document.getElementById('modalAciklama').value = '';
+
     new bootstrap.Modal(document.getElementById('depoFisiModal')).show();
 }
 
@@ -231,6 +301,7 @@ document.getElementById('sepeteEkleBtn').addEventListener('click', function () {
     const aracMarka = document.getElementById('modalAracMarka').value;
     const aracModel = document.getElementById('modalAracModel').value;
     const aciklama  = document.getElementById('modalAciklama').value;
+    const fiyat     = document.getElementById('modalFiyat').value;
 
     fetch(`{% url 'erp:depo_fisi_istek' 0 %}`.replace('/0/', `/${aktifStokPk}/`), {
         method: 'POST',
@@ -238,7 +309,7 @@ document.getElementById('sepeteEkleBtn').addEventListener('click', function () {
             'Content-Type': 'application/x-www-form-urlencoded',
             'X-CSRFToken': '{{ csrf_token }}',
         },
-        body: `adet=${adet}&plaka=${encodeURIComponent(plaka)}&arac_marka=${encodeURIComponent(aracMarka)}&arac_model=${encodeURIComponent(aracModel)}&cari=${encodeURIComponent(cari)}&aciklama=${encodeURIComponent(aciklama)}`
+        body: `adet=${adet}&plaka=${encodeURIComponent(plaka)}&arac_marka=${encodeURIComponent(aracMarka)}&arac_model=${encodeURIComponent(aracModel)}&cari=${encodeURIComponent(cari)}&aciklama=${encodeURIComponent(aciklama)}&fiyat=${encodeURIComponent(fiyat)}`
     })
     .then(r => r.json())
     .then(data => {

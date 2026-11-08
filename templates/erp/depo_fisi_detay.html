@@ -45,7 +45,7 @@
         </button>
         {% endif %}
         <a href="{% url 'erp:stok_listesi' %}" class="btn btn-outline-primary btn-sm">
-            <i class="bi bi-plus me-1"></i>Ürün Ekle
+            <i class="bi bi-box-seam me-1"></i>Stok Listesi
         </a>
         <a href="{% url 'erp:depo_fisi_listesi' %}" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-arrow-left me-1"></i>Fişler
@@ -72,7 +72,7 @@
                         <label class="form-label small fw-semibold">Üretici Kodu / Stok Kodu</label>
                         <div class="input-group">
                             <input type="text" id="kalemAraKodu" class="form-control form-control-sm"
-                                   placeholder="Kod ara..." autocomplete="off">
+                                   placeholder="Üretici kodu veya stok kodu girin" autocomplete="off">
                             <button class="btn btn-outline-primary btn-sm" type="button" onclick="stokAra()">
                                 <i class="bi bi-search"></i>
                             </button>
@@ -90,6 +90,7 @@
                         <div class="fw-semibold" id="kalemSeciliAdi"></div>
                         <div class="text-muted small" id="kalemSeciliMarka"></div>
                         <code class="small text-success" id="kalemSeciliKod"></code>
+                        <div class="text-muted small">Mevcut Stok: <span class="fw-semibold text-dark" id="kalemSeciliStokAdet">—</span></div>
                     </div>
                     <input type="hidden" id="kalemStokPk">
                     <div class="row g-2">
@@ -119,7 +120,7 @@
             <div class="card-header py-2 d-flex justify-content-between align-items-center"
                  style="background:#1565C0;color:white">
                 <h6 class="mb-0 fw-bold"><i class="bi bi-list-ul me-2"></i>Ürünler</h6>
-                <span class="badge bg-white text-primary">{{ kalemler|length }} kalem</span>
+                <span class="badge bg-white text-primary" id="kalemSayac">{{ kalemler|length }} kalem</span>
             </div>
             <div class="table-responsive">
                 <table class="table table-hover mb-0 small align-middle">
@@ -134,7 +135,7 @@
                             {% if fis.durum == 'bekliyor' %}<th class="text-center">Sil</th>{% endif %}
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="kalemTabloGovde">
                         {% for kalem in kalemler %}
                         <tr>
                             <td><code class="text-success small">{{ kalem.stok.stok_kodu }}</code></td>
@@ -288,7 +289,7 @@
                 </div>
                 <div class="d-flex justify-content-between mb-1">
                     <span class="text-muted">Toplam Kalem</span>
-                    <strong>{{ kalemler|length }}</strong>
+                    <strong id="fisOzetKalemSayisi">{{ kalemler|length }}</strong>
                 </div>
                 <div class="d-flex justify-content-between">
                     <span class="text-muted">Oluşturulma</span>
@@ -393,7 +394,7 @@ function stokAra() {
         let html = '<div class="list-group list-group-flush mt-1">';
         data.sonuclar.forEach(s => {
             html += `<button type="button" class="list-group-item list-group-item-action py-2 px-2 small"
-                onclick="kalemSeciliYap(${s.pk}, '${(s.stok_kodu||'').replace(/'/g,"\\'").replace(/"/g,"&quot;")}', '${(s.uretici_kodu||'').replace(/'/g,"\\'").replace(/"/g,"&quot;")}', '${(s.aciklama||'').replace(/'/g,"\\'").replace(/"/g,"&quot;")}', '${(s.marka||'').replace(/'/g,"\\'").replace(/"/g,"&quot;")}')">
+                onclick="kalemSeciliYap(${s.pk}, '${(s.stok_kodu||'').replace(/'/g,"\\'").replace(/"/g,"&quot;")}', '${(s.uretici_kodu||'').replace(/'/g,"\\'").replace(/"/g,"&quot;")}', '${(s.aciklama||'').replace(/'/g,"\\'").replace(/"/g,"&quot;")}', '${(s.marka||'').replace(/'/g,"\\'").replace(/"/g,"&quot;")}', '${(s.gercek_stok ?? '')}')">
                 <div class="fw-semibold">${s.aciklama || '—'}</div>
                 <div class="text-muted">${s.uretici_kodu || s.stok_kodu} &nbsp;|&nbsp; Stok: ${s.gercek_stok}</div>
             </button>`;
@@ -413,11 +414,12 @@ document.addEventListener('DOMContentLoaded', function() {
     if (inp) inp.addEventListener('keydown', function(e) { if (e.key === 'Enter') stokAra(); });
 });
 
-function kalemSeciliYap(pk, stokKodu, ureticiKodu, aciklama, marka) {
+function kalemSeciliYap(pk, stokKodu, ureticiKodu, aciklama, marka, gercekStok) {
     document.getElementById('kalemStokPk').value = pk;
     document.getElementById('kalemSeciliAdi').textContent = aciklama || '—';
     document.getElementById('kalemSeciliMarka').textContent = marka || '';
     document.getElementById('kalemSeciliKod').textContent = ureticiKodu || stokKodu || '';
+    document.getElementById('kalemSeciliStokAdet').textContent = (gercekStok !== null && gercekStok !== undefined && gercekStok !== '') ? gercekStok : '—';
     document.getElementById('kalemSeciliStok').classList.remove('d-none');
     document.getElementById('kalemAraArama').classList.add('d-none');
     document.getElementById('kalemAraKodu').value = ureticiKodu || stokKodu || '';
@@ -433,6 +435,22 @@ function kalemFormSifirla() {
     document.getElementById('kalemStokPk').value = '';
     document.getElementById('kalemAdet').value = 1;
     document.getElementById('kalemNot').value = '';
+}
+
+// Kalem ekleme başarılı olursa tabloyu AJAX ile yenile (tam sayfa yenileme yok).
+function kalemListesiniYenile() {
+    fetch(window.location.href)
+        .then(r => r.text())
+        .then(html => {
+            const doc = new DOMParser().parseFromString(html, 'text/html');
+            const yeniGovde = doc.getElementById('kalemTabloGovde');
+            if (yeniGovde) document.getElementById('kalemTabloGovde').innerHTML = yeniGovde.innerHTML;
+            const yeniSayac = doc.getElementById('kalemSayac');
+            if (yeniSayac) document.getElementById('kalemSayac').textContent = yeniSayac.textContent;
+            const yeniOzet = doc.getElementById('fisOzetKalemSayisi');
+            if (yeniOzet) document.getElementById('fisOzetKalemSayisi').textContent = yeniOzet.textContent;
+        })
+        .catch(() => { setTimeout(() => location.reload(), 600); });  // yedek: hata olursa yenile
 }
 
 function kalemEkle() {
@@ -454,8 +472,8 @@ function kalemEkle() {
         document.getElementById('fisToastBody').textContent = data.mesaj || data.hata;
         new bootstrap.Toast(document.getElementById('fisToast')).show();
         if (data.basarili) {
-            urunEkleKapat();
-            setTimeout(() => location.reload(), 800);
+            kalemListesiniYenile();   // AJAX ile kalem listesini güncelle (tam sayfa yenileme yok)
+            kalemFormSifirla();       // formu sıfırla; panel açık kalsın — yeni kalem eklenebilir
         }
     })
     .catch(() => {

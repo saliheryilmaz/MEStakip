@@ -245,6 +245,40 @@ def stok_listesi(request):
     if marka:
         qs = qs.filter(marka__icontains=marka)
 
+    # Segment filtresi (ozel_kod2)
+    segment = request.GET.get('segment', '').strip()
+    if segment:
+        qs = qs.filter(ozel_kod2__iexact=segment)
+
+    # Mevsim filtresi
+    mevsim_f = request.GET.get('mevsim', '').strip()
+    if mevsim_f:
+        qs = qs.filter(mevsim__icontains=mevsim_f)
+
+    # DOT filtresi (ozel_kod1)
+    dot_f = request.GET.get('dot', '').strip()
+    if dot_f:
+        qs = qs.filter(ozel_kod1__icontains=dot_f)
+
+    # Depo filtresi — depo_miktarlari üzerinden
+    depo_f = request.GET.get('depo', '').strip()
+    if depo_f:
+        qs = qs.filter(depo_miktarlari__depo__pk=depo_f)
+
+    # Stok var filtresi
+    stok_var = request.GET.get('stok_var', '').strip()
+    if stok_var == '1':
+        qs = qs.filter(gercek_stok__gt=0)
+
+    # İkinci arama kutusu (q2) — ozel_kod2 / ozel_kod1 / mevsim üzerinden
+    q2 = request.GET.get('q2', '').strip()
+    if q2:
+        qs = qs.filter(
+            Q(ozel_kod1__icontains=q2) |
+            Q(ozel_kod2__icontains=q2) |
+            Q(mevsim__icontains=q2)
+        )
+
     paginator = Paginator(qs, 25)
     sayfa = paginator.get_page(request.GET.get('sayfa', 1))
 
@@ -263,6 +297,16 @@ def stok_listesi(request):
         'secili_marka': marka,
         'toplam': qs.count(),
         'aktif_sayfa': 'stok_listesi',
+        'segment': segment,
+        'mevsim_f': mevsim_f,
+        'dot_f': dot_f,
+        'depo_f': depo_f,
+        'stok_var': stok_var,
+        'q2': q2,
+        'segmentler': StokKart.objects.exclude(ozel_kod2='').values_list('ozel_kod2', flat=True).distinct().order_by('ozel_kod2')[:30],
+        'mevsimler': StokKart.objects.exclude(mevsim='').values_list('mevsim', flat=True).distinct().order_by('mevsim')[:20],
+        'dot_listesi': StokKart.objects.exclude(ozel_kod1='').values_list('ozel_kod1', flat=True).distinct().order_by('ozel_kod1')[:50],
+        'depolar': Depo.objects.filter(aktif=True).order_by('sube_adi', 'ad'),
     })
 
 
@@ -344,6 +388,8 @@ def depo_fisi_istek(request, stok_pk):
     depo_fisi_id = request.POST.get('depo_fisi_id', '').strip()
     if depo_fisi_id:
         fis = get_object_or_404(DepoFisi, pk=int(depo_fisi_id))
+        if fis.durum != 'bekliyor':
+            return JsonResponse({'basarili': False, 'hata': 'Bu fiş artık aktif değil, yeni bir fiş açın.'}, status=400)
     else:
         fis = DepoFisi.objects.create(
             islem_yapan=request.user,
@@ -357,7 +403,7 @@ def depo_fisi_istek(request, stok_pk):
     return JsonResponse({
         'basarili': True,
         'fis_no': fis.fis_no,
-        'depo_fisi_id': fis.fis_no,
+        'depo_fisi_id': fis.pk,
         'stok_kodu': stok.stok_kodu,
         'aciklama': stok.aciklama,
         'mesaj': f'{stok.stok_kodu} fişe eklendi (Fiş #{fis.fis_no})',

@@ -3,47 +3,145 @@
 {% block page_name %}stok_listesi{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<!-- Aktif İş Emri Bildirimi -->
+<div id="aktifIsEmriSayfaBilgi" style="display:none" class="mb-3"></div>
+
+<!-- Başlık -->
+<div class="d-flex align-items-center justify-content-between mb-3">
     <div>
         <h4 class="fw-bold mb-1"><i class="bi bi-box-seam me-2 text-success"></i>Stok Kartları</h4>
-        <p class="text-muted mb-0">DİA'dan senkronize edilen {{ toplam }} stok kartı</p>
+        <p class="text-muted mb-0 small">DİA'dan senkronize edilen {{ toplam }} stok kartı</p>
     </div>
     <a href="{% url 'erp:dia_durum' %}" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-arrow-left me-1"></i>Sync Durumu
     </a>
 </div>
 
-<!-- Filtreler -->
-<div class="card border-0 shadow-sm mb-4">
+<!-- Sekme çubuğu -->
+<div class="mb-3">
+    <div class="d-flex flex-wrap gap-1 align-items-center">
+        {# Tümü #}
+        <a href="?q={{ q }}&q2={{ q2 }}&durum={{ secili_durum }}&marka={{ secili_marka }}&mevsim={{ mevsim_f }}&dot={{ dot_f }}&depo={{ depo_f }}&stok_var={{ stok_var }}"
+           class="btn btn-sm rounded-pill {% if not segment %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+            Tümü
+        </a>
+        {# Sabit sekmeler #}
+        <a href="?segment=Lastik&q={{ q }}&q2={{ q2 }}&durum={{ secili_durum }}&marka={{ secili_marka }}&mevsim={{ mevsim_f }}&dot={{ dot_f }}&depo={{ depo_f }}&stok_var={{ stok_var }}"
+           class="btn btn-sm rounded-pill {% if segment == 'Lastik' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+            Lastik
+        </a>
+        <a href="?segment=Jant&q={{ q }}&q2={{ q2 }}&durum={{ secili_durum }}&marka={{ secili_marka }}&mevsim={{ mevsim_f }}&dot={{ dot_f }}&depo={{ depo_f }}&stok_var={{ stok_var }}"
+           class="btn btn-sm rounded-pill {% if segment == 'Jant' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+            Jant
+        </a>
+        <a href="?segment=Akü&q={{ q }}&q2={{ q2 }}&durum={{ secili_durum }}&marka={{ secili_marka }}&mevsim={{ mevsim_f }}&dot={{ dot_f }}&depo={{ depo_f }}&stok_var={{ stok_var }}"
+           class="btn btn-sm rounded-pill {% if segment == 'Akü' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+            Akü
+        </a>
+        <a href="?segment=Malzeme&q={{ q }}&q2={{ q2 }}&durum={{ secili_durum }}&marka={{ secili_marka }}&mevsim={{ mevsim_f }}&dot={{ dot_f }}&depo={{ depo_f }}&stok_var={{ stok_var }}"
+           class="btn btn-sm rounded-pill {% if segment == 'Malzeme' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+            Malzeme
+        </a>
+        {# Dinamik diğer segmentler — sabitlerde olmayanlar #}
+        {% for seg in segmentler %}
+            {% if seg != 'Lastik' and seg != 'Jant' and seg != 'Akü' and seg != 'Malzeme' %}
+            <a href="?segment={{ seg }}&q={{ q }}&q2={{ q2 }}&durum={{ secili_durum }}&marka={{ secili_marka }}&mevsim={{ mevsim_f }}&dot={{ dot_f }}&depo={{ depo_f }}&stok_var={{ stok_var }}"
+               class="btn btn-sm rounded-pill {% if segment == seg %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                {{ seg }}
+            </a>
+            {% endif %}
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Çift arama kutusu -->
+<div class="card border-0 shadow-sm mb-2">
     <div class="card-body py-3">
-        <form method="get" class="row g-2 align-items-end">
+        <form method="get" id="aramaFormu" class="row g-2 align-items-end">
+            <input type="hidden" name="segment"  value="{{ segment }}">
+            <input type="hidden" name="marka"    value="{{ secili_marka }}">
+            <input type="hidden" name="mevsim"   value="{{ mevsim_f }}">
+            <input type="hidden" name="dot"      value="{{ dot_f }}">
+            <input type="hidden" name="depo"     value="{{ depo_f }}">
+            <input type="hidden" name="stok_var" value="{{ stok_var }}">
+            <input type="hidden" name="durum"    value="{{ secili_durum }}">
             <div class="col-md-5">
                 <input type="text" name="q" value="{{ q }}" class="form-control form-control-sm"
-                    placeholder="Üretici kodu, stok kodu, açıklama, barkod, marka...">
+                       placeholder="Ebat-1 · ebat, marka, desen veya kod">
+            </div>
+            <div class="col-md-5">
+                <input type="text" name="q2" value="{{ q2 }}" class="form-control form-control-sm"
+                       placeholder="Ebat-2 · ör. arka lastik ebadı">
             </div>
             <div class="col-md-2">
-                <select name="durum" class="form-select form-select-sm">
-                    <option value="">Tüm durumlar</option>
-                    <option value="A" {% if secili_durum == 'A' %}selected{% endif %}>Aktif</option>
-                    <option value="P" {% if secili_durum == 'P' %}selected{% endif %}>Pasif</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <select name="marka" class="form-select form-select-sm">
-                    <option value="">Tüm markalar</option>
-                    {% for m in markalar %}
-                    <option value="{{ m }}" {% if secili_marka == m %}selected{% endif %}>{{ m }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-3 d-flex gap-1">
-                <button type="submit" class="btn btn-primary btn-sm flex-grow-1">
-                    <i class="bi bi-search"></i> Filtrele
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="bi bi-search me-1"></i>Ara
                 </button>
-                <a href="{% url 'erp:stok_listesi' %}" class="btn btn-outline-secondary btn-sm">
-                    <i class="bi bi-x"></i>
-                </a>
             </div>
+        </form>
+    </div>
+</div>
+
+<!-- Filtre satırı -->
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body py-2">
+        <form method="get" id="filtrelerFormu" class="d-flex flex-wrap gap-2 align-items-center">
+            <input type="hidden" name="q"       value="{{ q }}">
+            <input type="hidden" name="q2"      value="{{ q2 }}">
+            <input type="hidden" name="segment" value="{{ segment }}">
+            <input type="hidden" name="durum"   value="{{ secili_durum }}">
+
+            <!-- Marka -->
+            <select name="marka" class="form-select form-select-sm" style="width:auto;min-width:120px"
+                    onchange="this.form.submit()">
+                <option value="">Marka ▾</option>
+                {% for m in markalar %}
+                <option value="{{ m }}" {% if secili_marka == m %}selected{% endif %}>{{ m }}</option>
+                {% endfor %}
+            </select>
+
+            <!-- Mevsim -->
+            <select name="mevsim" class="form-select form-select-sm" style="width:auto;min-width:120px"
+                    onchange="this.form.submit()">
+                <option value="">Mevsim ▾</option>
+                {% for mv in mevsimler %}
+                <option value="{{ mv }}" {% if mevsim_f == mv %}selected{% endif %}>{{ mv }}</option>
+                {% endfor %}
+            </select>
+
+            <!-- DOT -->
+            <select name="dot" class="form-select form-select-sm" style="width:auto;min-width:100px"
+                    onchange="this.form.submit()">
+                <option value="">DOT ▾</option>
+                {% for d in dot_listesi %}
+                <option value="{{ d }}" {% if dot_f == d %}selected{% endif %}>{{ d }}</option>
+                {% endfor %}
+            </select>
+
+            <!-- Depo -->
+            <select name="depo" class="form-select form-select-sm" style="width:auto;min-width:130px"
+                    onchange="this.form.submit()">
+                <option value="">Depo ▾</option>
+                {% for dep in depolar %}
+                <option value="{{ dep.pk }}" {% if depo_f == dep.pk|stringformat:"s" %}selected{% endif %}>
+                    {% if dep.sube_adi %}{{ dep.sube_adi }} — {% endif %}{{ dep.ad }}
+                </option>
+                {% endfor %}
+            </select>
+
+            <!-- Stok Var toggle -->
+            <div class="form-check form-switch mb-0 ms-1">
+                <input class="form-check-input" type="checkbox" name="stok_var" value="1"
+                       id="stokVarToggle"
+                       {% if stok_var == '1' %}checked{% endif %}
+                       onchange="this.form.submit()">
+                <label class="form-check-label small" for="stokVarToggle">Stok Var</label>
+            </div>
+
+            <!-- Sıfırla -->
+            <a href="{% url 'erp:stok_listesi' %}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-x-circle me-1"></i>Sıfırla
+            </a>
         </form>
     </div>
 </div>
@@ -51,58 +149,115 @@
 <!-- Tablo -->
 <div class="card border-0 shadow-sm">
     <div class="table-responsive">
-        <table class="table table-hover mb-0 small">
+        <table class="table table-hover mb-0 small align-middle">
             <thead class="table-light">
                 <tr>
-                    <th>Üretici Kodu</th>
-                    <th>Ürün</th>
-                    <th>Yıl</th>
-                    <th>Mevsim</th>
-                    <th>Segment</th>
-                    <th>Marka</th>
-                    <th class="text-end">Gerçek Stok</th>
-                    <th class="text-end">Fiyat 1</th>
-                    <th>Sync</th>
-                    <th style="background:#1565C0;color:white;text-align:center">İstek</th>
+                    <th style="width:36px"></th>
+                    <th>KOD</th>
+                    <th>ÜRÜN</th>
+                    <th>MARKA</th>
+                    <th>DOT</th>
+                    <th>MEVSİM</th>
+                    <th class="text-end">SATILABİLİR</th>
+                    <th class="text-end">ALIŞ FİY.</th>
+                    <th class="text-end">SATIŞ NAKİT</th>
+                    <th class="text-center" style="background:#1565C0;color:white">İSTEK</th>
                 </tr>
             </thead>
             <tbody>
                 {% for stok in sayfa %}
                 <tr>
-                    <td><code class="text-success">{{ stok.uretici_kodu|default:"—" }}</code></td>
-                    <td class="fw-semibold">{{ stok.aciklama }}</td>
-                    <td class="text-muted">{{ stok.ozel_kod1|default:"—" }}</td>
-                    <td class="text-muted">{{ stok.mevsim|default:"—" }}</td>
-                    <td class="text-muted">{{ stok.ozel_kod2|default:"—" }}</td>
-                    <td class="text-muted">{{ stok.marka|default:"—" }}</td>
-                    <td class="text-end">
-                        <span class="{% if stok.gercek_stok <= 0 %}text-danger{% else %}text-success{% endif %} fw-semibold">
-                            {{ stok.gercek_stok|floatformat:0 }}
-                        </span>
+                    <!-- Aksiyon menüsü -->
+                    <td>
+                        <div class="dropdown">
+                            <button class="btn btn-link btn-sm p-0 text-muted" data-bs-toggle="dropdown" aria-expanded="false"
+                                    title="İşlemler">⋮</button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                <li><a class="dropdown-item small" href="{% url 'erp:stok_detay' stok.pk %}">
+                                    <i class="bi bi-eye me-1"></i>Detay
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item small" href="#"
+                                       onclick="istekAc({{ stok.pk }}, '{{ stok.uretici_kodu|escapejs }}', '{{ stok.aciklama|escapejs }}', '{{ stok.marka|escapejs }}', '{{ stok.gercek_stok|floatformat:0 }}', '{{ stok.ozel_kod1|escapejs }}'); return false;">
+                                    <i class="bi bi-truck me-1"></i>Fişe Ekle
+                                </a></li>
+                            </ul>
+                        </div>
                     </td>
+
+                    <!-- KOD: üretici kodu + stok kodu küçük -->
+                    <td>
+                        <code class="text-success fw-semibold">{{ stok.uretici_kodu|default:"—" }}</code>
+                        {% if stok.stok_kodu %}
+                        <br><span class="text-muted" style="font-size:0.72rem">{{ stok.stok_kodu }}</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- ÜRÜN -->
+                    <td class="fw-semibold">{{ stok.aciklama }}</td>
+
+                    <!-- MARKA -->
+                    <td class="text-muted">{{ stok.marka|default:"—" }}</td>
+
+                    <!-- DOT -->
+                    <td>
+                        {% if stok.ozel_kod1 %}
+                        <span class="badge bg-success-subtle text-success border border-success-subtle">{{ stok.ozel_kod1 }}</span>
+                        {% else %}—{% endif %}
+                    </td>
+
+                    <!-- MEVSİM -->
+                    <td>
+                        {% if stok.mevsim %}
+                            {% if stok.mevsim == 'Kış' or stok.mevsim == 'Kis' %}
+                                <span class="badge bg-primary">{{ stok.mevsim }}</span>
+                            {% elif stok.mevsim == 'Yaz' %}
+                                <span class="badge bg-warning text-dark">{{ stok.mevsim }}</span>
+                            {% elif '4' in stok.mevsim or 'Mevsim' in stok.mevsim %}
+                                <span class="badge bg-success">{{ stok.mevsim }}</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ stok.mevsim }}</span>
+                            {% endif %}
+                        {% else %}—{% endif %}
+                    </td>
+
+                    <!-- SATILABİLİR -->
                     <td class="text-end">
-                        {% if stok.fiyat1 %}
+                        {% if stok.gercek_stok > 0 %}
+                        <span class="badge bg-success">{{ stok.gercek_stok|floatformat:0 }}</span>
+                        {% else %}
+                        <span class="badge bg-danger">{{ stok.gercek_stok|floatformat:0 }}</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- ALIŞ FİY. -->
+                    <td class="text-end">
+                        {% if stok.fiyat1 and stok.fiyat1 > 0 %}
                         <span class="fw-semibold">{{ stok.fiyat1|floatformat:0 }}₺</span>
                         {% else %}—{% endif %}
                     </td>
-                    <td>
-                        {% if stok.sync_durumu == 'senkron' %}<span class="text-success small">✓</span>
-                        {% elif stok.sync_durumu == 'hatali' %}<span class="text-danger small">✗</span>
-                        {% else %}<span class="text-muted small">—</span>{% endif %}
+
+                    <!-- SATIŞ NAKİT -->
+                    <td class="text-end">
+                        {% if stok.fiyat2 and stok.fiyat2 > 0 %}
+                        <span class="fw-semibold text-success">{{ stok.fiyat2|floatformat:0 }}₺</span>
+                        {% else %}—{% endif %}
                     </td>
+
+                    <!-- İSTEK -->
                     <td class="text-center">
-                        <button class="btn btn-istek p-0 border-0 bg-transparent"
-                                onclick="istekAc({{stok.pk}}, '{{stok.uretici_kodu|escapejs}}', '{{stok.aciklama|escapejs}}', '{{stok.marka|escapejs}}', '{{stok.gercek_stok|floatformat:0}}', '')"
+                        <button class="btn btn-link p-0 border-0 bg-transparent"
+                                onclick="istekAc({{ stok.pk }}, '{{ stok.uretici_kodu|escapejs }}', '{{ stok.aciklama|escapejs }}', '{{ stok.marka|escapejs }}', '{{ stok.gercek_stok|floatformat:0 }}', '{{ stok.ozel_kod1|escapejs }}')"
                                 title="{{ stok.aciklama }}" style="cursor:pointer">
                             <i class="bi bi-truck" style="font-size:1.4rem;color:#1565C0"></i>
                         </button>
                     </td>
-                    </tr>
+                </tr>
                 {% empty %}
                 <tr>
                     <td colspan="10" class="text-center text-muted py-4">
                         <i class="bi bi-box-seam fs-4 d-block mb-2"></i>
-                        Stok kartı bulunamadı. Sync başlatın.
+                        Stok kartı bulunamadı.
                     </td>
                 </tr>
                 {% endfor %}
@@ -110,6 +265,7 @@
         </table>
     </div>
 
+    <!-- Sayfalama -->
     {% if sayfa.has_other_pages %}
     <div class="card-footer bg-white border-top d-flex justify-content-between align-items-center py-2">
         <small class="text-muted">{{ sayfa.start_index }}–{{ sayfa.end_index }} / {{ toplam }} kayıt</small>
@@ -117,7 +273,7 @@
             <ul class="pagination pagination-sm mb-0">
                 {% if sayfa.has_previous %}
                 <li class="page-item">
-                    <a class="page-link" href="?{% if q %}q={{ q }}&{% endif %}sayfa={{ sayfa.previous_page_number }}">
+                    <a class="page-link" href="?segment={{ segment }}&q={{ q }}&q2={{ q2 }}&marka={{ secili_marka }}&mevsim={{ mevsim_f }}&dot={{ dot_f }}&depo={{ depo_f }}&stok_var={{ stok_var }}&durum={{ secili_durum }}&sayfa={{ sayfa.previous_page_number }}">
                         <i class="bi bi-chevron-left"></i>
                     </a>
                 </li>
@@ -127,7 +283,7 @@
                 </li>
                 {% if sayfa.has_next %}
                 <li class="page-item">
-                    <a class="page-link" href="?{% if q %}q={{ q }}&{% endif %}sayfa={{ sayfa.next_page_number }}">
+                    <a class="page-link" href="?segment={{ segment }}&q={{ q }}&q2={{ q2 }}&marka={{ secili_marka }}&mevsim={{ mevsim_f }}&dot={{ dot_f }}&depo={{ depo_f }}&stok_var={{ stok_var }}&durum={{ secili_durum }}&sayfa={{ sayfa.next_page_number }}">
                         <i class="bi bi-chevron-right"></i>
                     </a>
                 </li>
@@ -349,12 +505,13 @@ document.getElementById('sepeteEkleBtn').addEventListener('click', function () {
     .then(data => {
         this.disabled = false;
         if (data.basarili) {
+            urunEklendi = true;
             sessionStorage.setItem('aktifIsEmriId', data.depo_fisi_id);
             // Formu gizle, sonucu göster
             document.getElementById('fisEkleForm').style.display = 'none';
             const sonuc = document.getElementById('fisEkleSonuc');
             sonuc.style.display = '';
-            sonuc.querySelector('.sonuc-mesaj').textContent = `Ürün iş emrine eklendi — Fiş #${data.depo_fisi_id}`;
+            sonuc.querySelector('.sonuc-mesaj').textContent = `Ürün iş emrine eklendi — Fiş #${data.fis_no || data.depo_fisi_id}`;
             sonuc.querySelector('.sonuc-urun').textContent = data.aciklama || document.getElementById('modalUrun').value;
         } else {
             document.getElementById('istekToastBody').textContent = '✗ Hata: ' + (data.hata || 'Bilinmeyen');
@@ -369,15 +526,56 @@ document.getElementById('sepeteEkleBtn').addEventListener('click', function () {
 });
 
 document.getElementById('devamEtBtn').addEventListener('click', function () {
-    // Form alanlarını sıfırla (cari sabit)
+    // Formu ve ürün kartını sıfırla — aktifIsEmriId sessionStorage'da kalsın
     document.getElementById('modalAdet').value = 1;
     document.getElementById('modalPlaka').value = '';
     document.getElementById('modalAracMarka').value = '';
     document.getElementById('modalAracModel').value = '';
     document.getElementById('modalAciklama').value = '';
-    // Formu göster, sonucu gizle
+    document.getElementById('modalUrunAdi').textContent = '—';
+    document.getElementById('modalMarkaAdi').textContent = '—';
+    document.getElementById('modalBadgeKod').textContent = '';
+    document.getElementById('modalBadgeDot').textContent = '';
+    document.getElementById('modalBadgeDot').classList.add('d-none');
+    document.getElementById('modalBadgeStok').textContent = '';
+    document.getElementById('modalKod').value = '';
+    document.getElementById('modalDot').value = '';
+    document.getElementById('modalUrun').value = '';
     document.getElementById('fisEkleForm').style.display = '';
     document.getElementById('fisEkleSonuc').style.display = 'none';
+    // Modal'ı kapat
+    bootstrap.Modal.getInstance(document.getElementById('depoFisiModal')).hide();
+    // Sayfa üstünde aktif iş emri bildirimi göster
+    aktifIsEmriBildirimGoster();
+});
+
+function aktifIsEmriBildirimGoster() {
+    const aktifId = sessionStorage.getItem('aktifIsEmriId');
+    const bilgi = document.getElementById('aktifIsEmriSayfaBilgi');
+    if (aktifId) {
+        bilgi.innerHTML = `<div class="alert alert-success d-flex align-items-center gap-3 py-2">
+            <i class="bi bi-truck fs-5"></i>
+            <span>Aktif İş Emri <strong>#${aktifId}</strong> açık — listeden ürüne tıklayarak bu fişe kalem ekleyebilirsiniz.</span>
+            <button type="button" class="btn btn-sm btn-outline-danger ms-auto" onclick="sessionStorage.removeItem('aktifIsEmriId');document.getElementById('aktifIsEmriSayfaBilgi').style.display='none'">
+                <i class="bi bi-x me-1"></i>İş Emrini Kapat
+            </button>
+        </div>`;
+        bilgi.style.display = '';
+    } else {
+        bilgi.style.display = 'none';
+    }
+}
+
+// Sayfa yüklenince aktif iş emri varsa göster
+aktifIsEmriBildirimGoster();
+
+// Modal kapandığında sayfa yenile (ürün eklendiyse)
+let urunEklendi = false;
+document.getElementById('depoFisiModal').addEventListener('hidden.bs.modal', function () {
+    if (urunEklendi) {
+        urunEklendi = false;
+        location.reload();
+    }
 });
 
 document.getElementById('isEmriniKapatBtn').addEventListener('click', function () {
@@ -386,6 +584,7 @@ document.getElementById('isEmriniKapatBtn').addEventListener('click', function (
     const body = document.getElementById('istekToastBody');
     body.innerHTML = '<i class="bi bi-check-circle me-1"></i> İş emri kapatıldı.';
     new bootstrap.Toast(document.getElementById('istekToast'), {delay: 3000}).show();
+    location.reload();
 });
 </script>
 {% csrf_token %}

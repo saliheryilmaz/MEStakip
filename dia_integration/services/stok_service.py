@@ -63,6 +63,7 @@ class StokService:
     def dia_dan_senkronize_et(
         delta: bool = True,
         sayfa_boyutu: int = 100,
+        limit: int | None = None,
         tetikleyen: str = SyncTetikleyen.SISTEM,
         kullanici=None,
     ) -> StokSyncSonuc:
@@ -91,7 +92,8 @@ class StokService:
                     if not sayfa:
                         break
 
-                    for dia_kayit in sayfa:
+                    kalan = max(0, limit - sonuc.toplam) if limit is not None else len(sayfa)
+                    for dia_kayit in sayfa[:kalan]:
                         sonuc.toplam += 1
                         try:
                             eklendi = StokService._kaydi_isle(dia_kayit)
@@ -113,6 +115,8 @@ class StokService:
                                 hata_mesaji=str(exc),
                             )
 
+                    if limit is not None and sonuc.toplam >= limit:
+                        break
                     if len(sayfa) < sayfa_boyutu:
                         break
                     offset += sayfa_boyutu

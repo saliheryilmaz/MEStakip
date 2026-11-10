@@ -94,7 +94,7 @@
                 <td>{{ fis.tarih|date:"d.m.Y" }}</td>
                 <td>
                     {% for kalem in fis.kalemler.all %}
-                    <code class="text-success small d-block">{{ kalem.stok.stok_kodu }}</code>
+                    <code class="text-success small d-block">{{ kalem.stok.uretici_kodu|default:kalem.stok.stok_kodu }}</code>
                     {% empty %}—{% endfor %}
                 </td>
                 <td>
@@ -133,10 +133,10 @@
                             <i class="bi bi-eye"></i>
                         </a>
                         {% if fis.durum == 'bekliyor' %}
-                        <button class="btn btn-outline-warning btn-sm py-0 px-2" title="Düzenle"
-                                onclick="duzenleAc({{ fis.pk }}, '{{ fis.plaka|escapejs }}', '{{ fis.cari|escapejs }}', '{{ fis.aciklama|escapejs }}')">
+                        <a href="{% url 'erp:depo_fisi_detay' fis.pk %}"
+                           class="btn btn-outline-warning btn-sm py-0 px-2" title="Düzenle">
                             <i class="bi bi-pencil"></i>
-                        </button>
+                        </a>
                         <button class="btn btn-outline-success btn-sm py-0 px-2" title="Onayla"
                                 onclick="onayAc({{ fis.pk }})">
                             <i class="bi bi-check-lg"></i>

@@ -22,6 +22,8 @@ class Command(BaseCommand):
         parser.add_argument('--tam', action='store_true', default=False,
                             help='Tam sync (varsayılan: sadece değişenler)')
         parser.add_argument('--sayfa', type=int, default=100, help='Sayfa boyutu')
+        parser.add_argument('--limit', type=int, default=0,
+                            help='En fazla bu kadar stok kartını işle (0: sınırsız)')
         parser.add_argument('--depolar', action='store_true', default=False,
                             help='Sadece depo tanımlarını sync et')
         parser.add_argument('--miktarlar', action='store_true', default=False,
@@ -43,6 +45,8 @@ class Command(BaseCommand):
             try:
                 with DiaClient() as client:
                     sayfa = client.listele('scf', 'scf_stokkart_listele', limit=options['sayfa'])
+                if options['limit'] > 0:
+                    sayfa = sayfa[:options['limit']]
                 self.stdout.write(self.style.SUCCESS(f'✓ {len(sayfa)} stok çekildi (yazılmadı).'))
                 if sayfa:
                     self.stdout.write(f'  Örnek: {sayfa[0].get("stokkartkodu")} — {sayfa[0].get("aciklama")}')
@@ -65,6 +69,7 @@ class Command(BaseCommand):
                 sonuc = StokService.dia_dan_senkronize_et(
                     delta=delta,
                     sayfa_boyutu=options['sayfa'],
+                    limit=options['limit'] or None,
                 )
                 self.stdout.write(self.style.SUCCESS(
                     f'\n✓ Stok sync tamamlandı:\n'

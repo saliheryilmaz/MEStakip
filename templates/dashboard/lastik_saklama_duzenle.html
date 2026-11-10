@@ -10,103 +10,254 @@
         <h1 class="h3 mb-0"><i class="bi bi-pencil me-2 text-primary"></i>Kayıt Düzenle</h1>
         <p class="text-muted small mb-0">{{ kayit.musteri_adi }} – {{ kayit.plaka }}</p>
     </div>
-    <a href="{% url 'dashboard:lastik_saklama_detay' kayit.pk %}" class="btn btn-outline-secondary">
-        <i class="bi bi-arrow-left me-1"></i>Geri
-    </a>
+    <div class="d-flex gap-2">
+        <a href="{% url 'dashboard:lastik_saklama_sil' kayit.pk %}" class="btn btn-outline-danger">
+            <i class="bi bi-trash me-1"></i>Sil
+        </a>
+        <a href="{% url 'dashboard:lastik_saklama_detay' kayit.pk %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Geri
+        </a>
+    </div>
 </div>
 
-<div class="row justify-content-center">
-    <div class="col-lg-8">
-        <div class="card">
-            <div class="card-body">
-                <form method="post">
-                    {% csrf_token %}
-                    <h6 class="fw-bold mb-3 text-primary"><i class="bi bi-person me-1"></i>Müşteri Bilgileri</h6>
-                    <div class="row g-3 mb-4">
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Müşteri Adı <span class="text-danger">*</span></label>
-                            <input type="text" name="musteri_adi" class="form-control" value="{{ kayit.musteri_adi }}" required>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label fw-semibold">Telefon</label>
-                            <input type="text" name="musteri_telefon" class="form-control" value="{{ kayit.musteri_telefon }}">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label fw-semibold">Plaka</label>
-                            <input type="text" name="plaka" class="form-control" value="{{ kayit.plaka }}" style="text-transform:uppercase">
-                        </div>
-                    </div>
+<form method="post" id="duzenleForm">
+{% csrf_token %}
 
-                    <h6 class="fw-bold mb-3 text-primary"><i class="bi bi-circle me-1"></i>Lastik Bilgileri</h6>
-                    <div class="row g-3 mb-4">
-                        <div class="col-md-3">
-                            <label class="form-label fw-semibold">Marka</label>
-                            <input type="text" name="marka" class="form-control" value="{{ kayit.marka }}">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label fw-semibold">Ebat</label>
-                            <input type="text" name="ebat" class="form-control" value="{{ kayit.ebat }}">
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label fw-semibold">Mevsim</label>
-                            <select name="mevsim" class="form-select">
-                                {% for val, label in mevsim_choices %}
-                                <option value="{{ val }}" {% if kayit.mevsim == val %}selected{% endif %}>{{ label }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label fw-semibold">Adet</label>
-                            <input type="number" name="adet" class="form-control" value="{{ kayit.adet }}" min="1" max="8">
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label fw-semibold">Diş Derinliği (mm)</label>
-                            <input type="number" name="dis_derinligi" class="form-control" step="0.1" value="{{ kayit.dis_derinligi|default:'' }}">
-                        </div>
-                    </div>
-
-                    <h6 class="fw-bold mb-3 text-primary"><i class="bi bi-geo-alt me-1"></i>Depo Bilgileri</h6>
-                    <div class="row g-3 mb-4">
-                        <div class="col-md-4">
-                            <label class="form-label fw-semibold">Depo / Raf</label>
-                            <select name="depo" class="form-select">
-                                <option value="">– Seç –</option>
-                                {% for d in depolar %}
-                                <option value="{{ d.pk }}" {% if kayit.depo.pk == d.pk %}selected{% endif %}>{{ d }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label fw-semibold">Tahmini Çıkış</label>
-                            <input type="date" name="tahmini_cikis" class="form-control" value="{{ kayit.tahmini_cikis|date:'Y-m-d'|default:'' }}">
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label fw-semibold">Saklama Ücreti (₺)</label>
-                            <input type="number" name="saklama_ucreti" class="form-control" step="0.01" value="{{ kayit.saklama_ucreti|default:'' }}">
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label fw-semibold">Değişim Ücreti (₺)</label>
-                            <input type="number" name="degisim_ucreti" class="form-control" step="0.01" value="{{ kayit.degisim_ucreti|default:'' }}">
-                        </div>
-                    </div>
-
-                    <div class="mb-4">
-                        <label class="form-label fw-semibold">Açıklama</label>
-                        <textarea name="aciklama" class="form-control" rows="2">{{ kayit.aciklama }}</textarea>
-                    </div>
-
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary px-4">
-                            <i class="bi bi-check-circle me-1"></i>Kaydet
-                        </button>
-                        <a href="{% url 'dashboard:lastik_saklama_detay' kayit.pk %}" class="btn btn-outline-secondary">İptal</a>
-                        <a href="{% url 'dashboard:lastik_saklama_sil' kayit.pk %}" class="btn btn-outline-danger ms-auto">
-                            <i class="bi bi-trash me-1"></i>Sil
-                        </a>
-                    </div>
-                </form>
+<!-- ─── Müşteri Bilgileri ─────────────────────────────── -->
+<div class="card mb-4">
+    <div class="card-body">
+        <h6 class="fw-bold mb-3 d-flex align-items-center gap-2">
+            <span class="rounded-circle bg-primary bg-opacity-10 p-1 px-2 text-primary" style="font-size:.8rem">👤</span>
+            Müşteri Bilgileri
+        </h6>
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label fw-semibold">Müşteri Adı <span class="text-danger">*</span></label>
+                <input type="text" name="musteri_adi" class="form-control" value="{{ kayit.musteri_adi }}" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">Telefon</label>
+                <input type="text" name="musteri_telefon" class="form-control" value="{{ kayit.musteri_telefon }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-semibold">Plaka</label>
+                <input type="text" name="plaka" class="form-control" value="{{ kayit.plaka }}" style="text-transform:uppercase">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">Araç Marka / Model</label>
+                <input type="text" name="arac_marka_model" class="form-control" value="{{ kayit.arac_marka_model }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-semibold">Araç Kilometre</label>
+                <input type="number" name="arac_kilometre" class="form-control" value="{{ kayit.arac_kilometre|default:'' }}" min="0">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-semibold">Model Yılı</label>
+                <input type="number" name="model_yili" class="form-control" value="{{ kayit.model_yili|default:'' }}" min="1950" max="2100">
             </div>
         </div>
     </div>
 </div>
+
+<!-- ─── Depo & Tarih Bilgileri ─────────────────────────────── -->
+<div class="card mb-4">
+    <div class="card-body">
+        <h6 class="fw-bold mb-3 d-flex align-items-center gap-2">
+            <span class="rounded-circle bg-primary bg-opacity-10 p-1 px-2 text-primary" style="font-size:.8rem">📍</span>
+            Depo & Tarih Bilgileri
+        </h6>
+        <div class="row g-3">
+            <div class="col-md-2">
+                <label class="form-label fw-semibold">Mevsim <span class="text-danger">*</span></label>
+                <select name="mevsim" class="form-select" required>
+                    {% for val, label in mevsim_choices %}
+                    <option value="{{ val }}" {% if kayit.mevsim == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-1">
+                <label class="form-label fw-semibold">Adet</label>
+                <input type="number" name="adet" class="form-control" value="{{ kayit.adet }}" min="1" max="8" id="adetInput">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">Depo / Raf</label>
+                <div class="input-group">
+                    <select name="depo" class="form-select" id="depoSelect">
+                        <option value="">– Seç –</option>
+                        {% for d in depolar %}
+                        <option value="{{ d.pk }}" {% if kayit.depo.pk == d.pk %}selected{% endif %}>{{ d }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="button" class="btn btn-outline-primary" id="depoEkleBtn" title="Yeni depo ekle">
+                        <i class="bi bi-plus-lg"></i>
+                    </button>
+                </div>
+                <div id="depoEkleForm" class="border rounded p-2 mt-2 bg-light" style="display:none">
+                    <div class="fw-semibold small mb-2 text-primary">Yeni Depo / Raf Ekle</div>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <input type="text" id="yeniDepoAd" class="form-control form-control-sm" placeholder="Depo adı">
+                        </div>
+                        <div class="col-6">
+                            <input type="text" id="yeniDepoRaf" class="form-control form-control-sm" placeholder="Raf">
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2 mt-2">
+                        <button type="button" class="btn btn-sm btn-primary" id="depoKaydetBtn"><i class="bi bi-check me-1"></i>Kaydet</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="depoIptalBtn">İptal</button>
+                    </div>
+                    <div id="depoHata" class="text-danger small mt-1" style="display:none"></div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-semibold">Giriş Tarihi <span class="text-danger">*</span></label>
+                <input type="date" name="giris_tarihi" class="form-control" value="{{ kayit.giris_tarihi|date:'Y-m-d' }}" required>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-semibold">Saklama Ücreti (₺)</label>
+                <input type="number" name="saklama_ucreti" class="form-control" step="0.01" value="{% if kayit.saklama_ucreti %}{{ kayit.saklama_ucreti|stringformat:".2f" }}{% endif %}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-semibold">Değişim Ücreti (₺)</label>
+                <input type="number" name="degisim_ucreti" class="form-control" step="0.01" value="{% if kayit.degisim_ucreti %}{{ kayit.degisim_ucreti|stringformat:".2f" }}{% endif %}">
+            </div>
+            <div class="col-12">
+                <label class="form-label fw-semibold">Açıklama</label>
+                <textarea name="aciklama" class="form-control" rows="2">{{ kayit.aciklama }}</textarea>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ─── Lastik Bilgileri ─────────────────────────────── -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="fw-bold mb-0 d-flex align-items-center gap-2">
+                <span class="rounded-circle bg-primary bg-opacity-10 p-1 px-2 text-primary" style="font-size:.8rem">🔵</span>
+                Lastik Bilgileri
+            </h6>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="kopyalaBtn">
+                <i class="bi bi-copy me-1"></i>1. Satırı Kopyala
+            </button>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-bordered align-middle mb-0" id="lastikTablosu">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:36px" class="text-center text-muted">#</th>
+                        <th>MARKA</th>
+                        <th>EBAT</th>
+                        <th>DOT</th>
+                        <th>DİŞ DERİNLİĞİ</th>
+                        <th style="width:130px">JANT</th>
+                        <th>AÇIKLAMA</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for l in lastik_satirlari %}
+                    <tr>
+                        <td class="text-center text-muted fw-semibold">{{ l.sira }}</td>
+                        <td><input type="text" name="lastik_{{ l.sira }}_marka" class="form-control form-control-sm border-0 bg-transparent" value="{{ l.marka }}"></td>
+                        <td><input type="text" name="lastik_{{ l.sira }}_ebat" class="form-control form-control-sm border-0 bg-transparent" value="{{ l.ebat }}" placeholder="205/55R16"></td>
+                        <td><input type="text" name="lastik_{{ l.sira }}_dot" class="form-control form-control-sm border-0 bg-transparent" value="{{ l.dot }}"></td>
+                        <td><input type="number" name="lastik_{{ l.sira }}_dis" class="form-control form-control-sm border-0 bg-transparent" step="0.1" value="{{ l.dis_derinligi }}"></td>
+                        <td>
+                            <select name="lastik_{{ l.sira }}_jant" class="form-select form-select-sm border-0 bg-transparent">
+                                <option value="">–</option>
+                                <option value="celik" {% if l.jant == 'celik' %}selected{% endif %}>Çelik</option>
+                                <option value="aluminyum" {% if l.jant == 'aluminyum' %}selected{% endif %}>Alüminyum</option>
+                            </select>
+                        </td>
+                        <td><input type="text" name="lastik_{{ l.sira }}_aciklama" class="form-control form-control-sm border-0 bg-transparent" value="{{ l.aciklama }}"></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="d-flex gap-2">
+    <button type="submit" class="btn btn-primary px-4">
+        <i class="bi bi-check-circle me-1"></i>Kaydet
+    </button>
+    <a href="{% url 'dashboard:lastik_saklama_detay' kayit.pk %}" class="btn btn-outline-secondary">İptal</a>
+</div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 1. Satırı Kopyala
+document.getElementById('kopyalaBtn').addEventListener('click', function () {
+    const tbody = document.querySelector('#lastikTablosu tbody');
+    const rows = tbody.querySelectorAll('tr');
+    if (rows.length < 2) return;
+    const ilkRow = rows[0];
+    const ilkInputs = ilkRow.querySelectorAll('input, select');
+    for (let i = 1; i < rows.length; i++) {
+        const inputs = rows[i].querySelectorAll('input, select');
+        inputs.forEach((el, idx) => {
+            if (ilkInputs[idx]) el.value = ilkInputs[idx].value;
+        });
+    }
+});
+
+// Adet değişince satırları göster/gizle
+function adetGuncelle() {
+    const adet = parseInt(document.getElementById('adetInput').value) || 4;
+    const rows = document.querySelectorAll('#lastikTablosu tbody tr');
+    rows.forEach((row, idx) => {
+        row.style.display = (idx < adet) ? '' : 'none';
+    });
+}
+document.getElementById('adetInput').addEventListener('change', adetGuncelle);
+document.getElementById('adetInput').addEventListener('input', adetGuncelle);
+adetGuncelle();
+
+// Depo ekleme
+document.getElementById('depoEkleBtn').addEventListener('click', function () {
+    const f = document.getElementById('depoEkleForm');
+    f.style.display = f.style.display === 'none' ? 'block' : 'none';
+    document.getElementById('yeniDepoAd').focus();
+});
+document.getElementById('depoIptalBtn').addEventListener('click', function () {
+    document.getElementById('depoEkleForm').style.display = 'none';
+    document.getElementById('yeniDepoAd').value = '';
+    document.getElementById('yeniDepoRaf').value = '';
+    document.getElementById('depoHata').style.display = 'none';
+});
+document.getElementById('depoKaydetBtn').addEventListener('click', function () {
+    const ad  = document.getElementById('yeniDepoAd').value.trim();
+    const raf = document.getElementById('yeniDepoRaf').value.trim();
+    if (!ad) {
+        document.getElementById('depoHata').textContent = 'Depo adı boş olamaz.';
+        document.getElementById('depoHata').style.display = 'block';
+        return;
+    }
+    this.disabled = true;
+    document.getElementById('depoHata').style.display = 'none';
+    fetch('{% url "dashboard:lastik_depo_ekle" %}', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value, 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'ad=' + encodeURIComponent(ad) + '&raf=' + encodeURIComponent(raf),
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.ok) {
+            const opt = new Option(data.label, data.id, true, true);
+            document.getElementById('depoSelect').add(opt);
+            document.getElementById('depoSelect').value = data.id;
+            document.getElementById('depoEkleForm').style.display = 'none';
+            document.getElementById('yeniDepoAd').value = '';
+            document.getElementById('yeniDepoRaf').value = '';
+        } else {
+            document.getElementById('depoHata').textContent = data.hata;
+            document.getElementById('depoHata').style.display = 'block';
+        }
+    })
+    .finally(() => { document.getElementById('depoKaydetBtn').disabled = false; });
+});
+</script>
 {% endblock %}

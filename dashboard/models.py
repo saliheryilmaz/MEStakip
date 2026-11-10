@@ -56,18 +56,17 @@ class Siparis(models.Model):
     
     DURUM_CHOICES = [
         ('yolda', 'Yolda'),
-        ('takildi-ft-islendi-islem-devam', 'Takıldı / FT İşlendi / İşlem Devam...'),
-        ('islemde', 'Takıldı-Faturası gelmedi'),
+        ('takildi-ft-islendi-islem-devam', 'Takıldı - FT İşlendi - Açıkta Bekleyen'),
+        ('islemde', 'Takıldı-FT gelmedi'),
         ('teslim', 'Teslim Edildi'),
         ('kontrol', 'Kontrol Edildi'),
         ('iptal', 'İptal Edildi'),
-        ('yolda-fatura-islendi', 'Yolda/Fatura İşlendi'),
-        ('takilacak-faturasi-islendi', 'Takılacak/Faturası İşlendi'),
-        ('islemde-faturasi-islendi', 'İşlem devam.../Faturası İşlendi'),
-        
-        
+        ('yolda-fatura-islendi', 'Yolda-FT İşlendi'),
+        ('takilacak-faturasi-islendi', 'Takılacak-FT İşlendi'),
+        ('islemde-faturasi-islendi', 'Müşteri FT Kesilecek'),
+        ('sikintili', 'Sıkıntılı'),
     ]
-    
+
     ODEME_CHOICES = [
         ('kredi-karti', 'Kredi Kartı'),
         ('havale', 'Havale'),
@@ -172,8 +171,10 @@ class Siparis(models.Model):
             'takilacak-faturasi-islendi': 'warning',
             'islemde-faturasi-islendi': 'info',
             'takildi-ft-islendi-islem-devam': 'success',
+            'sikintili': 'orange',
         }
-        return colors.get(self.durum, 'secondary')
+        renk = colors.get(self.durum, 'secondary')
+        return renk
     
     def get_mevsim_display_color(self):
         """Mevsim için renk döndür"""

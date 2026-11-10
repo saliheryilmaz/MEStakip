@@ -1,0 +1,14 @@
+{
+  "verdict": "CHANGES_REQUESTED",
+  "findings": [
+    {
+      "file": "erp/views.py",
+      "lines": "344-358",
+      "title": "depo_fisi_istek adds items to non-bekliyor fiş without a durum guard",
+      "evidence": "When depo_fisi_id is supplied, the view fetches the fiş and immediately calls DepoFisiKalemi.objects.create() with no check on fis.durum. sessionStorage persists across tabs; if the fiş is approved or cancelled in another tab, the next modal submission will append a kalem to an onaylandi/iptal fiş. The companion depo_fisi_kalem_ekle view (lines 528–529) already applies the correct guard: `if fis.durum != 'bekliyor': return JsonResponse({'basarili': False, ...})`.",
+      "consequence": "Items are silently added to approved or cancelled receipts, corrupting their state and counts without any error feedback to the user.",
+      "correction": "Add `if fis.durum != 'bekliyor': return JsonResponse({'basarili': False, 'hata': 'Bu fiş artık bekliyor durumunda değil.'})` immediately after the existing-fiş lookup on line 346, matching the guard already present in depo_fisi_kalem_ekle."
+    }
+  ],
+  "reviewDoc": "/Users/talha/Desktop/Projeler/MEStakip-main/.agents/tasks/aktif-is-emri/review.md"
+}

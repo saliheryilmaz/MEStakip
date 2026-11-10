@@ -73,6 +73,7 @@ class DiaClient:
         server_code: str | None = None,
         username: str | None = None,
         password: str | None = None,
+        api_key: str | None = None,
         firma_kodu: int | str | None = None,
         donem_kodu: int | str | None = None,
         session_ttl: int | None = None,
@@ -80,6 +81,7 @@ class DiaClient:
         self.server_code = server_code or settings.DIA_SERVER_CODE
         self.username = username or settings.DIA_USERNAME
         self.password = password or settings.DIA_PASSWORD
+        self.api_key = api_key if api_key is not None else getattr(settings, 'DIA_API_KEY', '')
         # firma_kodu ve donem_kodu integer olarak sakla (DİA integer bekliyor)
         _firma = firma_kodu or settings.DIA_FIRMA_KODU
         _donem = donem_kodu or settings.DIA_DONEM_KODU
@@ -155,6 +157,8 @@ class DiaClient:
                 'disconnect_same_user': True,
             }
         }
+        if self.api_key:
+            payload[servis]['params'] = {'apikey': self.api_key}
 
         baslangic = time.monotonic()
         try:

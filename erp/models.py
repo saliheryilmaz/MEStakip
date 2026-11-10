@@ -259,6 +259,10 @@ class StokKart(DiaSyncMixin, models.Model):
     """
 
     stok_kodu   = models.CharField(max_length=30, unique=True, verbose_name=_('Stok kodu'))
+    uretici_kodu = models.CharField(
+        max_length=255, blank=True, default='', verbose_name=_('Üretici kodu'),
+        help_text=_('DİA stok liste görünümündeki tedarikçi/üretici stok kodu.'),
+    )
     aciklama    = models.CharField(max_length=200, verbose_name=_('Açıklama'))
     tur         = models.CharField(
         max_length=5, choices=StokKartTur.choices,
@@ -273,6 +277,7 @@ class StokKart(DiaSyncMixin, models.Model):
     ana_barkod  = models.CharField(max_length=50, blank=True, verbose_name=_('Ana barkod'))
     marka       = models.CharField(max_length=100, blank=True, verbose_name=_('Marka'))
     ozel_kod1   = models.CharField(max_length=100, blank=True, verbose_name=_('Özel kod 1'))
+    mevsim      = models.CharField(max_length=100, blank=True, default='', verbose_name=_('Mevsim'))
     ozel_kod2   = models.CharField(max_length=100, blank=True, verbose_name=_('Özel kod 2'))
     kdv_alis    = models.DecimalField(max_digits=7, decimal_places=4, default=Decimal('18'), verbose_name=_('KDV alış (%)'))
     kdv_satis   = models.DecimalField(max_digits=7, decimal_places=4, default=Decimal('18'), verbose_name=_('KDV satış (%)'))

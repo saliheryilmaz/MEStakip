@@ -37,6 +37,19 @@
     </div>
     <div class="d-flex gap-2">
         {% if fis.durum == 'bekliyor' %}
+        {% if not fis.fatura_no %}
+        <form method="post" class="d-inline" onsubmit="return confirm('Bu işlem scf_fatura_ekle servisiyle DİA’da gerçek bir satış faturası oluşturur ve kontör kullanabilir. Fiş kalemleri Fiyat 1 ve KDV oranıyla gönderilecek. Devam edilsin mi?')">
+            {% csrf_token %}
+            <input type="hidden" name="islem" value="dia_fatura_gonder">
+            <button type="submit" class="btn btn-primary btn-sm">
+                <i class="bi bi-send me-1"></i>Faturayı DİA’ya Gönder
+            </button>
+        </form>
+        {% else %}
+        <span class="badge bg-success">DİA referansı: {{ fis.fatura_no }}</span>
+        {% endif %}
+        {% endif %}
+        {% if fis.durum == 'bekliyor' %}
         <button class="btn btn-success btn-sm" onclick="urunEkleAc()">
             <i class="bi bi-plus-circle me-1"></i>Ürün Ekle
         </button>
@@ -52,6 +65,10 @@
         </a>
     </div>
 </div>
+
+{% if messages %}
+<div class="mb-3">{% for message in messages %}<div class="alert alert-{{ message.tags|default:'info' }} py-2">{{ message }}</div>{% endfor %}</div>
+{% endif %}
 
 <div class="row g-4">
     <!-- Sol: Ürün kalemleri -->
@@ -126,7 +143,7 @@
                 <table class="table table-hover mb-0 small align-middle">
                     <thead class="table-light">
                         <tr>
-                            <th>Stok Kodu</th>
+                            <th>Üretici Kodu</th>
                             <th>Ürün</th>
                             <th>Marka</th>
                             <th>Yıl</th>
@@ -138,7 +155,7 @@
                     <tbody id="kalemTabloGovde">
                         {% for kalem in kalemler %}
                         <tr>
-                            <td><code class="text-success small">{{ kalem.stok.stok_kodu }}</code></td>
+                            <td><code class="text-success small">{{ kalem.stok.uretici_kodu|default:kalem.stok.stok_kodu }}</code></td>
                             <td class="fw-semibold">{{ kalem.stok.aciklama }}</td>
                             <td class="text-muted small">{{ kalem.stok.marka|default:"—" }}</td>
                             <td class="text-muted small">{{ kalem.stok.ozel_kod1|default:"—" }}</td>

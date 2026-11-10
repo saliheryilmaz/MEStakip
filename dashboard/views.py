@@ -7514,7 +7514,7 @@ from .models import LastikOteli, LastikDepo, LastikOteliHareket
 @login_required
 def lastik_saklama(request):
     """Lastik oteli ana listesi."""
-    kayitlar = LastikOteli.objects.select_related('depo', 'olusturan').prefetch_related('lastikler').all()
+    kayitlar = LastikOteli.objects.select_related('depo', 'olusturan').prefetch_related('lastikler').all().order_by('-olusturma_tarihi')
 
     # Filtreler
     durum = request.GET.get('durum', 'depoda')
@@ -7620,8 +7620,8 @@ def lastik_saklama_giris(request):
             adet=adet,
             giris_tarihi=request.POST.get('giris_tarihi'),
             tahmini_cikis=request.POST.get('tahmini_cikis') or None,
-            saklama_ucreti=request.POST.get('saklama_ucreti') or None,
-            degisim_ucreti=request.POST.get('degisim_ucreti') or None,
+            saklama_ucreti=request.POST.get('saklama_ucreti') if request.POST.get('saklama_ucreti', '').strip() != '' else None,
+            degisim_ucreti=request.POST.get('degisim_ucreti') if request.POST.get('degisim_ucreti', '').strip() != '' else None,
             aciklama=request.POST.get('aciklama', '').strip(),
             durum='depoda',
             olusturan=request.user,
@@ -7740,21 +7740,28 @@ def lastik_saklama_cikis(request, kayit_id):
 @login_required
 def lastik_saklama_duzenle(request, kayit_id):
     """Kayıt düzenleme."""
-    kayit = get_object_or_404(LastikOteli, pk=kayit_id)
+    from .models import LastikOteliLastik
+    kayit = get_object_or_404(LastikOteli.objects.prefetch_related('lastikler'), pk=kayit_id)
     depolar = LastikDepo.objects.filter(aktif=True)
 
     if request.method == 'POST':
+        adet_raw = request.POST.get('adet', '4')
+        try:
+            adet = int(adet_raw)
+        except (ValueError, TypeError):
+            adet = 4
+
         kayit.musteri_adi = request.POST.get('musteri_adi', '').strip()
         kayit.musteri_telefon = request.POST.get('musteri_telefon', '').strip()
-        kayit.plaka = request.POST.get('plaka', '').upper().replace(" ", "").strip()
-        kayit.marka = request.POST.get('marka', '').strip()
-        kayit.ebat = request.POST.get('ebat', '').strip()
+        kayit.plaka = request.POST.get('plaka', '').upper().replace(' ', '').strip()
+        kayit.arac_marka_model = request.POST.get('arac_marka_model', '').strip()
+        kayit.arac_kilometre = request.POST.get('arac_kilometre') or None
+        kayit.model_yili = request.POST.get('model_yili') or None
         kayit.mevsim = request.POST.get('mevsim', 'kis')
-        kayit.adet = int(request.POST.get('adet', 4))
-        kayit.dis_derinligi = request.POST.get('dis_derinligi') or None
-        kayit.tahmini_cikis = request.POST.get('tahmini_cikis') or None
-        kayit.saklama_ucreti = request.POST.get('saklama_ucreti') or None
-        kayit.degisim_ucreti = request.POST.get('degisim_ucreti') or None
+        kayit.adet = adet
+        kayit.giris_tarihi = request.POST.get('giris_tarihi') or kayit.giris_tarihi
+        kayit.saklama_ucreti = request.POST.get('saklama_ucreti') if request.POST.get('saklama_ucreti', '').strip() != '' else None
+        kayit.degisim_ucreti = request.POST.get('degisim_ucreti') if request.POST.get('degisim_ucreti', '').strip() != '' else None
         kayit.aciklama = request.POST.get('aciklama', '').strip()
 
         depo_id = request.POST.get('depo')
@@ -7765,6 +7772,30 @@ def lastik_saklama_duzenle(request, kayit_id):
                 kayit.depo = None
         else:
             kayit.depo = None
+
+        # Mevcut lastik satırlarını sözlüğe çevir, sonra temizle
+        lastikler_dict = {l.sira: l for l in kayit.lastikler.all()}
+        kayit.lastikler.all().delete()
+        for i in range(1, adet + 1):
+            marka_val = request.POST.get(f'lastik_{i}_marka', '').strip()
+            ebat_val  = request.POST.get(f'lastik_{i}_ebat', '').strip()
+            dot_val   = request.POST.get(f'lastik_{i}_dot', '').strip()
+            dis_val   = request.POST.get(f'lastik_{i}_dis', '').strip() or None
+            jant_val  = request.POST.get(f'lastik_{i}_jant', '').strip()
+            aciklama_val = request.POST.get(f'lastik_{i}_aciklama', '').strip()
+            if any([marka_val, ebat_val, dot_val, dis_val, jant_val, aciklama_val]):
+                LastikOteliLastik.objects.create(
+                    kayit=kayit, sira=i,
+                    marka=marka_val, ebat=ebat_val,
+                    dot=dot_val, dis_derinligi=dis_val,
+                    jant=jant_val, aciklama=aciklama_val,
+                )
+
+        # Ana kayıttaki marka/ebat'ı ilk lastik satırından güncelle
+        ilk = kayit.lastikler.first()
+        if ilk:
+            kayit.marka = ilk.marka
+            kayit.ebat = ilk.ebat
 
         kayit.save()
 
@@ -7778,10 +7809,26 @@ def lastik_saklama_duzenle(request, kayit_id):
         messages.success(request, "Kayıt güncellendi.")
         return redirect('dashboard:lastik_saklama_detay', kayit_id=kayit.pk)
 
+    # Lastik satırlarını 1-8 arası diziye hazırla
+    lastikler_dict = {l.sira: l for l in kayit.lastikler.all()}
+    lastik_satirlari = []
+    for i in range(1, 9):
+        l = lastikler_dict.get(i)
+        lastik_satirlari.append({
+            'sira': i,
+            'marka': l.marka if l else '',
+            'ebat': l.ebat if l else '',
+            'dot': l.dot if l else '',
+            'dis_derinligi': l.dis_derinligi if l else '',
+            'jant': l.jant if l else '',
+            'aciklama': l.aciklama if l else '',
+        })
+
     context = {
         'kayit': kayit,
         'depolar': depolar,
         'mevsim_choices': LastikOteli.MEVSIM_CHOICES,
+        'lastik_satirlari': lastik_satirlari,
     }
     return render(request, 'dashboard/lastik_saklama_duzenle.html', context)
 

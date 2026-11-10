@@ -183,7 +183,7 @@ class StokKartAdmin(admin.ModelAdmin):
             'fields': ('ana_birim', 'ana_birim_dia_key', 'ana_barkod'),
         }),
         (_('Marka / Kategori'), {
-            'fields': ('marka', 'ozel_kod1', 'ozel_kod2'),
+            'fields': ('marka', 'ozel_kod1', 'mevsim', 'ozel_kod2'),
         }),
         (_('Vergi / Fiyat'), {
             'fields': ('kdv_alis', 'kdv_satis', 'fiyat1', 'fiyat2'),

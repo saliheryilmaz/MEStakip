@@ -7,6 +7,7 @@ from __future__ import annotations
 import datetime
 
 from django.contrib.auth.decorators import login_required
+from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import JsonResponse
@@ -225,7 +226,24 @@ def cari_detay(request, pk):
 @login_required
 def stok_listesi(request):
     """Stok kartı listesi — arama, filtre, sayfalama."""
-    qs = StokKart.objects.all().order_by('stok_kodu')
+    qs = StokKart.objects.all()
+
+    # Sıralama
+    SIRALAMA_MAP = {
+        'uretici_kodu': 'uretici_kodu',
+        '-uretici_kodu': '-uretici_kodu',
+        'aciklama': 'aciklama',
+        '-aciklama': '-aciklama',
+        'marka': 'marka',
+        '-marka': '-marka',
+        'dot': 'ozel_kod1',
+        '-dot': '-ozel_kod1',
+        'mevsim': 'mevsim',
+        '-mevsim': '-mevsim',
+    }
+    siralama = request.GET.get('siralama', '').strip()
+    order_field = SIRALAMA_MAP.get(siralama, 'stok_kodu')
+    qs = qs.order_by(order_field)
 
     q = request.GET.get('q', '').strip()
     if q:
@@ -303,6 +321,7 @@ def stok_listesi(request):
         'depo_f': depo_f,
         'stok_var': stok_var,
         'q2': q2,
+        'siralama': siralama,
         'segmentler': StokKart.objects.exclude(ozel_kod2='').values_list('ozel_kod2', flat=True).distinct().order_by('ozel_kod2')[:30],
         'mevsimler': StokKart.objects.exclude(mevsim='').values_list('mevsim', flat=True).distinct().order_by('mevsim')[:20],
         'dot_listesi': StokKart.objects.exclude(ozel_kod1='').values_list('ozel_kod1', flat=True).distinct().order_by('ozel_kod1')[:50],
@@ -475,6 +494,28 @@ def depo_fisi_detay(request, pk):
 
     if request.method == 'POST':
         islem = request.POST.get('islem', '')
+
+        if islem == 'dia_fatura_gonder':
+            if fis.fatura_no:
+                messages.error(request, 'Bu fiş için DİA aktarım kaydı mevcut; yinelenen fatura oluşturmamak için tekrar gönderilmedi.')
+            elif not fis.cari:
+                messages.error(request, 'DİA faturası için fişte cari seçilmeli.')
+            elif not kalemler.exists():
+                messages.error(request, 'DİA faturası için fişte en az bir ürün olmalı.')
+            else:
+                try:
+                    from dia_integration.services.depo_fisi_fatura_service import depo_fisini_dia_faturasi_yap
+                    dia_ref = depo_fisini_dia_faturasi_yap(fis)
+                    fis.fatura_no = dia_ref or f'ME-DEP-{fis.fis_no}'
+                    fis.yazildi = True
+                    fis.durum = 'onaylandi'
+                    fis.islem_yapan = request.user
+                    fis.save(update_fields=['fatura_no', 'yazildi', 'durum', 'islem_yapan', 'guncellendi'])
+                    messages.success(request, f'Fiş #{fis.fis_no} DİA’ya fatura olarak gönderildi. DİA referansı: {fis.fatura_no}')
+                except Exception as exc:
+                    messages.error(request, f'DİA’ya gönderilemedi: {exc}')
+            from django.shortcuts import redirect
+            return redirect('erp:depo_fisi_detay', pk=pk)
 
         # Fiş bilgilerini güncelle
         if islem == 'fis_guncelle':

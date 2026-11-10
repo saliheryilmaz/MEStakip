@@ -40,6 +40,14 @@ def _model_tur_to_dia(tur: str) -> str:
     return mapping.get(tur, 'TCR')
 
 
+def _ozelkod_aciklamasi(deger, kod) -> str:
+    """DİA'nın "Açıklama (Kod)" birleşik değerinden açıklamayı ayıklar."""
+    metin = str(deger or '').strip()
+    kod = str(kod or '').strip()
+    ek = f' ({kod})' if kod else ''
+    return metin[:-len(ek)].strip() if ek and metin.endswith(ek) else metin
+
+
 class StokMapper:
     """
     DİA stok kart verisi ile erp.StokKart modeli arasında dönüşüm.
@@ -57,6 +65,7 @@ class StokMapper:
         """
         return {
             'stok_kodu':          d.get('stokkartkodu', ''),
+            'uretici_kodu':      d.get('ekalan1') or d.get('tedarikcistokkodlari') or d.get('tedarikcistokkodu') or d.get('uretici_kodu') or d.get('ureticikodu', ''),
             'aciklama':           d.get('aciklama', ''),
             'tur':                _dia_tur_to_model(d.get('stokkartturu', 'TCR')),
             'durum':              StokDurum.AKTIF if d.get('durum') == 'A' else StokDurum.PASIF,
@@ -65,7 +74,30 @@ class StokMapper:
             'ana_barkod':         d.get('anabarkod') or d.get('barkodu', ''),
             'marka':              d.get('markaack') or d.get('marka', ''),
             'ozel_kod1':          d.get('ozelkod1', ''),
-            'ozel_kod2':          d.get('ozelkod2ack') or d.get('ozelkod2', ''),
+            # DİA M3 = Stok Özel Kod 2; stok listesi bunu
+            # `ozelkod3`: "Yazlık (1001)" biçiminde döndürüyor.
+            'mevsim':             (
+                _ozelkod_aciklamasi(d.get('ozelkod3'), d.get('ozelkod3kodu'))
+                or d.get('ozelkod3aciklama')
+                or d.get('ozelkod3ack')
+                or ''
+            ),
+            # DİA stok listesi M4 (Stok Özel Kod 3) değerini `ozelkod4`
+            # alanında "Açıklama (Kod)" biçiminde döndürüyor. Kullanıcının
+            # Segment alanı için gösterdiği DİA kartı M4 olduğundan bunu
+            # önceliklendir; eski M2 alias'ları eski kayıtlar için yedek kalsın.
+            'ozel_kod2':          (
+                _ozelkod_aciklamasi(d.get('ozelkod4'), d.get('ozelkod4kodu'))
+                or d.get('ozelkod4aciklama')
+                or d.get('ozelkod4ack')
+                or d.get('ozelkod2aciklama')
+                or d.get('ozelkod2ack')
+                or d.get('ozelkod2')
+                or d.get('ozelkod2kodu')
+                or d.get('altgrup2ack')
+                or d.get('altgrup2')
+                or ''
+            ),
             'kdv_alis':           _to_decimal(d.get('kdvalis'), '18'),
             'kdv_satis':          _to_decimal(d.get('kdvsatis'), '18'),
             'fiyat1':             _to_decimal(d.get('fiyat1')),

@@ -62,7 +62,7 @@ def _model_tip_to_dia(tip: str) -> str:
     """CariTip → DİA carikarttipi."""
     mapping = {
         CariTip.ALICI: 'AL',
-        CariTip.SATICI: 'SA',
+        CariTip.SATICI: 'ST',
         CariTip.ALICI_SATICI: 'AS',
         CariTip.DIGER: 'AL',
     }

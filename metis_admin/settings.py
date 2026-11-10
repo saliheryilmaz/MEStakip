@@ -308,6 +308,7 @@ CELERY_TASK_TIME_LIMIT = 660        # 11 dakika — zorla öldürür
 DIA_SERVER_CODE = os.environ.get('DIA_SERVER_CODE', 'diademo')
 DIA_USERNAME = os.environ.get('DIA_USERNAME', 'ws')
 DIA_PASSWORD = os.environ.get('DIA_PASSWORD', 'ws')
+DIA_API_KEY = os.environ.get('DIA_API_KEY', '')
 DIA_FIRMA_KODU = os.environ.get('DIA_FIRMA_KODU', '1')
 DIA_DONEM_KODU = os.environ.get('DIA_DONEM_KODU', '1')
 

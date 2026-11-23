@@ -43,7 +43,7 @@ class Migration(migrations.Migration):
                 ('ulke', models.CharField(blank=True, default='TÜRKİYE', max_length=100, verbose_name='Ülke')),
                 ('risk_limiti', models.DecimalField(decimal_places=4, default=Decimal('0'), max_digits=18, verbose_name='Risk limiti')),
                 ('indirim_orani', models.DecimalField(decimal_places=4, default=Decimal('0'), max_digits=7, verbose_name='İndirim oranı (%)')),
-                ('bakiye', models.DecimalField(decimal_places=4, default=Decimal('0'), help_text="DİA'dan senkronize edilen anlık bakiye. MEStakip hesaplamaz.", max_digits=18, verbose_name="Bakiye (DİA'dan)")),
+                ('bakiye', models.DecimalField(decimal_places=4, default=Decimal('0'), help_text="DİA'dan senkronize edilen anlık bakiye. MesDia hesaplamaz.", max_digits=18, verbose_name="Bakiye (DİA'dan)")),
                 ('borc_toplam', models.DecimalField(decimal_places=4, default=Decimal('0'), max_digits=18, verbose_name='Borç toplamı')),
                 ('alacak_toplam', models.DecimalField(decimal_places=4, default=Decimal('0'), max_digits=18, verbose_name='Alacak toplamı')),
                 ('efatura_senaryosu', models.CharField(blank=True, help_text='DİA efaturasenaryosu: 0=Temel, 1=Ticari vb.', max_length=10, verbose_name='e-Fatura senaryosu')),

@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}MesBul Ödeme Geçmişi · MesDia{% endblock %}
+{% block page_name %}mesbul{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'karsilastirma/odeme_gecmisi.css' %}">
+<link rel="stylesheet" href="{% static 'karsilastirma/mesbul-dashboard.css' %}">
+{% endblock %}
+{% block content %}
+<section class="mesbul-odeme-gecmisi">
+<a href="{% url 'mesbul:index' %}" class="btn btn-outline-secondary btn-sm mb-3">
+    <i class="bi bi-arrow-left me-1"></i>MesBul
+</a>
+<div class="page">
+
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Ödeme Geçmişi</h1>
+      <p class="page-sub">{{ request.user.username }} hesabına ait ödemeler</p>
+    </div>
+  </div>
+
+  <div class="summary">
+    <div class="sum-card">
+      <div class="sum-label">Toplam Ödeme</div>
+      <div class="sum-val">{{ odemeler|length }}</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-label">Toplam Tutar</div>
+      <div class="sum-val green">{{ toplam|floatformat:2 }} ₺</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-label">Son Ödeme</div>
+      <div class="sum-val" style="font-size:1rem">
+        {% if odemeler %}{{ odemeler.0.tarih }}{% else %}—{% endif %}
+      </div>
+    </div>
+  </div>
+
+  {% if odemeler %}
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th>Tarih</th>
+          <th>Tutar</th>
+          <th>Yöntem</th>
+          <th>Açıklama</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for odeme in odemeler %}
+        <tr>
+          <td class="tarih-col">{{ odeme.tarih }}</td>
+          <td class="tutar-col">{{ odeme.tutar|floatformat:2 }} ₺</td>
+          <td><span class="yontem-badge">{{ odeme.get_yontem_display }}</span></td>
+          <td style="color:var(--slate-600)">{{ odeme.aciklama|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty">
+    <div class="empty-icon">💳</div>
+    <div class="empty-text">Henüz ödeme kaydı yok</div>
+    <div class="empty-sub">Ödemeleriniz buraya eklenecektir.</div>
+  </div>
+  {% endif %}
+
+</div>
+</section>
+{% endblock %}

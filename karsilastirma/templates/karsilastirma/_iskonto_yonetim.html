@@ -1,0 +1,145 @@
+{% load static %}
+<!-- ========== İSKONTO YÖNETİM PANELİ (sadece staff) ========== -->
+
+<button type="button" class="btn btn-outline-secondary btn-sm" onclick="iskontoAc()">
+  <i class="bi bi-percent me-1" aria-hidden="true"></i>İskonto Tanımla
+</button>
+
+<div id="iskonto-overlay" onclick="iskontoKapat()"
+  style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.35);
+         backdrop-filter:blur(3px);z-index:1050"></div>
+
+<div id="iskonto-panel"
+  style="display:none;position:fixed;right:0;top:0;bottom:0;width:380px;max-width:92vw;
+         background:#F8FAFC;z-index:1051;flex-direction:column;
+         box-shadow:-6px 0 32px rgba(15,23,42,.12);border-left:1px solid #E2E8F0">
+
+  <!-- Başlık -->
+  <div style="padding:1rem 1.25rem;border-bottom:1px solid #E2E8F0;background:#fff;
+              display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+    <div>
+      <div style="font-size:.9375rem;font-weight:700;color:#0F172A;letter-spacing:-.02em">İskonto Yönetimi</div>
+      <div style="font-size:.6875rem;color:#94A3B8;margin-top:2px">Toptancı tooltip metinleri</div>
+    </div>
+    <button onclick="iskontoKapat()"
+      style="background:none;border:none;cursor:pointer;color:#CBD5E1;
+             font-size:1.125rem;line-height:1;padding:.375rem;border-radius:6px;
+             transition:all .2s;display:flex"
+      onmouseover="this.style.background='#F1F5F9';this.style.color='#475569'"
+      onmouseout="this.style.background='none';this.style.color='#CBD5E1'">✕</button>
+  </div>
+
+  <!-- Liste -->
+  <div id="iskonto-liste"
+    style="flex:1;overflow-y:auto;padding:.75rem;display:flex;flex-direction:column;gap:.375rem">
+    <div style="text-align:center;color:#94A3B8;font-size:.8125rem;padding:2rem 0">Yükleniyor...</div>
+  </div>
+
+  <!-- Alt -->
+  <div style="padding:.625rem 1.25rem;border-top:1px solid #E2E8F0;background:#fff;flex-shrink:0">
+    <span style="font-size:.6875rem;color:#94A3B8">Boş → tooltip yok &nbsp;·&nbsp; Enter ile kaydet</span>
+  </div>
+</div>
+
+<style>
+.isk-row { background:#fff; border:1px solid #E2E8F0; border-radius:8px; padding:.625rem .875rem; transition:border-color .2s; }
+.isk-row:hover { border-color:#CBD5E1; }
+.isk-input {
+  background:#F8FAFC; border:1.5px solid #E2E8F0; color:#334155;
+  font-family:'Inter',sans-serif; font-size:.8125rem; line-height:1.5;
+  border-radius:6px; padding:.4rem .625rem; resize:none;
+  outline:none; width:100%; transition:border-color .2s, box-shadow .2s;
+}
+.isk-input:focus { border-color:#E85D26; box-shadow:0 0 0 3px rgba(232,93,38,.08); background:#fff; }
+.isk-input::placeholder { color:#CBD5E1; }
+.isk-btn {
+  background:#E85D26; border:none; border-radius:6px;
+  color:#fff; font-size:.6875rem; font-weight:700; font-family:'Inter',sans-serif;
+  padding:.375rem .75rem; cursor:pointer; white-space:nowrap;
+  transition:background .2s; flex-shrink:0;
+}
+.isk-btn:hover { background:#C94D1A; }
+.isk-label { font-size:.6875rem; font-weight:700; color:#64748B; letter-spacing:.06em; text-transform:uppercase; margin-bottom:.3rem; }
+.isk-msg { font-size:.625rem; height:.875rem; margin-top:.15rem; }
+</style>
+
+<script>
+const TOPTANCILAR_LIST = [
+  'USPA Lastik','Keskin Lastik','OtoSemih','NetLastik','Lastsis',
+  'Dinçbay','Degeras','Art4','Simetri','Yılkarlas','Oltay','AS Oto','Karaoğlu',
+  'Çakıroğlu','Ayko','Mollaoğlu'
+];
+const CSRF_I = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+
+function iskontoAc() {
+  document.getElementById('iskonto-overlay').style.display = 'block';
+  document.getElementById('iskonto-panel').style.display = 'flex';
+  iskontoYukle();
+}
+function iskontoKapat() {
+  document.getElementById('iskonto-overlay').style.display = 'none';
+  document.getElementById('iskonto-panel').style.display = 'none';
+}
+
+async function iskontoYukle() {
+  try {
+    const r = await fetch('{% url "mesbul:iskonto_yonetim" %}');
+    const d = await r.json();
+    const map = {};
+    (d.iskontolar || []).forEach(i => map[i.toptanci_adi] = i.iskonto_metni);
+    iskontoRender(map);
+  } catch(e) {
+    document.getElementById('iskonto-liste').innerHTML =
+      '<div style="color:#EF4444;font-size:.8125rem">Yüklenemedi.</div>';
+  }
+}
+
+function iskontoRender(map) {
+  const liste = document.getElementById('iskonto-liste');
+  liste.innerHTML = TOPTANCILAR_LIST.map(t => {
+    const sid = escId(t);
+    return `
+      <div class="isk-row">
+        <div class="isk-label">${escH(t)}</div>
+        <div style="display:flex;gap:.5rem;align-items:flex-start">
+          <textarea id="is-${sid}" class="isk-input" rows="2"
+            placeholder="İskonto / özel not..."
+            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();iskontoKaydet('${sid}','${escAttr(t)}')}"
+          >${escH(map[t] || '')}</textarea>
+          <button class="isk-btn" onclick="iskontoKaydet('${sid}','${escAttr(t)}')">Kaydet</button>
+        </div>
+        <div id="is-msg-${sid}" class="isk-msg"></div>
+      </div>`;
+  }).join('');
+}
+
+function escH(s)    { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escAttr(s) { return String(s).replace(/'/g,'&#39;').replace(/"/g,'&quot;'); }
+function escId(s)   { return s.replace(/[^a-zA-Z0-9]/g,'_'); }
+
+async function iskontoKaydet(safeId, toptanciAdi) {
+  const ta  = document.getElementById('is-' + safeId);
+  const msg = document.getElementById('is-msg-' + safeId);
+  if (!ta) return;
+  try {
+    const r = await fetch('{% url "mesbul:iskonto_yonetim" %}', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-CSRFToken':CSRF_I},
+      body: JSON.stringify({toptanci_adi: toptanciAdi, iskonto_metni: ta.value.trim()})
+    });
+    const d = await r.json();
+    if (d.ok) {
+      msg.textContent = '✓ Kaydedildi';
+      msg.style.color = '#10B981';
+    } else {
+      msg.textContent = '✗ Hata';
+      msg.style.color = '#EF4444';
+    }
+    setTimeout(() => msg.textContent = '', 2000);
+  } catch(e) {
+    msg.textContent = '✗ Bağlantı hatası';
+    msg.style.color = '#EF4444';
+    setTimeout(() => msg.textContent = '', 2000);
+  }
+}
+</script>

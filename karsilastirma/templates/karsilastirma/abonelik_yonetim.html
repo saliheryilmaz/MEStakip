@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}MesBul Abonelikleri · MesDia{% endblock %}
+{% block page_name %}mesbul{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'karsilastirma/abonelik_yonetim.css' %}">
+<link rel="stylesheet" href="{% static 'karsilastirma/mesbul-dashboard.css' %}">
+{% endblock %}
+{% block content %}
+<section class="mesbul-abonelik-yonetim">
+<a href="{% url 'mesbul:index' %}" class="btn btn-outline-secondary btn-sm mb-3">
+    <i class="bi bi-arrow-left me-1"></i>MesBul
+</a>
+<div class="page">
+  <h1 class="page-title">Abonelik Yönetimi</h1>
+  <p class="page-sub">Kullanıcı aboneliklerini buradan ekleyip düzenleyebilirsin.</p>
+
+  <!-- YENİ KULLANICI EKLE -->
+  <div class="add-user-card">
+    <div class="add-user-title">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+      Yeni Kullanıcı Ekle
+    </div>
+
+    {% if form_hata %}
+    <div class="form-error">⚠️ {{ form_hata }}</div>
+    {% endif %}
+
+    <form method="POST" action="{% url 'mesbul:kullanici_ekle' %}">
+      {% csrf_token %}
+      <div class="add-user-grid">
+        <div class="field-group">
+          <label class="field-label">Kullanıcı Adı *</label>
+          <input type="text" name="username" class="field-ctrl" placeholder=""
+            value="{% if form_data %}{{ form_data.username }}{% endif %}" required autocomplete="off">
+        </div>
+        <div class="field-group">
+          <label class="field-label">E-posta</label>
+          <input type="email" name="email" class="field-ctrl"
+            value="{% if form_data %}{{ form_data.email }}{% endif %}">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Şifre *</label>
+          <input type="password" name="sifre" class="field-ctrl" placeholder="••••••••" required autocomplete="new-password">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Plan</label>
+          <select name="plan" class="field-ctrl">
+            <option value="demo"    {% if form_data.plan == 'demo'    %}selected{% endif %}>Demo</option>
+            <option value="deneme"  {% if form_data.plan == 'deneme'  %}selected{% endif %}>Deneme (1 hafta)</option>
+            <option value="aylik"   {% if form_data.plan == 'aylik'   %}selected{% endif %}>Aylık</option>
+            <option value="yillik"  {% if form_data.plan == 'yillik'  %}selected{% endif %}>Yıllık</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Abonelik Bitiş *</label>
+          <input type="date" name="bitis" class="field-ctrl"
+            value="{% if form_data %}{{ form_data.bitis }}{% endif %}" required>
+        </div>
+      </div>
+      <div class="add-user-footer">
+        <button type="submit" class="btn-add">+ Kullanıcı Oluştur</button>
+        <span style="font-size:.8125rem;color:var(--slate-400)">Oluşturulan kullanıcı direkt sisteme giriş yapabilir.</span>
+      </div>
+    </form>
+  </div>
+
+  {% with toplam=kullanicilar|length %}
+  <div class="stats">
+    <div class="stat-card">
+      <div class="stat-label">Toplam Kullanıcı</div>
+      <div class="stat-val gray">{{ toplam }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Aktif Abonelik</div>
+      <div class="stat-val green">{{ aktif_sayisi }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Bu Hafta Bitenler</div>
+      <div class="stat-val yellow">{{ bu_hafta_biten }}</div>
+    </div>
+  </div>
+  {% endwith %}
+
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th>Kullanıcı</th>
+          <th>Durum</th>
+          <th class="td-plan">Plan</th>
+          <th>Bitiş</th>
+          <th>Abonelik Güncelle</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in kullanicilar %}
+        <tr>
+          <td>
+            <div class="user-col">
+              <div class="avatar">{{ u.username|slice:":2" }}</div>
+              <div>
+                <div style="font-weight:600;font-size:.875rem">{{ u.username }}</div>
+                {% if u.email %}<div style="font-size:.75rem;color:var(--slate-400)">{{ u.email }}</div>{% endif %}
+              </div>
+            </div>
+          </td>
+          <td>
+            {% if u.abonelik %}
+              {% if u.abonelik.erisim_var_mi %}
+                <span class="badge badge-green">✓ Aktif</span>
+              {% else %}
+                <span class="badge badge-red">✗ Süresi Doldu</span>
+              {% endif %}
+            {% else %}
+              <span class="badge badge-gray">— Yok</span>
+            {% endif %}
+          </td>
+          <td class="td-plan">
+            {% if u.abonelik %}
+              <span style="font-size:.8125rem;color:var(--slate-600)">{{ u.abonelik.get_plan_display }}</span>
+            {% else %}
+              <span style="color:var(--slate-400)">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if u.abonelik %}
+              <span style="font-family:'JetBrains Mono',monospace;font-size:.8125rem">{{ u.abonelik.bitis }}</span>
+            {% else %}
+              <span style="color:var(--slate-400)">—</span>
+            {% endif %}
+          </td>
+          <td>
+            <form method="POST" action="{% url 'mesbul:abonelik_kaydet' u.id %}">
+              {% csrf_token %}
+              <div class="form-row">
+                <select name="plan" class="form-select">
+                  <option value="demo"    {% if u.abonelik.plan == 'demo'    %}selected{% endif %}>Demo</option>
+                  <option value="deneme"  {% if u.abonelik.plan == 'deneme'  %}selected{% endif %}>Deneme</option>
+                  <option value="aylik"   {% if u.abonelik.plan == 'aylik'   %}selected{% endif %}>Aylık</option>
+                  <option value="yillik"  {% if u.abonelik.plan == 'yillik'  %}selected{% endif %}>Yıllık</option>
+                </select>
+                <input type="date" name="bitis" class="form-input"
+                  value="{% if u.abonelik %}{{ u.abonelik.bitis|date:'Y-m-d' }}{% endif %}"
+                  required>
+                <label class="form-check">
+                  <input type="checkbox" name="aktif" {% if not u.abonelik or u.abonelik.aktif %}checked{% endif %}>
+                  Aktif
+                </label>
+                <button type="submit" class="btn-save">Kaydet</button>
+              </div>
+            </form>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5" style="text-align:center;padding:3rem;color:var(--slate-400)">
+            Henüz kullanıcı yok. Admin panelinden kullanıcı ekleyebilirsin.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ÖDEME EKLE -->
+  <div class="add-user-card" style="margin-top:1.5rem">
+    <div class="add-user-title">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+      Ödeme Kaydı Ekle
+    </div>
+    <form method="POST" action="{% url 'mesbul:odeme_ekle' %}">
+      {% csrf_token %}
+      <div class="add-user-grid">
+        <div class="field-group">
+          <label class="field-label">Kullanıcı *</label>
+          <select name="kullanici_id" class="field-ctrl" required>
+            <option value="">— Seç —</option>
+            {% for u in kullanicilar %}
+              <option value="{{ u.id }}">{{ u.username }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Tutar (₺) *</label>
+          <input type="text" name="tutar" class="field-ctrl" placeholder="1500.00" required>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Tarih *</label>
+          <input type="date" name="tarih" class="field-ctrl" required>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Yöntem</label>
+          <select name="yontem" class="field-ctrl">
+            <option value="havale">Havale / EFT</option>
+            <option value="nakit">Nakit</option>
+            <option value="kredi_karti">Kredi Kartı</option>
+            <option value="diger">Diğer</option>
+          </select>
+        </div>
+        <div class="field-group" style="grid-column:span 2">
+          <label class="field-label">Açıklama</label>
+          <input type="text" name="aciklama" class="field-ctrl" placeholder="Dekont no, dönem vb.">
+        </div>
+      </div>
+      <div class="add-user-footer">
+        <button type="submit" class="btn-add">+ Ödeme Ekle</button>
+      </div>
+    </form>
+  </div>
+
+</div>
+</section>
+{% endblock %}

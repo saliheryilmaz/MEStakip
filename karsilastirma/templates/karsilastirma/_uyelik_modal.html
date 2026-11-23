@@ -1,0 +1,164 @@
+{% load static %}
+<!-- ========== ÜYELİK TALEP MODALİ (standalone) ========== -->
+<div class="modal-overlay" id="uyelik-modal" onclick="uyelikModalKapatDis(event)" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.7);backdrop-filter:blur(4px);z-index:1100;align-items:center;justify-content:center;padding:1rem">
+  <div style="background:#fff;border:1px solid #E2E8F0;border-radius:12px;padding:2rem 1.75rem;width:100%;max-width:480px;box-shadow:0 20px 60px rgba(15,23,42,.25);animation:modalIn .2s ease;position:relative;max-height:90vh;overflow-y:auto" onclick="event.stopPropagation()">
+
+    <!-- Kapat -->
+    <button onclick="uyelikModalKapat()" style="position:absolute;top:1rem;right:1rem;background:none;border:none;cursor:pointer;color:#94A3B8;padding:.25rem;border-radius:6px;font-size:1.25rem;line-height:1;transition:color .2s" onmouseover="this.style.color='#475569'" onmouseout="this.style.color='#94A3B8'">✕</button>
+
+    <!-- Logo -->
+    <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1.25rem;justify-content:center">
+      <div style="display:inline-flex;align-items:center;gap:.75rem;background:rgba(20,20,24,.97);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:.625rem 1rem .625rem .625rem;box-shadow:0 4px 16px rgba(15,23,42,.2)">
+        <img src="{% static 'karsilastirma/favicon1.png' %}" style="width:34px;height:34px;border-radius:8px;object-fit:cover">
+        <span style="color:#F1F5F9;font-size:1.0625rem;font-weight:700;letter-spacing:-.02em">MesBul</span>
+      </div>
+    </div>
+
+    <div style="font-size:1.125rem;font-weight:700;color:#0F172A;text-align:center;margin-bottom:1rem;letter-spacing:-.02em">Üyelik Planları</div>
+
+    <!-- Plan kartları -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:1.25rem">
+
+      <div onclick="uyelikPlanSec('aylik')" id="up-aylik" style="border:2px solid #E85D26;background:#FFF7F4;border-radius:8px;padding:.875rem;cursor:pointer;position:relative;transition:box-shadow .2s">
+        <div style="font-size:.6875rem;font-weight:700;color:#E85D26;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.25rem">Aylık</div>
+        <div style="font-size:1.0625rem;font-weight:800;color:#0F172A">Aylık Ödeme</div>
+        <div style="font-size:1.5rem;font-weight:800;color:#E85D26;margin-top:.375rem;letter-spacing:-.02em">1.000 ₺</div>
+        <div style="font-size:.6875rem;color:#94A3B8;margin-top:.125rem">KDV hariç / ay</div>
+        <ul style="margin-top:.625rem;list-style:none;display:flex;flex-direction:column;gap:.25rem">
+          <li style="font-size:.8125rem;color:#334155">✓ Tüm toptancılar</li>
+          <li style="font-size:.8125rem;color:#334155">✓ Anlık fiyat</li>
+          <li style="font-size:.8125rem;color:#334155">✓ Not sistemi</li>
+        </ul>
+        <div style="margin-top:.625rem;text-align:center">
+          <span id="up-radio-aylik" style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;border:2px solid #E85D26;background:#E85D26;flex-shrink:0">
+            <span style="width:6px;height:6px;background:#fff;border-radius:50%;display:block"></span>
+          </span>
+        </div>
+      </div>
+
+      <div onclick="uyelikPlanSec('yillik')" id="up-yillik" style="border:2px solid #E2E8F0;background:#F8FAFC;border-radius:8px;padding:.875rem;cursor:pointer;position:relative;transition:box-shadow .2s">
+        <div style="position:absolute;top:-10px;right:8px;background:#E85D26;color:#fff;font-size:.5625rem;font-weight:700;padding:.15rem .45rem;border-radius:100px;letter-spacing:.05em">2 AY BEDAVA</div>
+        <div style="font-size:.6875rem;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.25rem">Yıllık</div>
+        <div style="font-size:1.0625rem;font-weight:800;color:#0F172A">Yıllık Ödeme</div>
+        <div style="display:flex;align-items:baseline;gap:.375rem;margin-top:.375rem">
+          <span style="font-size:1.5rem;font-weight:800;color:#E85D26;letter-spacing:-.02em">10.000 ₺</span>
+        </div>
+        <div style="font-size:.6875rem;color:#94A3B8;margin-top:.125rem">KDV hariç / yıl</div>
+        <div style="font-size:.6875rem;color:#10B981;font-weight:600;margin-top:.25rem">Normal fiyat: 12.000 ₺ — <span style="text-decoration:line-through;color:#94A3B8">12.000 ₺</span></div>
+        <ul style="margin-top:.5rem;list-style:none;display:flex;flex-direction:column;gap:.25rem">
+          <li style="font-size:.8125rem;color:#334155">✓ Tüm toptancılar</li>
+          <li style="font-size:.8125rem;color:#334155">✓ Anlık fiyat</li>
+          <li style="font-size:.8125rem;color:#334155">✓ Not sistemi</li>
+          <li style="font-size:.8125rem;color:#10B981;font-weight:600">✓ 2 ay ücretsiz</li>
+        </ul>
+        <div style="margin-top:.625rem;text-align:center">
+          <span id="up-radio-yillik" style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;border:2px solid #CBD5E1;background:#fff;flex-shrink:0"></span>
+        </div>
+      </div>
+    </div>
+
+    <input type="hidden" id="up-plan" value="aylik">
+
+    <div style="display:flex;flex-direction:column;gap:.5rem;margin-bottom:.75rem">
+      <input id="up-ad"      type="text"  placeholder="Ad Soyad *"           style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:6px;padding:.625rem .875rem;font-size:.9375rem;color:#0F172A;outline:none;font-family:'Inter',sans-serif;transition:border-color .2s" onfocus="this.style.borderColor='#E85D26';this.style.boxShadow='0 0 0 3px rgba(232,93,38,.1)'" onblur="this.style.borderColor='#E2E8F0';this.style.boxShadow='none'">
+      <input id="up-telefon" type="tel"   placeholder="Telefon *"             style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:6px;padding:.625rem .875rem;font-size:.9375rem;color:#0F172A;outline:none;font-family:'Inter',sans-serif;transition:border-color .2s" onfocus="this.style.borderColor='#E85D26';this.style.boxShadow='0 0 0 3px rgba(232,93,38,.1)'" onblur="this.style.borderColor='#E2E8F0';this.style.boxShadow='none'">
+      <input id="up-email"   type="email" placeholder="E-posta *"              style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:6px;padding:.625rem .875rem;font-size:.9375rem;color:#0F172A;outline:none;font-family:'Inter',sans-serif;transition:border-color .2s" onfocus="this.style.borderColor='#E85D26';this.style.boxShadow='0 0 0 3px rgba(232,93,38,.1)'" onblur="this.style.borderColor='#E2E8F0';this.style.boxShadow='none'">
+      <textarea id="up-mesaj" placeholder="Ek mesaj (opsiyonel)" rows="2"     style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:6px;padding:.625rem .875rem;font-size:.9375rem;color:#0F172A;outline:none;font-family:'Inter',sans-serif;resize:none;line-height:1.5;transition:border-color .2s" onfocus="this.style.borderColor='#E85D26';this.style.boxShadow='0 0 0 3px rgba(232,93,38,.1)'" onblur="this.style.borderColor='#E2E8F0';this.style.boxShadow='none'"></textarea>
+    </div>
+
+    <div id="up-hata"   style="display:none;color:#EF4444;font-size:.8125rem;margin-bottom:.5rem;font-weight:500"></div>
+    <div id="up-basari" style="display:none;background:#D1FAE5;border:1px solid #A7F3D0;border-radius:6px;padding:.75rem;color:#065F46;font-size:.875rem;font-weight:500;margin-bottom:.5rem;text-align:center">✅ Talebiniz alındı! En kısa sürede sizi arayacağız.</div>
+
+    <button onclick="uyelikTalepGonder()" id="up-btn" style="width:100%;background:#E85D26;border:none;border-radius:6px;padding:.875rem;color:#fff;font-family:'Inter',sans-serif;font-size:.875rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;transition:background .2s" onmouseover="this.style.background='#C94D1A'" onmouseout="this.style.background='#E85D26'">Talep Gönder</button>
+
+    <div style="text-align:center;margin-top:.875rem;font-size:.8125rem;color:#94A3B8">
+      Denemek için: kullanıcı adı <b style="color:#475569">demo</b> · şifre <b style="color:#475569">demo</b>
+    </div>
+  </div>
+</div>
+
+<style>
+@keyframes modalIn {
+  from { opacity:0; transform:translateY(-16px) scale(.97); }
+  to   { opacity:1; transform:translateY(0) scale(1); }
+}
+</style>
+
+<script>
+function uyelikModalAc() {
+  const m = document.getElementById('uyelik-modal');
+  m.style.display = 'flex';
+}
+function uyelikModalKapat() {
+  document.getElementById('uyelik-modal').style.display = 'none';
+}
+function uyelikModalKapatDis(e) {
+  if (e.target === document.getElementById('uyelik-modal')) uyelikModalKapat();
+}
+
+function uyelikPlanSec(plan) {
+  document.getElementById('up-plan').value = plan;
+  const aylik  = document.getElementById('up-aylik');
+  const yillik = document.getElementById('up-yillik');
+  const rA = document.getElementById('up-radio-aylik');
+  const rY = document.getElementById('up-radio-yillik');
+  if (plan === 'aylik') {
+    aylik.style.borderColor  = '#E85D26'; aylik.style.background  = '#FFF7F4';
+    yillik.style.borderColor = '#E2E8F0'; yillik.style.background = '#F8FAFC';
+    rA.style.borderColor = '#E85D26'; rA.style.background = '#E85D26';
+    rA.innerHTML = '<span style="width:6px;height:6px;background:#fff;border-radius:50%;display:block"></span>';
+    rY.style.borderColor = '#CBD5E1'; rY.style.background = '#fff'; rY.innerHTML = '';
+  } else {
+    yillik.style.borderColor = '#E85D26'; yillik.style.background  = '#FFF7F4';
+    aylik.style.borderColor  = '#E2E8F0'; aylik.style.background   = '#F8FAFC';
+    rY.style.borderColor = '#E85D26'; rY.style.background = '#E85D26';
+    rY.innerHTML = '<span style="width:6px;height:6px;background:#fff;border-radius:50%;display:block"></span>';
+    rA.style.borderColor = '#CBD5E1'; rA.style.background = '#fff'; rA.innerHTML = '';
+  }
+}
+
+async function uyelikTalepGonder() {
+  const ad      = document.getElementById('up-ad').value.trim();
+  const telefon = document.getElementById('up-telefon').value.trim();
+  const email   = document.getElementById('up-email').value.trim();
+  const mesaj   = document.getElementById('up-mesaj').value.trim();
+  const plan    = document.getElementById('up-plan').value;
+  const hataEl  = document.getElementById('up-hata');
+  const basariEl= document.getElementById('up-basari');
+  const btn     = document.getElementById('up-btn');
+
+  hataEl.style.display = 'none';
+  basariEl.style.display = 'none';
+
+  if (!ad || !telefon) {
+    hataEl.textContent = 'Ad soyad ve telefon zorunludur.';
+    hataEl.style.display = 'block';
+    return;
+  }
+  if (!email || !email.includes('@')) {
+    hataEl.textContent = 'Geçerli bir e-posta adresi giriniz.';
+    hataEl.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true; btn.textContent = 'Gönderiliyor...';
+
+  try {
+    const r = await fetch('{% url "mesbul:uyelik_talep" %}', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '' },
+      body: JSON.stringify({ ad_soyad: ad, telefon, email, plan, mesaj })
+    });
+    const d = await r.json();
+    if (d.ok) {
+      basariEl.style.display = 'block';
+      ['up-ad','up-telefon','up-email','up-mesaj'].forEach(id => document.getElementById(id).value = '');
+      btn.textContent = 'Gönderildi ✓';
+    } else { throw new Error(d.hata || 'Hata'); }
+  } catch(e) {
+    hataEl.textContent = e.message || 'Bir hata oluştu.';
+    hataEl.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Talep Gönder';
+  }
+}
+</script>

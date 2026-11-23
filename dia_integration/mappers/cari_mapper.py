@@ -136,6 +136,80 @@ class CariMapper:
         }
 
     @staticmethod
+    def rapor_to_fields(d: dict) -> dict:
+        """scf1100c rapor satırını, raporda gerçekten bulunan alanlarla eşler.
+
+        Cari kart listesi raporunun sütun tasarımı değişebildiği için raporda
+        dönmeyen alanları boş değerle ezmez. Kod ve ünvan olmadan satır kabul
+        edilmez; ``_key`` varsa DİA bağlantısı korunur.
+        """
+        alan_eslemeleri = {
+            'carikartkodu': ('carikartkodu', 'cari_kodu', 'carikodu'),
+            'unvan': ('unvan', 'carikartunvani'),
+            'kisaaciklama': ('kisaaciklama', 'kisa_aciklama'),
+            'carikarttipi': ('carikarttipi', 'cari_tipi', 'tip'),
+            'durum': ('durum',),
+            'verginumarasi': ('verginumarasi', 'vergi_no', 'vergino'),
+            'tckimlikno': ('tckimlikno', 'tc_kimlik_no'),
+            'vergidairesi': ('vergidairesi', 'vergi_dairesi'),
+            'dairekodu': ('dairekodu', 'daire_kodu'),
+            'telefon1': ('telefon1',),
+            'telefon2': ('telefon2',),
+            'ceptel': ('ceptel', 'cep_tel'),
+            'fax': ('fax',),
+            'eposta': ('eposta',),
+            'weburl': ('weburl', 'web_url'),
+            'adres1': ('adres1',),
+            'adres2': ('adres2',),
+            'ilce': ('ilce',),
+            'il': ('il', 'sehir'),
+            'postakodu': ('postakodu', 'posta_kodu'),
+            'ulke': ('ulke',),
+            'risklimiti': ('risklimiti', 'risk_limiti'),
+            'indirimorani': ('indirimorani', 'indirim_orani'),
+            'bakiye': ('bakiye',),
+            'borctoplam': ('borctoplam', 'borc_toplam'),
+            'alacaktoplam': ('alacaktoplam', 'alacak_toplam'),
+            'efaturasenaryosu': ('efaturasenaryosu', 'efatura_senaryosu'),
+            'note': ('note', 'notlar'),
+            '_key': ('_key', 'dia_key'),
+            '_date': ('_date', 'dia_son_degisiklik'),
+        }
+        normalize = {}
+        for target, aliases in alan_eslemeleri.items():
+            for alias in aliases:
+                if alias in d and d[alias] is not None:
+                    normalize[target] = d[alias]
+                    break
+
+        if not normalize.get('carikartkodu') or not normalize.get('unvan'):
+            raise ValueError('Cari rapor satırında cari kodu veya ünvan bulunamadı.')
+
+        alanlar = CariMapper.dia_to_fields(normalize)
+        # Bu rapor tasarımı bazı sütunları dışarıda bırakabilir; yalnızca raporda
+        # yer alan alanları güncelle, var olan yerel bilgileri boşaltma.
+        alan_esleme_model = {
+            'kisaaciklama': 'kisa_aciklama', 'carikarttipi': 'tip',
+            'durum': 'durum', 'verginumarasi': 'vergi_no', 'tckimlikno': 'tc_kimlik_no',
+            'vergidairesi': 'vergi_dairesi', 'dairekodu': 'daire_kodu',
+            'telefon1': 'telefon1', 'telefon2': 'telefon2', 'ceptel': 'cep_tel',
+            'fax': 'fax', 'eposta': 'eposta', 'weburl': 'web_url',
+            'adres1': 'adres1', 'adres2': 'adres2', 'ilce': 'ilce', 'il': 'sehir',
+            'postakodu': 'posta_kodu', 'ulke': 'ulke', 'risklimiti': 'risk_limiti',
+            'indirimorani': 'indirim_orani', 'bakiye': 'bakiye',
+            'borctoplam': 'borc_toplam', 'alacaktoplam': 'alacak_toplam',
+            'efaturasenaryosu': 'efatura_senaryosu', 'note': 'notlar',
+        }
+        for source, model_field in alan_esleme_model.items():
+            if source not in normalize:
+                alanlar.pop(model_field, None)
+        if '_key' in normalize:
+            alanlar['dia_key'] = _to_text(normalize.get('_key'))
+        if '_date' in normalize:
+            alanlar['dia_son_degisiklik'] = _parse_datetime(normalize.get('_date'))
+        return alanlar
+
+    @staticmethod
     def dia_to_model(d: dict) -> Cari:
         """
         DİA dict'inden kaydedilmemiş bir Cari nesnesi oluşturur.

@@ -2,7 +2,7 @@
 {% load static %}
 {% load turkish_format %}
 
-{% block title %}Teklifler - Mestakip{% endblock %}
+{% block title %}Teklifler - MesDia{% endblock %}
 {% block page_name %}quotations{% endblock %}
 
 {% block extra_css %}
@@ -388,9 +388,11 @@
                 input.value = '0.00';
             }
         });
+        newRow.querySelector('.mevsim-input').value = '';
         
         tbody.appendChild(newRow);
         calculateTotals();
+        return newRow;
     }
 
     // Remove product row
@@ -430,10 +432,36 @@
         document.getElementById('grandTotalAmount').textContent = grandTotal.toFixed(2) + ' TL';
     }
 
+    const mesbulDraftKey = 'mesbul-quotation-{{ request.user.pk }}';
+
+    function loadMesbulDraft() {
+        if (new URLSearchParams(window.location.search).get('mesbul') !== '1') return;
+        let items;
+        try {
+            items = JSON.parse(sessionStorage.getItem(mesbulDraftKey) || '[]');
+        } catch {
+            return;
+        }
+        if (!Array.isArray(items) || !items.length) return;
+
+        const firstRow = document.querySelector('#productsTable tbody tr');
+        items.forEach((item, index) => {
+            const row = index ? addProductRow() : firstRow;
+            row.querySelector('.marka-input').value = item.brand;
+            row.querySelector('.urun-input').value = item.product;
+            row.querySelector('.mevsim-input').value = item.season;
+            row.querySelector('.price-input').value = item.price;
+        });
+        calculateTotals();
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('newQuotationModal')).show();
+        sessionStorage.removeItem(mesbulDraftKey);
+    }
+
     // Add event listeners for automatic calculation
     document.addEventListener('DOMContentLoaded', function() {
         document.querySelector('#productsTable').addEventListener('input', calculateTotals);
         document.querySelector('#productsTable').addEventListener('change', calculateTotals);
+        loadMesbulDraft();
     });
 
     // Save quotation

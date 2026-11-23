@@ -138,7 +138,7 @@ class DiaClient:
 
         DİA v3 login formatı:
           POST /api/v3/sis/json
-          Payload: {"login": {"username": ..., "password": ..., "disconnect_same_user": true}}
+          Payload: {"login": {"username": ..., "password": ..., "disconnect_same_user": false}}
           Yanıt  : {"code": "200", "msg": "<session_id>", "warnings": []}
 
         Returns:
@@ -154,7 +154,7 @@ class DiaClient:
             servis: {
                 'username': self.username,
                 'password': self.password,
-                'disconnect_same_user': True,
+                'disconnect_same_user': False,
             }
         }
         if self.api_key:

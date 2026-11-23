@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Yeni Lastik Ekle - Mestakip{% endblock %}
+{% block title %}Yeni Lastik Ekle - MesDia{% endblock %}
 
 {% block content %}
 <!-- Page Header -->
@@ -24,7 +24,7 @@
         <h5 class="card-title mb-0">Yeni Sipariş Ekle</h5>
     </div>
     <div class="card-body">
-        <form method="post" id="yeniLastikForm">
+        <form method="post" action="{% url 'dashboard:yeni_lastik' %}" id="yeniLastikForm">
             {% csrf_token %}
             <div class="row g-4">
                 <!-- Sol Kolon -->
@@ -206,8 +206,8 @@
                                         {{ form.one_cikar.label }}
                                     </label>
                                 </div>
-                                <button type="button" class="btn btn-outline-info btn-sm" id="musteriToggleBtn">
-                                    <i class="bi bi-person-plus me-1"></i>
+                                <button type="button" class="btn btn-sm {% if musteri_bilgileri_acik %}btn-info text-white{% else %}btn-outline-info{% endif %}" id="musteriToggleBtn" aria-controls="musteriBilgileri" aria-expanded="{{ musteri_bilgileri_acik|yesno:'true,false' }}">
+                                    <i class="bi {% if musteri_bilgileri_acik %}bi-person-dash{% else %}bi-person-plus{% endif %} me-1" aria-hidden="true"></i>
                                     Müşteri
                                 </button>
                             </div>
@@ -216,7 +216,7 @@
                             {% endif %}
                             
                             <!-- Müşteri Bilgileri Açılır Bölüm -->
-                            <div id="musteriBilgileri" class="collapse">
+                            <div id="musteriBilgileri" class="collapse{% if musteri_bilgileri_acik %} show{% endif %}">
                                 <div class="card border-info">
                                     <div class="card-header bg-light">
                                         <h6 class="mb-0 text-info">
@@ -249,6 +249,16 @@
                                             </div>
                                             <div class="col-md-6">
                                                 <!-- Boş alan - düzen için -->
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label for="{{ form.kapora_tutari.id_for_label }}" class="form-label">{{ form.kapora_tutari.label }}</label>
+                                                {{ form.kapora_tutari }}
+                                                {{ form.kapora_tutari.errors }}
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label for="{{ form.kapora_yontemi.id_for_label }}" class="form-label">{{ form.kapora_yontemi.label }}</label>
+                                                {{ form.kapora_yontemi }}
+                                                {{ form.kapora_yontemi.errors }}
                                             </div>
                                             <div class="col-12">
                                                 <label for="{{ form.musteri_aciklama.id_for_label }}" class="form-label">{{ form.musteri_aciklama.label }}</label>
@@ -649,6 +659,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     musteriToggleBtn.addEventListener('click', function() {
         const isCollapsed = !musteriBilgileri.classList.contains('show');
+        musteriToggleBtn.setAttribute('aria-expanded', String(isCollapsed));
         
         if (isCollapsed) {
             // Açılıyor

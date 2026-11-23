@@ -69,7 +69,7 @@ class StokMapper:
             'aciklama':           d.get('aciklama', ''),
             'tur':                _dia_tur_to_model(d.get('stokkartturu', 'TCR')),
             'durum':              StokDurum.AKTIF if d.get('durum') == 'A' else StokDurum.PASIF,
-            'ana_birim':          d.get('birimadi', ''),
+            'ana_birim':          d.get('birimadi') or d.get('anabirimadi', ''),
             'ana_birim_dia_key':  str(d.get('anabirimkey', '')),
             'ana_barkod':         d.get('anabarkod') or d.get('barkodu', ''),
             'marka':              d.get('markaack') or d.get('marka', ''),
@@ -78,6 +78,7 @@ class StokMapper:
             # `ozelkod3`: "Yazlık (1001)" biçiminde döndürüyor.
             'mevsim':             (
                 _ozelkod_aciklamasi(d.get('ozelkod3'), d.get('ozelkod3kodu'))
+                or d.get('ozelkodaciklama3')
                 or d.get('ozelkod3aciklama')
                 or d.get('ozelkod3ack')
                 or ''
@@ -88,6 +89,7 @@ class StokMapper:
             # önceliklendir; eski M2 alias'ları eski kayıtlar için yedek kalsın.
             'ozel_kod2':          (
                 _ozelkod_aciklamasi(d.get('ozelkod4'), d.get('ozelkod4kodu'))
+                or d.get('ozelkodaciklama4')
                 or d.get('ozelkod4aciklama')
                 or d.get('ozelkod4ack')
                 or d.get('ozelkod2aciklama')

@@ -1,0 +1,797 @@
+{% extends "base.html" %}
+{% load static l10n %}
+{% block title %}{{ ebat }} · MesBul · MesDia{% endblock %}
+{% block page_name %}mesbul{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'karsilastirma/sonuclar.css' %}">
+<link rel="stylesheet" href="{% static 'karsilastirma/mesbul-dashboard.css' %}">
+{% endblock %}
+{% block content %}
+<section class="mesbul-sonuclar" data-ebat="{{ ebat }}" data-quote-key="mesbul-quotation-{{ request.user.pk }}" data-current-year="{% now 'Y' %}">
+<header class="mesbul-results-heading">
+    <div>
+        <a class="small text-decoration-none" href="{% url 'mesbul:index' %}"><i class="bi bi-arrow-left me-1"></i>MesBul</a>
+        <h1 class="h4 fw-bold mt-1 mb-0">{{ ebat }} sonuçları</h1>
+    </div>
+    <a class="btn btn-sm btn-primary" href="{% url 'dashboard:quotations' %}?mesbul=1" id="mesbul-open-quotation" hidden></a>
+</header>
+
+<div class="mesbul-results-search">
+    <form data-mesbul-progress method="post" action="{% url 'mesbul:sonuclar' %}" class="mesbul-quick-search">
+        {% csrf_token %}
+        <input type="hidden" name="marka" value="{{ marka }}">
+        <input type="hidden" name="mevsim" value="{{ mevsim }}">
+        <input type="hidden" name="min_dot" value="{{ min_dot }}">
+        <label for="mesbul-quick-ebat" class="visually-hidden">Lastik ebadı</label>
+        <div class="mesbul-results-size">
+            <i class="bi bi-search" aria-hidden="true"></i>
+            <input class="form-control" name="ebat" id="mesbul-quick-ebat" value="{{ ebat }}" required>
+        </div>
+        <button class="btn btn-primary" type="submit">Ara</button>
+    </form>
+    <button type="button" class="filter-trigger btn btn-outline-secondary btn-sm" aria-controls="mesbul-filters" aria-expanded="false" aria-label="Filtreler" onclick="openFilters()">
+        <i class="bi bi-sliders" aria-hidden="true"></i>
+        <span class="mesbul-filter-trigger-text">Filtreler</span>
+        <span class="mesbul-filter-count" id="mesbul-filter-count" aria-hidden="true" hidden></span>
+    </button>
+</div>
+{% if user.userprofile.role != 'misafir' %}
+<div class="mesbul-mobile-dial">
+    <button type="button" class="mesbul-dial-trigger" aria-label="Asistan menüsü" aria-expanded="false" aria-controls="mesbul-dial-menu">
+        <i class="bi bi-robot" aria-hidden="true"></i>
+    </button>
+    <div class="mesbul-dial-menu" id="mesbul-dial-menu" hidden>
+        <button type="button" data-dial-action="discount"><i class="bi bi-percent" aria-hidden="true"></i> İskonto Tanımla</button>
+        <button type="button" data-dial-action="notes"><i class="bi bi-journal-text" aria-hidden="true"></i> Notlarım</button>
+        <a href="{% url 'dashboard:manager_assistant' %}"><i class="bi bi-robot" aria-hidden="true"></i> Yönetici Asistanı</a>
+    </div>
+</div>
+{% endif %}
+<div class="mesbul-action-feedback" role="status" id="mesbul-action-feedback"></div>
+<dialog id="mesbul-order-dialog" aria-labelledby="mesbul-order-title">
+    <form method="post" action="{% url 'dashboard:yeni_lastik' %}">
+        {% csrf_token %}
+        <h2 class="h5 mb-2" id="mesbul-order-title">Sipariş oluştur</h2>
+        <p id="mesbul-order-product" class="text-body-secondary mb-3"></p>
+        <input type="hidden" name="mesbul" value="1">
+        <input type="hidden" name="cari_firma">
+        <input type="hidden" name="marka">
+        <input type="hidden" name="urun">
+        <input type="hidden" name="mevsim">
+        <input type="hidden" name="birim_fiyat">
+        <input type="hidden" name="aciklama">
+        <label class="form-label" for="mesbul-order-quantity">Adet</label>
+        <input class="form-control" type="number" id="mesbul-order-quantity" name="adet" min="1" step="1" inputmode="numeric" aria-describedby="mesbul-order-stock" required>
+        <p class="form-text mb-2" id="mesbul-order-stock"></p>
+        <p class="small mb-3">Toplam <strong id="mesbul-order-total"></strong></p>
+        <fieldset class="mesbul-order-customer">
+            <legend class="h6 mb-2"><i class="bi bi-person me-1" aria-hidden="true"></i>Müşteri Bilgileri</legend>
+            <div class="mesbul-order-customer-fields">
+                <div>
+                    <label class="form-label" for="mesbul-customer-name">Müşteri adı</label>
+                    <input class="form-control" id="mesbul-customer-name" name="musteri_adi" autocomplete="name" maxlength="200">
+                </div>
+                <div>
+                    <label class="form-label" for="mesbul-customer-phone">Telefon numarası</label>
+                    <input class="form-control" id="mesbul-customer-phone" name="musteri_telefon" type="tel" autocomplete="tel" maxlength="20">
+                </div>
+                <div>
+                    <label class="form-label" for="mesbul-customer-payment">Ödeme tutarı</label>
+                    <input class="form-control" id="mesbul-customer-payment" name="musteri_odeme_tutari" inputmode="decimal" maxlength="100">
+                </div>
+                <div class="mesbul-order-customer-note">
+                    <label class="form-label" for="mesbul-customer-note">Müşteri açıklaması</label>
+                    <textarea class="form-control" id="mesbul-customer-note" name="musteri_aciklama" rows="2"></textarea>
+                </div>
+            </div>
+        </fieldset>
+        <div class="d-flex justify-content-end gap-2">
+            <button type="button" class="btn btn-outline-secondary" data-order-cancel>Vazgeç</button>
+            <button type="submit" class="btn btn-primary">Siparişe geç</button>
+        </div>
+    </form>
+</dialog>
+<div class="mesbul-fab mesbul-notes-fab">
+    {% include "karsilastirma/_not_widget.html" %}
+</div>
+<div class="mesbul-fab mesbul-discount-fab">
+    {% include "karsilastirma/_iskonto_yonetim.html" %}
+</div>
+<div class="filter-overlay" id="filter-overlay" onclick="closeFilters()"></div>
+
+<div class="layout">
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="mesbul-filters" aria-label="Sonuç filtreleri">
+  <div class="mesbul-filters-heading">
+    <strong><i class="bi bi-sliders me-1" aria-hidden="true"></i>Filtreler</strong>
+    <button class="filter-clear" type="button" onclick="resetMesbulFilters()">Sıfırla</button>
+    <button class="mesbul-filter-close btn btn-sm btn-outline-secondary" type="button" aria-label="Filtreleri kapat" onclick="closeFilters()"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+  </div>
+
+  <div class="mesbul-filter-quick">
+    <div class="filter-title">Mevsim</div>
+    <div class="mesbul-season-options" role="group" aria-label="Mevsim">
+      <label><input type="checkbox" class="filter-cb" data-filter="mevsim" data-value="Yaz" onchange="applyFilters()"><span>Yaz</span></label>
+      <label><input type="checkbox" class="filter-cb" data-filter="mevsim" data-value="Kış" onchange="applyFilters()"><span>Kış</span></label>
+      <label><input type="checkbox" class="filter-cb" data-filter="mevsim" data-value="4 Mevsim" onchange="applyFilters()"><span>4 Mevsim</span></label>
+    </div>
+    <label for="dot-filter" class="filter-title">Minimum DOT</label>
+    <select id="dot-filter" class="dot-select" onchange="applyFilters()">
+      <option value="">Tümü</option>
+      {% for yil in dot_yillari %}<option value="{{ yil }}">{{ yil }} ve üzeri</option>{% endfor %}
+    </select>
+  </div>
+
+  {% if not demo_mod %}
+  <details class="mesbul-filter-accordion" open>
+    <summary>Toptancı</summary>
+    <div class="filter-list" id="filter-toptanci">
+      {% for t, n in toptanci_sayilari.items %}
+      <label class="filter-item">
+        <input type="checkbox" class="filter-cb" data-filter="toptanci" data-value="{{ t }}" onchange="applyFilters()">
+        <span class="mesbul-filter-name">{{ t }}</span>
+        <span class="count">{{ n }}</span>
+      </label>
+      {% endfor %}
+    </div>
+  </details>
+  {% else %}
+  <div class="filter-section">
+    <div class="filter-title">Toptancı</div>
+    <a href="{% url 'mesbul:arama' %}" onclick="uyelikModalAc();return false;"
+      style="display:flex;align-items:center;gap:.5rem;background:#FFF7F4;border:1px solid #FECACA;border-radius:6px;padding:.625rem .75rem;text-decoration:none;transition:background .2s"
+      onmouseover="this.style.background='#FEE2E2'" onmouseout="this.style.background='#FFF7F4'">
+      <span style="font-size:1rem">🔒</span>
+      <div>
+        <div style="font-size:.8125rem;font-weight:700;color:#E85D26">Toptancıları Görmek İçin</div>
+        <div style="font-size:.75rem;color:#C2410C;font-weight:500">Ücretli Üyelik Alın →</div>
+      </div>
+    </a>
+  </div>
+
+  <hr class="filter-divider">
+  {% endif %}
+
+  <details class="mesbul-filter-accordion" open>
+    <summary>Marka</summary>
+    <input type="search" class="filter-search" id="mesbul-brand-filter" aria-label="Marka filtrelerinde ara" placeholder="Marka ara..." oninput="filterMarkalar(this.value)">
+    <div class="filter-list" id="filter-marka">
+      {% for m in marka_listesi %}
+      <label class="filter-item marka-filter-item">
+        <input type="checkbox" class="filter-cb" data-filter="marka" data-value="{{ m }}" onchange="applyFilters()">
+        <span class="mesbul-filter-name">{{ m }}</span>
+        <span class="count"></span>
+      </label>
+      {% endfor %}
+    </div>
+  </details>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+
+  {% if hatali_toptancilar and not demo_mod %}
+  <div class="hata-banner" role="status">
+    <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
+    <span><strong>{{ hatali_toptancilar|join:", " }}</strong> ile bağlantı kurulamadı. Sonuçlar eksik olabilir.</span>
+    <form data-mesbul-progress method="post" action="{% url 'mesbul:sonuclar' %}">
+      {% csrf_token %}
+      <input type="hidden" name="ebat" value="{{ ebat }}">
+      <input type="hidden" name="marka" value="{{ marka }}">
+      <input type="hidden" name="mevsim" value="{{ mevsim }}">
+      <input type="hidden" name="min_dot" value="{{ min_dot }}">
+      <button type="submit">Tekrar dene</button>
+    </form>
+  </div>
+  {% endif %}
+
+  <div class="mesbul-summary" aria-label="Sonuç özeti">
+    <span>En ucuz <strong id="stat-min">{% if sonuclar %}{{ sonuclar.0.fiyat_str }}{% else %}—{% endif %}</strong></span>
+    <span>En pahalı <strong id="stat-max">{% if sonuclar %}{% with sonuclar|last as son %}{{ son.fiyat_str }}{% endwith %}{% else %}—{% endif %}</strong></span>
+    <span><strong id="stat-count">{{ sonuc_sayisi }}</strong> ürün</span>
+  </div>
+
+  {% if sonuclar %}
+
+  <div class="table-toolbar">
+    <input type="text" class="model-search" aria-label="Sonuçlarda model ara" placeholder="Model ara…" oninput="applyFilters()" id="model-search">
+    <button class="sort-btn active" type="button" id="sort-fiyat" onclick="sortBy('fiyat')">Fiyat ↕</button>
+  </div>
+
+  <div class="tablo-wrap">
+    <table id="main-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          {% if not demo_mod %}
+            <th>Toptancı</th>
+          {% else %}
+            <th>Toptancı <span style="font-size:inherit;font-weight:600;color:#E85D26;background:#FFF7F4;border:1px solid #FECACA;border-radius:4px;padding:.1rem .35rem;vertical-align:middle;white-space:nowrap">🔒 Üye</span></th>
+          {% endif %}
+          <th>Marka</th>
+          <th class="mesbul-model-column">Model</th>
+          <th class="gizle">Mevsim</th>
+          <th class="gizle mesbul-dot-column">DOT</th>
+          <th class="gizle mesbul-stock-column">Stok</th>
+          <th class="fiyat-cell">Fiyat</th>
+          {% if request.user.is_authenticated %}<th class="gizle mesbul-actions-column">İşlemler</th>{% endif %}
+        </tr>
+      </thead>
+      <tbody id="table-body">
+        {% for u in sonuclar %}
+        <tr class="data-row {% if u.fiyat == en_ucuz_fiyat %}en-ucuz{% endif %}"
+            data-toptanci="{{ u.toptanci }}"
+            data-marka="{{ u.marka }}"
+            data-mevsim="{{ u.mevsim }}"
+            data-model="{{ u.urun_adi }}"
+            data-fiyat="{{ u.fiyat|unlocalize }}"
+            data-stok="{{ u.miktar|unlocalize }}"
+            data-dot="{{ u.dot }}"
+            data-card="mc-{{ forloop.counter }}">
+
+          <td><span class="sira">{{ forloop.counter }}</span></td>
+          {% if not demo_mod %}
+            <td>
+              <div class="toptanci-name" data-toptanci-key="{{ u.toptanci }}">{{ u.toptanci }}</div>
+            </td>
+          {% else %}
+            <td><a href="{% url 'mesbul:arama' %}" onclick="uyelikModalAc();return false;"
+              style="display:inline-flex;align-items:center;gap:.3rem;font-size:inherit;font-weight:600;color:#E85D26;background:#FFF7F4;border:1px solid #FECACA;border-radius:4px;padding:.2rem .5rem;text-decoration:none;white-space:nowrap">
+              🔒 Üyelik Al
+            </a></td>
+          {% endif %}
+          <td><div class="marka-name">{{ u.marka }}</div></td>
+          <td><div class="model-name">{{ u.urun_adi }}</div></td>
+
+          <td class="gizle">
+            {% if "kış" in u.mevsim|lower or "kis" in u.mevsim|lower %}
+              <span class="mevsim-badge mv-kis">❄️ Kış</span>
+            {% elif "4" in u.mevsim %}
+              <span class="mevsim-badge mv-dort">{% include "karsilastirma/4mevsimico.svg" %} 4 Mev.</span>
+            {% else %}
+              <span class="mevsim-badge mv-yaz">☀️ Yaz</span>
+            {% endif %}
+          </td>
+
+          <td class="gizle">
+            <span class="dot-val {% if not u.dot or u.dot == '0' %}dot-empty{% endif %}">
+              {% if u.dot and u.dot != "0" %}{{ u.dot }}{% else %}—{% endif %}
+            </span>
+          </td>
+
+          <td class="gizle">
+            {% if u.miktar == 0 %}
+              <span class="stok-yok">Yok</span>
+            {% elif u.miktar <= 4 %}
+              <span class="stok">Son {{ u.miktar }}</span>
+            {% else %}
+              <span class="stok">{{ u.miktar }} adet</span>
+            {% endif %}
+          </td>
+
+          <td class="fiyat-cell">
+            <div class="fiyat-ana {% if u.fiyat == en_ucuz_fiyat %}cheapest{% endif %}"
+                 data-toptanci-key="{{ u.toptanci }}"
+                 data-fiyat="{{ u.fiyat|unlocalize }}">
+              {{ u.fiyat_str }}
+            </div>
+          </td>
+
+          {% if request.user.is_authenticated %}
+          <td class="gizle mesbul-actions-column">
+            {% include "karsilastirma/_satir_aksiyonlari.html" %}
+          </td>
+          {% endif %}
+
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="mobile-cards" id="mobile-cards"></div>
+  <button type="button" id="mesbul-load-more" class="btn btn-outline-secondary" hidden>Daha fazla göster</button>
+  {% for u in sonuclar %}
+  <template id="mc-{{ forloop.counter }}">
+    <article class="m-card" aria-label="{{ u.marka }} {{ u.urun_adi }}"
+             data-marka="{{ u.marka }}" data-mevsim="{{ u.mevsim }}"
+             data-fiyat="{{ u.fiyat|unlocalize }}" data-stok="{{ u.miktar|unlocalize }}" data-dot="{{ u.dot }}">
+      <div class="m-card-row1">
+        {% if not demo_mod %}
+        <div class="m-card-supplier" data-toptanci-key="{{ u.toptanci }}">
+          <span class="m-card-logo">
+            {% for ad, bilgi in b2b_linkler.items %}
+              {% if ad == u.toptanci %}<img src="{% get_static_prefix %}karsilastirma/{{ bilgi.logo }}" alt="" width="28" height="28" loading="lazy">{% endif %}
+            {% endfor %}
+            <i class="bi bi-shop" aria-hidden="true"></i>
+          </span>
+          <strong>{{ u.toptanci }}</strong>
+        </div>
+        {% else %}
+        <button type="button" class="btn btn-sm btn-outline-secondary m-card-membership" onclick="uyelikModalAc()">Üyelik Al</button>
+        {% endif %}
+        <div class="m-card-price">
+          <strong class="m-card-fiyat" data-toptanci-key="{% if not demo_mod %}{{ u.toptanci }}{% endif %}" data-fiyat="{{ u.fiyat|unlocalize }}">{{ u.fiyat_str }}</strong>
+          <small class="m-card-price-diff" hidden></small>
+          <small class="m-card-cheapest" hidden>En ucuz</small>
+        </div>
+      </div>
+      <div>
+        <strong class="m-card-marka">{{ u.marka }}</strong>
+        <p class="m-card-model">{{ u.urun_adi }}</p>
+      </div>
+      <dl class="m-card-specs">
+        <div>
+          <dt>Üretim</dt>
+          <dd class="m-card-dot"><span class="m-card-indicator" aria-hidden="true"></span><span class="m-card-dot-year">—</span></dd>
+          <dd class="m-card-age-warning" hidden>Eski lastik</dd>
+        </div>
+        <div>
+          <dt>Stok</dt>
+          <dd class="m-card-stock" data-status="{% if u.miktar <= 2 %}low{% elif u.miktar <= 10 %}medium{% else %}good{% endif %}">
+            <span class="m-card-indicator" aria-hidden="true"></span>
+            {% if u.miktar <= 0 %}0 adet{% elif u.miktar <= 2 %}Son {{ u.miktar }} adet{% else %}{{ u.miktar }} adet{% endif %}
+          </dd>
+        </div>
+        <div>
+          <dt>Mevsim</dt>
+          <dd class="m-card-season">—</dd>
+        </div>
+      </dl>
+      {% if request.user.is_authenticated %}
+      {% include "karsilastirma/_satir_aksiyonlari.html" %}
+      {% endif %}
+    </article>
+  </template>
+  {% endfor %}
+
+  <div class="empty hidden" id="empty-state">
+    <div class="icon">🔍</div>
+    <p>Filtrelere uyan ürün bulunamadı</p>
+  </div>
+
+  {% else %}
+  <div class="empty">
+    <div class="icon">🔍</div>
+    <p>{{ ebat }} için sonuç bulunamadı</p>
+    <a href="{% url 'mesbul:index' %}" class="btn btn-outline-secondary btn-sm mt-2">Tekrar ara</a>
+  </div>
+  {% endif %}
+
+</div>
+</div>
+
+{{ iskontolar|json_script:"mesbul-iskontolar" }}
+<script>
+let sortField = 'fiyat', sortDir = 1;
+
+function getActiveValues(filterName) {
+  return [...document.querySelectorAll(`.filter-cb[data-filter="${filterName}"]:checked`)]
+    .map(cb => cb.dataset.value);
+}
+
+function mesbulSeason(value) {
+  const season = value.toLocaleLowerCase('tr');
+  if (/4|dört|all.?season/.test(season)) return '4 Mevsim';
+  if (/kış|kıs|kis|winter/.test(season)) return 'Kış';
+  if (/yaz|summer/.test(season)) return 'Yaz';
+  return '';
+}
+
+function filterRows() {
+  const suppliers = getActiveValues('toptanci');
+  const brands = getActiveValues('marka');
+  const seasons = getActiveValues('mevsim');
+  const model = (document.getElementById('model-search')?.value || '').toLocaleLowerCase('tr').trim();
+  const minDot = Number(document.getElementById('dot-filter').value);
+  const rows = document.querySelectorAll('.data-row');
+  const visible = [];
+
+  rows.forEach(row => {
+    const values = row.dataset;
+    const year = Number(values.dot.match(/20\d{2}/)?.[0] || 0);
+    const matches = (!suppliers.length || suppliers.includes(values.toptanci))
+      && (!brands.length || brands.includes(values.marka))
+      && (!seasons.length || seasons.includes(mesbulSeason(values.mevsim)))
+      && (!model || values.model.toLocaleLowerCase('tr').includes(model))
+      && (!minDot || !year || year >= minDot);
+
+    row.classList.toggle('hidden', !matches);
+    if (matches) {
+      visible.push(row);
+      row.querySelector('.sira').textContent = visible.length;
+    }
+  });
+  return visible;
+}
+
+const mesbulPrice = new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+function formatMesbulPrice(value) {
+  return Number.isFinite(value) ? `${mesbulPrice.format(value)} ₺` : '—';
+}
+
+function pinMesbulFilters() {
+  for (const list of document.querySelectorAll('.mesbul-sonuclar .filter-list')) {
+    const items = [...list.children];
+    items.forEach((item, index) => { item.dataset.initialOrder ??= index; });
+    const sorted = [...items].sort((a, b) => {
+      const checked = Number(b.firstElementChild.checked) - Number(a.firstElementChild.checked);
+      return checked || Number(a.dataset.initialOrder) - Number(b.dataset.initialOrder);
+    });
+    const focused = document.activeElement;
+    sorted.forEach((item, index) => {
+      if (list.children[index] !== item) list.insertBefore(item, list.children[index]);
+    });
+    if (list.contains(focused) && document.activeElement !== focused) focused.focus({ preventScroll: true });
+  }
+}
+
+function applyFilters() {
+  pinMesbulFilters();
+  filterMarkalar(document.getElementById('mesbul-brand-filter').value);
+  const visible = filterRows();
+  let min = Infinity;
+  let max = -Infinity;
+  visible.forEach(row => {
+    const price = Number(row.dataset.fiyat);
+    if (Number.isFinite(price)) {
+      min = Math.min(min, price);
+      max = Math.max(max, price);
+    }
+  });
+  document.getElementById('stat-count').textContent = visible.length;
+  document.getElementById('stat-min').textContent = formatMesbulPrice(min);
+  document.getElementById('stat-max').textContent = formatMesbulPrice(max);
+  document.getElementById('empty-state')?.classList.toggle('hidden', visible.length > 0);
+  document.querySelector('.tablo-wrap')?.classList.toggle('hidden', visible.length === 0);
+  updateMesbulFilterCount();
+  mesbulCardLimit = mesbulBatchSize;
+  mesbulVisibleCards = visible;
+  mesbulMinimumPrice = min;
+  renderMesbulCards();
+}
+
+function resetMesbulFilters() {
+  document.querySelectorAll('.filter-cb').forEach(cb => cb.checked = false);
+  document.getElementById('dot-filter').value = '';
+  const brandSearch = document.getElementById('mesbul-brand-filter');
+  const modelSearch = document.getElementById('model-search');
+  brandSearch.value = '';
+  if (modelSearch) modelSearch.value = '';
+  applyFilters();
+}
+
+function filterMarkalar(query) {
+  const lower = query.trim().toLocaleLowerCase('tr');
+  document.querySelectorAll('.marka-filter-item').forEach(item => {
+    const name = item.querySelector('.mesbul-filter-name').textContent.toLocaleLowerCase('tr');
+    item.hidden = !item.firstElementChild.checked && !name.includes(lower);
+  });
+}
+
+function sortBy(field) {
+  if (sortField === field) sortDir *= -1; else { sortField = field; sortDir = 1; }
+  document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('sort-' + field)?.classList.add('active');
+  const tbody = document.getElementById('table-body');
+  const rows = [...tbody.querySelectorAll('.data-row')];
+  rows.sort((a, b) => {
+    if (field === 'fiyat') return (parseFloat(a.dataset.fiyat) - parseFloat(b.dataset.fiyat)) * sortDir;
+    return a.dataset[field].localeCompare(b.dataset[field], 'tr') * sortDir;
+  });
+  rows.forEach(row => tbody.appendChild(row));
+  applyFilters();
+}
+
+// Başlangıçta arama sayfasından gelen mevsim seçimini işaretle
+const initialMevsim = "{{ mevsim|escapejs }}";
+if (initialMevsim) {
+  document.querySelectorAll('.filter-cb[data-filter="mevsim"]').forEach(cb => {
+    if (cb.dataset.value.toLowerCase() === initialMevsim.toLowerCase()) {
+      cb.checked = true;
+    }
+  });
+}
+const initialDot = "{{ min_dot|escapejs }}";
+if (initialDot) {
+  const ds = document.getElementById('dot-filter');
+  if (ds) ds.value = initialDot;
+}
+const mesbulMobile = matchMedia('(max-width: 768px)');
+const mesbulCardLayout = matchMedia('(max-width: 990px)');
+const mesbulCardList = document.getElementById('mobile-cards');
+const mesbulLoadMore = document.getElementById('mesbul-load-more');
+const mesbulCurrentYear = Number(document.querySelector('.mesbul-sonuclar').dataset.currentYear);
+const mesbulSeasonLabels = { 'Yaz': '☀ Yaz', 'Kış': '❄ Kış', '4 Mevsim': '🌦 4 Mevsim' };
+const mesbulBatchSize = 20;
+let mesbulCardLimit = mesbulBatchSize;
+let mesbulVisibleCards = [];
+let mesbulMinimumPrice = Infinity;
+
+function updateMesbulFilterCount() {
+  const selected = document.querySelectorAll('#mesbul-filters .filter-cb:checked').length
+    + Number(Boolean(document.getElementById('dot-filter').value));
+  const badge = document.getElementById('mesbul-filter-count');
+  badge.textContent = selected;
+  badge.hidden = selected === 0;
+  badge.closest('button').setAttribute('aria-label', selected ? `Filtreler, ${selected} seçili` : 'Filtreler');
+}
+
+function buildMesbulCard(row) {
+  const { card: sourceId, fiyat, dot, mevsim } = row.dataset;
+  const card = document.getElementById(sourceId).content.firstElementChild.cloneNode(true);
+  card.id = `${sourceId}-rendered`;
+  const price = Number(fiyat);
+  const label = formatMesbulPrice(price);
+  const priceLabel = card.querySelector('.m-card-fiyat');
+  priceLabel.textContent = label;
+
+  const gap = Number.isFinite(price) && Number.isFinite(mesbulMinimumPrice)
+    ? Math.round((price - mesbulMinimumPrice) * 100) / 100
+    : null;
+  if (gap === 0) {
+    card.classList.add('en-ucuz');
+    card.querySelector('.m-card-cheapest').hidden = false;
+  } else if (gap > 0) {
+    const difference = card.querySelector('.m-card-price-diff');
+    difference.textContent = `+${formatMesbulPrice(gap)}`;
+    difference.hidden = false;
+  }
+
+  const year = Number(dot.match(/20\d{2}/)?.[0] || 0);
+  if (year) {
+    const age = mesbulCurrentYear - year;
+    card.querySelector('.m-card-dot-year').textContent = year;
+    card.querySelector('.m-card-dot').dataset.status = age <= 1 ? 'good' : age === 2 ? 'medium' : 'low';
+    card.querySelector('.m-card-age-warning').hidden = age <= 2;
+  }
+  card.querySelector('.m-card-season').textContent = mesbulSeasonLabels[mesbulSeason(mevsim)] || '—';
+  const actions = card.querySelector('.mesbul-row-actions');
+  if (actions) actions.dataset.fiyatMetni = label;
+  return card;
+}
+
+function renderMesbulCards(start = 0) {
+  if (!mesbulCardList) return;
+  const limit = mesbulMobile.matches ? mesbulCardLimit : mesbulVisibleCards.length;
+  const rows = mesbulCardLayout.matches ? mesbulVisibleCards.slice(start, limit) : [];
+  const cards = rows.map(buildMesbulCard);
+  if (start) mesbulCardList.append(...cards);
+  else mesbulCardList.replaceChildren(...cards);
+  mesbulLoadMore.hidden = !mesbulMobile.matches || mesbulVisibleCards.length <= limit;
+  if (start && cards.length) {
+    cards[0].tabIndex = -1;
+    cards[0].focus();
+  }
+}
+
+mesbulLoadMore?.addEventListener('click', () => {
+  const start = mesbulCardLimit;
+  mesbulCardLimit += mesbulBatchSize;
+  renderMesbulCards(start);
+});
+mesbulMobile.addEventListener('change', () => renderMesbulCards());
+mesbulCardLayout.addEventListener('change', () => renderMesbulCards());
+
+const mesbulScrollArea = document.querySelector('.admin-main');
+const mesbulSearch = document.querySelector('.mesbul-results-search');
+let mesbulLastScroll = 0;
+mesbulScrollArea.addEventListener('scroll', () => {
+  if (!mesbulMobile.matches) return;
+  const current = Math.max(0, mesbulScrollArea.scrollTop);
+  const delta = current - mesbulLastScroll;
+  if (current <= mesbulSearch.offsetHeight || delta < -5) mesbulSearch.classList.remove('is-scrolling-down');
+  else if (delta > 5) mesbulSearch.classList.add('is-scrolling-down');
+  if (Math.abs(delta) > 5 || current === 0) mesbulLastScroll = current;
+}, { passive: true });
+mesbulMobile.addEventListener('change', () => {
+  mesbulLastScroll = 0;
+  mesbulSearch.classList.remove('is-scrolling-down');
+});
+
+const mesbulDial = document.querySelector('.mesbul-mobile-dial');
+if (mesbulDial) {
+  const trigger = mesbulDial.querySelector('.mesbul-dial-trigger');
+  const menu = document.getElementById('mesbul-dial-menu');
+
+  function setDialOpen(open) {
+    menu.hidden = !open;
+    trigger.setAttribute('aria-expanded', String(open));
+  }
+
+  trigger.addEventListener('click', () => setDialOpen(menu.hidden));
+  menu.addEventListener('click', event => {
+    const action = event.target.closest('[data-dial-action]')?.dataset.dialAction;
+    if (!action) return;
+    setDialOpen(false);
+    if (action === 'discount') iskontoAc();
+    else notPanelAc();
+  });
+  document.addEventListener('click', event => {
+    if (!menu.hidden && !mesbulDial.contains(event.target)) setDialOpen(false);
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && !menu.hidden) {
+      setDialOpen(false);
+      trigger.focus();
+    }
+  });
+  mesbulMobile.addEventListener('change', () => setDialOpen(false));
+}
+
+const mesbulBrandCounts = new Map();
+document.querySelectorAll('.data-row').forEach(row => {
+  const { marka, fiyat } = row.dataset;
+  mesbulBrandCounts.set(marka, (mesbulBrandCounts.get(marka) || 0) + 1);
+  const label = formatMesbulPrice(Number(fiyat));
+  row.querySelector('.fiyat-ana').textContent = label;
+  const actions = row.querySelector('.mesbul-row-actions');
+  if (actions) actions.dataset.fiyatMetni = label;
+});
+document.querySelectorAll('.marka-filter-item').forEach(item => {
+  item.querySelector('.count').textContent = mesbulBrandCounts.get(item.firstElementChild.dataset.value) || 0;
+});
+applyFilters();
+
+// Mobil drawer
+function openFilters() {
+  const panel = document.getElementById('mesbul-filters');
+  panel.classList.add('open');
+  panel.setAttribute('role', 'dialog');
+  panel.setAttribute('aria-modal', 'true');
+  document.getElementById('filter-overlay').classList.add('open');
+  document.querySelector('.filter-trigger').setAttribute('aria-expanded', 'true');
+  document.documentElement.classList.add('mesbul-filter-open');
+  document.querySelector('.mesbul-filter-close').focus({ preventScroll: true });
+}
+function closeFilters() {
+  const panel = document.getElementById('mesbul-filters');
+  panel.classList.remove('open');
+  panel.removeAttribute('role');
+  panel.removeAttribute('aria-modal');
+  document.getElementById('filter-overlay').classList.remove('open');
+  document.documentElement.classList.remove('mesbul-filter-open');
+  const trigger = document.querySelector('.filter-trigger');
+  trigger.setAttribute('aria-expanded', 'false');
+  if (trigger.offsetParent) trigger.focus();
+}
+
+matchMedia('(max-width: 990px)').addEventListener('change', event => {
+  if (!event.matches) closeFilters();
+});
+
+document.getElementById('mesbul-filters').addEventListener('keydown', event => {
+  const panel = event.currentTarget;
+  if (event.key !== 'Tab' || !panel.classList.contains('open')) return;
+  const controls = [...panel.querySelectorAll('button, input, select, summary, a[href]')]
+    .filter(control => !control.disabled && control.offsetParent);
+  const first = controls[0];
+  const last = controls.at(-1);
+  if (event.shiftKey ? document.activeElement === first : document.activeElement === last) {
+    event.preventDefault();
+    (event.shiftKey ? last : first).focus();
+  }
+});
+
+// ── İskonto Tooltip ──────────────────────────────────────────────────────────
+const ISKONTOLAR = JSON.parse(document.getElementById('mesbul-iskontolar').textContent);
+function iskontoMetni(text) {
+  const node = document.createElement('span');
+  node.textContent = text;
+  return node.innerHTML;
+}
+
+// Tooltip elementi oluştur
+const _tip = document.createElement('div');
+_tip.id = 'iskonto-tooltip';
+_tip.style.cssText = `
+  position:fixed;z-index:9999;
+  background:linear-gradient(135deg,#0F172A 0%,#1E293B 100%);
+  border:1px solid rgba(255,255,255,.08);
+  color:#F1F5F9;
+  font-family:'Inter',sans-serif;
+  padding:.75rem 1rem;border-radius:12px;min-width:200px;
+  box-shadow:0 16px 40px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.04);
+  pointer-events:none;opacity:0;transition:opacity .18s,transform .18s;
+  transform:translateY(4px);
+`;
+document.body.appendChild(_tip);
+
+function _showTip(el, text) {
+  if (!text) return;
+
+  const fiyat = parseFloat(el.dataset.fiyat);
+  if (!isNaN(fiyat) && fiyat > 0) {
+    // "NAKİT:%8 KK:5" veya "NAKİT:%8, KK:%5" veya "NAKİT: %8\nKK: %5" formatlarını destekle
+    const satirlar = text.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+    let satirListesi = [];
+    satirlar.forEach(satir => {
+      // Boşlukla ayrılmış birden fazla "ETIKET:%sayi" olabilir, önce bunları ayır
+      const parcalar = satir.split(/\s+/);
+      parcalar.forEach(parca => {
+        const m = parca.match(/^(.+?):(%?)(\d+(?:[.,]\d+)?)%?$/i);
+        if (m) satirListesi.push({ etiket: m[1].trim(), oran: parseFloat(m[3].replace(',', '.')) });
+      });
+      // Boşlukla ayrılmadıysa tüm satırı dene
+      if (satirListesi.length === 0) {
+        const m = satir.match(/^(.+?)\s*[:%]\s*%?(\d+(?:[.,]\d+)?)%?$/i);
+        if (m) satirListesi.push({ etiket: m[1].trim(), oran: parseFloat(m[2].replace(',', '.')) });
+      }
+    });
+
+    let html = `<div style="font-size:.625rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#475569;margin-bottom:.5rem">İskontolu Fiyatlar</div>`;
+    satirListesi.forEach(({ etiket, oran }) => {
+      const tutar    = fiyat * (1 - oran / 100);
+      const tutarStr = tutar.toLocaleString('tr-TR', {minimumFractionDigits:2, maximumFractionDigits:2});
+      html += `<div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:.25rem 0;border-bottom:1px solid rgba(255,255,255,.05);last-child:border:none">
+        <span style="font-size:.75rem;font-weight:600;color:#94A3B8;white-space:nowrap">${iskontoMetni(etiket)}</span>
+        <span style="font-size:.875rem;font-weight:700;color:#F1F5F9;white-space:nowrap">${tutarStr} ₺ <span style="font-size:.625rem;color:#E85D26;font-weight:700">-%${oran}</span></span>
+      </div>`;
+    });
+    _tip.innerHTML = html;
+  } else {
+    _tip.innerHTML = `<div style="font-size:.8125rem">${iskontoMetni(text)}</div>`;
+  }
+
+  _tip.style.opacity = '1';
+  _tip.style.transform = 'translateY(0)';
+  const rect = el.getBoundingClientRect();
+  let top  = rect.bottom + 8;
+  let left = rect.right - 210;
+  if (left + 220 > window.innerWidth) left = window.innerWidth - 224;
+  if (left < 8) left = 8;
+  _tip.style.top  = top  + 'px';
+  _tip.style.left = left + 'px';
+}
+function _hideTip() {
+  _tip.style.opacity = '0';
+  _tip.style.transform = 'translateY(4px)';
+}
+
+document.addEventListener('mouseover', function(e) {
+  const el = e.target.closest('[data-toptanci-key]');
+  if (!el) return;
+  const key = el.dataset.toptanciKey;
+  if (ISKONTOLAR[key]) _showTip(el, ISKONTOLAR[key]);
+});
+document.addEventListener('mouseout', function(e) {
+  if (e.target.closest('[data-toptanci-key]')) _hideTip();
+});
+// Mobil: dokunuşta
+document.addEventListener('touchstart', function(e) {
+  const el = e.target.closest('[data-toptanci-key]');
+  if (!el) { _hideTip(); return; }
+  const key = el.dataset.toptanciKey;
+  if (ISKONTOLAR[key]) { _showTip(el, ISKONTOLAR[key]); }
+  else _hideTip();
+}, {passive: true});
+
+// ── Satır bazlı hızlı not ekleme ─────────────────────────────────────────────
+function satirNotAc(toptanci, marka, model, dot, fiyat) {
+  notPanelAc();
+
+  const ebatEl  = document.getElementById('not-ebat');
+  const markaEl = document.getElementById('not-marka');
+  const icerikEl= document.getElementById('not-icerik');
+
+  if (ebatEl) ebatEl.value = document.querySelector('.mesbul-sonuclar').dataset.ebat;
+  icerikEl.value = [toptanci, marka, model, dot].filter(Boolean).join(' ') + '\nFiyat: ' + fiyat;
+
+  // Marka alanını doldur
+  if (markaEl) markaEl.value = marka;
+
+  icerikEl.focus();
+  const pos = icerikEl.value.length;
+  icerikEl.setSelectionRange(pos, pos);
+}
+</script>
+{% if demo_mod %}{% include "karsilastirma/_uyelik_modal.html" %}{% endif %}
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'karsilastirma/mesbul-results.js' %}?v=order-flow-4"></script>
+<script src="{% static 'karsilastirma/mesbul-progress.js' %}"></script>
+{% endblock %}

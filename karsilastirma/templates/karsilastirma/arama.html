@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}MesBul · MesDia{% endblock %}
+{% block page_name %}mesbul{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'karsilastirma/mesbul-dashboard.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="mesbul-dashboard" aria-labelledby="mesbul-heading">
+    <header class="mesbul-heading">
+        <h1 id="mesbul-heading" class="mesbul-wordmark">
+            <img src="{% static 'karsilastirma/favicon1.png' %}" alt="MesBul" width="1254" height="1254">
+        </h1>
+    </header>
+
+    {% if hata %}<div class="alert alert-danger" role="alert">{{ hata }}</div>{% endif %}
+    <form data-mesbul-progress method="post" action="{% url 'mesbul:sonuclar' %}" id="mesbul-search-form" class="mesbul-search-bar">
+        {% csrf_token %}
+        <input type="hidden" name="marka" value="">
+        <div class="mesbul-size">
+            <label for="mesbul-ebat" class="visually-hidden">Lastik ebadı</label>
+            <i class="bi bi-search mesbul-size-icon" aria-hidden="true"></i>
+            <input class="form-control" id="mesbul-ebat" name="ebat" placeholder="205/55R16" autocomplete="off" required>
+        </div>
+
+        <fieldset class="mesbul-filter-group">
+            <legend class="mesbul-section-label">Mevsim</legend>
+            <div class="mesbul-segments">
+                <label><input type="radio" name="mevsim" value="" checked><span>Tümü</span></label>
+                <label><input type="radio" name="mevsim" value="Yaz"><span><span aria-hidden="true">☀</span> Yaz</span></label>
+                <label><input type="radio" name="mevsim" value="Kış"><span><span aria-hidden="true">❄</span> Kış</span></label>
+                <label><input type="radio" name="mevsim" value="4 Mevsim"><span><span aria-hidden="true">🌦</span> 4 Mevsim</span></label>
+            </div>
+        </fieldset>
+
+        <fieldset class="mesbul-filter-group">
+            <legend class="mesbul-section-label">Minimum DOT</legend>
+            <div class="mesbul-segments">
+                <label><input type="radio" name="min_dot" value="" checked><span>Fark etmez</span></label>
+                {% for yil in dot_yillari|slice:":3" %}
+                <label><input type="radio" name="min_dot" value="{{ yil }}"><span>{{ yil }}{% if not forloop.first %}+{% endif %}</span></label>
+                {% endfor %}
+            </div>
+        </fieldset>
+
+        <button type="submit" class="btn btn-primary" id="mesbul-search-submit">Ara</button>
+        <div id="mesbul-search-status" class="mesbul-search-status" role="status"></div>
+    </form>
+
+    {% if gecmis %}
+    <div class="mesbul-history" aria-label="Son aramalar">
+        <span class="mesbul-section-label"><i class="bi bi-clock-history" aria-hidden="true"></i> Son aramalar</span>
+        {% for ebat in gecmis %}
+        <button type="button" class="mesbul-history-item" data-ebat="{{ ebat }}">{{ ebat }}</button>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if not demo_mod %}
+    <section class="mesbul-suppliers" aria-labelledby="mesbul-suppliers-heading">
+        <div class="mesbul-supplier-heading">
+            <h2 id="mesbul-suppliers-heading">Toptancılar</h2>
+            <span class="mesbul-supplier-count">{{ b2b_linkler|length }} bağlantı</span>
+        </div>
+        <div class="mesbul-supplier-grid">
+            {% for ad, site in b2b_linkler.items %}
+            <a class="mesbul-supplier" href="{{ site.url }}" target="_blank" rel="noopener noreferrer">
+                <span class="mesbul-supplier-logo"><img src="{% get_static_prefix %}karsilastirma/{{ site.logo }}" alt="" loading="lazy"></span>
+                <span>{{ ad }}</span>
+            </a>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    <div class="mesbul-fab mesbul-notes-fab">
+        {% include "karsilastirma/_not_widget.html" %}
+    </div>
+    <div class="mesbul-fab mesbul-discount-fab">
+        {% include "karsilastirma/_iskonto_yonetim.html" %}
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'karsilastirma/mesbul-search.js' %}"></script>
+<script src="{% static 'karsilastirma/mesbul-progress.js' %}"></script>
+{% endblock %}

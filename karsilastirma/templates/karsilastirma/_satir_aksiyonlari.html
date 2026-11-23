@@ -1,0 +1,14 @@
+<div class="mesbul-row-actions" data-urun="{{ u.urun_adi }}" data-fiyat-metni="{{ u.fiyat_str }}"{% if not demo_mod %} data-toptanci="{{ u.toptanci }}"{% endif %}>
+    <button type="button" data-action="quote">
+        <i class="bi bi-plus-lg" aria-hidden="true"></i>
+        <span>Teklife ekle</span>
+    </button>
+    <button type="button" data-order-trigger aria-label="Sipariş oluştur" title="{% if u.miktar > 0 %}Sipariş oluştur{% else %}Stok yok{% endif %}"{% if u.miktar <= 0 %} disabled{% endif %}>
+        <i class="bi bi-cart-plus" aria-hidden="true"></i>
+        <span>Sipariş oluştur</span>
+    </button>
+    <button type="button" data-action="note" aria-label="Not al" title="Not al">
+        <i class="bi bi-journal-text" aria-hidden="true"></i>
+        <span>Not al</span>
+    </button>
+</div>

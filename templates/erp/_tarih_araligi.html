@@ -1,0 +1,25 @@
+<div class="col-md-4">
+    <label class="form-label small text-muted mb-1" for="tarihSec">Tarih aralığı</label>
+    <input type="hidden" name="baslangic" value="{{ request.GET.baslangic }}">
+    <input type="hidden" name="bitis" value="{{ request.GET.bitis }}">
+    <button type="button" id="tarihSec" class="form-control form-control-sm text-start" popovertarget="tarihPanel">
+        <i class="bi bi-calendar3 me-2"></i><span>Tüm tarihler</span><i class="bi bi-chevron-down float-end"></i>
+    </button>
+    <div popover id="tarihPanel" role="dialog" aria-label="Tarih aralığı seçimi" data-today="{% now 'Y-m-d' %}">
+        <div class="tarih-layout">
+            <div class="tarih-presets" aria-label="Hazır aralıklar"></div>
+            <div class="tarih-main">
+                <div class="tarih-inputs">
+                    <label>Başlangıç<input class="form-control" type="date" data-start></label>
+                    <label>Bitiş<input class="form-control" type="date" data-end></label>
+                </div>
+                <div class="tarih-nav"><button type="button" aria-label="Önceki ay">‹</button><button type="button" aria-label="Sonraki ay">›</button></div>
+                <div class="tarih-months"></div>
+            </div>
+        </div>
+        <div class="tarih-footer"><span aria-live="polite"></span>
+            <button type="button" class="btn btn-outline-secondary btn-sm" popovertarget="tarihPanel" popovertargetaction="hide">Vazgeç</button>
+            <button type="button" class="btn btn-primary btn-sm" data-apply>Uygula</button>
+        </div>
+    </div>
+</div>

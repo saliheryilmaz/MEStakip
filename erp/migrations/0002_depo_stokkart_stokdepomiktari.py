@@ -52,7 +52,7 @@ class Migration(migrations.Migration):
                 ('kdv_satis', models.DecimalField(decimal_places=4, default=Decimal('18'), max_digits=7, verbose_name='KDV satış (%)')),
                 ('fiyat1', models.DecimalField(decimal_places=4, default=Decimal('0'), max_digits=18, verbose_name='Fiyat 1')),
                 ('fiyat2', models.DecimalField(decimal_places=4, default=Decimal('0'), max_digits=18, verbose_name='Fiyat 2')),
-                ('gercek_stok', models.DecimalField(decimal_places=4, default=Decimal('0'), help_text="DİA'dan senkronize edilir, MEStakip hesaplamaz.", max_digits=18, verbose_name='Gerçek stok')),
+                ('gercek_stok', models.DecimalField(decimal_places=4, default=Decimal('0'), help_text="DİA'dan senkronize edilir, MesDia hesaplamaz.", max_digits=18, verbose_name='Gerçek stok')),
                 ('fiili_stok', models.DecimalField(decimal_places=4, default=Decimal('0'), max_digits=18, verbose_name='Fiili stok')),
                 ('notlar', models.TextField(blank=True, verbose_name='Notlar')),
                 ('olusturuldu', models.DateTimeField(auto_now_add=True)),

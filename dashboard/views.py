@@ -3,8 +3,10 @@ from django.http import JsonResponse, HttpResponse, HttpResponseRedirect
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
+from django.db import transaction as db_transaction
 from django.db.models import Q
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db.models import Q, Sum, Count, F, Case, When, DecimalField, IntegerField
 from django.db.models.functions import TruncMonth
@@ -18,7 +20,8 @@ from django.urls import reverse
 from django.views.decorators.http import require_POST, require_http_methods
 from decimal import Decimal
 from .models import Siparis, UserProfile, Notification, Transaction, TransactionCategory, Event, MalzemeHareketi, MalzemeDosya, CikmaLastik, JokerSatisDosya, JokerSatisHareketi, LastikModelBilgisi, Quotation, GarantiBelgesi, FiloArac
-from .forms import SiparisForm, TransactionForm, MalzemeExcelUploadForm
+from .models import SiparisKapora
+from .forms import YeniSiparisForm, SiparisForm, TransactionForm, MalzemeExcelUploadForm
 # pandas removed - using openpyxl instead
 from collections import defaultdict
 from django.views.decorators.csrf import csrf_exempt
@@ -204,6 +207,7 @@ def index(request):
     
     context = {
         'page_title': 'Dashboard',
+        'saklama': _lastik_saklama_ozeti(),
         'stats': {
             'total_users': toplam_siparis,
             'revenue': toplam_ciro,
@@ -421,7 +425,7 @@ def manager_assistant(request):
     key, model = configuration()
     return render(request, "dashboard/assistant.html", {
         "assistant_history": clean_history(request.session.get("ai_chat_history", [])),
-        "assistant_ready": bool(key), "assistant_model": model,
+        "assistant_ready": bool(key), "assistant_model": model, "assistant_local": key == "ollama-local",
     })
 
 
@@ -443,7 +447,7 @@ def manager_assistant_query(request):
 
     history = clean_history(request.session.get("ai_chat_history", []))
     result = answer_question(request.user, question, history)
-    if result["used_groq"]:
+    if result["status"] == "ready":
         history.extend([{"role": "user", "content": question},
                         {"role": "assistant", "content": result["text"]}])
         request.session["ai_chat_history"] = history[-12:]
@@ -847,6 +851,7 @@ def expenses_3d(request):
 
     totals_by_cat = defaultdict(Decimal)
     totals_by_month_cat = defaultdict(lambda: defaultdict(Decimal))
+    kalemler = defaultdict(lambda: defaultdict(lambda: [0] * len(months)))
     total_12m = Decimal("0")
 
     for tx in qs:
@@ -854,7 +859,10 @@ def expenses_3d(request):
         if label not in month_index:
             continue
         cat = _expense_category_name(tx)
-        total = (tx.nakit or 0) + (tx.kredi_karti or 0) + (tx.sanal_pos or 0) + (tx.cari or 0) + (tx.mehmet_havale or 0) + (tx.banka_havale or 0) + (tx.pafgo or 0) + (tx.canta_cikis or 0)
+        total = tx.toplam
+        alt = tx.kategori3 or tx.kategori2 or tx.kategori1
+        kalem = alt.name if alt and alt.name != cat else (tx.aciklama or '').strip() or cat
+        kalemler[cat][kalem][month_index[label]] += total
         total_12m += total
         totals_by_cat[cat] += total
         totals_by_month_cat[label][cat] += total
@@ -872,7 +880,11 @@ def expenses_3d(request):
 
     context = {
         "months_json": json.dumps(month_labels),
-        "categories_json": json.dumps(categories),
+        "chart_categories": categories,
+        "expense_rows": [
+            {"category": cat, "name": name, "values": [int(value * 100) for value in values]}
+            for cat, items in kalemler.items() for name, values in items.items()
+        ],
         "z_json": json.dumps(z),
         "top_n": top_n,
         "total_12m": total_12m,
@@ -954,7 +966,7 @@ def expenses_3d_insights(request):
 
     # ── Groq prompt ──
     system_prompt = (
-        "Sen MEStakip gider analiz asistanısın. Türkçe, kısa ve net yaz.\n"
+        "Sen MesDia gider analiz asistanısın. Türkçe, kısa ve net yaz.\n"
         "Verilen sayılar gerçek veritabanı kayıtlarından geliyor — yalnızca bu rakamlara dayan, uydurma yapma.\n\n"
         "ÇIKTI FORMATI (bu sırayla, başka bir şey ekleme):\n"
         "1) Özet: Son 12 aylık toplam gideri ve aylık ortalamayı tek cümlede yaz.\n"
@@ -1069,16 +1081,16 @@ def users(request):
 @misafir_forbidden
 def products(request):
     """Products sayfası: tarih aralığı filtresi ile işlemleri göster"""
-    from datetime import date
+    from erp.models import FaturaKalemi, FaturaTur
     
     # Tarih aralığı parametrelerini al
-    baslangic_tarih = request.GET.get('baslangic_tarih')
-    bitis_tarih = request.GET.get('bitis_tarih')
+    baslangic_tarih = request.GET.get('baslangic_tarih') or request.GET.get('start-date')
+    bitis_tarih = request.GET.get('bitis_tarih') or request.GET.get('end-date')
     
     # Eski tek tarih parametresi (geriye uyumluluk için)
     secilen_tarih = request.GET.get('tarih')
     if not secilen_tarih and not baslangic_tarih and not bitis_tarih:
-        secilen_tarih = date.today().strftime('%Y-%m-%d')
+        secilen_tarih = timezone.localdate().isoformat()
     
     # İşlemleri filtrele (kategorileri ve parent kategorileri de yükle)
     # Kredi kartı giderlerini products sayfasından tamamen hariç tut
@@ -1130,234 +1142,42 @@ def products(request):
     gider_banka_havale = 0  # Banka Havale gider gösterilmiyor
     gider_canta_cikis = qs.filter(hareket_tipi='gider').exclude(kasa_adi__in=['merkez-satis', 'virman']).aggregate(total=Sum('canta_cikis', default=0))['total'] or 0
     
-    # Excel verileri için tarih filtrelemesi (Servis toplamları için)
-    excel_hareketler = MalzemeHareketi.objects.filter(kullanici=request.user)
-    
-    # Tarih filtrelerini uygula
+    hareketler = FaturaKalemi.objects.select_related('fatura').filter(fatura__tur=FaturaTur.SATIS)
     if baslangic_tarih:
-        excel_hareketler = excel_hareketler.filter(tarih__gte=baslangic_tarih)
+        hareketler = hareketler.filter(fatura__tarih__gte=baslangic_tarih)
     if bitis_tarih:
-        excel_hareketler = excel_hareketler.filter(tarih__lte=bitis_tarih)
-    if secilen_tarih and not baslangic_tarih and not bitis_tarih:
-        excel_hareketler = excel_hareketler.filter(tarih=secilen_tarih)
-    
-    # KATEGORİ'de "hizmet" yazan Excel verilerini Servis toplamlarına ekle
-    # Türkçe karakter sorunu için hem büyük hem küçük harf kontrol et
-    excel_hizmet_hareketler = excel_hareketler.filter(
-        Q(kategori__icontains='hizmet') | Q(kategori__icontains='HİZMET')
-    )
-    
-    # Excel hizmet tutarlarını ödeme şekline göre dağıt
-    # Nakit hesaplamasından vade içeren kayıtları (GÜN) hariç tut
-    # NAKİT (Türkçe İ) - Excel'de "NAKİT" yazılırsa eşleşsin
-    excel_nakit = excel_hizmet_hareketler.filter(
-        Q(odeme_sekli__icontains='nakit') |
-        Q(odeme_sekli__icontains='NAKİT') |
-        Q(odeme_sekli__iexact='nakit') |
-        Q(odeme_sekli__iexact='NAKİT')
-    ).exclude(
-        Q(odeme_sekli__icontains='gün') |
-        Q(odeme_sekli__iregex=r'\d+\s*gün') |
-        Q(odeme_sekli__iregex=r'\d+\s*GÜN')
-    ).aggregate(total=Sum('tutar', default=0))['total'] or 0
-    
-    # Kredi kartı eşleştirmesi (kart, pos, kuveyttürk pos vb.) - SANAL POS hariç
-    excel_kart = excel_hizmet_hareketler.filter(
-        Q(odeme_sekli__icontains='kart') | 
-        Q(odeme_sekli__icontains='pos') |
-        Q(odeme_sekli__icontains='kuveyttürk') |
-        Q(odeme_sekli__icontains='kuveyt') |
-        Q(odeme_sekli__iexact='kredi kartı') |
-        Q(odeme_sekli__iexact='kredi karti')
-    ).exclude(
-        Q(odeme_sekli__icontains='sanal pos') |
-        Q(odeme_sekli__icontains='sanal') |
-        Q(odeme_sekli__iexact='SANAL POS') |
-        Q(odeme_sekli__icontains='sanalpos')
-    ).aggregate(total=Sum('tutar', default=0))['total'] or 0
-    
-    # Cari eşleştirmesi (cari 1 gün, cari 5 gün vb.) ve GÜN ödeme şekli
-    excel_cari = excel_hizmet_hareketler.filter(
-        Q(odeme_sekli__icontains='cari') |
-        Q(odeme_sekli__icontains='carı') |
-        Q(odeme_sekli__iexact='cari') |
-        Q(odeme_sekli__iregex=r'cari\s*\d+\s*gün') |
-        Q(odeme_sekli__iregex=r'carı\s*\d+\s*gün') |
-        Q(odeme_sekli__iexact='GÜN') |
-        Q(odeme_sekli__icontains='gün') |
-        Q(odeme_sekli__iregex=r'\d+\s*gün')  # "5 GÜN", "30 GÜN" gibi
-    ).aggregate(total=Sum('tutar', default=0))['total'] or 0
-    
-    # Sanal POS eşleştirmesi
-    excel_sanal_pos = excel_hizmet_hareketler.filter(
-        Q(odeme_sekli__icontains='sanal pos') |
-        Q(odeme_sekli__icontains='sanal') |
-        Q(odeme_sekli__iexact='sanal pos') |
-        Q(odeme_sekli__iexact='SANAL POS') |
-        Q(odeme_sekli__icontains='sanalpos')
-    ).aggregate(total=Sum('tutar', default=0))['total'] or 0
-    
-    excel_havale = excel_hizmet_hareketler.filter(
-        Q(odeme_sekli__icontains='havale') |
-        Q(odeme_sekli__iexact='havale') |
-        Q(odeme_sekli__icontains='garanti havale') |
-        Q(odeme_sekli__icontains='GARANTİ') |
-        Q(odeme_sekli__icontains='garantı') |
-        Q(odeme_sekli__icontains='vakif') |
-        Q(odeme_sekli__icontains='vakıf')
-    ).exclude(
-        Q(odeme_sekli__icontains='m.havale') |
-        Q(odeme_sekli__icontains='m havale') |
-        Q(odeme_sekli__icontains='mhavale') |
-        Q(odeme_sekli__icontains='mehmet havale') |
-        Q(odeme_sekli__iexact='M.HAVALE')
-    ).aggregate(total=Sum('tutar', default=0))['total'] or 0
-    
-    # Diğer ödeme şekilleri (belirtilmemiş olanlar) nakit olarak kabul et
-    # Ancak vade içeren kayıtları (GÜN) hariç tut
-    excel_diger = excel_hizmet_hareketler.exclude(
-        odeme_sekli__icontains='nakit'
-    ).exclude(
-        Q(odeme_sekli__icontains='kart') | 
-        Q(odeme_sekli__icontains='pos') |
-        Q(odeme_sekli__icontains='kuveyttürk')
-    ).exclude(
-        Q(odeme_sekli__icontains='cari') |
-        Q(odeme_sekli__icontains='carı') |
-        Q(odeme_sekli__iexact='cari') |
-        Q(odeme_sekli__iregex=r'cari\s*\d+\s*gün') |
-        Q(odeme_sekli__iregex=r'carı\s*\d+\s*gün') |
-        Q(odeme_sekli__icontains='gün') |
-        Q(odeme_sekli__iregex=r'\d+\s*gün') |
-        Q(odeme_sekli__iregex=r'\d+\s*GÜN')
-    ).exclude(
-        odeme_sekli__icontains='sanal pos'
-    ).exclude(
-        odeme_sekli__icontains='havale'
-    ).aggregate(total=Sum('tutar', default=0))['total'] or 0
-    
-    excel_nakit_toplam = excel_nakit + excel_diger
-    
-    # Toplam Excel hizmet tutarı
-    excel_servis_toplam = excel_nakit_toplam + excel_kart + excel_cari + excel_sanal_pos + excel_havale
-    
-    # Hizmet olmayan kategorilerdeki tutarları Merkez Satış'a ekle (LASTİK, AKÜ, JANT vb.)
-    excel_merkez_hareketler = excel_hareketler.exclude(
-        Q(kategori__icontains='hizmet') | Q(kategori__icontains='HİZMET')
-    )
-    
-    # Merkez Satış nakit hesaplamasından vade içeren kayıtları (GÜN) hariç tut
-    # NAKİT (Türkçe İ) için icontains ekle - Excel'de "NAKİT" yazılırsa eşleşsin
-    excel_merkez_nakit = excel_merkez_hareketler.filter(
-        Q(odeme_sekli__icontains='nakit') |
-        Q(odeme_sekli__icontains='NAKİT') |
-        Q(odeme_sekli__iexact='nakit') |
-        Q(odeme_sekli__iexact='NAKİT')
-    ).exclude(
-        Q(odeme_sekli__icontains='gün') |
-        Q(odeme_sekli__iregex=r'\d+\s*gün') |
-        Q(odeme_sekli__iregex=r'\d+\s*GÜN')
-    ).aggregate(total=Sum('tutar', default=0))['total'] or 0
-    
-    excel_merkez_kart = excel_merkez_hareketler.filter(
-        Q(odeme_sekli__icontains='kart') | 
-        Q(odeme_sekli__icontains='kuveyttürk') |
-        Q(odeme_sekli__icontains='kuveyt')
-    ).exclude(
-        Q(odeme_sekli__icontains='sanal pos') |
-        Q(odeme_sekli__icontains='sanal')
-    ).aggregate(total=Sum('tutar', default=0))['total'] or 0
-    
-    excel_merkez_cari = excel_merkez_hareketler.filter(
-        Q(odeme_sekli__icontains='cari') |
-        Q(odeme_sekli__icontains='carı') |
-        Q(odeme_sekli__iregex=r'cari\s*\d+\s*gün') |
-        Q(odeme_sekli__iregex=r'carı\s*\d+\s*gün') |
-        Q(odeme_sekli__iexact='GÜN') |
-        Q(odeme_sekli__icontains='gün') |
-        Q(odeme_sekli__iregex=r'\d+\s*gün')  # "5 GÜN", "30 GÜN" gibi
-    ).aggregate(total=Sum('tutar', default=0))['total'] or 0
-    
-    excel_merkez_sanal_pos = excel_merkez_hareketler.filter(
-        Q(odeme_sekli__icontains='sanal pos') |
-        Q(odeme_sekli__icontains='sanal') |
-        Q(odeme_sekli__iexact='SANAL POS') |
-        Q(odeme_sekli__icontains='sanalpos')
-    ).aggregate(total=Sum('tutar', default=0))['total'] or 0
-    
-    # M.Havale: sadece m.havale, m havale, mhavale, mehmet havale, M.HAVALE kalıpları (merkez)
-    excel_merkez_mhavale = excel_merkez_hareketler.filter(
-        Q(odeme_sekli__icontains='m.havale') |
-        Q(odeme_sekli__icontains='m havale') |
-        Q(odeme_sekli__icontains='mhavale') |
-        Q(odeme_sekli__icontains='mehmet havale') |
-        Q(odeme_sekli__iexact='M.HAVALE')
-    ).aggregate(total=Sum('tutar', default=0))['total'] or 0
-    
-    # Garanti/Banka Havale: garanti havale, GARANTİ HAVALE (Türkçe İ), banka havale, toplam havale, b.havale, b havale, vakif havale kalıpları (merkez)
-    excel_merkez_garanti_havale = excel_merkez_hareketler.filter(
-        Q(odeme_sekli__icontains='garanti havale') |
-        Q(odeme_sekli__icontains='GARANTİ') |
-        Q(odeme_sekli__icontains='garantı') |
-        Q(odeme_sekli__icontains='banka havale') |
-        Q(odeme_sekli__icontains='toplam havale') |
-        Q(odeme_sekli__icontains='b.havale') |
-        Q(odeme_sekli__icontains='b havale') |
-        Q(odeme_sekli__icontains='garantihavale') |
-        Q(odeme_sekli__icontains='bankahavale') |
-        Q(odeme_sekli__icontains='vakif') |
-        Q(odeme_sekli__icontains='vakıf')
-    ).aggregate(total=Sum('tutar', default=0))['total'] or 0
-    
-    # Toplam (debug dict için)
-    excel_merkez_havale = excel_merkez_mhavale + excel_merkez_garanti_havale
-    
-    # Hizmet olmayan kategorilerdeki diğer ödeme şekilleri (belirtilmemiş olanlar)
-    # Ancak vade içeren kayıtları (GÜN) hariç tut
-    # NAKİT (Türkçe İ) hariç - nakit/diger çift sayımını önle
-    excel_merkez_diger = excel_merkez_hareketler.exclude(
-        Q(odeme_sekli__icontains='nakit') |
-        Q(odeme_sekli__icontains='NAKİT') |
-        Q(odeme_sekli__iexact='nakit') |
-        Q(odeme_sekli__iexact='NAKİT')
-    ).exclude(
-        Q(odeme_sekli__icontains='kart') | 
-        Q(odeme_sekli__icontains='pos') |
-        Q(odeme_sekli__icontains='kuveyttürk')
-    ).exclude(
-        Q(odeme_sekli__icontains='cari') |
-        Q(odeme_sekli__icontains='carı') |
-        Q(odeme_sekli__iexact='cari') |
-        Q(odeme_sekli__iregex=r'cari\s*\d+\s*gün') |
-        Q(odeme_sekli__iregex=r'carı\s*\d+\s*gün') |
-        Q(odeme_sekli__icontains='gün') |
-        Q(odeme_sekli__iregex=r'\d+\s*gün') |
-        Q(odeme_sekli__iregex=r'\d+\s*GÜN')
-    ).exclude(
-        odeme_sekli__icontains='sanal pos'
-    ).exclude(
-        odeme_sekli__icontains='havale'
-    ).aggregate(total=Sum('tutar', default=0))['total'] or 0
-    
-    excel_merkez_nakit_toplam = excel_merkez_nakit + excel_merkez_diger
-    
-    # Tüm kategorilerdeki M.HAVALE ödeme şekilli tutarları M.Havale'ye ekle
-    excel_mhavale = excel_hareketler.filter(
-        Q(odeme_sekli__icontains='m.havale') |
-        Q(odeme_sekli__icontains='m havale') |
-        Q(odeme_sekli__icontains='mhavale') |
-        Q(odeme_sekli__icontains='mehmet havale') |
-        Q(odeme_sekli__iexact='M.HAVALE')
-    ).aggregate(total=Sum('tutar', default=0))['total'] or 0
-    
-    # Excel hizmet tutarlarını ödeme yöntemlerine göre dağıt (SADECE HİZMET KATEGORİSİ)
-    # Net tutarları göster (gelir - gider)
-    gun_ozeti['nakit_toplam'] = (gelir_nakit - gider_nakit) + excel_nakit_toplam  # Sadece hizmet nakit tutarları (net)
-    gun_ozeti['kredi_karti_toplam'] = (gelir_kredi_karti - gider_kredi_karti) + excel_kart  # Sadece hizmet kart tutarları (net)
-    gun_ozeti['cari_toplam'] = (gelir_cari - gider_cari) + excel_cari  # Sadece hizmet cari tutarları (net)
-    gun_ozeti['sanal_pos_toplam'] = (gelir_sanal_pos - gider_sanal_pos) + excel_sanal_pos  # Transaction + hizmet sanal pos tutarları (net)
-    gun_ozeti['mehmet_havale_toplam'] = (gelir_mehmet_havale - gider_mehmet_havale) + excel_mhavale  # Transaction + tüm kategorilerdeki M.HAVALE tutarları (net)
-    gun_ozeti['banka_havale_toplam'] = (gelir_banka_havale - gider_banka_havale) + excel_havale  # Transaction + Excel hizmet Garanti/Banka Havale
+        hareketler = hareketler.filter(fatura__tarih__lte=bitis_tarih)
+    if not baslangic_tarih and not bitis_tarih:
+        hareketler = hareketler.filter(fatura__tarih=secilen_tarih)
+    hareketler = hareketler.order_by('-fatura__tarih', 'fatura__fis_no', 'fatura_id', 'sirano', 'pk')
+
+    hizmet = defaultdict(Decimal)
+    merkez = defaultdict(Decimal)
+    for kalem in hareketler:
+        grup = hizmet if 'HIZMET' in normalize_turkish_text(kalem.kategori or '') else merkez
+        plan = normalize_turkish_text(kalem.odeme_plani or '').replace(' ', '').replace('.', '')
+        if 'SANAL' in plan:
+            odeme = 'Sanal_Pos'
+        elif 'NAKIT' in plan:
+            odeme = 'Nakit'
+        elif 'MHAVALE' in plan or 'MEHMET' in plan:
+            odeme = 'Mehmet_Havale'
+        elif 'HAVALE' in plan or 'BANKA' in plan:
+            odeme = 'Banka_Havale'
+        elif any(ad in plan for ad in ('KART', 'KREDI', 'KUVEYT', 'POS')):
+            odeme = 'Kredi_Karti'
+        elif 'CARI' in plan or 'GUN' in plan:
+            odeme = 'Cari'
+        else:
+            odeme = 'Diger'
+        grup[odeme] += kalem.tutar
+
+    gun_ozeti['nakit_toplam'] = (gelir_nakit - gider_nakit) + hizmet['Nakit']  # Sadece hizmet nakit tutarları (net)
+    gun_ozeti['kredi_karti_toplam'] = (gelir_kredi_karti - gider_kredi_karti) + hizmet['Kredi_Karti']  # Sadece hizmet kart tutarları (net)
+    gun_ozeti['cari_toplam'] = (gelir_cari - gider_cari) + hizmet['Cari']  # Sadece hizmet cari tutarları (net)
+    gun_ozeti['sanal_pos_toplam'] = (gelir_sanal_pos - gider_sanal_pos) + hizmet['Sanal_Pos']  # Transaction + hizmet sanal pos tutarları (net)
+    gun_ozeti['mehmet_havale_toplam'] = (gelir_mehmet_havale - gider_mehmet_havale) + (merkez['Mehmet_Havale'] + hizmet['Mehmet_Havale'])  # Transaction + tüm kategorilerdeki M.HAVALE tutarları (net)
+    gun_ozeti['banka_havale_toplam'] = (gelir_banka_havale - gider_banka_havale) + hizmet['Banka_Havale']
     gun_ozeti['canta_cikis_toplam'] = gelir_canta_cikis - gider_canta_cikis  # Net
 
     # Servis Toplamları genel toplamı
@@ -1371,8 +1191,7 @@ def products(request):
     )
 
     # Merkez Satış toplamını hesapla ve Toplam Gelir'e ekle
-    merkez_satis_toplam = (excel_merkez_nakit_toplam + excel_merkez_kart + 
-                          excel_merkez_cari + excel_merkez_sanal_pos + excel_merkez_havale)
+    merkez_satis_toplam = sum(merkez.values())
     gun_ozeti['merkez_satis_toplam'] = merkez_satis_toplam  # Debug için
     gun_ozeti['gelir'] = gun_ozeti['gelir'] + merkez_satis_toplam
     gun_ozeti['net'] = gun_ozeti['gelir'] - gun_ozeti['gider']
@@ -1380,260 +1199,45 @@ def products(request):
     # Servis, Merkez Satış ve Çıkma Lastik kasaları için Nakit, Kredi Kartı ve M.Havale toplamları
     servis_merkez_qs = qs.filter(kasa_adi__in=['servis', 'merkez-satis', 'cikma-lastik'])
     
-    # Nakit toplamları (Excel Merkez nakit + diğer tutarlarını ekle)
-    servis_merkez_nakit_gelir = servis_merkez_qs.filter(hareket_tipi='gelir').aggregate(total=Sum('nakit', default=0))['total'] or 0
-    servis_merkez_nakit_gelir += excel_merkez_nakit_toplam  # excel_merkez_nakit + excel_merkez_diger (diger: belirtilmemiş, NAKİT hariç)
-    servis_merkez_nakit_gider = servis_merkez_qs.filter(hareket_tipi='gider').aggregate(total=Sum('nakit', default=0))['total'] or 0
-    servis_merkez_nakit_net = servis_merkez_nakit_gelir - servis_merkez_nakit_gider
-    
-    # Kredi Kartı toplamları (Excel Merkez kart tutarlarını da ekle)
-    servis_merkez_kredi_gelir = servis_merkez_qs.filter(hareket_tipi='gelir').aggregate(total=Sum('kredi_karti', default=0))['total'] or 0
-    servis_merkez_kredi_gelir += excel_merkez_kart  # Excel'den gelen merkez kart tutarlarını ekle
-    servis_merkez_kredi_gider = servis_merkez_qs.filter(hareket_tipi='gider').aggregate(total=Sum('kredi_karti', default=0))['total'] or 0
-    servis_merkez_kredi_net = servis_merkez_kredi_gelir - servis_merkez_kredi_gider
-    
-    # M.Havale toplamları (Excel'den gelen M.HAVALE tutarlarını ekle - tüm kategoriler)
-    servis_merkez_mhavale_gelir = servis_merkez_qs.filter(hareket_tipi='gelir').aggregate(total=Sum('mehmet_havale', default=0))['total'] or 0
-    servis_merkez_mhavale_gelir += excel_mhavale  # Excel'den gelen tüm kategorilerdeki M.HAVALE tutarlarını ekle
-    servis_merkez_mhavale_gider = servis_merkez_qs.filter(hareket_tipi='gider').aggregate(total=Sum('mehmet_havale', default=0))['total'] or 0
-    servis_merkez_mhavale_net = servis_merkez_mhavale_gelir - servis_merkez_mhavale_gider
-    
-    # Cari toplamları (Excel Merkez cari tutarlarını da ekle)
-    servis_merkez_cari_gelir = servis_merkez_qs.filter(hareket_tipi='gelir').aggregate(total=Sum('cari', default=0))['total'] or 0
-    servis_merkez_cari_gelir += excel_merkez_cari  # Excel'den gelen merkez cari tutarlarını ekle
-    servis_merkez_cari_gider = servis_merkez_qs.filter(hareket_tipi='gider').aggregate(total=Sum('cari', default=0))['total'] or 0
-    servis_merkez_cari_net = servis_merkez_cari_gelir - servis_merkez_cari_gider
-    
-    # Sanal Pos toplamları (Excel Merkez sanal pos tutarlarını da ekle)
-    servis_merkez_sanal_pos_gelir = servis_merkez_qs.filter(hareket_tipi='gelir').aggregate(total=Sum('sanal_pos', default=0))['total'] or 0
-    servis_merkez_sanal_pos_gelir += excel_merkez_sanal_pos  # Excel'den gelen merkez sanal pos tutarlarını ekle
-    servis_merkez_sanal_pos_gider = servis_merkez_qs.filter(hareket_tipi='gider').aggregate(total=Sum('sanal_pos', default=0))['total'] or 0
-    servis_merkez_sanal_pos_net = servis_merkez_sanal_pos_gelir - servis_merkez_sanal_pos_gider
-    
-    # Banka Havale toplamları (Excel Merkez banka havale tutarlarını da ekle)
-    servis_merkez_banka_havale_gelir = servis_merkez_qs.filter(hareket_tipi='gelir').aggregate(total=Sum('banka_havale', default=0))['total'] or 0
-    servis_merkez_banka_havale_gelir += excel_merkez_garanti_havale  # Excel'den gelen merkez garanti/banka havale tutarlarını ekle
-    servis_merkez_banka_havale_gider = 0  # Banka Havale gider gösterilmiyor
-    servis_merkez_banka_havale_net = servis_merkez_banka_havale_gelir - servis_merkez_banka_havale_gider
-    
-    # Çanta Çıkış toplamları
-    servis_merkez_canta_cikis_gelir = servis_merkez_qs.filter(hareket_tipi='gelir').aggregate(total=Sum('canta_cikis', default=0))['total'] or 0
-    servis_merkez_canta_cikis_gider = servis_merkez_qs.filter(hareket_tipi='gider').aggregate(total=Sum('canta_cikis', default=0))['total'] or 0
-    servis_merkez_canta_cikis_net = servis_merkez_canta_cikis_gelir - servis_merkez_canta_cikis_gider
-    
-    # Excel verileri için tarih filtrelemesi (Servis toplamları için)
-    excel_hareketler = MalzemeHareketi.objects.filter(kullanici=request.user)
-    
-    # Tarih filtrelerini uygula
-    if baslangic_tarih:
-        excel_hareketler = excel_hareketler.filter(tarih__gte=baslangic_tarih)
-    if bitis_tarih:
-        excel_hareketler = excel_hareketler.filter(tarih__lte=bitis_tarih)
-    if secilen_tarih and not baslangic_tarih and not bitis_tarih:
-        excel_hareketler = excel_hareketler.filter(tarih=secilen_tarih)
-    
-    # KATEGORİ'de "hizmet" yazan Excel verilerini Servis toplamlarına ekle
-    excel_servis_toplam = excel_hareketler.filter(
-        Q(kategori__icontains='hizmet') | Q(kategori__icontains='HİZMET')
-    ).aggregate(total=Sum('tutar', default=0))['total'] or 0
-    
-    # Toplam (Nakit + Kredi Kartı + Cari + Sanal Pos + M.Havale + Banka Havale + Çanta Çıkış + Excel Hizmet)
-    # NOT: merkez_satis_toplam eklenmez - Excel merkez tutarları zaten servis_merkez_*_gelir değişkenlerine eklendi (çift sayım önlendi)
-    servis_merkez_toplam_gelir = servis_merkez_nakit_gelir + servis_merkez_kredi_gelir + servis_merkez_cari_gelir + servis_merkez_sanal_pos_gelir + servis_merkez_mhavale_gelir + servis_merkez_banka_havale_gelir + servis_merkez_canta_cikis_gelir + excel_servis_toplam
-    servis_merkez_toplam_gider = servis_merkez_nakit_gider + servis_merkez_kredi_gider + servis_merkez_cari_gider + servis_merkez_sanal_pos_gider + servis_merkez_mhavale_gider + servis_merkez_canta_cikis_gider  # Banka Havale gider dahil değil
+    kasa_alanlari = ('nakit', 'kredi_karti', 'cari', 'sanal_pos', 'mehmet_havale', 'banka_havale', 'canta_cikis')
+    kasa_gelirleri = servis_merkez_qs.filter(hareket_tipi='gelir').aggregate(
+        **{alan: Sum(alan, default=0) for alan in kasa_alanlari}
+    )
+    kasa_giderleri = servis_merkez_qs.filter(hareket_tipi='gider').aggregate(
+        **{alan: Sum(alan, default=0) for alan in kasa_alanlari if alan != 'banka_havale'}
+    )
+    servis_merkez_toplam_gelir = sum(kasa_gelirleri.values()) + merkez_satis_toplam + sum(hizmet.values())
+    servis_merkez_toplam_gider = sum(kasa_giderleri.values())
     servis_merkez_toplam_net = servis_merkez_toplam_gelir - servis_merkez_toplam_gider
-    
+
     gun_ozeti['servis_merkez_toplam'] = {
         'gelir': servis_merkez_toplam_gelir,
         'gider': servis_merkez_toplam_gider,
         'net': servis_merkez_toplam_net,
-        'excel_hizmet': excel_servis_toplam,  # Debug için
-        'excel_debug': {  # Debug bilgileri
-            'toplam_excel_kayit': excel_hareketler.count(),
-            'hizmet_kayit': excel_hizmet_hareketler.count(),
-            'excel_nakit': excel_nakit,
-            'excel_kart': excel_kart,
-            'excel_cari': excel_cari,
-            'excel_havale': excel_havale,
-            'excel_merkez_nakit': excel_merkez_nakit,
-            'excel_merkez_kart': excel_merkez_kart,
-            'excel_merkez_cari': excel_merkez_cari,
-            'excel_merkez_havale': excel_merkez_havale,
-            'excel_merkez_mhavale': excel_merkez_mhavale,
-            'excel_merkez_garanti_havale': excel_merkez_garanti_havale,
-        }
+        'dia_hizmet': sum(hizmet.values()),
     }
 
-    # Excel verileri için tarih filtrelemesi
-    hareketler = MalzemeHareketi.objects.filter(kullanici=request.user).order_by('-tarih')
-    dosyalar = MalzemeDosya.objects.filter(kullanici=request.user).prefetch_related('satirlar').order_by('-yukleme_tarihi')
-    
-    # Tarih aralığı filtresi uygula
-    if baslangic_tarih:
-        hareketler = hareketler.filter(tarih__gte=baslangic_tarih)
-        dosyalar = dosyalar.filter(yukleme_tarihi__date__gte=baslangic_tarih)
-    if bitis_tarih:
-        hareketler = hareketler.filter(tarih__lte=bitis_tarih)
-        dosyalar = dosyalar.filter(yukleme_tarihi__date__lte=bitis_tarih)
-    
-    # Eski parametreler (geriye uyumluluk)
-    start_s = request.GET.get('start-date')
-    end_s = request.GET.get('end-date')
-    if start_s and not baslangic_tarih:
-        hareketler = hareketler.filter(tarih__gte=start_s)
-        dosyalar = dosyalar.filter(yukleme_tarihi__date__gte=start_s)
-    if end_s and not bitis_tarih:
-        hareketler = hareketler.filter(tarih__lte=end_s)
-        dosyalar = dosyalar.filter(yukleme_tarihi__date__lte=end_s)
-    from collections import defaultdict
-    import datetime
-    gunluk = defaultdict(list)
-    for h in hareketler:
-        tarih_str = h.tarih.strftime('%d.%m.%Y')
-        gunluk[tarih_str].append(h)
-    gunluk_excel = defaultdict(list)
-    for d in dosyalar:
-        # Dosyayı hem yükleme tarihine hem de içindeki kayıtların tarihlerine göre gruplandır
-        yukleme_tarihi_str = d.yukleme_tarihi.strftime('%d.%m.%Y')
-        gunluk_excel[yukleme_tarihi_str].append(d)
-        
-        # Ayrıca dosya içindeki kayıtların tarihlerine göre de gruplandır
-        for satir in d.satirlar.all():
-            satir_tarih_str = satir.tarih.strftime('%d.%m.%Y')
-            if satir_tarih_str != yukleme_tarihi_str:
-                # Eğer kayıt tarihi farklıysa, o tarihe de ekle
-                if d not in gunluk_excel[satir_tarih_str]:
-                    gunluk_excel[satir_tarih_str].append(d)
-    gunluk_sorted = dict(sorted(gunluk.items(), key=lambda x: datetime.datetime.strptime(x[0], '%d.%m.%Y'), reverse=True))
-    gunluk_excel_sorted = dict(sorted(gunluk_excel.items(), key=lambda x: datetime.datetime.strptime(x[0], '%d.%m.%Y'), reverse=True))
-    
-    # Excel verilerini belirle
-    secilen_gun_excel = []
-    secilen_tarih_str = ''
-    
-    if secilen_tarih and not baslangic_tarih and not bitis_tarih:
-        # Tek tarih seçilmişse
-        from datetime import datetime as dt
-        secilen_tarih_obj = dt.strptime(secilen_tarih, '%Y-%m-%d')
-        secilen_tarih_str = secilen_tarih_obj.strftime('%d.%m.%Y')
-        secilen_gun_excel = gunluk_excel_sorted.get(secilen_tarih_str, [])
-    else:
-        # Tarih aralığı seçilmişse, tüm filtrelenmiş dosyaları göster
-        secilen_gun_excel = list(dosyalar)
-    
-    # Excel verilerine göre ödeme şekillerine göre toplamlar
-    excel_odeme_toplamlari = {}
-    
-    # Tüm filtrelenmiş Excel satırlarını al (HİZMET hariç - LASTİK, AKÜ, JANT vb.)
-    excel_satirlar = MalzemeHareketi.objects.filter(kullanici=request.user).exclude(
-        Q(kategori__icontains='hizmet') | Q(kategori='HİZMET')
-    )
-    if baslangic_tarih:
-        excel_satirlar = excel_satirlar.filter(tarih__gte=baslangic_tarih)
-    if bitis_tarih:
-        excel_satirlar = excel_satirlar.filter(tarih__lte=bitis_tarih)
-    if secilen_tarih and not baslangic_tarih and not bitis_tarih:
-        excel_satirlar = excel_satirlar.filter(tarih=secilen_tarih)
-    
-    # Ödeme şekillerine göre grupla ve topla
-    excel_odeme_dict = {
-        'Nakit': Decimal('0'),
-        'Kredi_Karti': Decimal('0'),
-        'Cari': Decimal('0'),
-        'Sanal_Pos': Decimal('0'),
-        'Mehmet_Havale': Decimal('0'),
-        'Banka_Havale': Decimal('0')
-    }
-    
-    for satir in excel_satirlar:
-        odeme_sekli = satir.odeme_sekli or 'Belirtilmemiş'
-        # Ödeme şeklini normalize et (Türkçe karakterleri dönüştür, küçük harfe çevir, boşlukları temizle)
-        odeme_sekli_normalized = odeme_sekli.replace('İ', 'i').replace('I', 'ı').lower().strip().replace(' ', '').replace('.', '').replace('-', '')
-        odeme_sekli_original = odeme_sekli.strip()
-        
-        # Ana ödeme şekillerini belirle (tam eşleşme ve içerme kontrolü)
-        # Nakit kontrolü
-        amount = parse_decimal_value(satir.tutar)
-        if (odeme_sekli_original.replace('İ', 'i').replace('I', 'ı').lower() == 'nakit' or 
-            'nakit' in odeme_sekli_normalized or 
-            odeme_sekli_normalized == 'nakit'):
-            excel_odeme_dict['Nakit'] += amount
-        # Kredi Kartı kontrolü
-        elif ('kart' in odeme_sekli_normalized or 
-              'kredi' in odeme_sekli_normalized or 
-              'kredit' in odeme_sekli_normalized or
-              'kuveyttürk' in odeme_sekli_normalized or
-              'kuveyt' in odeme_sekli_normalized or
-              odeme_sekli_original.lower() in ['kredi kartı', 'kredi karti', 'kart', 'credit card']) and \
-              'sanal' not in odeme_sekli_normalized:  # SANAL POS hariç
-            excel_odeme_dict['Kredi_Karti'] += amount
-        # Sanal Pos kontrolü
-        elif ('sanal' in odeme_sekli_normalized or 
-              'sanalpos' in odeme_sekli_normalized or
-              'sanal pos' in odeme_sekli_original.lower() or
-              odeme_sekli_original.upper() == 'SANAL POS'):
-            excel_odeme_dict['Sanal_Pos'] += amount
-        # Banka Havale kontrolü (Mehmet Havale'den önce kontrol edilmeli)
-        # GARANTİ HAVALE / VAKIF HAVALE: Türkçe İ karakteri için normalize + orijinal kontrol
-        elif ('banka' in odeme_sekli_normalized or 
-              'bankahavale' in odeme_sekli_normalized or
-              'bhavale' in odeme_sekli_normalized or
-              'garanti' in odeme_sekli_normalized or
-              'garantihavale' in odeme_sekli_normalized or
-              'GARANTİ' in (odeme_sekli_original or '') or
-              'garantı' in odeme_sekli_normalized or
-              'vakif' in odeme_sekli_normalized or
-              'vakıf' in odeme_sekli_normalized or
-              'VAKIF' in (odeme_sekli_original or '') or
-              'VAKIF HAVALE' in (odeme_sekli_original or '').upper() or
-              odeme_sekli_original.replace('İ', 'i').replace('I', 'ı').lower() in ['b.havale', 'b havale', 'bhavale', 'banka havale', 'banka havalesi', 'garanti havale', 'toplam havale', 'vakif havale', 'vakıf havale']):
-            excel_odeme_dict['Banka_Havale'] += amount
-        # Mehmet Havale kontrolü
-        elif ('mehmet' in odeme_sekli_normalized or 
-              'mhavale' in odeme_sekli_normalized or
-              odeme_sekli_original.lower() in ['m.havale', 'm havale', 'mhavale', 'mehmet havale'] or
-              ('havale' in odeme_sekli_normalized and 'banka' not in odeme_sekli_normalized)):
-            excel_odeme_dict['Mehmet_Havale'] += amount
-        # Cari kontrolü (GÜN ödeme şekli de dahil)
-        elif ('cari' in odeme_sekli_normalized or 
-              'carı' in odeme_sekli_normalized or
-              odeme_sekli_original.lower() == 'cari' or
-              odeme_sekli_normalized == 'cari' or
-              'gün' in odeme_sekli_normalized or
-              odeme_sekli_original.upper() == 'GÜN' or
-              # Regex ile "5 GÜN", "30 GÜN" gibi formatları yakala
-              any(char.isdigit() for char in odeme_sekli_original) and 'gün' in odeme_sekli_original.lower()):  
-            excel_odeme_dict['Cari'] += amount
-        else:
-            # Eğer eşleşme yoksa, varsayılan olarak hiçbir şeye eklenmez
-            pass
-    
-    # Merkez Satış kasasındaki işlemleri de Excel toplamlarına ekle (Gelir - Gider)
+    odeme_toplamlari = merkez.copy()
     merkez_satis_gelir = qs.filter(Q(kasa_adi='merkez-satis') & Q(hareket_tipi='gelir'))
     merkez_satis_gider = qs.filter(Q(kasa_adi='merkez-satis') & Q(hareket_tipi='gider'))
     
     # Merkez Satış Gelir işlemlerini ödeme şekillerine göre topla
     for islem in merkez_satis_gelir:
-        excel_odeme_dict['Nakit'] += parse_decimal_value(islem.nakit)
-        excel_odeme_dict['Kredi_Karti'] += parse_decimal_value(islem.kredi_karti)
-        excel_odeme_dict['Cari'] += parse_decimal_value(islem.cari)
-        excel_odeme_dict['Sanal_Pos'] += parse_decimal_value(islem.sanal_pos)
-        excel_odeme_dict['Mehmet_Havale'] += parse_decimal_value(islem.mehmet_havale)
-        excel_odeme_dict['Banka_Havale'] += parse_decimal_value(islem.banka_havale)
+        odeme_toplamlari['Nakit'] += parse_decimal_value(islem.nakit)
+        odeme_toplamlari['Kredi_Karti'] += parse_decimal_value(islem.kredi_karti)
+        odeme_toplamlari['Cari'] += parse_decimal_value(islem.cari)
+        odeme_toplamlari['Sanal_Pos'] += parse_decimal_value(islem.sanal_pos)
+        odeme_toplamlari['Mehmet_Havale'] += parse_decimal_value(islem.mehmet_havale)
+        odeme_toplamlari['Banka_Havale'] += parse_decimal_value(islem.banka_havale)
     
     # Merkez Satış Gider işlemlerini ödeme şekillerine göre düş (Banka Havale hariç)
     for islem in merkez_satis_gider:
-        excel_odeme_dict['Nakit'] -= parse_decimal_value(islem.nakit)
-        excel_odeme_dict['Kredi_Karti'] -= parse_decimal_value(islem.kredi_karti)
-        excel_odeme_dict['Cari'] -= parse_decimal_value(islem.cari)
-        excel_odeme_dict['Sanal_Pos'] -= parse_decimal_value(islem.sanal_pos)
-        excel_odeme_dict['Mehmet_Havale'] -= parse_decimal_value(islem.mehmet_havale)
+        odeme_toplamlari['Nakit'] -= parse_decimal_value(islem.nakit)
+        odeme_toplamlari['Kredi_Karti'] -= parse_decimal_value(islem.kredi_karti)
+        odeme_toplamlari['Cari'] -= parse_decimal_value(islem.cari)
+        odeme_toplamlari['Sanal_Pos'] -= parse_decimal_value(islem.sanal_pos)
+        odeme_toplamlari['Mehmet_Havale'] -= parse_decimal_value(islem.mehmet_havale)
         # Banka Havale gider düşülmüyor
-    
-    # Dictionary'yi context'e gönder - Merkez Satış Excel değerleri zaten döngüde hesaplandı
-    # excel_odeme_dict zaten doğru değerleri içeriyor, tekrar eklemeye gerek yok
-    
-    excel_odeme_toplamlari = excel_odeme_dict
     
     # Merkez Ekstra İşlemler - Merkez Satış ve Virman kasalarını dahil et
     # Merkez Satış kasasında Gider işlemlerinde Kredi Kartı ve Banka Havale hariç
@@ -1683,26 +1287,15 @@ def products(request):
 
     context = {
         'page_title': 'Products',
-        'secilen_tarih': secilen_tarih or date.today().strftime('%Y-%m-%d'),
-        'baslangic_tarih': baslangic_tarih,
-        'bitis_tarih': bitis_tarih,
+        'secilen_tarih': date.fromisoformat(secilen_tarih) if secilen_tarih else timezone.localdate(),
+        'baslangic_tarih': date.fromisoformat(baslangic_tarih) if baslangic_tarih else None,
+        'bitis_tarih': date.fromisoformat(bitis_tarih) if bitis_tarih else None,
         'gun_ozeti': gun_ozeti,
         'gunun_islemleri': detayli_islemler,
         'merkez_ekstra_islemler': merkez_ekstra_islemler,
         'merkez_ekstra_toplam': merkez_ekstra_toplam,
-        'malzeme_gunluk': gunluk_sorted,
-        'gunluk_excel': gunluk_excel_sorted,
-        'secilen_gun_excel': secilen_gun_excel,
-        'start_selected': start_s or '',
-        'end_selected': end_s or '',
-        # Debug bilgileri
-        'debug_secilen_tarih_str': secilen_tarih_str,
-        'debug_gunluk_excel_keys': list(gunluk_excel_sorted.keys()),
-        'debug_toplam_dosya': len(dosyalar),
-        'excel_odeme_toplamlari': excel_odeme_toplamlari,
-        'debug_merkez_satis_toplam': merkez_satis_toplam,
-        'debug_excel_merkez_nakit': excel_merkez_nakit_toplam,
-        'debug_excel_merkez_kart': excel_merkez_kart,
+        'hareketler': hareketler,
+        'odeme_toplamlari': odeme_toplamlari,
     }
     return render(request, 'dashboard/products.html', context)
 
@@ -1930,7 +1523,7 @@ def elements(request):
     bitis_tarihi = request.GET.get('bitis_tarihi', '')
     
     # Siparişleri getir (iptal edilenleri ve kontrol edilenleri hariç tut, sadece kullanıcının siparişleri)
-    siparisler = Siparis.objects.filter(user=request.user).exclude(durum__in=['iptal', 'kontrol'])
+    siparisler = Siparis.objects.select_related('kapora').filter(user=request.user).exclude(durum__in=['iptal', 'kontrol'])
     
     # Filtreleme uygula
     if firma:
@@ -2103,15 +1696,46 @@ def elements_tables(request):
     return render(request, 'dashboard/elements-tables.html', context)
 
 @login_required
+@misafir_forbidden
+@require_POST
+@db_transaction.atomic
+def siparis_kapora(request, siparis_id):
+    siparis = get_object_or_404(Siparis, pk=siparis_id, user=request.user)
+    kapora = SiparisKapora.objects.select_for_update().filter(siparis=siparis).first()
+    if kapora:
+        if request.POST.get('eylem') == 'aktar' and not kapora.islem_id:
+            kapora.islem = Transaction.objects.create(
+                created_by=request.user, tarih=kapora.tarih, kasa_adi='merkez-satis',
+                hareket_tipi='gelir', aciklama=f'Kapora · Sipariş #{siparis.pk} · {siparis.musteri_adi or siparis.cari_firma}'[:255],
+                **{kapora.yontem: kapora.tutar},
+            )
+            kapora.save(update_fields=['islem'])
+        elif request.POST.get('eylem') == 'sil':
+            if kapora.islem_id:
+                kapora.islem.delete()
+            else:
+                kapora.delete()
+    return redirect('dashboard:elements')
+
+
+@login_required
 def yeni_lastik(request):
     """Yeni lastik ekleme sayfası"""
-    if request.method == 'POST':
-        form = SiparisForm(request.POST)
+    mesbul_onizleme = request.method == 'POST' and request.POST.get('mesbul') == '1'
+    musteri_alanlari = ('musteri_adi', 'musteri_telefon', 'musteri_odeme_tutari', 'musteri_aciklama')
+    if request.method == 'POST' and not mesbul_onizleme:
+        form = YeniSiparisForm(request.POST)
         if form.is_valid():
             siparis = form.save(commit=False)
             # Kullanıcıyı otomatik ata
             siparis.user = request.user
-            siparis.save()
+            with db_transaction.atomic():
+                siparis.save()
+                if form.cleaned_data['kapora_tutari']:
+                    SiparisKapora.objects.create(
+                        siparis=siparis, tutar=form.cleaned_data['kapora_tutari'],
+                        yontem=form.cleaned_data['kapora_yontemi'],
+                    )
 
             # --- Otomatik öğrenme: ürün adından model çıkar ve mevsimi kaydet ---
             if siparis.mevsim and siparis.urun:
@@ -2148,11 +1772,30 @@ def yeni_lastik(request):
             messages.error(request, f'Form hataları: {", ".join(error_messages)}')
             print(f"Form errors: {form.errors}")  # Debug için
     else:
-        form = SiparisForm()
+        form = YeniSiparisForm()
+        if mesbul_onizleme or request.GET.get('mesbul') == '1':
+            veri = request.POST if mesbul_onizleme else request.GET
+            alanlar = ('cari_firma', 'marka', 'urun', 'mevsim', 'adet', 'birim_fiyat', 'aciklama')
+            if mesbul_onizleme:
+                alanlar += musteri_alanlari
+            initial = {}
+            for name in alanlar:
+                try:
+                    initial[name] = form.fields[name].clean(veri.get(name))
+                except ValidationError:
+                    continue
+            if initial.get('adet', 0) >= 1 and 'birim_fiyat' in initial:
+                total = initial['adet'] * initial['birim_fiyat']
+                try:
+                    initial['toplam_fiyat'] = form.fields['toplam_fiyat'].clean(total)
+                except ValidationError:
+                    pass
+            form.initial.update(initial)
     
     context = {
         'page_title': 'Yeni Lastik Ekle',
         'form': form,
+        'musteri_bilgileri_acik': any(form[name].value() or form[name].errors for name in (*musteri_alanlari, 'kapora_tutari', 'kapora_yontemi')),
     }
     return render(request, 'dashboard/yeni_lastik.html', context)
 
@@ -2211,11 +1854,11 @@ def siparis_whatsapp(request, siparis_id):
     """WhatsApp mesajı gönder"""
     siparis = get_object_or_404(Siparis, id=siparis_id, user=request.user)
     
-    # Cari firma adını al, yoksa varsayılan olarak "MesTakip" kullan
-    firma_adi = siparis.cari_firma if siparis.cari_firma and siparis.cari_firma.strip() else 'MesTakip'
+    # Cari firma adını al, yoksa varsayılan olarak "MesDia" kullan
+    firma_adi = siparis.cari_firma if siparis.cari_firma and siparis.cari_firma.strip() else 'MesDia'
     
     # WhatsApp mesajı oluştur (Güncellenen Son Tarih kaldırıldı)
-    mesaj = f"""*MesTakip - {firma_adi}*
+    mesaj = f"""*MesDia - {firma_adi}*
 
 *Ürün:* {siparis.urun}
 *Marka:* {siparis.marka}
@@ -2937,7 +2580,7 @@ def quotation_pdf(request, quotation_id):
     # Başlık tablosu
     title_cell = [
         Paragraph("E-TEKLİF", title_style),
-        Paragraph("Created by MesTakip", subtitle_style)
+        Paragraph("Created by MesDia", subtitle_style)
     ]
     
     if logo_path and os.path.exists(logo_path):
@@ -6916,7 +6559,7 @@ def get_oe_tire_data(request):
             
             headers = {
                 'Accept': 'application/json',
-                'User-Agent': 'MesTakip-TireComparison/1.0'
+                'User-Agent': 'MesDia-TireComparison/1.0'
             }
             
             response = requests.get(api_url, headers=headers, timeout=5)
@@ -7511,6 +7154,20 @@ def lastik_mevsim_ai(request):
 from .models import LastikOteli, LastikDepo, LastikOteliHareket
 
 
+def _lastik_saklama_ozeti():
+    def mevsim_adedi(mevsim):
+        filtre = Q(mevsim=mevsim)
+        return Count('lastikler', filter=filtre) + Sum(
+            'adet', filter=filtre & Q(lastikler__isnull=True), default=0,
+        )
+
+    return LastikOteli.objects.filter(durum='depoda').aggregate(
+        toplam_plaka=Count('plaka', distinct=True),
+        toplam_kislik=mevsim_adedi('kis'),
+        toplam_yazlik=mevsim_adedi('yaz'),
+    )
+
+
 @login_required
 def lastik_saklama(request):
     """Lastik oteli ana listesi."""
@@ -7530,27 +7187,6 @@ def lastik_saklama(request):
         kayitlar = kayitlar.filter(plaka__icontains=plaka)
     if mevsim:
         kayitlar = kayitlar.filter(mevsim=mevsim)
-
-    # Özet istatistikler — LastikOteliLastik'ten toplam adet
-    from .models import LastikOteliLastik
-    from django.db.models import Sum
-
-    toplam_plaka = LastikOteli.objects.filter(durum='depoda').values('plaka').distinct().count()
-
-    kislik_adet = LastikOteliLastik.objects.filter(
-        kayit__durum='depoda', kayit__mevsim='kis'
-    ).count()
-    # Lastik satırı girilmemişse ana kayıttaki adet alanından topla
-    kislik_adet += LastikOteli.objects.filter(
-        durum='depoda', mevsim='kis', lastikler__isnull=True
-    ).aggregate(t=Sum('adet'))['t'] or 0
-
-    yazlik_adet = LastikOteliLastik.objects.filter(
-        kayit__durum='depoda', kayit__mevsim='yaz'
-    ).count()
-    yazlik_adet += LastikOteli.objects.filter(
-        durum='depoda', mevsim='yaz', lastikler__isnull=True
-    ).aggregate(t=Sum('adet'))['t'] or 0
 
     depolar = LastikDepo.objects.filter(aktif=True)
 
@@ -7580,9 +7216,7 @@ def lastik_saklama(request):
 
     context = {
         'kayitlar': kayitlar,
-        'toplam_plaka': toplam_plaka,
-        'toplam_kislik': kislik_adet,
-        'toplam_yazlik': yazlik_adet,
+        **_lastik_saklama_ozeti(),
         'depolar': depolar,
         'filters': {
             'durum': durum,
@@ -7678,6 +7312,7 @@ def lastik_saklama_giris(request):
 
     context = {
         'depolar': depolar,
+        'geri_donen_setler': LastikOteli.objects.filter(durum='teslim_edildi').order_by('plaka'),
         'mevsim_choices': LastikOteli.MEVSIM_CHOICES,
         'bugun': timezone.now().date().isoformat(),
         'lastik_sayilari': range(1, 9),
@@ -7714,9 +7349,10 @@ def lastik_saklama_detay(request, kayit_id):
 
 
 @login_required
+@db_transaction.atomic
 def lastik_saklama_cikis(request, kayit_id):
     """Lastik teslim etme (çıkış)."""
-    kayit = get_object_or_404(LastikOteli.objects.prefetch_related('lastikler'), pk=kayit_id)
+    kayit = get_object_or_404(LastikOteli.objects.select_for_update().prefetch_related('lastikler'), pk=kayit_id, durum='depoda')
 
     if request.method == 'POST':
         kayit.durum = 'teslim_edildi'

@@ -16,7 +16,7 @@ from django.core.management.base import BaseCommand, CommandError
 
 
 class Command(BaseCommand):
-    help = 'DİA\'dan stok kartlarını ve depo miktarlarını MEStakip\'e senkronize eder'
+    help = 'DİA\'dan stok kartlarını ve depo miktarlarını MesDia\'ya senkronize eder'
 
     def add_arguments(self, parser) -> None:
         parser.add_argument('--tam', action='store_true', default=False,

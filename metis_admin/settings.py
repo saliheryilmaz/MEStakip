@@ -92,11 +92,14 @@ INSTALLED_APPS = [
     # DİA ERP entegrasyon app'leri
     'erp',
     'dia_integration',
+    'karsilastirma',
     # Celery periyodik görevler
     'django_celery_beat',
     'django_celery_results',
 ]
 
+
+MESSAGE_STORAGE = 'metis_admin.message_storage.NotificationStorage'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -105,12 +108,21 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'erp.middleware.GuestStockAccessMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
 
 ROOT_URLCONF = 'metis_admin.urls'
+
+CACHES = {
+    'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'},
+    'mesbul': {
+        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+        'LOCATION': 'mesbul_cache',
+    },
+}
 
 
 # ============================================================
@@ -291,6 +303,16 @@ CELERY_TIMEZONE = 'Europe/Istanbul'
 CELERY_ENABLE_UTC = True
 
 # Periyodik görevler için django-celery-beat
+from celery.schedules import crontab
+
+CELERY_BEAT_SCHEDULE = {
+    "otel-aylik-plan": {"task": "dashboard.tasks.otel_plan_raporu", "schedule": crontab(day_of_month=1, hour=7, minute=0)},
+    "otel-sezon-oncesi": {"task": "dashboard.tasks.otel_plan_raporu", "schedule": crontab(month_of_year="4,11", day_of_month=15, hour=7, minute=0)},
+    "tahsilat-aylik-rapor": {
+        "task": "erp.tasks.tahsilat_raporunu_guncelle",
+        "schedule": crontab(hour=23, minute=55),
+    },
+}
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 
 # Görev yeniden deneme varsayılanları
@@ -311,6 +333,7 @@ DIA_PASSWORD = os.environ.get('DIA_PASSWORD', 'ws')
 DIA_API_KEY = os.environ.get('DIA_API_KEY', '')
 DIA_FIRMA_KODU = os.environ.get('DIA_FIRMA_KODU', '1')
 DIA_DONEM_KODU = os.environ.get('DIA_DONEM_KODU', '1')
+DIA_CARI_KART_RAPOR_TASARIM_KEY = os.environ.get('DIA_CARI_KART_RAPOR_TASARIM_KEY', '').strip()
 
 # Session timeout: DİA 1 saat, biz 50 dakika ile yeniliyoruz (güvenlik payı)
 DIA_SESSION_TTL_SECONDS = int(os.environ.get('DIA_SESSION_TTL_SECONDS', '3000'))

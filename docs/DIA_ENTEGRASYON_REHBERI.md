@@ -1,4 +1,4 @@
-# MEStakip ↔ DİA Entegrasyonu: Mentorluk Rehberi
+# MesDia ↔ DİA Entegrasyonu: Mentorluk Rehberi
 
 Bu belge, repodaki `dia_integration` uygulamasının veri akışını, cari ve stok kartlarının eşlemesini ve entegrasyonu güvenli biçimde çalıştırmayı açıklar. DİA Web Servis erişimi tanımlanınca bu rehber operasyonel başlangıç noktası olarak kullanılabilir.
 
@@ -7,13 +7,13 @@ Bu belge, repodaki `dia_integration` uygulamasının veri akışını, cari ve s
 Entegrasyon iki yönde de işlem yapabilecek kod içeriyor:
 
 ```text
-DİA → MEStakip: listele → alanları eşle → yerel kaydı oluştur/güncelle
-MEStakip → DİA: yerel modeli eşle → ekle veya güncelle servisini çağır
+DİA → MesDia: listele → alanları eşle → yerel kaydı oluştur/güncelle
+MesDia → DİA: yerel modeli eşle → ekle veya güncelle servisini çağır
 ```
 
-İlk kurulum için **DİA'yı ana kaynak kabul edip önce yalnızca DİA → MEStakip yönünde başlamak** önerilir. Çünkü cari ve ürün kartlarını DİA'ya girdiğini belirttin. MEStakip'teki `dia_key`, bir kaydı DİA'daki kartla eşler. DİA'dan gelen kayıtlar `cari_kodu` veya `stok_kodu` ile `update_or_create` edildiği için kodu aynı olan yerel kayıt güncellenir; farklı kodla varsa ayrı kayıt açılabilir.
+İlk kurulum için **DİA'yı ana kaynak kabul edip önce yalnızca DİA → MesDia yönünde başlamak** önerilir. Çünkü cari ve ürün kartlarını DİA'ya girdiğini belirttin. MesDia'daki `dia_key`, bir kaydı DİA'daki kartla eşler. DİA'dan gelen kayıtlar `cari_kodu` veya `stok_kodu` ile `update_or_create` edildiği için kodu aynı olan yerel kayıt güncellenir; farklı kodla varsa ayrı kayıt açılabilir.
 
-MEStakip'ten DİA'ya gönderim kodu da var (`CariService.dia_ya_gonder`, `StokService.dia_ya_gonder`), ama bu çağrı DİA'da gerçek kayıt oluşturabilir veya değiştirebilir. İlk eşleşmeler ve alan kontrolleri yapılmadan bu yönü toplu kullanma.
+MesDia'dan DİA'ya gönderim kodu da var (`CariService.dia_ya_gonder`, `StokService.dia_ya_gonder`), ama bu çağrı DİA'da gerçek kayıt oluşturabilir veya değiştirebilir. İlk eşleşmeler ve alan kontrolleri yapılmadan bu yönü toplu kullanma.
 
 ## 2. Katmanlar ve sorumlulukları
 
@@ -36,7 +36,7 @@ Management command / Django admin / Celery task
 ```
 
 - **`client/dia_client.py` — `DiaClient`:** URL oluşturur, login/session yönetir, JSON POST çağrısı yapar, DİA cevap kodlarını exception'a çevirir. İş kuralları ve Cari/Stok ORM işlemleri burada olmamalı.
-- **`mappers/cari_mapper.py`, `mappers/stok_mapper.py`:** DİA JSON alanlarını MEStakip model alanlarına, gerektiğinde de ters yönde dönüştürür. Mapper mümkün olduğunca saf dönüşüm kodu olmalı; ağ ve veritabanı çağırmamalı.
+- **`mappers/cari_mapper.py`, `mappers/stok_mapper.py`:** DİA JSON alanlarını MesDia model alanlarına, gerektiğinde de ters yönde dönüştürür. Mapper mümkün olduğunca saf dönüşüm kodu olmalı; ağ ve veritabanı çağırmamalı.
 - **`services/cari_service.py`, `services/stok_service.py`:** Senkronizasyonun iş akışıdır. API'den sayfa alır, her kaydı mapper'dan geçirir, veritabanına kaydeder ve sonuç/hata sayılarını tutar.
 - **`models.py`:** Entegrasyon bağlantı bilgisi, senkronizasyon geçmişi ve API çağrı loglarının tabloları.
 - **`mixins.py`:** Cari/Stok modeline ortak `dia_key`, sync durumu ve zaman alanlarını ekler.
@@ -143,7 +143,7 @@ Mapper ayrıca Decimal, telefon/adres, vergi kimliği, bakiye ve not alanların�
 
 ## 5. Ürün/stok kartı akışı
 
-Ürün kartı MEStakip terminolojisinde `StokKart` olarak modellenmiş. Zincir cariyle aynı, servis ve mapper farklı:
+Ürün kartı MesDia terminolojisinde `StokKart` olarak modellenmiş. Zincir cariyle aynı, servis ve mapper farklı:
 
 ```text
 dia_sync_stok
@@ -198,7 +198,7 @@ DIA_DONEM_KODU=...
 Örneğin başka bir kart tipi eklenecekse:
 
 1. DİA WS dokümanında model adını, liste/getir/ekle/güncelle servislerini, zorunlu alanları, yetki kodunu ve cevap JSON'unu bul.
-2. MEStakip'te hedef Django modelini ve mevcut alanların tip/uzunluklarını belirle.
+2. MesDia'da hedef Django modelini ve mevcut alanların tip/uzunluklarını belirle.
 3. `mappers/<model>_mapper.py` içinde saf iki yönlü dönüşüm yaz:
 
 ```python
@@ -227,11 +227,11 @@ class OrnekMapper:
 ## 10. Şu an dikkat gerektiren kod noktaları
 
 1. **DİA'dan içe alma, “kuru çalışma” sanıldığı kadar kapsamlı değil:** Cari/Stok `--kuru-calis` sadece ilk API sayfasını yazmadan çeker. `CariMapper`/`StokMapper` ve model kaydını denemiyor. Tam güvenli prova için mapper doğrulaması veya gerçek test veritabanı ayrıca gerekir.
-2. **Cari satıcı kodu:** DİA'nın `ScfCarikartModel` belgesinde satıcı kodu `ST`. İçe alma `ST`'yi tanıyor ve MEStakip'ten dışa gönderimde kod artık `ST` üretiyor. Gerçek yazma çağrısından önce DİA Web Service Tester veya demo firmayla doğrula.
+2. **Cari satıcı kodu:** DİA'nın `ScfCarikartModel` belgesinde satıcı kodu `ST`. İçe alma `ST`'yi tanıyor ve MesDia'dan dışa gönderimde kod artık `ST` üretiyor. Gerçek yazma çağrısından önce DİA Web Service Tester veya demo firmayla doğrula.
 3. **Stok alan eşlemesi canlı cevapla doğrulanmalı:** `anabirimkey`, `markaack`, `gercek_stok` gibi alan adları ve liste servisinin gerçekten döndürdüğü alan kümesi DİA Tester cevabına göre teyit edilmeli. API modelinde alanın bulunması, liste görünümünde kesin döndüğü anlamına gelmeyebilir.
 4. **Servis hata kodu ile HTTP durum kodu ayrımı:** `DiaClient._yanit_isle` DİA'nın JSON `code` değerini exception seçimi için kullanıyor; DİA bazı lisans/servis hatalarını HTTP 200 içinde JSON koduyla döndürebilir. Resmî hata tablosuna göre gerçek cevaplarla exception eşlemesini doğrula.
 5. **`DiaBaglanti` parola/API key saklama yeri değil:** Maskeli şifre alanı var, fakat istemci settings kullanıyor. Gerçek sırları DB modeline, admin'e, loga veya komut satırı argümanına yazma.
-6. **DİA → MEStakip senkronu yerel alanları ezebilir:** `update_or_create(defaults=...)` eşlenen alanları her çalışmada DİA değerleriyle günceller. Hangi alanların DİA'ya ait olduğunu belirle; MEStakip'e özel alanları mapper'ın `defaults` sözlüğüne ekleme.
+6. **DİA → MesDia senkronu yerel alanları ezebilir:** `update_or_create(defaults=...)` eşlenen alanları her çalışmada DİA değerleriyle günceller. Hangi alanların DİA'ya ait olduğunu belirle; MesDia'ya özel alanları mapper'ın `defaults` sözlüğüne ekleme.
 7. **Müşterilere SaaS olarak sunma:** Mevcut `DiaClient` kimlik bilgilerini global Django settings/env'den okuyor; bu tek DİA bağlantısı/tek kurulum varsayımıdır. Her müşterinin ayrı DIA'sı olacaksa tenant başına bağlantı seçimi, sırların güvenli saklanması, her Celery işinde tenant kimliği ve tenant bazlı sync logları eklenmeli. Global `DIA_*` env ayarları tüm müşterileri birbirinden ayırmaya yetmez.
 
 ## İlgili dosyalar

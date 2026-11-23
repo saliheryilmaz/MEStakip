@@ -52,7 +52,7 @@ class FaturaMapper:
     def dia_to_fields(d: dict) -> dict:
         return {
             'fis_no':       d.get('fisno', ''),
-            'belge_no':     d.get('belgeno2', '') or d.get('belgeno', ''),
+            'belge_no':     str(d.get('belgeno') or '').strip(),
             'tarih':        _parse_tarih(d.get('tarih')),
             'saat':         d.get('saat', ''),
             'tur':          _tur(d),

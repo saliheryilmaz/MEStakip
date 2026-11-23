@@ -1,5 +1,5 @@
 """
-CariService — DİA ↔ MEStakip cari senkronizasyon servisi.
+CariService — DİA ↔ MesDia cari senkronizasyon servisi.
 
 Sorumluluklar:
   - DİA'dan cari listesini çekip yerel Cari modelini güncelleme (delta sync)
@@ -66,7 +66,7 @@ class SyncSonuc:
 
 class CariService:
     """
-    DİA ↔ MEStakip cari senkronizasyon servisi.
+    DİA ↔ MesDia cari senkronizasyon servisi.
 
     Kullanım:
         # Tüm carileri senkronize et (ilk kurulum veya tam sync)
@@ -75,11 +75,11 @@ class CariService:
         # Sadece son sync'ten beri değişenleri çek (delta)
         sonuc = CariService.dia_dan_senkronize_et(delta=True)
 
-        # MEStakip'te oluşturulan yeni cariyi DİA'ya yaz
+        # MesDia'da oluşturulan yeni cariyi DİA'ya yaz
         dia_key = CariService.dia_ya_gonder(cari)
     """
 
-    # ── DİA → MEStakip ────────────────────────────────────────
+    # ── DİA → MesDia ────────────────────────────────────────
 
     @staticmethod
     def dia_dan_senkronize_et(
@@ -177,6 +177,117 @@ class CariService:
             raise
 
     @staticmethod
+    def rapordan_senkronize_et(
+        *,
+        tasarim_key: int | None = None,
+        tetikleyen: str = SyncTetikleyen.MANUEL,
+        kullanici=None,
+    ) -> SyncSonuc:
+        """scf1100c Cari Kart Listesi raporunu JSON olarak yerel carilere aktarır.
+
+        Tasarım anahtarı DIA_CARI_KART_RAPOR_TASARIM_KEY ayarından alınır.
+        DİA rapor servisi kontör tüketebileceğinden bu yöntem yalnızca açıkça
+        seçilen rapor sync işleminde çağrılmalıdır.
+        """
+        from django.conf import settings
+
+        from dia_integration.services.rapor_service import RaporService
+
+        anahtar = tasarim_key or getattr(
+            settings, 'DIA_CARI_KART_RAPOR_TASARIM_KEY', ''
+        )
+        try:
+            anahtar = int(anahtar)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(
+                'Cari Kart Listesi (scf1100c) rapor tasarım anahtarı ayarlı değil. '
+                'DIA_CARI_KART_RAPOR_TASARIM_KEY değerini yapılandırın.'
+            ) from exc
+
+        log = SyncLog.objects.create(
+            modul='cari',
+            tetikleyen=tetikleyen,
+            tetikleyen_kullanici=kullanici,
+        )
+        sonuc = SyncSonuc()
+        try:
+            rapor = RaporService.cari_kart_json_al(tasarim_key=anahtar)
+            veri = rapor.json_verisi
+            satirlar = veri.get('__rows') if isinstance(veri, dict) else None
+            if not isinstance(satirlar, list):
+                raise DiaBaseError(
+                    'DİA Cari Kart Listesi raporu beklenen __rows listesini içermiyor.'
+                )
+
+            # Yazmaya başlamadan önce rapor satırlarının kimliklerini doğrula.
+            # Yanlış tasarım/JSON gelirse mevcut cariler üzerinde değişiklik olmaz.
+            for satir in satirlar:
+                if not isinstance(satir, dict):
+                    raise DiaBaseError('Cari raporunda geçersiz satır bulundu.')
+                cari_kodu = next((satir.get(alan) for alan in (
+                    'carikartkodu', 'cari_kodu', 'carikodu'
+                ) if satir.get(alan)), None)
+                unvan = next((satir.get(alan) for alan in (
+                    'unvan', 'carikartunvani'
+                ) if satir.get(alan)), None)
+                if not satir.get('_key') or not cari_kodu or not unvan:
+                    raise DiaBaseError(
+                        'Cari rapor satırında DİA _key, cari kodu veya ünvan eksik.'
+                    )
+
+            for satir in satirlar:
+                sonuc.toplam += 1
+                try:
+                    alanlar = CariMapper.rapor_to_fields(satir)
+                    dia_key = alanlar.pop('dia_key', '')
+                    dia_son_degisiklik = alanlar.pop('dia_son_degisiklik', None)
+                    cari_kodu = alanlar.pop('cari_kodu')
+                    with transaction.atomic():
+                        cari, olusturuldu = Cari.objects.update_or_create(
+                            cari_kodu=cari_kodu,
+                            defaults=alanlar,
+                        )
+                        cari.dia_key = dia_key
+                        cari.son_sync_tarihi = timezone.now()
+                        from dia_integration.mixins import SyncDurumSecenekleri
+                        cari.sync_durumu = SyncDurumSecenekleri.SENKRON
+                        guncel_alanlar = ['dia_key', 'son_sync_tarihi', 'sync_durumu']
+                        if dia_son_degisiklik is not None:
+                            cari.dia_son_degisiklik = dia_son_degisiklik
+                            guncel_alanlar.append('dia_son_degisiklik')
+                        cari.save(update_fields=guncel_alanlar)
+                    if olusturuldu:
+                        sonuc.eklenen += 1
+                    else:
+                        sonuc.guncellenen += 1
+                except Exception as exc:
+                    sonuc.hatali += 1
+                    kod = satir.get('carikartkodu') or satir.get('cari_kodu') or '?'
+                    sonuc.hatalar.append(f'{kod}: {exc}')
+                    SyncHataKaydi.objects.create(
+                        sync_log=log,
+                        modul='cari',
+                        yerel_model='erp.Cari',
+                        yerel_id=str(kod),
+                        dia_servis='rpr_raporsonuc_getir:scf1100c',
+                        hata_kodu='',
+                        hata_mesaji=str(exc),
+                    )
+
+            durum = (
+                SyncDurum.BASARILI if sonuc.basarili_mi
+                else (SyncDurum.KISMI_BASARILI if sonuc.eklenen + sonuc.guncellenen else SyncDurum.BASARISIZ)
+            )
+            log.toplam_kayit = sonuc.toplam
+            log.basarili_kayit = sonuc.eklenen + sonuc.guncellenen
+            log.hatali_kayit = sonuc.hatali
+            log.tamamla(durum=durum)
+            return sonuc
+        except Exception as exc:
+            log.tamamla(durum=SyncDurum.BASARISIZ, hata=str(exc))
+            raise
+
+    @staticmethod
     def _kaydi_isle(dia_kayit: dict, log: SyncLog) -> bool:
         """
         Tek bir DİA cari kaydını işler — oluşturur veya günceller.
@@ -242,7 +353,7 @@ class CariService:
         Bu metod şimdilik placeholder — gerekirse ileride genişletilir."""
         pass
 
-    # ── MEStakip → DİA ────────────────────────────────────────
+    # ── MesDia → DİA ────────────────────────────────────────
 
     @staticmethod
     def dia_ya_gonder(cari: Cari) -> str:

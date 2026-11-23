@@ -1,10 +1,14 @@
 from django.urls import path
-from . import views
+from . import markets, views, otel_views
 
 app_name = 'dashboard'
 
 urlpatterns = [
+    path('lastik-saklama/plan/', otel_views.panel, name='otel_plan'),
+    path('lastik-saklama/<int:pk>/kontrol/', otel_views.kontrol, name='otel_kontrol'),
+    path('lastik-saklama/<int:pk>/karar/', otel_views.karar, name='otel_karar'),
     path('', views.index, name='index'),
+    path('api/piyasa/', markets.market_strip, name='market_strip'),
     path('analytics/', views.analytics, name='analytics'),
     path('users/', views.users, name='users'),
     path('products/', views.products, name='products'),
@@ -13,6 +17,7 @@ urlpatterns = [
     path('transactions/<int:transaction_id>/duzenle/', views.transaction_duzenle, name='transaction_duzenle'),
     path('orders/', views.orders, name='orders'),
     path('forms/', views.forms, name='forms'),
+    path('elements/<int:siparis_id>/kapora/', views.siparis_kapora, name='siparis_kapora'),
     path('elements/', views.elements, name='elements'),
     path('elements/buttons/', views.elements_buttons, name='elements_buttons'),
     path('elements/alerts/', views.elements_alerts, name='elements_alerts'),

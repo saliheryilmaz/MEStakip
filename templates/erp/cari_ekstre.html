@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% load turkish_format %}
+{% block title %}Cari Ekstresi — {{ cari.unvan }}{% endblock %}
+{% block page_name %}cari_listesi{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="bi bi-journal-text me-2 text-success"></i>Cari Ekstresi</h4>
+        <div class="text-muted"><code>{{ cari.cari_kodu }}</code> · <strong>{{ cari.unvan }}</strong></div>
+    </div>
+    <a href="{% url 'erp:cari_listesi' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Cari Listesine Dön
+    </a>
+</div>
+
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
+            <input type="hidden" name="getir" value="1">
+            <div class="col-sm-4 col-md-3">
+                <label class="form-label small">Başlangıç</label>
+                <input type="date" name="baslangic" value="{{ baslangic }}" class="form-control form-control-sm">
+            </div>
+            <div class="col-sm-4 col-md-3">
+                <label class="form-label small">Bitiş</label>
+                <input type="date" name="bitis" value="{{ bitis }}" class="form-control form-control-sm">
+            </div>
+            <div class="col-sm-4 col-md-3">
+                <button type="submit" class="btn btn-success btn-sm w-100">
+                    <i class="bi bi-arrow-repeat me-1"></i>{% if rapordan %}Ekstreyi Göster{% else %}DİA Ekstresini Getir{% endif %}
+                </button>
+            </div>
+            <div class="col-sm-4 col-md-3">
+                <button type="submit" name="rapor_pdf" value="1" class="btn btn-outline-danger btn-sm w-100"
+                        title="DİA rapor çağrısı kontör tüketebilir">
+                    <i class="bi bi-file-earmark-pdf me-1"></i>DİA PDF Ekstresi
+                </button>
+            </div>
+            <div class="col-md-3 small text-muted">{% if rapordan %}Tablo son rapor aktarımından okunur. PDF çağrısı kontör tüketebilir.{% else %}Canlı hareket ve PDF rapor çağrıları kontör tüketebilir.{% endif %}</div>
+        </form>
+    </div>
+</div>
+
+{% if hata %}
+<div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-2"></i>{{ hata }}</div>
+{% endif %}
+
+{% if getirildi %}
+<div class="row g-3 mb-3">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm"><div class="card-body py-3">
+            <div class="small text-muted">Hareket sayısı</div>
+            <div class="fs-5 fw-bold">{{ hareketler|length }}</div>
+        </div></div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm"><div class="card-body py-3">
+            <div class="small text-muted">Toplam borç</div>
+            <div class="fs-5 fw-bold text-danger">{{ borc_toplam|turkish_format }} ₺</div>
+        </div></div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm"><div class="card-body py-3">
+            <div class="small text-muted">Toplam alacak</div>
+            <div class="fs-5 fw-bold text-success">{{ alacak_toplam|turkish_format }} ₺</div>
+        </div></div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover table-sm align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Tarih / Saat</th>
+                    <th>Tür</th>
+                    <th>Fiş / Belge No</th>
+                    <th>Açıklama</th>
+                    <th class="text-end">Borç</th>
+                    <th class="text-end">Alacak</th>
+                    <th class="text-end">Bakiye</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for h in hareketler %}
+                <tr>
+                    <td class="text-nowrap">{{ h.tarih|default:"—" }}<br><small class="text-muted">{{ h.saat|default:"" }}</small></td>
+                    <td>{{ h.tur }}</td>
+                    <td class="text-nowrap">{{ h.belge }}</td>
+                    <td>{{ h.aciklama }}</td>
+                    <td class="text-end text-nowrap">{{ h.borc|turkish_format }}</td>
+                    <td class="text-end text-nowrap">{{ h.alacak|turkish_format }}</td>
+                    <td class="text-end text-nowrap fw-semibold">{{ h.bakiye|turkish_format }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="text-center text-muted py-4">Seçilen tarih aralığında hareket bulunamadı.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

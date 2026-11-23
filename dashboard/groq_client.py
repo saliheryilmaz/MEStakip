@@ -13,15 +13,51 @@ class GroqError(Exception):
         self.error_code = error_code
 
 
+def _ollama_payload(messages, model, tools, tool_choice, temperature, max_tokens):
+    # Ollama's native endpoint allows a context window large enough for the project tools.
+    turns = []
+    tool_names = {}
+    for message in messages:
+        turn = dict(message)
+        if turn.get("tool_calls"):
+            calls = []
+            for call in turn["tool_calls"]:
+                function = call["function"]
+                tool_names[call["id"]] = function["name"]
+                calls.append({"function": {"name": function["name"],
+                                           "arguments": json.loads(function["arguments"] or "{}")}})
+            turn["tool_calls"] = calls
+            turn["content"] = turn.get("content") or ""
+        if turn["role"] == "tool":
+            turn["tool_name"] = tool_names[turn.pop("tool_call_id")]
+        turns.append(turn)
+    payload = {"model": model, "messages": turns, "stream": False, "think": False,
+               "options": {"num_ctx": 16384, "temperature": temperature, "num_predict": max_tokens}}
+    if tools and tool_choice != "none":
+        payload["tools"] = tools
+    return payload
+
+
+def _ollama_completion(data):
+    message = data["message"]
+    calls = []
+    for index, call in enumerate(message.get("tool_calls") or []):
+        function = call["function"]
+        calls.append({"type": "function", "id": f"local-{index}", "function": {
+            "name": function["name"], "arguments": json.dumps(function.get("arguments", {}))}})
+    return {"choices": [{"message": {"role": "assistant", "content": message.get("content", ""),
+                                      "tool_calls": calls}, "finish_reason": data.get("done_reason")}]}
+
+
 def groq_chat_completion(*, messages, model=None, api_key=None,
                          temperature=0.2, max_tokens=1000, timeout_s=45,
-                         tools=None, tool_choice=None):
+                         tools=None, tool_choice=None, local=False):
     """
     Groq Chat Completions client (OpenAI-compatible endpoint).
     Tool calling desteği eklenmiştir.
     """
     api_key = api_key if api_key is not None else os.environ.get("GROQ_API_KEY", "")
-    if not api_key:
+    if not api_key and not local:
         raise GroqError("GROQ_API_KEY is not set")
 
     model = model or os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b")
@@ -39,15 +75,17 @@ def groq_chat_completion(*, messages, model=None, api_key=None,
     if tool_choice:
         payload["tool_choice"] = tool_choice
 
+    endpoint = "https://api.groq.com/openai/v1/chat/completions"
+    headers = {"Content-Type": "application/json", "Accept": "application/json", "User-Agent": "MesDia/2.0"}
+    if local:
+        endpoint = "http://127.0.0.1:11434/api/chat"
+        payload = _ollama_payload(messages, model, tools, tool_choice, temperature, max_tokens)
+    else:
+        headers["Authorization"] = f"Bearer {api_key}"
     req = urllib.request.Request(
-        "https://api.groq.com/openai/v1/chat/completions",
+        endpoint,
         data=json.dumps(payload).encode("utf-8"),
-        headers={
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-            "User-Agent": "MEStakip/2.0 (+https://localhost)",
-        },
+        headers=headers,
         method="POST",
     )
 
@@ -77,10 +115,12 @@ def groq_chat_completion(*, messages, model=None, api_key=None,
 
     try:
         data = json.loads(body)
+        if local:
+            data = _ollama_completion(data)
         if not isinstance(data, dict) or not data.get("choices"):
             raise ValueError("Missing choices")
-    except ValueError as e:
-        raise GroqError("Unexpected Groq response", error_code="invalid_response") from e
+    except (ValueError, KeyError, TypeError, AttributeError) as e:
+        raise GroqError("Unexpected chat response", error_code="invalid_response") from e
 
     # Tool call response döndür (ham)
     if tools:

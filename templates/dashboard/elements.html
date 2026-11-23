@@ -2,7 +2,7 @@
 {% load static %}
 {% load turkish_format %}
 
-{% block title %}Sipariş Envanteri Listesi - Mestakip{% endblock %}
+{% block title %}Sipariş Envanteri Listesi - MesDia{% endblock %}
 
 {% block content %}
 <!-- Page Header -->
@@ -229,7 +229,7 @@
                                 <a href="{% url 'dashboard:siparis_duzenle' siparis.id %}" class="btn btn-warning btn-sm" title="Düzenle">
                                     <i class="bi bi-pencil"></i>
                                 </a>
-                                {% if siparis.musteri_adi or siparis.musteri_telefon or siparis.musteri_aciklama %}
+                                {% if siparis.musteri_adi or siparis.musteri_telefon or siparis.musteri_aciklama or siparis.kapora %}
                                 <button type="button" class="btn btn-info btn-sm" title="Müşteri Bilgileri" 
                                         data-bs-toggle="modal" data-bs-target="#musteriModal{{ siparis.id }}">
                                     <i class="bi bi-person"></i>
@@ -435,7 +435,7 @@
                         <i class="bi bi-whatsapp me-1"></i> WhatsApp
                     </button>
                     {% endif %}
-                    {% if siparis.musteri_adi or siparis.musteri_telefon or siparis.musteri_aciklama %}
+                    {% if siparis.musteri_adi or siparis.musteri_telefon or siparis.musteri_aciklama or siparis.kapora %}
                     <button type="button" class="btn btn-info btn-sm"
                             data-bs-toggle="modal" data-bs-target="#musteriModal{{ siparis.id }}">
                         <i class="bi bi-person me-1"></i> Müşteri
@@ -504,7 +504,7 @@
 
 <!-- Müşteri Bilgileri Modalları -->
 {% for siparis in siparisler %}
-{% if siparis.musteri_adi or siparis.musteri_telefon or siparis.musteri_aciklama %}
+{% if siparis.musteri_adi or siparis.musteri_telefon or siparis.musteri_aciklama or siparis.kapora %}
 <div class="modal fade" id="musteriModal{{ siparis.id }}" tabindex="-1" aria-labelledby="musteriModalLabel{{ siparis.id }}" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -543,6 +543,22 @@
                         <p class="mb-0">
                             <span class="badge bg-success">{{ siparis.musteri_odeme_tutari }}</span>
                         </p>
+                    </div>
+                    {% endif %}
+                    {% if siparis.kapora %}
+                    <div class="col-12">
+                        <h6>Kapora</h6>
+                        <p>{{ siparis.kapora.tutar|turkish_format }} ₺ · {{ siparis.kapora.get_yontem_display }} · {{ siparis.kapora.tarih|date:'d.m.Y' }}</p>
+                        <form method="post" action="{% url 'dashboard:siparis_kapora' siparis.id %}" class="d-flex align-items-center gap-2">
+                            {% csrf_token %}
+                            {% if siparis.kapora.islem_id %}
+                            <span class="text-success">Merkez kasasına aktarıldı</span>
+                            {% else %}
+                            <button class="btn btn-primary btn-sm" name="eylem" value="aktar">Aktar</button>
+                            {% endif %}
+                            <button class="btn btn-outline-danger btn-sm" name="eylem" value="sil"
+                                    onclick="return confirm('Kapora{% if siparis.kapora.islem_id %} ve merkez kasasındaki kaydı{% endif %} silinsin mi?')">Sil</button>
+                        </form>
                     </div>
                     {% endif %}
                     {% if siparis.musteri_aciklama %}
@@ -804,11 +820,11 @@ function whatsappGonderData(button) {
         cleanTelefon = '90' + cleanTelefon;
     }
     
-    // Cari firma adını kullan, yoksa varsayılan olarak "MesTakip" kullan
-    const firmaAdi = cariFirma && cariFirma.trim() !== '' ? cariFirma.trim() : 'MesTakip';
+    // Cari firma adını kullan, yoksa varsayılan olarak "MesDia" kullan
+    const firmaAdi = cariFirma && cariFirma.trim() !== '' ? cariFirma.trim() : 'MesDia';
     
     // Detaylı mesaj formatı (Cari firma adı ile)
-    const mesaj = `*MesTakip - ${firmaAdi}*
+    const mesaj = `*MesDia - ${firmaAdi}*
 *Ürün:* ${urun}
 *Marka:* ${marka}
 *Adet:* ${adet}

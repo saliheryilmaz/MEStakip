@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Tahsilat Merkezi · MesDia{% endblock %}
+{% block content %}
+<a class="small" href="{% url 'erp:cari_listesi' %}">← Cari kartları</a>
+<h1 class="h3 mt-3">Akıllı Cari Analiz ve Tahsilat</h1>
+<p class="text-muted">DİA cari bakiyeleri ve ödeme alışkanlıklarına göre takip listesi.</p>
+<div class="row g-3 mb-3">
+  <div class="col-sm-6"><div class="card p-3"><small>Açık müşteri bakiyesi</small><strong class="fs-3">{{ toplam|floatformat:"2g" }} ₺</strong></div></div>
+  <div class="col-sm-6"><div class="card p-3"><small>Takip gerektiren cari</small><strong class="fs-3">{{ takip_sayisi }}</strong></div></div>
+</div>
+<form class="d-flex flex-wrap gap-2 align-items-center mb-3">
+  <input class="form-control w-auto" name="q" aria-label="Cari ara" placeholder="Cari adı veya kodu" value="{{ q }}">
+  <select class="form-select w-auto" name="ay" aria-label="Rapor dönemi"><option value="">Güncel takip</option>{% for ay in aylar %}<option value="{{ ay|date:'Y-m' }}" {% if ay == rapor.ay %}selected{% endif %}>{{ ay|date:"F Y" }} raporu</option>{% endfor %}</select>
+  <label><input type="checkbox" name="takip" value="1" {% if request.GET.takip %}checked{% endif %}> Yalnızca takip gerekenler</label>
+  <button class="btn btn-primary">Göster</button>
+</form>
+{% if rapor %}<p>Raporun son kayıt zamanı {{ rapor.hazirlanma|date:"d.m.Y H:i" }}</p>{% endif %}
+<div class="row g-2">
+{% for r in rows %}
+<article class="col-12"><div class="card p-3"><div class="row align-items-center gy-2">
+<div class="col-lg-4"><a class="fw-bold" href="{% url 'erp:tahsilat_profil' r.pk %}">{{ r.unvan }}</a><small class="d-block">{{ r.kod }} · {{ r.model }}</small><small class="text-muted">DİA aktarımı · {{ r.kaynak_tarihi|default:"Bilinmiyor" }}</small></div>
+<div class="col-lg-3"><strong>{{ r.bakiye|floatformat:"2g" }} ₺</strong>{% if r.fark != None %}<small class="d-block">{{ previous.ay|date:"F" }} raporuna göre {{ r.fark|floatformat:"2g" }} ₺</small>{% endif %}</div>
+<div class="col-lg-3">{{ r.durum }}{% if r.beklenti %}<small class="d-block">Beklenen ödeme · {{ r.beklenti }}</small>{% endif %}{% if r.limit_asildi %}<strong class="d-block text-danger">Cari risk limiti aşıldı</strong>{% endif %}{% if r.arama %}<small>Arama · {{ r.arama|date:"d.m.Y" }}</small>{% endif %}</div>
+<div class="col-lg-2"><small>Ay içi tahsilat</small><strong class="d-block">{% if r.aylik_tahsilat != None %}{{ r.aylik_tahsilat|floatformat:"2g" }} ₺{% else %}Ekstre yok{% endif %}</strong></div>
+</div></div></article>
+{% empty %}<p>Bu seçimde açık bakiyeli müşteri bulunmuyor.</p>{% endfor %}</div>
+{% endblock %}

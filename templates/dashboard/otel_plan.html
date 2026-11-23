@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block title %}Lastik Ömrü ve Stok Tahmini · MesDia{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+ <h1 class="h3 mb-0">Akıllı Lastik Ömrü ve Stok Tahmini</h1>
+ <a href="{% url 'dashboard:lastik_saklama' %}" class="btn btn-outline-secondary">Lastik Oteli</a>
+</div>
+<form class="d-flex flex-wrap gap-2 mb-4 align-items-center" method="get">
+ <label for="rapor">Plan dönemi</label>
+ <select id="rapor" name="rapor" class="form-select w-auto"><option value="">Güncel plan · tüm açık ihtiyaçlar</option>
+ {% for r in reports %}<option value="{{ r.pk }}" {% if report.pk == r.pk %}selected{% endif %}>{{ r.tarih|date:"d.m.Y" }} · 6 aylık rapor</option>{% endfor %}</select>
+ <button class="btn btn-outline-primary">Göster</button>
+</form>
+<section class="card mb-4"><div class="card-body">
+<h2 class="h5">Satın alma planı</h2>
+<p>{{ data.musteri }} müşteri için açık ihtiyaç{% if data.kontrolsuz %} · {{ data.kontrolsuz }} sette fiziksel kontrol bekleniyor{% endif %}</p>
+<div class="table-responsive"><table class="table align-middle"><thead><tr>
+<th>Hedef</th><th>Mevsim</th><th>Ebat</th><th>Müşteri</th><th>Tahmini</th><th>Müşteri onaylı</th><th>Toplam</th><th>Kullanılabilir stok</th><th>Alım önerisi</th></tr></thead>
+<tbody>{% for r in data.alim %}<tr><td>{{ r.hedef }}</td><td>{{ r.mevsim }}</td><td>{{ r.ebat }}</td><td>{{ r.musteri }}</td><td>{{ r.tahmini }}</td><td>{{ r.onayli }}</td><td>{{ r.adet }}</td><td>{{ r.stok|default_if_none:"—" }}</td><td><strong>{% if r.eksik != None %}{{ r.eksik }} adet{% else %}Ebat eşleştirilmeli{% endif %}</strong></td></tr>
+{% empty %}<tr><td colspan="9">Bu dönem için kayıtlı değişim ihtiyacı yok.</td></tr>{% endfor %}</tbody></table></div>
+<small>DİA stokları ebat ve mevsime göre eşleşir. Önce yakın sezonun ihtiyacı karşılanır. Alım önerisi, müşteri onaylı ve tahmini ihtiyaçların toplamına göre hesaplanır.</small>
+</div></section>
+<section class="card mb-4"><div class="card-body"><h2 class="h5">Müşteri ihtiyaçları</h2>
+<div class="table-responsive"><table class="table"><thead><tr><th>Müşteri / plaka</th><th>Sezon</th><th>Ebat</th><th>Adet</th><th>Hedef</th><th>Sezon sonu en düşük diş</th><th>İletişim</th><th>Fırsat</th></tr></thead><tbody>
+{% for n in data.ihtiyac %}<tr><td><a href="{% url 'dashboard:otel_kontrol' n.id %}">{{ n.ad }} · {{ n.plaka }}</a></td><td>{{ n.mevsim }}</td><td>{{ n.ebat }}</td><td>{{ n.adet }}</td><td>{{ n.hedef }}</td><td>{% if n.tahmin != None %}{{ n.tahmin }} mm · {{ n.olculen }}/{{ n.adet }} lastik{% else %}Ölçüm geçmişi yetersiz{% endif %}</td><td>{{ n.bildirildi|yesno:"Bilgi verildi,Aranacak" }}</td><td>{{ n.onay|yesno:"Müşteri onayladı,Tahmini" }}</td></tr>
+{% empty %}<tr><td colspan="8">Açık müşteri talebi yok.</td></tr>{% endfor %}</tbody></table></div></div></section>
+{% if not report %}<section class="card"><div class="card-body"><h2 class="h5">Set geçmişi ve sezon kontrolü</h2><div class="list-group list-group-flush">{% for k in sets %}<a class="list-group-item list-group-item-action" href="{% url 'dashboard:otel_kontrol' k.pk %}">{{ k.plaka }} · {{ k.musteri_adi }} · {{ k.get_mevsim_display }} · {{ k.get_durum_display }} →</a>{% empty %}<p>Lastik Oteli’nde henüz set yok.</p>{% endfor %}</div></div></section>{% endif %}
+{% endblock %}

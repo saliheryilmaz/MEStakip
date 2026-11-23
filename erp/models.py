@@ -1,5 +1,5 @@
 """
-ERP iş modelleri — MEStakip'e ait, DİA'dan bağımsız iş katmanı.
+ERP iş modelleri — MesDia'ya ait, DİA'dan bağımsız iş katmanı.
 
 Faz 2: Cari (müşteri/tedarikçi kart)
 Faz 3: StokKart, Depo, StokDepoMiktari
@@ -44,12 +44,14 @@ class Cari(DiaSyncMixin, models.Model):
 
     DİA karşılığı: scf_carikart
     Senkronizasyon yönü:
-      - DİA → MEStakip: periyodik delta sync (_date filtresiyle)
-      - MEStakip → DİA: yeni cari oluşturma / güncelleme (Faz 2 son adımı)
+      - DİA → MesDia: periyodik delta sync (_date filtresiyle)
+      - MesDia → DİA: yeni cari oluşturma / güncelleme (Faz 2 son adımı)
 
     DiaSyncMixin'den gelen alanlar:
       dia_key, son_sync_tarihi, sync_durumu, dia_son_degisiklik
     """
+
+    rapor_ekstresi = models.JSONField(null=True, blank=True, editable=False)
 
     # ── Temel kimlik ──────────────────────────────────────────
     cari_kodu = models.CharField(
@@ -145,7 +147,7 @@ class Cari(DiaSyncMixin, models.Model):
         decimal_places=4,
         default=Decimal('0'),
         verbose_name=_('Bakiye (DİA\'dan)'),
-        help_text=_('DİA\'dan senkronize edilen anlık bakiye. MEStakip hesaplamaz.'),
+        help_text=_('DİA\'dan senkronize edilen anlık bakiye. MesDia hesaplamaz.'),
     )
     borc_toplam = models.DecimalField(
         max_digits=18,
@@ -244,6 +246,18 @@ class Depo(models.Model):
         verbose_name_plural = _('Depolar')
         ordering = ['sube_adi', 'ad']
 
+    @classmethod
+    def fatura_depolari(cls):
+        pozitif_anahtar = r'^0*[1-9][0-9]*$'
+        return cls.objects.filter(
+            aktif=True, dia_key__regex=pozitif_anahtar, sube_dia_key__regex=pozitif_anahtar,
+        )
+
+    @classmethod
+    def varsayilan_fatura_deposu(cls):
+        depolar = list(cls.fatura_depolari()[:2])
+        return depolar[0] if len(depolar) == 1 else None
+
     def __str__(self) -> str:
         return f'{self.sube_adi} / {self.ad}' if self.sube_adi else self.ad
 
@@ -286,7 +300,7 @@ class StokKart(DiaSyncMixin, models.Model):
     gercek_stok = models.DecimalField(
         max_digits=18, decimal_places=4, default=Decimal('0'),
         verbose_name=_('Gerçek stok'),
-        help_text=_('DİA\'dan senkronize edilir, MEStakip hesaplamaz.'),
+        help_text=_('DİA\'dan senkronize edilir, MesDia hesaplamaz.'),
     )
     fiili_stok  = models.DecimalField(max_digits=18, decimal_places=4, default=Decimal('0'), verbose_name=_('Fiili stok'))
     notlar      = models.TextField(blank=True, verbose_name=_('Notlar'))
@@ -348,6 +362,17 @@ class StokDepoMiktari(models.Model):
 # ─────────────────────────────────────────────────────────────
 # Depo Fişi — stok istek/talep takibi
 # ─────────────────────────────────────────────────────────────
+
+class StokDepoRaporMiktari(models.Model):
+    """Özel raporun stok ve depo bazında verdiği net hareket miktarı."""
+
+    stok = models.ForeignKey(StokKart, on_delete=models.CASCADE, related_name='rapor_depo_miktarlari')
+    depo = models.ForeignKey(Depo, on_delete=models.CASCADE)
+    net_hareket_miktari = models.DecimalField(max_digits=18, decimal_places=4)
+
+    class Meta:
+        unique_together = [('stok', 'depo')]
+
 
 class DepoFisiDurum(models.TextChoices):
     BEKLIYOR   = 'bekliyor',   _('Bekliyor')
@@ -416,11 +441,22 @@ class DepoFisiKalemi(models.Model):
         verbose_name=_('Stok Kartı'),
     )
     adet  = models.PositiveIntegerField(default=1, verbose_name=_('Adet'))
+    birim_fiyat = models.DecimalField(
+        max_digits=18, decimal_places=4, null=True, blank=True, verbose_name=_('Birim Fiyat'),
+    )
     kalem_notu = models.CharField(max_length=200, blank=True, verbose_name=_('Not'))
 
     class Meta:
         verbose_name        = _('Depo Fişi Kalemi')
         verbose_name_plural = _('Depo Fişi Kalemleri')
+
+    @property
+    def kullanilan_birim_fiyat(self):
+        return self.stok.fiyat1 if self.birim_fiyat is None else self.birim_fiyat
+
+    @property
+    def satir_toplami(self):
+        return self.kullanilan_birim_fiyat * self.adet
 
     def __str__(self) -> str:
         return f'{self.stok.stok_kodu} x{self.adet}'
@@ -496,6 +532,7 @@ class FaturaKalemi(models.Model):
     indirim      = models.DecimalField(max_digits=7, decimal_places=4, default=Decimal('0'), verbose_name=_('İskonto %'))
     tutar        = models.DecimalField(max_digits=18, decimal_places=4, default=Decimal('0'), verbose_name=_('Tutar'))
     satisci      = models.CharField(max_length=100, blank=True, verbose_name=_('Satış Temsilcisi'))
+    manuel_aciklama = models.TextField(blank=True, default='', verbose_name=_('Manuel açıklama'))
     odeme_plani  = models.CharField(max_length=100, blank=True, verbose_name=_('Ödeme Planı'))
     depo         = models.CharField(max_length=100, blank=True, verbose_name=_('Ambar'))
     marka        = models.CharField(max_length=100, blank=True, verbose_name=_('Marka'))
@@ -511,3 +548,23 @@ class FaturaKalemi(models.Model):
 
     def __str__(self) -> str:
         return f'{self.stok_kodu} x{self.miktar}'
+
+
+class TahsilatAylikRapor(models.Model):
+    ay = models.DateField(unique=True)
+    hazirlanma = models.DateTimeField(auto_now=True)
+    satirlar = models.JSONField(default=list)
+
+    class Meta:
+        ordering = ["-ay"]
+
+
+class TahsilatGorusme(models.Model):
+    cari = models.ForeignKey(Cari, on_delete=models.CASCADE, related_name="tahsilat_gorusmeleri")
+    kullanici = models.ForeignKey("auth.User", on_delete=models.PROTECT)
+    zaman = models.DateTimeField(auto_now_add=True)
+    not_metni = models.CharField(max_length=500)
+    tekrar_ara = models.DateField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-zaman", "-pk"]

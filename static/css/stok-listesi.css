@@ -1,0 +1,53 @@
+.stock-results .table { font-size: 1rem; }
+.stock-results thead th,
+.stock-results .col-filtre { font-size: .9375rem; }
+.stock-results td .badge { font-size: .875rem; }
+
+.stock-product-link { color: inherit; text-decoration: none; }
+.stock-product-link:hover { text-decoration: underline; }
+
+@media (max-width: 767.98px) {
+    .stock-catalog { min-width: 0; padding-bottom: 1rem; }
+    .stock-catalog :is(.btn, .form-control, .form-select, .page-link) { min-height: 44px; }
+    .stock-catalog :is(.btn, .page-link) { align-content: center; }
+    .stock-catalog #aramaFormu input { font-size: 1rem; }
+    .stock-catalog #filtrelerFormu { justify-content: space-between; }
+    .stock-catalog #stokSecenekleri { order: 1; width: 100%; }
+    .stock-catalog #stokSecenekleri.show {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .stock-catalog #stokSecenekleri select { width: 100% !important; min-width: 0 !important; }
+    .stock-results.card { background: transparent; box-shadow: none !important; }
+    .stock-results .table-responsive { overflow: visible; }
+    .stock-results table, .stock-results tbody { display: block; }
+    .stock-results thead { display: none; }
+    .stock-results tbody tr {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: .65rem 1rem;
+        padding: 1rem;
+        margin-bottom: .65rem;
+        background: var(--bs-body-bg);
+        border: 1px solid var(--bs-border-color);
+        border-radius: .875rem;
+    }
+    .stock-results tbody td {
+        padding: 0; border: 0; background: transparent;
+        text-align: start !important; overflow-wrap: anywhere; white-space: normal;
+        font-size: 1rem;
+    }
+    .stock-results td[data-label]::before {
+        content: attr(data-label); display: block; font-size: .8125rem;
+        color: var(--bs-secondary-color);
+    }
+    .stock-results td[data-label="Ürün"], .stock-results td[colspan] { grid-column: 1 / -1; order: -3; }
+    .stock-results td[data-label="Ürün"]::before { display: none; }
+    .stock-product-link { display: flex; align-items: center; min-height: 44px; font-size: 1.125rem; }
+    .stock-results td:is([data-label="Satılabilir adet"], [data-label="Nakit satış"]) {
+        order: -2; padding-bottom: .5rem; border-bottom: 1px solid var(--bs-border-color);
+        font-size: 1.15rem; font-variant-numeric: tabular-nums;
+    }
+    .stock-results td[data-label="Satılabilir adet"] .badge { font-size: 1rem; }
+    .stock-results td[data-label="İstek"] button { min-width: 44px; }
+}

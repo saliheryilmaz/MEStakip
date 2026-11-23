@@ -1,0 +1,37 @@
+<div class="modal fade" id="faturaAracModal" tabindex="-1" aria-labelledby="faturaAracBaslik" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="faturaAracBaslik">Araç Bilgileri</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-3">Fiş No <strong data-fatura-fis-no></strong></p>
+                <dl class="row gy-2 mb-0" data-arac-alanlari>
+                    <dt class="col-5">Plaka</dt>
+                    <dd class="col-7 mb-0" data-alan="plaka"></dd>
+                    <dt class="col-5">Marka</dt>
+                    <dd class="col-7 mb-0" data-alan="marka"></dd>
+                    <dt class="col-5">Model</dt>
+                    <dd class="col-7 mb-0" data-alan="model"></dd>
+                    <dt class="col-5">Kilometre</dt>
+                    <dd class="col-7 mb-0" data-alan="km"></dd>
+                </dl>
+                <p class="mb-0" data-arac-bulunamadi hidden>Bu fiş için araç bilgisi bulunamadı.</p>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    const faturaAracModal = document.getElementById('faturaAracModal');
+    faturaAracModal.addEventListener('show.bs.modal', (event) => {
+        const { dataset } = event.relatedTarget;
+        const aracBilgisiVar = 'aracBilgisi' in dataset;
+        faturaAracModal.querySelector('[data-fatura-fis-no]').textContent = dataset.fisNo;
+        faturaAracModal.querySelector('[data-arac-alanlari]').hidden = !aracBilgisiVar;
+        faturaAracModal.querySelector('[data-arac-bulunamadi]').hidden = aracBilgisiVar;
+        for (const alan of faturaAracModal.querySelectorAll('[data-alan]')) {
+            alan.textContent = dataset[alan.dataset.alan] || '—';
+        }
+    });
+</script>

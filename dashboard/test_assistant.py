@@ -2,6 +2,7 @@ import json
 import io
 import ssl
 import urllib.error
+from datetime import date
 from decimal import Decimal
 from unittest.mock import patch
 
@@ -13,7 +14,7 @@ from django.utils import timezone
 from . import assistant_service as service
 from .assistant_guide import get_project_guide
 from .groq_client import GroqError, groq_chat_completion
-from .models import Quotation, UserProfile, GarantiBelgesi
+from .models import CikmaLastik, Quotation, Transaction, UserProfile, GarantiBelgesi
 
 
 def completion(content=None, calls=None):
@@ -26,6 +27,46 @@ def call(name, arguments="{}", key="call-1"):
 
 
 class AssistantServiceTests(SimpleTestCase):
+    @patch.object(service, "configuration", return_value=("ollama-local", "test-model"))
+    @patch.object(service, "groq_chat_completion")
+    def test_freeform_question_uses_planned_tool_when_native_call_is_missing(self, client, config):
+        client.side_effect = [
+            completion("Elimde veri yok."),
+            json.dumps({"queries": [{"name": "get_erp_stock_by_brand", "args": {"brand": "Test"}}]}),
+            completion("Test stoklarında 8 adet var."),
+        ]
+        with patch.object(service, "execute_tool", return_value={"markalar": [{"marka": "Test", "miktar": 8}]}) as query:
+            result = service.answer_question(None, "Test markasında stok kaldı mı?", [])
+        query.assert_called_once_with("get_erp_stock_by_brand", '{"brand": "Test"}', None)
+        self.assertEqual(result["status"], "ready")
+        self.assertEqual(result["sources"][0]["url"], reverse("erp:stok_listesi"))
+
+    @patch.object(service, "configuration", return_value=("ollama-local", "test-model"))
+    @patch.object(service, "groq_chat_completion")
+    def test_report_style_is_rewritten_without_requerying_data(self, client, config):
+        draft = ("## 📦 Depo Durumu\n### ✅ Depodaki Lastikler\n"
+                 "**Toplam Kayıt:** 1\n**Sonuç:** Depoda 1 lastik var.\n"
+                 "Michelin 205/55R16 · Dört mevsim\n"
+                 "### 📊 Genel Durum\nDepoda 1 lastik var.")
+        concise = "**Depoda 1 çıkma lastik var.**\nMichelin 205/55R16 · Dört mevsim"
+        client.side_effect = [completion(calls=[call("get_used_tire_inventory")]),
+                              completion(draft), completion(concise)]
+
+        with patch.object(service, "execute_tool", return_value={"toplam_adet": 1}):
+            result = service.answer_question(None, "Depodaki çıkma lastikleri göster.", [])
+
+        self.assertEqual(result["text"], concise)
+        self.assertEqual(client.call_count, 3)
+        self.assertNotIn("tools", client.call_args.kwargs)
+
+    @patch.object(service, "configuration", return_value=("ollama-local", "test-model"))
+    @patch.object(service, "groq_chat_completion", return_value=completion("Toplam stok 45 adet."))
+    def test_unsourced_business_answer_is_withheld_after_retry(self, client, config):
+        result = service.answer_question(None, "Stokta kaç adet var?", [])
+        self.assertEqual(result["status"], "unverified")
+        self.assertNotIn("45", result["text"])
+        self.assertEqual(client.call_count, 2)
+
     @patch("dashboard.groq_client.urllib.request.urlopen")
     def test_transport_errors_have_safe_categories(self, urlopen):
         for reason, code in ((PermissionError(13, "private detail"), "network_blocked"),
@@ -61,12 +102,29 @@ class AssistantServiceTests(SimpleTestCase):
             client.side_effect = error
             self.assertEqual(service.answer_question(None, "Merhaba", [])["status"], expected)
 
+    @patch.dict("os.environ", {"ASSISTANT_PROVIDER": "ollama", "OLLAMA_MODEL": ""})
+    @patch("dashboard.groq_client.urllib.request.urlopen")
+    def test_local_chat_uses_tools_without_sending_credentials(self, urlopen):
+        response = urlopen.return_value.__enter__.return_value
+        response.read.side_effect = [
+            json.dumps({"message": {"tool_calls": [{"function": {"name": "get_project_guide", "arguments": {"topic": "filo"}}}]}}).encode(),
+            json.dumps({"message": {"content": "Filo ekranını açabilirsiniz."}}).encode(),
+        ]
+        result = service.answer_question(None, "Filo ekranı nerede?", [])
+        self.assertEqual(result["status"], "ready")
+        self.assertFalse(result["used_groq"])
+        self.assertEqual(result["sources"][0]["tool"], "get_project_guide")
+        req = urlopen.call_args.args[0]
+        self.assertEqual(req.full_url, "http://127.0.0.1:11434/api/chat")
+        self.assertIsNone(req.get_header("Authorization"))
+        self.assertEqual(json.loads(req.data)["model"], "qwen3.5:4b")
+
     def test_all_guide_links_resolve(self):
         for item in get_project_guide()["moduller"]:
             self.assertTrue(resolve(item["url"]))
 
     def test_optional_null_filters_use_function_defaults(self):
-        def inventory(brand="", size="", season="", limit=20):
+        def inventory(user=None, brand="", size="", season="", limit=20):
             return {"brand": brand, "size": size, "season": season, "limit": limit}
         with patch.dict(service.REGISTRY, {"get_used_tire_inventory": inventory}):
             result = service.execute_tool("get_used_tire_inventory",
@@ -175,6 +233,30 @@ class AssistantDataTests(TestCase):
     def setUp(self):
         self.client.force_login(self.user)
 
+    @patch.object(service, "groq_chat_completion")
+    def test_last_three_months_expenses_use_actual_dates_and_scoped_records(self, model):
+        for owner, day, amount, kind in (
+            (self.user, date(2026, 8, 23), "120.50", "gider"),
+            (self.user, date(2026, 11, 20), "4000", "gider"),
+            (self.user, date(2026, 8, 22), "800", "gider"),
+            (self.user, date(2026, 11, 24), "900", "gider"),
+            (self.user, date(2026, 10, 1), "100", "gelir"),
+            (self.other, date(2026, 11, 23), "7000", "gider"),
+        ):
+            Transaction.objects.create(created_by=owner, tarih=day, hareket_tipi=kind,
+                                       kasa_adi="merkez", nakit=Decimal(amount))
+        with patch.object(timezone, "localdate", return_value=date(2026, 11, 23)):
+            result = self.client.post(
+                reverse("dashboard:manager_assistant_query"),
+                data={"q": "son 3 ay giderleri göster"}, content_type="application/json",
+            ).json()
+        self.assertEqual(result["status"], "ready")
+        self.assertIn("4.120,50 ₺", result["text"])
+        self.assertIn("23 Ağustos 2026 – 23 Kasım 2026", result["text"])
+        self.assertIn("Kasım 2026 · 4.000,00 ₺", result["text"])
+        self.assertIn("baslangic_tarih=2026-08-23", result["sources"][0]["url"])
+        model.assert_not_called()
+
     def test_quotes_and_warranties_are_scoped(self):
         result = service.execute_tool("get_quotes_summary", "{}", self.user)
         self.assertEqual(result["toplam_teklif"], 1)
@@ -182,6 +264,60 @@ class AssistantDataTests(TestCase):
         result = service.execute_tool("get_warranties", "{}", self.user)
         self.assertEqual(result["toplam_kayit"], 1)
         self.assertEqual(result["kayitlar"][0]["musteri_adi"], self.user.username)
+
+    @patch.object(service, "groq_chat_completion")
+    def test_used_tire_sales_question_uses_recorded_total_without_assuming_dates(self, model):
+        CikmaLastik.objects.create(user=self.user, durum="satildi", adet=4, satis_fiyati=5000)
+        CikmaLastik.objects.create(user=self.other, durum="satildi", adet=1, satis_fiyati=9000)
+        CikmaLastik.objects.create(user=self.user, durum="depolandi", adet=1, satis_fiyati=1000)
+        url = reverse("dashboard:manager_assistant_query")
+        result = self.client.post(url, data={"q": "toplam satılan çıkma lastik tutarı ne kadar"},
+                                  content_type="application/json").json()
+        self.assertIn("5.000,00 ₺", result["text"])
+        self.assertIn("4 lastik · 1 satış kaydı", result["text"])
+        self.assertIn("Tüm zamanlar", result["text"])
+        self.assertEqual(result["sources"][0]["url"], reverse("dashboard:satilan_cikma_lastikler"))
+
+        result = self.client.post(url, data={"q": "bu ay çıkma lastik satış toplamı"},
+                                  content_type="application/json").json()
+        self.assertIn("satış kaydı yok", result["text"])
+        model.assert_not_called()
+
+    @patch.object(service, "groq_chat_completion")
+    def test_used_tire_quick_question_returns_compact_stock_summary(self, model):
+        for owner, status, brand in (
+            (self.user, "depolandi", "Michelin"),
+            (self.user, "imha", "İmha"),
+            (self.other, "depolandi", "Başka depo"),
+        ):
+            CikmaLastik.objects.create(user=owner, durum=status, marka=brand,
+                                      ebat="205/55R16", mevsim="dort-mevsim", adet=1)
+        response = self.client.post(
+            reverse("dashboard:manager_assistant_query"),
+            data=json.dumps({"q": "Depodaki çıkma lastikleri ve uzun süredir bekleyenleri göster."}),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json()["text"],
+            "**Depoda 1 çıkma lastik var.**\n"
+            "- Michelin 205/55R16 · 4 Mevsim · 1 adet\n\n"
+            "**90 gün ve üzeri bekleyen lastik yok.**",
+        )
+        model.assert_not_called()
+
+    def test_additional_modules_resolve_and_fleet_is_user_scoped(self):
+        from .models import FiloArac
+        for owner in (self.user, self.other):
+            FiloArac.objects.create(user=owner, plaka=owner.username, adet=4)
+        fleet = service.execute_tool("get_fleet", "{}", self.user)
+        self.assertEqual(fleet["toplam_kayit"], 1)
+        self.assertEqual(fleet["kayitlar"][0]["plaka"], self.user.username)
+        for tool in ("get_tire_storage", "get_calendar", "get_deposits", "get_warehouse_slips"):
+            with self.subTest(tool=tool):
+                result = service.execute_tool(tool, "{}", self.user)
+                self.assertEqual(result["toplam_kayit"], 0)
+                self.assertEqual(result["kaynak"], reverse(service._source(tool)[1]))
 
     def test_erp_queries_and_sync_metadata(self):
         from erp.models import Cari, StokKart, Fatura, FaturaKalemi

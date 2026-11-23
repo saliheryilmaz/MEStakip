@@ -18,6 +18,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.views.generic import RedirectView
 from django.shortcuts import redirect
 from django.http import HttpResponse
 
@@ -61,8 +62,10 @@ def debug_info(request):
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', redirect_to_login, name='home'),
+    path('assistant/', RedirectView.as_view(pattern_name='dashboard:manager_assistant')),
     path('dashboard/', include('dashboard.urls')),
     path('erp/', include('erp.urls', namespace='erp')),
+    path('mesbul/', include('karsilastirma.urls')),
     path('dia/', include('dia_integration.urls', namespace='dia_integration')),
     path('health/', healthcheck, name='healthcheck'),
     path('debug/', debug_info, name='debug_info'),

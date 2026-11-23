@@ -211,16 +211,18 @@ class FaturaService:
         return fatura, ok
 
     @staticmethod
+    @transaction.atomic
     def _kalemleri_isle(fatura: Fatura, getir_yanit: dict) -> None:
         """scf_fatura_getir yanıtından m_kalemler'i işle."""
         kalemler_raw = getir_yanit.get('m_kalemler', [])
         if not kalemler_raw:
             return
 
-        # Mevcut kalemleri sil, yeniden yaz (idempotent)
-        FaturaKalemi.objects.filter(fatura=fatura).delete()
+        mevcutlar = {}
+        for kalem in fatura.kalemler.select_for_update().order_by('-pk'):
+            kimlik = (kalem.dia_key,) if kalem.dia_key else ('', kalem.sirano, kalem.stok_kodu)
+            mevcutlar.setdefault(kimlik, []).append(kalem.pk)
 
-        yeni_kalemler = []
         for k in kalemler_raw:
             # Stok bilgisi _key_kalemturu içinde dict olarak geliyor
             stok_info = k.get('_key_kalemturu', {})
@@ -266,8 +268,7 @@ class FaturaService:
                     dot      = dot or sk.get('ozel_kod1', '')   # Yıl / DOT
                     kategori = kategori or sk.get('ozel_kod2', '')   # Segment / Kategori
 
-            yeni_kalemler.append(FaturaKalemi(
-                fatura      = fatura,
+            alanlar = dict(
                 dia_key     = str(k.get('_key', '')),
                 sirano      = k.get('sirano', 0),
                 stok_kodu   = stok_kodu,
@@ -287,10 +288,18 @@ class FaturaService:
                 kategori    = kategori,
                 dot         = dot,
                 bolge       = bolge,
-            ))
+            )
+            key = alanlar['dia_key']
+            kimlik = (key,) if key else ('', int(alanlar['sirano']), stok_kodu)
+            eslesen = mevcutlar.get(kimlik)
+            if eslesen:
+                FaturaKalemi.objects.filter(pk=eslesen.pop()).update(**alanlar)
+            else:
+                FaturaKalemi.objects.create(fatura=fatura, **alanlar)
 
-        FaturaKalemi.objects.bulk_create(yeni_kalemler)
-        logger.debug('Fatura %s — %d kalem kaydedildi.', fatura.dia_key, len(yeni_kalemler))
+        silinenler = [pk for kayitlar in mevcutlar.values() for pk in kayitlar]
+        FaturaKalemi.objects.filter(pk__in=silinenler).delete()
+        logger.debug('Fatura %s — %d kalem kaydedildi.', fatura.dia_key, len(kalemler_raw))
 
     @staticmethod
     def _filtreleri_olustur(

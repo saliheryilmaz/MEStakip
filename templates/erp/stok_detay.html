@@ -83,10 +83,12 @@
             </div>
             <div class="card-body">
                 <div class="row g-3 small">
+{% if user.userprofile.role != 'misafir' %}
                     <div class="col-md-3">
                         <label class="text-muted d-block">Fiyat 1</label>
                         <strong class="text-primary fs-6">{{ stok.fiyat1|floatformat:2 }} ₺</strong>
                     </div>
+{% endif %}
                     <div class="col-md-3">
                         <label class="text-muted d-block">Fiyat 2</label>
                         <strong>{{ stok.fiyat2|floatformat:2 }} ₺</strong>
@@ -123,6 +125,23 @@
                             <td class="text-end text-muted">{{ dm.fiili_miktar|floatformat:2 }}</td>
                             <td class="text-muted">{{ dm.son_sync|date:"d.m H:i" }}</td>
                         </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+        {% if rapor_depo_miktarlari %}
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-bottom">
+                <h6 class="fw-bold mb-0">Depo Bazında Net Hareket</h6>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead><tr><th>Depo</th><th class="text-end">Net hareket miktarı</th></tr></thead>
+                    <tbody>
+                        {% for dm in rapor_depo_miktarlari %}
+                        <tr><td>{{ dm.depo }}</td><td class="text-end">{{ dm.net_hareket_miktari|floatformat:2 }} {{ stok.ana_birim }}</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>

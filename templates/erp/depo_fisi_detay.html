@@ -36,18 +36,20 @@
         </div>
     </div>
     <div class="d-flex gap-2">
-        {% if fis.durum == 'bekliyor' %}
-        {% if not fis.fatura_no %}
-        <form method="post" class="d-inline" onsubmit="return confirm('Bu işlem scf_fatura_ekle servisiyle DİA’da gerçek bir satış faturası oluşturur ve kontör kullanabilir. Fiş kalemleri Fiyat 1 ve KDV oranıyla gönderilecek. Devam edilsin mi?')">
+        {% if fis.durum == 'bekliyor' and not fis.fatura_no %}
+        <form method="post" class="d-inline" onsubmit="return confirm('Bu işlem scf_fatura_ekle servisiyle DİA’da gerçek bir satış faturası oluşturur ve kontör kullanabilir. Fişteki birim fiyatlar ve stok kartlarındaki KDV oranları kullanılacak. Devam edilsin mi?')">
             {% csrf_token %}
             <input type="hidden" name="islem" value="dia_fatura_gonder">
             <button type="submit" class="btn btn-primary btn-sm">
                 <i class="bi bi-send me-1"></i>Faturayı DİA’ya Gönder
             </button>
         </form>
-        {% else %}
-        <span class="badge bg-success">DİA referansı: {{ fis.fatura_no }}</span>
-        {% endif %}
+        {% elif fis.dia_fatura_no %}
+        <span class="badge bg-success">Fatura No: {{ fis.dia_fatura_no }}</span>
+        {% elif fis.fatura_no and fis.onaylandi %}
+        <span class="badge bg-success">Fatura No: {{ fis.fatura_no }}</span>
+        {% elif fis.fatura_no %}
+        <span class="badge bg-secondary">Fatura numarası için rapor bekleniyor</span>
         {% endif %}
         {% if fis.durum == 'bekliyor' %}
         <button class="btn btn-success btn-sm" onclick="urunEkleAc()">
@@ -149,6 +151,8 @@
                             <th>Yıl</th>
                             <th>Segment</th>
                             <th class="text-center" style="width:110px">Adet</th>
+                            <th class="text-end text-nowrap">Birim fiyat</th>
+                            <th class="text-end text-nowrap">Toplam (KDV dahil)</th>
                             {% if fis.durum == 'bekliyor' %}<th class="text-center">Sil</th>{% endif %}
                         </tr>
                     </thead>
@@ -175,6 +179,8 @@
                                 <span class="badge bg-primary">{{ kalem.adet }}</span>
                                 {% endif %}
                             </td>
+                            <td class="text-end text-nowrap">{{ kalem.kullanilan_birim_fiyat|floatformat:"-4" }} ₺</td>
+                            <td class="text-end text-nowrap fw-semibold">{{ kalem.satir_toplami|floatformat:2 }} ₺</td>
                             {% if fis.durum == 'bekliyor' %}
                             <td class="text-center">
                                 <button class="btn btn-outline-danger btn-sm py-0 px-1"
@@ -187,7 +193,7 @@
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="7" class="text-center text-muted py-4">
+                            <td colspan="{% if fis.durum == 'bekliyor' %}9{% else %}8{% endif %}" class="text-center text-muted py-4">
                                 <i class="bi bi-inbox me-1"></i>Fiş boş —
                                 <a href="{% url 'erp:stok_listesi' %}">Stok listesinden ürün ekle</a>
                             </td>
@@ -210,6 +216,17 @@
                 <form method="post">
                     {% csrf_token %}
                     <input type="hidden" name="islem" value="fis_guncelle">
+                    {% if fatura_depolari %}
+                    <div class="mb-3">
+                        <label for="fisFaturaDeposu" class="form-label small fw-semibold text-muted">DİA faturası için depo</label>
+                        <select name="depo" id="fisFaturaDeposu" class="form-select form-select-sm">
+                            <option value="">Depo seçin</option>
+                            {% for depo in fatura_depolari %}
+                            <option value="{{ depo.pk }}"{% if fis.depo_id == depo.pk %} selected{% endif %}>{{ depo.ad }}{% if depo.sube_adi and depo.sube_adi != depo.ad %} ({{ depo.sube_adi }}){% endif %}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endif %}
                     <div class="mb-3">
                         <label class="form-label small fw-semibold text-muted">Plaka</label>
                         <input type="text" name="plaka" value="{{ fis.plaka }}"

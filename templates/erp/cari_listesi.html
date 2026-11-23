@@ -2,13 +2,23 @@
 {% block title %}Cariler — DİA ERP{% endblock %}
 {% block page_name %}cari_listesi{% endblock %}
 
+{% block extra_css %}{{ block.super }}
+<style>
+    .cari-tablosu { font-size: 1.0625rem; }
+    .cari-tablosu thead th,
+    .cari-tablosu :is(code, .small, .btn-sm) { font-size: .9375rem; }
+    .cari-tablosu .badge { font-size: .8125rem; }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h4 class="fw-bold mb-1"><i class="bi bi-people me-2 text-primary"></i>Cari Kartları</h4>
         <p class="text-muted mb-0">DİA'dan senkronize edilen {{ toplam }} cari</p>
     </div>
-    <div class="d-flex gap-2">
+    <div class="d-flex flex-wrap gap-2">
+        <a href="{% url 'erp:tahsilat_merkezi' %}" class="btn btn-primary btn-sm">Tahsilat Merkezi</a>
         <a href="{% url 'erp:dia_durum' %}" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-arrow-left me-1"></i>Sync Durumu
         </a>
@@ -19,6 +29,7 @@
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-body py-3">
         <form method="get" class="row g-2 align-items-end">
+            {% if bakiyeye_gore %}<input type="hidden" name="sirala" value="bakiye">{% endif %}
             <div class="col-md-4">
                 <input type="text" name="q" value="{{ q }}" class="form-control form-control-sm"
                     placeholder="Kod, ünvan, vergi no, telefon...">
@@ -61,16 +72,18 @@
 <!-- Tablo -->
 <div class="card border-0 shadow-sm">
     <div class="table-responsive">
-        <table class="table table-hover mb-0 small">
+        <table class="table table-hover mb-0 cari-tablosu">
             <thead class="table-light">
                 <tr>
                     <th>Cari Kodu</th>
                     <th>Ünvan</th>
                     <th>Tip</th>
-                    <th>Vergi No</th>
-                    <th>Telefon</th>
-                    <th>Şehir</th>
-                    <th class="text-end">Bakiye</th>
+                    <th scope="col" class="text-end"{% if bakiyeye_gore %} aria-sort="descending"{% endif %}>
+                        <a href="{% querystring sirala='bakiye' sayfa=None %}" class="text-reset text-nowrap"
+                           title="Bakiyeye göre en yüksekten en düşüğe sırala">
+                            Bakiye <i class="bi bi-arrow-down" aria-hidden="true"></i>
+                        </a>
+                    </th>
                     <th>Sync</th>
                     <th></th>
                 </tr>
@@ -86,9 +99,6 @@
                         {% elif cari.tip == 'AS' %}<span class="badge" style="background:#9C27B0">Alıcı/Satıcı</span>
                         {% else %}<span class="badge bg-secondary">Diğer</span>{% endif %}
                     </td>
-                    <td class="text-muted">{{ cari.vergi_no|default:"—" }}</td>
-                    <td class="text-muted">{{ cari.telefon1|default:cari.cep_tel|default:"—" }}</td>
-                    <td class="text-muted">{{ cari.sehir|default:"—" }}</td>
                     <td class="text-end">
                         {% if cari.bakiye != 0 %}
                         <span class="{% if cari.bakiye > 0 %}text-danger{% else %}text-success{% endif %} fw-semibold">
@@ -106,9 +116,14 @@
                         {% endif %}
                     </td>
                     <td>
-                        <a href="{% url 'erp:cari_detay' cari.pk %}" class="btn btn-outline-primary btn-sm py-0 px-2">
-                            <i class="bi bi-eye"></i>
-                        </a>
+                        <div class="d-flex justify-content-end gap-1">
+                            <a href="{% url 'erp:cari_detay' cari.pk %}" class="btn btn-outline-primary btn-sm py-0 px-2" title="Cari kartını görüntüle">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a href="{% url 'erp:cari_ekstre' cari.pk %}?getir=1" class="btn btn-outline-success btn-sm py-0 px-2" title="DİA cari ekstresini getir">
+                                <i class="bi bi-journal-text me-1"></i>Ekstre
+                            </a>
+                        </div>
                     </td>
                 </tr>
                 {% empty %}
@@ -133,7 +148,7 @@
             <ul class="pagination pagination-sm mb-0">
                 {% if sayfa.has_previous %}
                 <li class="page-item">
-                    <a class="page-link" href="?{% if q %}q={{ q }}&{% endif %}{% if secili_tip %}tip={{ secili_tip }}&{% endif %}sayfa={{ sayfa.previous_page_number }}">
+                    <a class="page-link" href="{% querystring sayfa=sayfa.previous_page_number %}">
                         <i class="bi bi-chevron-left"></i>
                     </a>
                 </li>
@@ -143,7 +158,7 @@
                 </li>
                 {% if sayfa.has_next %}
                 <li class="page-item">
-                    <a class="page-link" href="?{% if q %}q={{ q }}&{% endif %}{% if secili_tip %}tip={{ secili_tip }}&{% endif %}sayfa={{ sayfa.next_page_number }}">
+                    <a class="page-link" href="{% querystring sayfa=sayfa.next_page_number %}">
                         <i class="bi bi-chevron-right"></i>
                     </a>
                 </li>

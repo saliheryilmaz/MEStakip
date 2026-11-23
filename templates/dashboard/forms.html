@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Kontrol Edilen Siparişler - Mestakip{% endblock %}
+{% block title %}Kontrol Edilen Siparişler - MesDia{% endblock %}
 
 {% block content %}
 <!-- Page Header -->
@@ -652,11 +652,11 @@ function whatsappGonderData(button) {
         cleanTelefon = '90' + cleanTelefon;
     }
     
-    // Cari firma adını kullan, yoksa varsayılan olarak "MesTakip" kullan
-    const firmaAdi = cariFirma && cariFirma.trim() !== '' ? cariFirma.trim() : 'MesTakip';
+    // Cari firma adını kullan, yoksa varsayılan olarak "MesDia" kullan
+    const firmaAdi = cariFirma && cariFirma.trim() !== '' ? cariFirma.trim() : 'MesDia';
     
     // Detaylı mesaj formatı (Cari firma adı ile)
-    const mesaj = `*MesTakip - ${firmaAdi}*
+    const mesaj = `*MesDia - ${firmaAdi}*
 *Ürün:* ${urun}
 *Marka:* ${marka}
 *Adet:* ${adet}

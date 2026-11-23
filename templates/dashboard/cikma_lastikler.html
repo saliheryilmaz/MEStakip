@@ -2,7 +2,7 @@
 {% load static %}
 {% load turkish_format %}
 
-{% block title %}Çıkma Lastikler - Mestakip{% endblock %}
+{% block title %}Çıkma Lastikler - MesDia{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -482,40 +482,40 @@
         <h1 class="h4 mb-1">Çıkma Lastikler</h1>
         <p class="text-muted mb-0 small">Müşterilerden çıkan lastiklerin takibi</p>
     </div>
+    {% if not is_misafir %}
     <div class="d-none d-md-flex gap-2">
-        {% if not is_misafir %}
         <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#yeniKayitModal">
             <i class="bi bi-plus-lg me-1"></i>
             Yeni Kayıt
         </button>
-        {% endif %}
         <a href="{% url 'dashboard:satilan_cikma_lastikler' %}" class="btn btn-warning">
             <i class="bi bi-check-circle me-1"></i>
             Satılanları Görüntüle
         </a>
     </div>
     <div class="d-md-none btn-group w-100">
-        {% if not is_misafir %}
         <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#yeniKayitModal">
             <i class="bi bi-plus-lg"></i>
             Yeni
         </button>
-        {% endif %}
         <a href="{% url 'dashboard:satilan_cikma_lastikler' %}" class="btn btn-warning btn-sm">
             <i class="bi bi-check-circle"></i>
             Satılan
         </a>
     </div>
+    {% endif %}
 </div>
 
 <!-- Compact Mobile Filter -->
 <div class="compact-mobile-filter d-md-none mb-2">
     <form method="get" id="mobileFilterForm" class="d-flex gap-2 flex-wrap">
         {% for key, value in extra_filters %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}
-        <input type="text" inputmode="numeric" maxlength="20" class="form-control form-control-sm" id="mobileIdInput" name="id" value="{{ filters.id }}" placeholder="ID / #123" aria-label="Kayıt ID" style="flex: 1; min-width: 100px;">
-        <input type="text" class="form-control form-control-sm" id="mobileEbatInput" name="ebat" value="{{ filters.ebat }}" placeholder="Ebat girin..." style="flex: 2; min-width: 140px;">
-        <input type="text" class="form-control form-control-sm" id="mobileMarkaInput" name="marka" value="{{ filters.marka }}" placeholder="Marka..." style="flex: 1; min-width: 100px;">
         {% if not is_misafir %}
+        <input type="text" inputmode="numeric" maxlength="20" class="form-control form-control-sm" id="mobileIdInput" name="id" value="{{ filters.id }}" placeholder="ID / #123" aria-label="Kayıt ID" style="flex: 1; min-width: 100px;">
+        {% endif %}
+        <input type="text" class="form-control form-control-sm" id="mobileEbatInput" name="ebat" value="{{ filters.ebat }}" placeholder="Ebat girin..." style="flex: 2; min-width: 140px;">
+        {% if not is_misafir %}
+        <input type="text" class="form-control form-control-sm" id="mobileMarkaInput" name="marka" value="{{ filters.marka }}" placeholder="Marka..." style="flex: 1; min-width: 100px;">
         <select class="form-select form-select-sm" id="mobileDepoInput" name="depo_konumu" aria-label="Depo" style="flex: 1; min-width: 140px;" data-depot-select>
             {% include 'dashboard/_used_tire_depot_options.html' %}
         </select>
@@ -549,10 +549,12 @@
         <form method="get" id="desktopFilterForm">
             {% for key, value in extra_filters %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}
             <div class="row g-2 filter-row">
+                {% if not is_misafir %}
                 <div class="col-md-2 col-6 filter-col">
                     <label for="filterRecordId" class="form-label">KAYIT ID</label>
                     <input type="text" inputmode="numeric" maxlength="20" class="form-control" id="filterRecordId" name="id" value="{{ filters.id }}" placeholder="123 veya #123">
                 </div>
+                {% endif %}
                 <div class="col-md-2 col-6 filter-col">
                     <label for="marka" class="form-label">MARKA</label>
                     <input type="text" class="form-control" id="marka" name="marka" value="{{ filters.marka }}" placeholder="Marka adı...">
@@ -1269,8 +1271,10 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             
             // Tüm inputları temizle
-            document.getElementById('mobileIdInput').value = '';
-            document.getElementById('mobileMarkaInput').value = '';
+            const idInput = document.getElementById('mobileIdInput');
+            if (idInput) idInput.value = '';
+            const markaInput = document.getElementById('mobileMarkaInput');
+            if (markaInput) markaInput.value = '';
             document.getElementById('mobileEbatInput').value = '';
             if (document.getElementById('mobileDepoInput')) {
                 document.getElementById('mobileDepoInput').value = '';
@@ -1464,7 +1468,7 @@ function whatsappGonder(telefon, musteriAdi, lastikBilgisi) {
     }
     
     // Mesaj formatı
-    const mesaj = `*MesTakip - Çıkma Lastik*
+    const mesaj = `*MesDia - Çıkma Lastik*
 
 Sayın ${musteriAdi},
 

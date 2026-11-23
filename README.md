@@ -1,10 +1,10 @@
-# Mestakip CRM
+# MesDia CRM
 
 [![Django](https://img.shields.io/badge/Django-092E20?style=for-the-badge&logo=django&logoColor=white)](https://www.djangoproject.com/)
 [![Bootstrap](https://img.shields.io/badge/Bootstrap-563D7C?style=for-the-badge&logo=bootstrap&logoColor=white)](https://getbootstrap.com/)
 [![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 
-Mestakip CRM, lastik satış ve servis işletmeleri için özel olarak tasarlanmış, kapsamlı bir işletme yönetim sistemidir. Finansal yönetim, stok takibi, müşteri ilişkileri ve raporlama gibi temel iş süreçlerinizi tek bir platformda birleştirir.
+MesDia CRM, lastik satış ve servis işletmeleri için özel olarak tasarlanmış, kapsamlı bir işletme yönetim sistemidir. Finansal yönetim, stok takibi, müşteri ilişkileri ve raporlama gibi temel iş süreçlerinizi tek bir platformda birleştirir.
 
 ## 🚀 Öne Çıkan Özellikler
 
@@ -61,7 +61,15 @@ sorgularla sipariş, finans, teklif, garanti, çıkma lastik ve DİA kayıtları
 DİA sonuçları canlı API sorgusu değil, son senkronize edilmiş yerel kayıtlardır.
 Yanıtlarda kullanılan sorguların kaynak bağlantıları gösterilir.
 
-Coolify uygulamasının **Environment Variables** bölümünde runtime için tanımlayın:
+Yerel kullanımda Ollama servisini Django ile aynı makinede çalıştırın ve modeli bir kez indirin:
+
+```sh
+ollama pull qwen3.5:4b
+```
+
+`GROQ_API_KEY` boşken asistan otomatik olarak yerel Ollama'ya bağlanır. Bir Groq anahtarı tanımlıysa yerel çalışmayı seçmek için `ASSISTANT_PROVIDER=ollama` kullanın. Yerelde kurulu başka bir araç destekli modelin etiketini `OLLAMA_MODEL` ile belirleyebilirsiniz.
+
+Groq kullanmak için Coolify uygulamasının **Environment Variables** bölümünde runtime için tanımlayın:
 
 ```env
 GROQ_API_KEY=<Groq hesabınızın API anahtarı>

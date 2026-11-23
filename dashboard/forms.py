@@ -1,7 +1,8 @@
 from django import forms
 from django.utils import timezone
 from .models import Transaction, TransactionCategory
-from .models import Siparis
+from decimal import Decimal
+from .models import Siparis, SiparisKapora
 from .models import MalzemeHareketi
 
 
@@ -263,6 +264,25 @@ class SiparisForm(forms.ModelForm):
             cleaned_data['mevsim'] = None
         
         return cleaned_data
+
+class YeniSiparisForm(SiparisForm):
+    kapora_tutari = forms.DecimalField(
+        label='Kapora tutarı (₺)', required=False, min_value=Decimal('0.01'),
+        max_digits=12, decimal_places=2, widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+    )
+    kapora_yontemi = forms.ChoiceField(
+        label='Kapora ödeme şekli', required=False, choices=[('', 'Seçiniz'), *SiparisKapora.YONTEMLER],
+        widget=forms.Select(attrs={'class': 'form-select'}),
+    )
+
+    def clean(self):
+        data = super().clean()
+        if data.get('kapora_tutari') and not data.get('kapora_yontemi'):
+            self.add_error('kapora_yontemi', 'Kapora için ödeme şekli seçin.')
+        if data.get('kapora_yontemi') and 'kapora_tutari' in data and data['kapora_tutari'] is None:
+            self.add_error('kapora_tutari', 'Kapora tutarını girin.')
+        return data
+
 
 class MalzemeExcelUploadForm(forms.Form):
     file = forms.FileField(

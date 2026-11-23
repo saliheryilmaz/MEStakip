@@ -44,6 +44,18 @@ def sync_cari_listesi(delta: bool = True) -> dict:
     return sonuc.__dict__
 
 
+@shared_task(name='dia_integration.sync_cari_rapor_listesi')
+def sync_cari_rapor_listesi() -> dict:
+    """DİA Cari Kart Listesi raporunu çekip yerel carileri eşitler."""
+    from dia_integration.models import SyncTetikleyen
+    from dia_integration.services import CariService
+
+    sonuc = CariService.rapordan_senkronize_et(
+        tetikleyen=SyncTetikleyen.MANUEL,
+    )
+    return sonuc.__dict__
+
+
 @shared_task(name='dia_integration.sync_stok_listesi')
 def sync_stok_listesi(delta: bool = True) -> dict:
     from dia_integration.models import SyncTetikleyen

@@ -467,7 +467,7 @@ class Transaction(models.Model):
         ('servis', 'Servis'),
         ('merkez-satis', 'Merkez Satış'),
         ('virman', 'Virman'),
-        ('joker-satis', 'Joker Satış'),
+        ('joker-satis', 'Tahsilat'),
     ]
 
     hareket_tipi = models.CharField(max_length=10, choices=TYPE_CHOICES, default='gelir', verbose_name="Hareket Tipi")
@@ -512,6 +512,16 @@ class Transaction(models.Model):
             + (self.pafgo or 0)
             + (self.canta_cikis or 0)
         )
+
+class SiparisKapora(models.Model):
+    YONTEMLER = [('nakit', 'Nakit'), ('mehmet_havale', 'M. Havale')]
+
+    siparis = models.OneToOneField(Siparis, on_delete=models.CASCADE, related_name='kapora')
+    tutar = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(Decimal('0.01'))])
+    yontem = models.CharField(max_length=15, choices=YONTEMLER)
+    tarih = models.DateField(default=timezone.localdate)
+    islem = models.OneToOneField(Transaction, on_delete=models.CASCADE, null=True, blank=True)
+
 
 class CikmaLastik(models.Model):
     """Müşterilerden çıkan lastiklerin kaydı"""
@@ -1041,6 +1051,7 @@ class LastikOteli(models.Model):
     DURUM_CHOICES = [
         ('depoda', 'Depoda'),
         ('teslim_edildi', 'Teslim Edildi'),
+        ('degisim', 'Değişim nedeniyle depolama dışı'),
     ]
 
     # Müşteri bilgisi
@@ -1163,3 +1174,35 @@ class LastikOteliHareket(models.Model):
 
     def __str__(self):
         return f"{self.get_hareket_tipi_display()} – {self.kayit} – {self.tarih:%d.%m.%Y}"
+
+
+class OtelKontrol(models.Model):
+    """Aynı fiziksel setin tarihli kontrolü. Lastik sıraları sezonlar arasında korunur."""
+    kayit = models.ForeignKey(LastikOteli, on_delete=models.CASCADE, related_name="kontroller")
+    tarih = models.DateField()
+    km = models.PositiveIntegerField(null=True)
+    yapan = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    lastikler = models.JSONField(default=list)
+    oneri = models.CharField(max_length=16)
+    gerekce = models.TextField()
+    hedef = models.DateField()
+    karar = models.CharField(max_length=16, blank=True)
+    karar_veren = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="+")
+    bildirildi = models.BooleanField(default=False)
+    onaylandi = models.BooleanField(default=False)
+    karsilandi = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ["-tarih", "-pk"]
+        constraints = [models.UniqueConstraint(fields=["kayit", "tarih"], name="otel_set_gun_kontrol")]
+
+
+class OtelKontrolFotograf(models.Model):
+    kontrol = models.ForeignKey(OtelKontrol, on_delete=models.CASCADE, related_name="fotograflar")
+    sira = models.PositiveIntegerField()
+    resim = models.ImageField(upload_to="otel-kontrol/%Y/%m/")
+
+
+class OtelPlanRaporu(models.Model):
+    tarih = models.DateField(unique=True)
+    icerik = models.JSONField()

@@ -9,7 +9,11 @@ urlpatterns = [
     path('dia/sync/', views.sync_baslat, name='sync_baslat'),
 
     # Cari
+    path('cari/tahsilat/', views.tahsilat_merkezi, name='tahsilat_merkezi'),
+    path('cari/tahsilat/<int:pk>/', views.tahsilat_profil, name='tahsilat_profil'),
+    path('cari/ara/', views.cari_ara_ajax, name='cari_ara_ajax'),
     path('cari/', views.cari_listesi, name='cari_listesi'),
+    path('cari/<int:pk>/ekstre/', views.cari_ekstre, name='cari_ekstre'),
     path('cari/<int:pk>/', views.cari_detay, name='cari_detay'),
 
     # Stok

@@ -5,6 +5,8 @@ from django.urls import reverse
 
 # Keep descriptions aligned with the linked views, not planned features.
 MODULES = [
+    ("saklama", "Lastik Saklama", "dashboard:lastik_saklama", "Müşteri lastik setlerini, plakaları, mevsimleri ve depo raflarını girişten teslime kadar takip eder."),
+    ("filo", "Filo Yönetimi", "dashboard:filo_yonetimi", "Filo araçlarının plakası, lastik ebadı, rafı ve işlem durumu izlenir."),
     ("siparis", "Siparişler", "dashboard:orders",
      "Lastik siparişlerini marka, ürün, adet, cari firma ve işlem durumuyla takip eder. "
      "Yeni Lastik ekranından kayıt açılır; sipariş detayından kontrol ve teslim işlemleri yapılır. "

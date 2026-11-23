@@ -1,10 +1,15 @@
 {% extends "base.html" %}
+{% load l10n static %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/stok-listesi.css' %}">{% endblock %}
 {% block title %}Stok Kartları — DİA ERP{% endblock %}
 {% block page_name %}stok_listesi{% endblock %}
 
 {% block content %}
+<div class="stock-catalog">
+{% if user.userprofile.role != 'misafir' %}
 <!-- Aktif İş Emri Bildirimi -->
 <div id="aktifIsEmriSayfaBilgi" style="display:none" class="mb-3"></div>
+{% endif %}
 
 <!-- Başlık -->
 <div class="d-flex align-items-center justify-content-between mb-3">
@@ -12,9 +17,11 @@
         <h4 class="fw-bold mb-1"><i class="bi bi-box-seam me-2 text-success"></i>Stok Kartları</h4>
         <p class="text-muted mb-0 small">DİA'dan senkronize edilen {{ toplam }} stok kartı</p>
     </div>
+{% if user.userprofile.role != 'misafir' %}
     <a href="{% url 'erp:dia_durum' %}" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-arrow-left me-1"></i>Sync Durumu
     </a>
+{% endif %}
 </div>
 
 <!-- Sekme çubuğu -->
@@ -38,10 +45,6 @@
            class="btn btn-sm rounded-pill {% if segment == 'Akü' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
             Akü
         </a>
-        <a href="?segment=Malzeme&q={{ q }}&q2={{ q2 }}&durum={{ secili_durum }}&marka={{ secili_marka }}&mevsim={{ mevsim_f }}&dot={{ dot_f }}&depo={{ depo_f }}&stok_var={{ stok_var }}"
-           class="btn btn-sm rounded-pill {% if segment == 'Malzeme' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
-            Malzeme
-        </a>
         {# Dinamik diğer segmentler — kaldırıldı #}
     </div>
 </div>
@@ -57,12 +60,12 @@
             <input type="hidden" name="depo"     value="{{ depo_f }}">
             <input type="hidden" name="stok_var" value="{{ stok_var }}">
             <input type="hidden" name="durum"    value="{{ secili_durum }}">
-            <div class="col-md-5">
+            <div class="col col-md-5">
                 <input type="text" name="q" value="{{ q }}" class="form-control form-control-sm"
-                       placeholder="Ebat-1 · ebat, marka, desen veya kod">
+                       aria-label="Stok kartlarında ara" placeholder="Ebat, marka, desen veya kod">
             </div>
             
-            <div class="col-md-2">
+            <div class="col-auto col-md-2">
                 <button type="submit" class="btn btn-primary btn-sm w-100">
                     <i class="bi bi-search me-1"></i>Ara
                 </button>
@@ -80,8 +83,14 @@
             <input type="hidden" name="segment" value="{{ segment }}">
             <input type="hidden" name="durum"   value="{{ secili_durum }}">
 
+            <button type="button" class="btn btn-outline-secondary d-md-none stock-filter-toggle"
+                    data-bs-toggle="collapse" data-bs-target="#stokSecenekleri" aria-controls="stokSecenekleri"
+                    aria-expanded="{% if secili_marka or mevsim_f or dot_f or depo_f %}true{% else %}false{% endif %}">
+                <i class="bi bi-sliders me-1"></i>Filtreler
+            </button>
+            <div id="stokSecenekleri" class="collapse d-md-flex flex-wrap gap-2{% if secili_marka or mevsim_f or dot_f or depo_f %} show{% endif %}">
             <!-- Marka -->
-            <select name="marka" class="form-select form-select-sm" style="width:auto;min-width:120px"
+            <select aria-label="Marka" name="marka" class="form-select form-select-sm" style="width:auto;min-width:120px"
                     onchange="this.form.submit()">
                 <option value="">Marka ▾</option>
                 {% for m in markalar %}
@@ -90,7 +99,7 @@
             </select>
 
             <!-- Mevsim -->
-            <select name="mevsim" class="form-select form-select-sm" style="width:auto;min-width:120px"
+            <select aria-label="Mevsim" name="mevsim" class="form-select form-select-sm" style="width:auto;min-width:120px"
                     onchange="this.form.submit()">
                 <option value="">Mevsim ▾</option>
                 {% for mv in mevsimler %}
@@ -99,7 +108,7 @@
             </select>
 
             <!-- DOT -->
-            <select name="dot" class="form-select form-select-sm" style="width:auto;min-width:100px"
+            <select aria-label="DOT" name="dot" class="form-select form-select-sm" style="width:auto;min-width:100px"
                     onchange="this.form.submit()">
                 <option value="">DOT ▾</option>
                 {% for d in dot_listesi %}
@@ -108,7 +117,7 @@
             </select>
 
             <!-- Depo -->
-            <select name="depo" class="form-select form-select-sm" style="width:auto;min-width:130px"
+            <select aria-label="Depo" name="depo" class="form-select form-select-sm" style="width:auto;min-width:130px"
                     onchange="this.form.submit()">
                 <option value="">Depo ▾</option>
                 {% for dep in depolar %}
@@ -118,8 +127,11 @@
                 {% endfor %}
             </select>
 
+            </div>
+
             <!-- Stok Var toggle -->
             <div class="form-check form-switch mb-0 ms-1">
+                <input type="hidden" name="stok_var" value="0">
                 <input class="form-check-input" type="checkbox" name="stok_var" value="1"
                        id="stokVarToggle"
                        {% if stok_var == '1' %}checked{% endif %}
@@ -136,66 +148,67 @@
 </div>
 
 <!-- Tablo -->
-<div class="card border-0 shadow-sm">
+<div class="stock-results card border-0 shadow-sm">
     <div class="table-responsive">
-        <table class="table table-hover mb-0 small align-middle">
+        <table class="table table-hover mb-0 align-middle">
             <thead class="table-light">
                 <tr>
                     <th>
-                        <div class="fw-semibold small mb-1">KOD</div>
+                        <div class="fw-semibold mb-1">KOD</div>
                         <input type="text" class="form-control form-control-sm col-filtre" data-col="kod" placeholder="Ara..." value="{{ q }}">
                     </th>
                     <th>
-                        <div class="fw-semibold small mb-1">ÜRÜN</div>
+                        <div class="fw-semibold mb-1">ÜRÜN</div>
                         <input type="text" class="form-control form-control-sm col-filtre" data-col="urun" placeholder="Ara..." value="">
                     </th>
                     <th>
-                        <div class="fw-semibold small mb-1">MARKA</div>
+                        <div class="fw-semibold mb-1">MARKA</div>
                         <input type="text" class="form-control form-control-sm col-filtre" data-col="marka" placeholder="Ara..." value="{{ secili_marka }}">
                     </th>
                     <th>
-                        <div class="fw-semibold small mb-1">DOT</div>
+                        <div class="fw-semibold mb-1">DOT</div>
                         <input type="text" class="form-control form-control-sm col-filtre" data-col="dot" placeholder="Ara..." value="{{ dot_f }}">
                     </th>
                     <th>
-                        <div class="fw-semibold small mb-1">MEVSİM</div>
+                        <div class="fw-semibold mb-1">MEVSİM</div>
                         <input type="text" class="form-control form-control-sm col-filtre" data-col="mevsim" placeholder="Ara..." value="{{ mevsim_f }}">
                     </th>
                     <th class="text-end">SATILABİLİR</th>
-                    <th class="text-end">ALIŞ FİY.</th>
+                    {% if user.userprofile.role != 'misafir' %}<th class="text-end">ALIŞ FİY.</th>{% endif %}
                     <th class="text-end">SATIŞ NAKİT</th>
-                    <th class="text-center" style="background:#1565C0;color:white">İSTEK</th>
+                    {% if user.userprofile.role != 'misafir' %}<th class="text-center" style="background:#1565C0;color:white">İSTEK</th>{% endif %}
+                </tr>
             </thead>
             <tbody>
                 {% for stok in sayfa %}
                 <tr>
                     <!-- KOD: üretici kodu -->
-                    <td>
+                    <td data-label="Kod">
                         <code class="text-success fw-semibold">{{ stok.uretici_kodu|default:"—" }}</code>
                     </td>
 
                     <!-- ÜRÜN -->
-                    <td class="fw-semibold">{{ stok.aciklama }}</td>
+                    <td data-label="Ürün" class="fw-semibold"><a class="stock-product-link" href="{% url 'erp:stok_detay' stok.pk %}">{{ stok.aciklama }}</a></td>
 
                     <!-- MARKA -->
-                    <td class="text-muted">{{ stok.marka|default:"—" }}</td>
+                    <td data-label="Marka" class="text-muted">{{ stok.marka|default:"—" }}</td>
 
                     <!-- DOT -->
-                    <td>
+                    <td data-label="DOT">
                         {% if stok.ozel_kod1 %}
                         <span class="badge bg-success-subtle text-success border border-success-subtle">{{ stok.ozel_kod1 }}</span>
                         {% else %}—{% endif %}
                     </td>
 
                     <!-- MEVSİM -->
-                    <td class="text-center">
+                    <td data-label="Mevsim" class="text-center">
                         {% if stok.mevsim %}
                             {% if stok.mevsim == 'Kışlık' %}
                                 <span title="Kışlık" style="font-size:1.4rem">❄️</span>
                             {% elif stok.mevsim == 'Yazlık' %}
                                 <span title="Yazlık" style="font-size:1.4rem">☀️</span>
                             {% elif stok.mevsim == '4 Mevsim' %}
-                                <span title="4 Mevsim" style="font-size:1.4rem">❄️☀️</span>
+                                <span role="img" aria-label="4 Mevsim" title="4 Mevsim" style="font-size:1.4rem">🌦</span>
                             {% else %}
                                 <span class="badge bg-secondary">{{ stok.mevsim }}</span>
                             {% endif %}
@@ -203,7 +216,7 @@
                     </td>
 
                     <!-- SATILABİLİR -->
-                    <td class="text-end">
+                    <td data-label="Satılabilir adet" class="text-end">
                         {% if stok.gercek_stok > 0 %}
                         <span class="badge bg-success">{{ stok.gercek_stok|floatformat:0 }}</span>
                         {% else %}
@@ -211,32 +224,37 @@
                         {% endif %}
                     </td>
 
+{% if user.userprofile.role != 'misafir' %}
                     <!-- ALIŞ FİY. -->
-                    <td class="text-end">
+                    <td data-label="Alış fiyatı" class="text-end">
                         {% if stok.fiyat1 and stok.fiyat1 > 0 %}
                         <span class="fw-semibold">{{ stok.fiyat1|floatformat:0 }}₺</span>
                         {% else %}—{% endif %}
                     </td>
+{% endif %}
 
                     <!-- SATIŞ NAKİT -->
-                    <td class="text-end">
+                    <td data-label="Nakit satış" class="text-end">
                         {% if stok.fiyat2 and stok.fiyat2 > 0 %}
                         <span class="fw-semibold text-success">{{ stok.fiyat2|floatformat:0 }}₺</span>
                         {% else %}—{% endif %}
                     </td>
 
+{% if user.userprofile.role != 'misafir' %}
                     <!-- İSTEK -->
-                    <td class="text-center">
+                    <td data-label="İstek" class="text-center">
                         <button class="btn btn-link p-0 border-0 bg-transparent"
-                                onclick="istekAc({{ stok.pk }}, '{{ stok.uretici_kodu|escapejs }}', '{{ stok.aciklama|escapejs }}', '{{ stok.marka|escapejs }}', '{{ stok.gercek_stok|floatformat:0 }}', '{{ stok.ozel_kod1|escapejs }}')"
+                                onclick="istekAc({{ stok.pk }}, '{{ stok.uretici_kodu|escapejs }}', '{{ stok.aciklama|escapejs }}', '{{ stok.marka|escapejs }}', '{{ stok.gercek_stok|floatformat:0 }}', '{{ stok.ozel_kod1|escapejs }}', this.dataset.birimFiyat)"
+                                data-birim-fiyat="{{ stok.fiyat1|unlocalize }}"
                                 title="{{ stok.aciklama }}" style="cursor:pointer">
                             <i class="bi bi-truck" style="font-size:1.4rem;color:#1565C0"></i>
                         </button>
                     </td>
+{% endif %}
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="9" class="text-center text-muted py-4">
+                    <td colspan="{% if user.userprofile.role == 'misafir' %}7{% else %}9{% endif %}" class="text-center text-muted py-4">
                         <i class="bi bi-box-seam fs-4 d-block mb-2"></i>
                         Stok kartı bulunamadı.
                     </td>
@@ -274,9 +292,11 @@
     </div>
     {% endif %}
 </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
+{% if user.userprofile.role != 'misafir' %}
 <!-- Depo Fişi Ekle Modal -->
 <div class="modal fade" id="depoFisiModal" tabindex="-1" aria-labelledby="depoFisiModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
@@ -321,9 +341,17 @@
                         <input type="text" id="modalUrun" class="form-control" readonly>
                     </div>
                     <!-- Sol: Adet -->
-                    <div class="col-md-6">
-                        <label class="form-label small fw-semibold">Adet</label>
-                        <input type="number" id="modalAdet" class="form-control" value="1" min="1" max="999">
+                    <div class="col-6">
+                        <label for="modalAdet" class="form-label small fw-semibold">Adet</label>
+                        <input type="number" id="modalAdet" class="form-control" value="1" min="1" max="999" required>
+                    </div>
+                    <div class="col-6">
+                        <label for="modalBirimFiyat" class="form-label small fw-semibold">Birim fiyat (₺)</label>
+                        <input type="number" id="modalBirimFiyat" class="form-control" min="0" step="0.0001" inputmode="decimal" required>
+                    </div>
+                    <div class="col-12 d-flex align-items-center justify-content-between gap-2 py-2 border-bottom">
+                        <label for="modalSatirToplami" class="small fw-semibold">Satır toplamı <span class="text-body-secondary">(KDV dahil)</span></label>
+                        <output id="modalSatirToplami" for="modalAdet modalBirimFiyat" class="fw-bold">—</output>
                     </div>
                     <!-- Plaka -->
                     <div class="col-md-6">
@@ -343,8 +371,10 @@
                     <!-- Tam genişlik: Cari -->
                     <div class="col-12">
                         <label class="form-label small fw-semibold">Cari</label>
-                        <input type="text" id="modalCari" class="form-control"
-                               value="{{request.user.get_full_name|default:request.user.username}}">
+                        <input type="text" id="modalCari" class="form-control" list="diaCariSecenekleri"
+                               placeholder="DİA cari ünvanında arayın ve listeden seçin" autocomplete="off" required>
+                        <datalist id="diaCariSecenekleri"></datalist>
+                        <div class="form-text">DİA’dan senkronize edilmiş aktif cari kartlardan seçim yapın.</div>
                     </div>
                     <!-- Tam genişlik: Açıklama -->
                     <div class="col-12">
@@ -401,8 +431,53 @@
 
 <script>
 let aktifStokPk = null;
+let cariAramaZamanlayici = null;
+let cariAramaNo = 0;
 
-function istekAc(stokPk, stokKodu, aciklama, marka, stokAdedi, dot) {
+document.getElementById('modalCari').addEventListener('input', function () {
+    clearTimeout(cariAramaZamanlayici);
+    const q = this.value.trim();
+    const liste = document.getElementById('diaCariSecenekleri');
+    if (q.length < 2) {
+        liste.replaceChildren();
+        return;
+    }
+    cariAramaZamanlayici = setTimeout(async () => {
+        const aramaNo = ++cariAramaNo;
+        try {
+            const response = await fetch(`{% url 'erp:cari_ara_ajax' %}?q=${encodeURIComponent(q)}`);
+            const data = await response.json();
+            if (aramaNo !== cariAramaNo) return;
+            liste.replaceChildren(...(data.sonuclar || []).map(cari => {
+                const option = document.createElement('option');
+                option.value = cari.unvan;
+                option.label = cari.cari_kodu;
+                return option;
+            }));
+        } catch (_) {
+            liste.replaceChildren();
+        }
+    }, 180);
+});
+
+const depoFisiAdet = document.getElementById('modalAdet');
+const depoFisiBirimFiyat = document.getElementById('modalBirimFiyat');
+const depoFisiPara = new Intl.NumberFormat('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+function depoFisiToplaminiGuncelle() {
+    const toplam = document.getElementById('modalSatirToplami');
+    if (!depoFisiAdet.validity.valid || !depoFisiBirimFiyat.validity.valid) {
+        toplam.textContent = '—';
+        return;
+    }
+    const tutar = Math.round(depoFisiBirimFiyat.valueAsNumber * 10000) * depoFisiAdet.valueAsNumber / 10000;
+    toplam.textContent = `${depoFisiPara.format(tutar)} ₺`;
+}
+
+depoFisiAdet.addEventListener('input', depoFisiToplaminiGuncelle);
+depoFisiBirimFiyat.addEventListener('input', depoFisiToplaminiGuncelle);
+
+function istekAc(stokPk, stokKodu, aciklama, marka, stokAdedi, dot, birimFiyat) {
     aktifStokPk = stokPk;
 
     document.getElementById('modalUrunAdi').textContent = aciklama || '—';
@@ -427,10 +502,12 @@ function istekAc(stokPk, stokKodu, aciklama, marka, stokAdedi, dot) {
     document.getElementById('modalDot').value = (dot && dot.trim() !== '') ? dot : '';
     document.getElementById('modalUrun').value = aciklama || '';
     document.getElementById('modalAdet').value = 1;
+    depoFisiBirimFiyat.value = birimFiyat;
+    depoFisiToplaminiGuncelle();
     document.getElementById('modalPlaka').value = '';
     document.getElementById('modalAracMarka').value = '';
     document.getElementById('modalAracModel').value = '';
-    document.getElementById('modalCari').value = '{{request.user.get_full_name|default:request.user.username}}';
+    document.getElementById('modalCari').value = sessionStorage.getItem('aktifIsEmriCari') || '';
     document.getElementById('modalAciklama').value = '';
 
     // Aktif iş emri varsa bilgi göster
@@ -452,8 +529,14 @@ function istekAc(stokPk, stokKodu, aciklama, marka, stokAdedi, dot) {
 
 document.getElementById('sepeteEkleBtn').addEventListener('click', function () {
     if (!aktifStokPk) return;
-    const adet      = parseInt(document.getElementById('modalAdet').value) || 1;
+    if (!depoFisiAdet.reportValidity() || !depoFisiBirimFiyat.reportValidity()) return;
+    const adet = depoFisiAdet.value;
     const cari      = document.getElementById('modalCari').value;
+    if (!cari.trim()) {
+        document.getElementById('istekToastBody').textContent = 'Önce DİA cari kartlarından bir ünvan seçin.';
+        new bootstrap.Toast(document.getElementById('istekToast'), {delay: 3500}).show();
+        return;
+    }
     const plaka     = document.getElementById('modalPlaka').value.toUpperCase();
     const aracMarka = document.getElementById('modalAracMarka').value;
     const aracModel = document.getElementById('modalAracModel').value;
@@ -461,6 +544,7 @@ document.getElementById('sepeteEkleBtn').addEventListener('click', function () {
 
     const body = new URLSearchParams({
         adet,
+        birim_fiyat: depoFisiBirimFiyat.value,
         plaka,
         arac_marka: aracMarka,
         arac_model: aracModel,
@@ -488,6 +572,7 @@ document.getElementById('sepeteEkleBtn').addEventListener('click', function () {
         if (data.basarili) {
             urunEklendi = true;
             sessionStorage.setItem('aktifIsEmriId', data.depo_fisi_id);
+            sessionStorage.setItem('aktifIsEmriCari', data.cari || cari);
             // Formu gizle, sonucu göster
             document.getElementById('fisEkleForm').style.display = 'none';
             const sonuc = document.getElementById('fisEkleSonuc');
@@ -537,7 +622,7 @@ function aktifIsEmriBildirimGoster() {
         bilgi.innerHTML = `<div class="alert alert-success d-flex align-items-center gap-3 py-2">
             <i class="bi bi-truck fs-5"></i>
             <span>Aktif İş Emri <strong>#${aktifId}</strong> açık — listeden ürüne tıklayarak bu fişe kalem ekleyebilirsiniz.</span>
-            <button type="button" class="btn btn-sm btn-outline-danger ms-auto" onclick="sessionStorage.removeItem('aktifIsEmriId');document.getElementById('aktifIsEmriSayfaBilgi').style.display='none'">
+            <button type="button" class="btn btn-sm btn-outline-danger ms-auto" onclick="sessionStorage.removeItem('aktifIsEmriId');sessionStorage.removeItem('aktifIsEmriCari');document.getElementById('aktifIsEmriSayfaBilgi').style.display='none'">
                 <i class="bi bi-x me-1"></i>İş Emrini Kapat
             </button>
         </div>`;
@@ -550,6 +635,9 @@ function aktifIsEmriBildirimGoster() {
 // Sayfa yüklenince aktif iş emri varsa göster
 aktifIsEmriBildirimGoster();
 
+</script>
+{% endif %}
+<script>
 // ─── Sütun filtre input'ları ───────────────────────────────
 (function() {
     const COL_PARAM = { kod: 'q', urun: 'q', marka: 'marka', dot: 'dot', mevsim: 'mevsim' };
@@ -570,6 +658,7 @@ aktifIsEmriBildirimGoster();
 })();
 
 
+{% if user.userprofile.role != 'misafir' %}
 let urunEklendi = false;
 document.getElementById('depoFisiModal').addEventListener('hidden.bs.modal', function () {
     if (urunEklendi) {
@@ -580,12 +669,14 @@ document.getElementById('depoFisiModal').addEventListener('hidden.bs.modal', fun
 
 document.getElementById('isEmriniKapatBtn').addEventListener('click', function () {
     sessionStorage.removeItem('aktifIsEmriId');
+    sessionStorage.removeItem('aktifIsEmriCari');
     bootstrap.Modal.getInstance(document.getElementById('depoFisiModal')).hide();
     const body = document.getElementById('istekToastBody');
     body.innerHTML = '<i class="bi bi-check-circle me-1"></i> İş emri kapatıldı.';
     new bootstrap.Toast(document.getElementById('istekToast'), {delay: 3000}).show();
     location.reload();
 });
+{% endif %}
 </script>
 {% csrf_token %}
 {% endblock %}

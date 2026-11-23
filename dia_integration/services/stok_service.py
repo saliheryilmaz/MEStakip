@@ -1,5 +1,5 @@
 """
-StokService — DİA ↔ MEStakip stok + depo senkronizasyon servisi.
+StokService — DİA ↔ MesDia stok + depo senkronizasyon servisi.
 """
 
 from __future__ import annotations
@@ -49,7 +49,7 @@ class StokSyncSonuc:
 
 class StokService:
     """
-    DİA ↔ MEStakip stok ve depo senkronizasyon servisi.
+    DİA ↔ MesDia stok ve depo senkronizasyon servisi.
 
     Kullanım:
         sonuc = StokService.dia_dan_senkronize_et(delta=True)
@@ -57,7 +57,82 @@ class StokService:
         StokService.depo_miktarlarini_guncelle()
     """
 
-    # ── DİA → MEStakip: Stok kartları ────────────────────────
+    # ── DİA → MesDia: Stok kartları ────────────────────────
+
+    @staticmethod
+    def rapordan_senkronize_et(
+        tasarim_key: int,
+        *,
+        stok_kodu: str = '',
+        kuru_calis: bool = False,
+        tetikleyen: str = SyncTetikleyen.MANUEL,
+        kullanici=None,
+    ) -> StokSyncSonuc:
+        """scf2300b stok kart raporundan kart alanlarını alır.
+
+        Bu, normal SCF stok sync'inin yerine otomatik geçirilmez. Rapor tek
+        yanıtta kart listesini döndürür; rapordaki miktar alanları doğrulanana
+        kadar mevcut stok miktarlarını değiştirmez.
+        """
+        from dia_integration.services.rapor_service import RaporService
+
+        log = SyncLog.objects.create(
+            modul='stok', tetikleyen=tetikleyen,
+            tetikleyen_kullanici=kullanici,
+        )
+        sonuc = StokSyncSonuc()
+        try:
+            rapor = RaporService.stok_karti_json_al(
+                stok_kodu=stok_kodu, tasarim_key=tasarim_key,
+            )
+            veri = rapor.json_verisi
+            satirlar = veri.get('__rows') if isinstance(veri, dict) else None
+            if not isinstance(satirlar, list):
+                raise DiaBaseError('DİA stok raporu beklenen __rows listesini içermiyor.')
+
+            # Veritabanını değiştirmeden önce tüm satırların kimlik alanlarını
+            # doğrula; hatalı/başka formatlı rapor kısmi bozulma yaratmasın.
+            for satir in satirlar:
+                if not isinstance(satir, dict) or not satir.get('_key') or not satir.get('stokkartkodu'):
+                    raise DiaBaseError('DİA stok raporunda _key veya stokkartkodu eksik.')
+
+            for satir in satirlar:
+                sonuc.toplam += 1
+                alanlar = StokMapper.dia_to_fields(satir)
+                dia_key = alanlar.pop('dia_key', '')
+                dia_son_degisiklik = alanlar.pop('dia_son_degisiklik', None)
+                stok_kodu_satir = alanlar.pop('stok_kodu', '')
+                # scf2300b kart raporu stok miktarlarının kaynağı olarak
+                # doğrulanmadı; kart senkronu bunları sıfırlamamalı.
+                alanlar.pop('gercek_stok', None)
+                alanlar.pop('fiili_stok', None)
+                if kuru_calis:
+                    continue
+                with transaction.atomic():
+                    stok, olusturuldu = StokKart.objects.update_or_create(
+                        stok_kodu=stok_kodu_satir,
+                        defaults=alanlar,
+                    )
+                    stok.dia_key = dia_key
+                    stok.dia_son_degisiklik = dia_son_degisiklik
+                    stok.son_sync_tarihi = timezone.now()
+                    stok.sync_durumu = SyncDurumSecenekleri.SENKRON
+                    stok.save(update_fields=[
+                        'dia_key', 'dia_son_degisiklik', 'son_sync_tarihi', 'sync_durumu',
+                    ])
+                if olusturuldu:
+                    sonuc.eklenen += 1
+                else:
+                    sonuc.guncellenen += 1
+
+            log.toplam_kayit = sonuc.toplam
+            log.basarili_kayit = sonuc.toplam
+            log.hatali_kayit = 0
+            log.tamamla(durum=SyncDurum.BASARILI)
+            return sonuc
+        except Exception as exc:
+            log.tamamla(durum=SyncDurum.BASARISIZ, hata=str(exc))
+            raise
 
     @staticmethod
     def dia_dan_senkronize_et(
@@ -186,7 +261,7 @@ class StokService:
         )
         return son_log.bitis if son_log and son_log.bitis else None
 
-    # ── DİA → MEStakip: Depolar ───────────────────────────────
+    # ── DİA → MesDia: Depolar ───────────────────────────────
 
     @staticmethod
     def depolari_senkronize_et() -> int:
@@ -233,7 +308,7 @@ class StokService:
         logger.info('Depo sync tamamlandı: %d depo.', islenen)
         return islenen
 
-    # ── DİA → MEStakip: Depo miktarları ──────────────────────
+    # ── DİA → MesDia: Depo miktarları ──────────────────────
 
     @staticmethod
     def depo_miktarlarini_guncelle(sayfa_boyutu: int = 50) -> int:
@@ -298,7 +373,7 @@ class StokService:
             log.tamamla(durum=SyncDurum.BASARISIZ, hata=str(exc))
             raise
 
-    # ── MEStakip → DİA ────────────────────────────────────────
+    # ── MesDia → DİA ────────────────────────────────────────
 
     @staticmethod
     def dia_ya_gonder(stok: StokKart) -> str:

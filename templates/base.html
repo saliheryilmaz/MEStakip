@@ -11,12 +11,12 @@
     <meta name="csrf-token" content="{{ csrf_token }}">
 
     <!-- Open Graph Meta Tags -->
-    <meta property="og:title" content="Mestakip">
+    <meta property="og:title" content="MesDia">
     <meta property="og:description" content="Clean and modern admin dashboard template built with Bootstrap 5">
     <meta property="og:type" content="website">
 
     <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="{% load static %}{% static 'images/favicon.ico' %}?v={{ timestamp }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{% load static %}{% static 'icons/favicon.png' %}?v=mesdia-1">
 
     <!-- Preconnect to external domains -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -26,7 +26,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <!-- Title -->
-    <title>{% block title %}Dashboard - Mestakip{% endblock %}</title>
+    <title>{% block title %}Dashboard - MesDia{% endblock %}</title>
 
     <!-- Theme Color -->
     <meta name="theme-color" content="#6366f1">
@@ -69,23 +69,12 @@
             background-color: #f8f9fa !important;
         }
         
-        /* Logo Styles */
-        .navbar-logo, .sidebar-logo {
-            object-fit: contain;
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.1);
-            padding: 4px;
-            transition: all 0.3s ease;
-        }
-        
-        .navbar-logo:hover, .sidebar-logo:hover {
-            background: rgba(255, 255, 255, 0.2);
-            transform: scale(1.05);
-        }
-        
         .sidebar-logo {
-            background: rgba(255, 255, 255, 0.15);
+            width: 134px;
+            height: auto;
+            border-radius: 6px;
         }
+        .sidebar-logo-compact { display: none; }
     </style>
 
     {% block extra_css %}{% endblock %}
@@ -97,6 +86,7 @@
     <!-- Sidebar Toggle Styles -->
     <style>
         .admin-wrapper {
+            --sidebar-span: 250px;
             transition: all 0.3s ease;
         }
 
@@ -108,7 +98,7 @@
             background: #1f2937;
             z-index: 1000;
             overflow-y: auto;
-            width: 250px;
+            width: var(--sidebar-span);
             transition: width 0.3s ease;
         }
 
@@ -138,19 +128,28 @@
         }
 
         .admin-main {
-            margin-left: 250px;
+            margin-left: var(--sidebar-span);
             min-height: 100vh;
             background: #e8eaf2;
             transition: margin-left 0.3s ease;
         }
 
+        .admin-wrapper.sidebar-collapsed { --sidebar-span: 60px; }
+
+        @media (min-width: 769px) {
+            .admin-wrapper > .admin-header {
+                margin-inline-start: var(--sidebar-span);
+                transition: margin-inline-start .3s ease;
+            }
+        }
+
         .admin-wrapper.sidebar-collapsed .admin-sidebar {
-            width: 60px;
+            width: var(--sidebar-span);
             overflow: hidden;
         }
 
         .admin-wrapper.sidebar-collapsed .admin-main {
-            margin-left: 60px;
+            margin-left: var(--sidebar-span);
         }
 
         .admin-wrapper.sidebar-collapsed .admin-sidebar .nav-link span {
@@ -187,12 +186,11 @@
             padding: 1rem 0.5rem;
         }
 
-        .admin-wrapper.sidebar-collapsed .admin-sidebar .navbar-brand h1 {
-            display: none;
-        }
-
-        .admin-wrapper.sidebar-collapsed .admin-sidebar .navbar-brand img {
-            margin-right: 0;
+        .admin-wrapper.sidebar-collapsed .sidebar-logo { display: none; }
+        .admin-wrapper.sidebar-collapsed .sidebar-logo-compact {
+            display: block;
+            width: 36px;
+            border-radius: 6px;
         }
 
         .admin-wrapper.sidebar-collapsed .admin-sidebar .sidebar-header {
@@ -257,6 +255,12 @@
         /* Mobile Responsive Styles */
         @media (max-width: 768px) {
 
+            .admin-wrapper {
+                inline-size: 100%;
+                min-inline-size: 0;
+                overflow-x: clip;
+            }
+
             /* Sidebar Mobile Ayarları */
             .admin-sidebar {
                 transform: translateX(-100%);
@@ -265,8 +269,11 @@
                 width: 280px;
             }
 
-            .admin-main {
+            .admin-wrapper > .admin-main,
+            .admin-wrapper.sidebar-collapsed > .admin-main {
                 margin-left: 0;
+                min-width: 0;
+                max-width: 100%;
                 padding: 1rem;
             }
 
@@ -395,17 +402,7 @@
 
         /* Tablet Responsive Styles */
         @media (max-width: 1024px) and (min-width: 769px) {
-            .admin-sidebar {
-                width: 220px;
-            }
-
-            .admin-main {
-                margin-left: 220px;
-            }
-
-            .admin-wrapper.sidebar-collapsed .admin-main {
-                margin-left: 60px;
-            }
+            .admin-wrapper { --sidebar-span: 220px; }
 
             .search-container {
                 max-width: 300px;
@@ -494,7 +491,50 @@
             }
         }
     </style>
-    <link rel="stylesheet" href="{% static 'css/light-theme.css' %}">
+    <style>
+        .admin-header .navbar > .container-fluid { flex-wrap: nowrap; }
+        .navbar-markets {
+            display: flex;
+            align-items: center;
+            flex: 1 1 0;
+            min-width: 0;
+            overflow-x: auto;
+            scrollbar-width: thin;
+            white-space: nowrap;
+            margin-inline-end: .75rem;
+        }
+        .navbar-markets .market-item { flex: 1 0 auto; padding-inline: clamp(.5rem, 1.4vw, 1.5rem); }
+        .navbar-markets .market-item + .market-item { border-inline-start: 1px solid var(--bs-border-color); }
+        .navbar-markets .market-label { font-size: .75rem; color: var(--bs-secondary-color); }
+        .navbar-markets strong { font-size: .95rem; font-variant-numeric: tabular-nums; }
+        .navbar-markets small { font-size: .72rem; color: var(--bs-secondary-color); }
+        @media (max-width: 767.98px) {
+            .admin-wrapper > .admin-header,
+            .admin-header .navbar { height: auto; }
+
+            .admin-header .navbar { padding-block: 0; }
+            .admin-header .navbar > .container-fluid { padding: 2px 8px; }
+            .navbar-markets, .admin-header [data-theme-toggle] { display: none; }
+            .navbar-markets + .navbar-nav .navbar-logout {
+                display: inline-flex; align-items: center; min-height: 44px;
+                padding-inline: .35rem;
+            }
+            .navbar-markets + .navbar-nav > button {
+                width: 44px; height: 44px; min-width: 0;
+                margin: 0 !important; padding: 0;
+            }
+        }
+    </style>
+    <style>
+        .guest-contact { display:flex; flex-wrap:wrap; align-items:center; gap:.5rem; }
+        .guest-contact h2 { flex:1 0 auto; font-size:1rem; margin:0; }
+        .guest-contact a { min-height:44px; display:inline-flex; align-items:center; justify-content:center; gap:.45rem; }
+        @media (max-width:575.98px) {
+            .guest-contact h2 { flex-basis:100%; }
+            .guest-contact a { flex:1 1 auto; }
+        }
+    </style>
+    <style>{% include '_light_theme.css' %}</style>
 </head>
 
 <body data-page="{% block page_name %}dashboard{% endblock %}" class="admin-layout">
@@ -511,16 +551,12 @@
                         <i class="bi bi-list"></i>
                     </button>
 
-                    <!-- Logo/Brand - Now first on the left -->
-                    <a class="navbar-brand d-flex align-items-center" href="{% url 'dashboard:index' %}">
-                        <img src="{% load static %}{% static 'images/mestakip1.png' %}" alt="Logo" height="40"
-                            class="d-inline-block align-text-top me-2 navbar-logo">
-                       
-                    </a>
-
-                    
-                    
-
+                    {% if user.is_authenticated %}
+                    <section class="navbar-markets" id="market-strip" aria-label="Piyasa göstergeleri"
+                             tabindex="0" data-url="{% url 'dashboard:market_strip' %}">
+                        <small>Piyasa verileri yükleniyor…</small>
+                    </section>
+                    {% endif %}
                     <!-- Right Side Icons -->
                     <div class="navbar-nav flex-row align-items-center ms-auto">
                         <!-- Theme Toggle -->
@@ -545,9 +581,9 @@
 
                         <!-- User Info & Logout -->
                         {% if user.is_authenticated %}
-                        <div class="d-none d-md-flex align-items-center gap-2">
-                            <span class="text-body">{{ user.username }}</span>
-                            <a href="{% url 'dashboard:logout' %}" class="btn btn-outline-secondary btn-sm">
+                        <div class="d-flex align-items-center">
+                            <span class="text-body d-none d-md-inline me-2">{{ user.username }}</span>
+                            <a href="{% url 'dashboard:logout' %}" class="navbar-logout btn btn-outline-secondary btn-sm">
                                 <i class="bi bi-box-arrow-right me-1"></i>
                                 Çıkış
                             </a>
@@ -569,9 +605,8 @@
                 <!-- Sidebar Header -->
                 <div class="sidebar-header d-flex align-items-center justify-content-between p-3">
                     <a class="navbar-brand d-flex align-items-center" href="{% url 'dashboard:index' %}">
-                        <img src="{% load static %}{% static 'images/mestakip1.png' %}" alt="Logo" height="40"
-                            class="d-inline-block align-text-top me-2 sidebar-logo">
-                        <h1 class="h4 mb-0 fw-bold text-body">MesTakip</h1>
+                        <img src="{% static 'images/mesdia.png' %}" alt="MesDia" class="sidebar-logo">
+                        <img src="{% static 'icons/mesdia-192.png' %}" alt="MesDia" class="sidebar-logo-compact">
                     </a>
                     <button class="sidebar-toggle-btn" type="button" data-sidebar-toggle aria-label="Toggle sidebar"
                         title="Toggle Sidebar">
@@ -582,7 +617,12 @@
                 <nav class="sidebar-nav">
                     <ul class="nav flex-column">
                         {% if user.userprofile.role == 'misafir' %}
-                        <!-- Misafir kullanıcısı için sadece Çıkma Lastikler -->
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.namespace == 'erp' %}active{% endif %}" href="{% url 'erp:stok_listesi' %}">
+                                <i class="bi bi-box-seam"></i>
+                                <span>Stok</span>
+                            </a>
+                        </li>
                         <li class="nav-item">
                             <a class="nav-link {% if request.resolver_match.url_name == 'cikma_lastikler' %}active{% endif %}"
                                 href="{% url 'dashboard:cikma_lastikler' %}">
@@ -600,7 +640,7 @@
                         <!-- Normal kullanıcılar için tüm menü -->
                         <!-- Ana -->
                         <li class="nav-item">
-                            <a class="nav-link {% if request.resolver_match.url_name == 'index' %}active{% endif %}"
+                            <a class="nav-link {% if request.resolver_match.namespace == 'dashboard' and request.resolver_match.url_name == 'index' %}active{% endif %}"
                                 href="{% url 'dashboard:index' %}">
                                 <i class="bi bi-speedometer2"></i>
                                 <span>Dashboard</span>
@@ -613,7 +653,61 @@
                                 <span>Yönetici Asistanı</span>
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.namespace == 'mesbul' %}active{% endif %}"
+                                href="{% url 'mesbul:index' %}">
+                                <i class="bi bi-search"></i>
+                                <span>MesBul</span>
+                            </a>
+                        </li>
                        
+
+                        <!-- DİA ERP Entegrasyon -->
+                        <li class="nav-item mt-3">
+                            <small class="text-muted px-3 text-uppercase fw-bold">DİA ERP</small>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'dia_durum' %}active{% endif %}"
+                                href="{% url 'erp:dia_durum' %}">
+                                <i class="bi bi-activity me-1"></i>
+                                <span>Sync Durumu</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'cari_listesi' %}active{% endif %}"
+                                href="{% url 'erp:cari_listesi' %}">
+                                <i class="bi bi-people me-1"></i>
+                                <span>Cariler</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'stok_listesi' %}active{% endif %}"
+                                href="{% url 'erp:stok_listesi' %}">
+                                <i class="bi bi-box-seam me-1"></i>
+                                <span>Stok</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'depo_fisi_listesi' or request.resolver_match.url_name == 'depo_fisi_detay' or request.resolver_match.url_name == 'depo_fisi_sepet' %}active{% endif %}"
+                                href="{% url 'erp:depo_fisi_listesi' %}">
+                                <i class="bi bi-truck me-1"></i>
+                                <span>Depo Fişleri</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'fatura_listesi' %}active{% endif %}"
+                                href="{% url 'erp:fatura_listesi' %}">
+                                <i class="bi bi-receipt me-1"></i>
+                                <span>Malzeme Hareketleri</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'sync_loglar' %}active{% endif %}"
+                                href="{% url 'erp:sync_loglar' %}">
+                                <i class="bi bi-clock-history me-1"></i>
+                                <span>Sync Logları</span>
+                            </a>
+                        </li>
 
                         <!-- Siparişler -->
                         <li class="nav-item mt-3">
@@ -704,78 +798,12 @@
                                 <span>Lastik Saklama</span>
                             </a>
                         </li>
+<li class="nav-item"><a class="nav-link" href="{% url 'dashboard:otel_plan' %}"><i class="bi bi-graph-up"></i><span>Lastik Ömrü ve Stok Tahmini</span></a></li>
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'dashboard:users' %}">
                                 <i class="bi bi-people"></i>
                                 <span>Kullanıcılar</span>
                             </a>
-                        </li>
-
-                        <!-- DİA ERP Entegrasyon -->
-                        <li class="nav-item mt-3">
-                            <small class="text-muted px-3 text-uppercase fw-bold">DİA ERP</small>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" data-bs-toggle="collapse" data-bs-target="#sidebarDia" href="#"
-                                role="button" aria-expanded="{% if 'erp' in request.path or 'dia' in request.path %}true{% else %}false{% endif %}"
-                                aria-controls="sidebarDia">
-                                <i class="bi bi-diagram-3"></i>
-                                <span>ERP Senkronizasyon</span>
-                                <i class="bi bi-chevron-down ms-auto collapse-icon"></i>
-                            </a>
-                            <div class="collapse {% if 'erp' in request.path or 'dia' in request.path %}show{% endif %}" id="sidebarDia">
-                                <ul class="nav flex-column ms-3 my-2">
-                                    <li class="nav-item">
-                                        <a class="nav-link {% if request.resolver_match.url_name == 'dia_durum' %}active{% endif %}"
-                                            href="{% url 'erp:dia_durum' %}">
-                                            <i class="bi bi-activity me-1"></i>
-                                            <span>Sync Durumu</span>
-                                        </a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link {% if request.resolver_match.url_name == 'cari_listesi' %}active{% endif %}"
-                                            href="{% url 'erp:cari_listesi' %}">
-                                            <i class="bi bi-people me-1"></i>
-                                            <span>Cariler</span>
-                                        </a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link {% if request.resolver_match.url_name == 'stok_listesi' %}active{% endif %}"
-                                            href="{% url 'erp:stok_listesi' %}">
-                                            <i class="bi bi-box-seam me-1"></i>
-                                            <span>Stok Kartları</span>
-                                        </a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link {% if request.resolver_match.url_name == 'depo_fisi_listesi' or request.resolver_match.url_name == 'depo_fisi_detay' or request.resolver_match.url_name == 'depo_fisi_sepet' %}active{% endif %}"
-                                            href="{% url 'erp:depo_fisi_listesi' %}">
-                                            <i class="bi bi-truck me-1"></i>
-                                            <span>Depo Fişleri</span>
-                                        </a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link {% if request.resolver_match.url_name == 'fatura_listesi' %}active{% endif %}"
-                                            href="{% url 'erp:fatura_listesi' %}">
-                                            <i class="bi bi-receipt me-1"></i>
-                                            <span>Malzeme Hareketleri</span>
-                                        </a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link {% if request.resolver_match.url_name == 'depo_listesi' %}active{% endif %}"
-                                            href="{% url 'erp:depo_listesi' %}">
-                                            <i class="bi bi-building me-1"></i>
-                                            <span>Depolar</span>
-                                        </a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link {% if request.resolver_match.url_name == 'sync_loglar' %}active{% endif %}"
-                                            href="{% url 'erp:sync_loglar' %}">
-                                            <i class="bi bi-clock-history me-1"></i>
-                                            <span>Sync Logları</span>
-                                        </a>
-                                    </li>
-                                </ul>
-                            </div>
                         </li>
 
                         <li class="nav-item mt-3">
@@ -815,6 +843,17 @@
         <!-- Main Content -->
         <main class="admin-main">
             <div class="container-fluid p-4 p-lg-5">
+                {% if user.is_authenticated and user.userprofile.role == 'misafir' %}
+                <section class="guest-contact border rounded-3 p-3 mb-3" aria-labelledby="guest-contact-heading">
+                    <h2 id="guest-contact-heading">Bize ulaşın</h2>
+                    <a href="tel:+905526470460" class="btn btn-outline-primary btn-sm" aria-label="Meslas Otomotiv’i ara: 0552 647 04 60">
+                        <i class="bi bi-telephone" aria-hidden="true"></i>0552 647 04 60
+                    </a>
+                    <a href="https://wa.me/905526470460" class="btn btn-success btn-sm" target="_blank" rel="noopener noreferrer">
+                        <i class="bi bi-whatsapp" aria-hidden="true"></i>WhatsApp’tan yaz
+                    </a>
+                </section>
+                {% endif %}
                 {% block content %}
                 {% endblock %}
             </div>
@@ -825,7 +864,7 @@
             <div class="container-fluid">
                 <div class="row">
                     <div class="col-md-6">
-                        <p class="mb-0 text-muted">© 2025 Mestakip</p>
+                        <p class="mb-0 text-muted">© 2025 MesDia</p>
                     </div>
                 </div>
             </div>
@@ -1000,6 +1039,27 @@
     <script type="module" src="{% load static %}{% static 'main-f0Mg-34g.js' %}"></script>
 
     <!-- Page specific scripts -->
+<script>
+(() => {
+    const strip = document.getElementById('market-strip');
+    if (!strip) return;
+    const desktop = window.matchMedia('(min-width: 768px)');
+    async function refresh() {
+        if (document.hidden || !desktop.matches) return;
+        try {
+            const response = await fetch(strip.dataset.url);
+            if (!response.ok || response.redirected) throw new Error();
+            strip.innerHTML = await response.text();
+        } catch {
+            if (!strip.querySelector('.market-item')) strip.textContent = 'Piyasa verileri alınamadı.';
+        }
+    }
+    refresh();
+    desktop.addEventListener('change', refresh);
+    setInterval(refresh, 300000);
+    document.addEventListener('visibilitychange', refresh);
+})();
+</script>
     {% block extra_js %}
     {% endblock %}
 
@@ -1255,7 +1315,6 @@
             --bs-body-color: #ffffff;
         }
 
-        /* Light palette is maintained in static/css/light-theme.css. */
 
         [data-bs-theme="dark"] .admin-main {
             background: #0f172a !important;
@@ -1899,8 +1958,8 @@
                                     try {
                                         const browserNotification = new Notification(notification.title, {
                                             body: notification.message,
-                                            icon: '/static/images/mestakip1.png',
-                                            badge: '/static/images/mestakip1.png',
+                                            icon: '/static/icons/mesdia-192.png',
+                                            badge: '/static/icons/mesdia-192.png',
                                             tag: `notification-${notification.id}`,
                                             requireInteraction: notification.type === 'event_start',
                                             silent: false
@@ -2131,7 +2190,7 @@
                 if (Notification.permission === 'granted') {
                     new Notification(notification.title, {
                         body: notification.message,
-                        icon: '/static/images/mestakip1.png'
+                        icon: '/static/icons/mesdia-192.png'
                     });
                 }
             }
@@ -2440,7 +2499,7 @@
     <!-- Mobile Bottom Navigation -->
     <nav class="mobile-bottom-nav d-md-none">
         {% if user.userprofile.role != 'misafir' %}
-        <a href="{% url 'dashboard:index' %}" class="bottom-nav-item {% if request.resolver_match.url_name == 'index' %}active{% endif %}">
+        <a href="{% url 'dashboard:index' %}" class="bottom-nav-item {% if request.resolver_match.namespace == 'dashboard' and request.resolver_match.url_name == 'index' %}active{% endif %}">
             <i class="bi bi-house-door"></i>
             <span>Ana Sayfa</span>
         </a>
@@ -2459,8 +2518,13 @@
             <i class="bi bi-arrow-down-circle"></i>
             <span>Çıkma Lastik</span>
         </a>
+        {% else %}
+        <a href="{% url 'erp:stok_listesi' %}" class="bottom-nav-item {% if request.resolver_match.namespace == 'erp' %}active{% endif %}">
+            <i class="bi bi-box-seam"></i>
+            <span>Stok Kartları</span>
+        </a>
         {% endif %}
-        
+
         <a href="#" class="bottom-nav-item" onclick="toggleMobileSidebar(); return false;">
             <i class="bi bi-list"></i>
             <span>Menü</span>

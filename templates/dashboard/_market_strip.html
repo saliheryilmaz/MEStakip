@@ -1,0 +1,12 @@
+{% load tz %}
+{% for item in quotes %}
+<div class="market-item"{% if item.timestamp %} title="{{ item.timestamp|timezone:"Europe/Istanbul"|date:"d.m.Y H:i" }} TSİ"{% endif %}>
+    <span class="market-label"><i class="bi bi-{{ item.icon }} text-{{ item.color }}" aria-hidden="true"></i> {{ item.name }}</span>
+    {% if item.price %}
+    <div><strong>{{ item.price }}</strong> <small>{{ item.unit }}</small></div>
+
+    {% else %}
+    <small>Veri alınamadı</small>
+    {% endif %}
+</div>
+{% endfor %}

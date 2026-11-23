@@ -2,24 +2,11 @@
 {% load static %}
 {% load turkish_format %}
 
-{% block title %}Dashboard - Mestakip{% endblock %}
+{% block title %}Dashboard - MesDia{% endblock %}
 
 {% block content %}
-<!-- Page Header -->
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h1 class="h3 mb-0">Dashboard</h1>
-    </div>
-    <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#hizliErisimModal">
-        <i class="bi bi-grid me-1"></i>Hızlı Erişimi Özelleştir
-    </button>
-</div>
-
-<!-- Quick Action Cards — dinamik -->
-<div class="row g-3 mb-4" id="hizliErisimKartlar">
-    <!-- JS ile doldurulur -->
-</div>
-
+<div class="dashboard-overview">
+<header class="overview-heading"><h1>Dashboard</h1></header>
 <!-- Hızlı Erişim Özelleştirme Modal -->
 <div class="modal fade" id="hizliErisimModal" tabindex="-1" aria-labelledby="hizliErisimModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width:520px">
@@ -53,52 +40,44 @@
     </div>
 </div>
 
-<!-- Stats Cards -->
-<div class="row g-4 mb-4">
-    <div class="col-xl-6 col-lg-6 col-6">
-        <div class="card stats-card">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="flex-shrink-0">
-                        <div class="stats-icon bg-success bg-opacity-10 text-success">
-                            <i class="bi bi-graph-up"></i>
-                        </div>
-                    </div>
-                    <div class="flex-grow-1 ms-3">
-                        <h6 class="mb-0 text-muted">Sipariş Geçilen Ciro</h6>
-                        <h3 class="mb-0">{{ stats.revenue|turkish_lira }}</h3>
-                        <small class="text-success">
-                            <i class="bi bi-arrow-up"></i> Toplam
-                        </small>
-                    </div>
-                </div>
-            </div>
+<div class="overview-summary">
+    <section class="order-summary" aria-label="Sipariş özeti">
+        <div class="overview-metric">
+            <i class="bi bi-graph-up-arrow" aria-hidden="true"></i>
+            <span>Sipariş Geçilen Ciro</span>
+            <strong>{{ stats.revenue|turkish_lira }}</strong>
         </div>
-    </div>
-
-    <div class="col-xl-6 col-lg-6 col-6">
-        <div class="card stats-card">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="flex-shrink-0">
-                        <div class="stats-icon bg-info bg-opacity-10 text-info">
-                            <i class="bi bi-clock-history"></i>
-                        </div>
-                    </div>
-                    <div class="flex-grow-1 ms-3">
-                        <h6 class="mb-0 text-muted">Toplam Sipariş Adeti</h6>
-                        <h3 class="mb-0">{{ stats.avg_response|floatformat:0 }}</h3>
-                        <small class="text-success">
-                            <i class="bi bi-arrow-up"></i> Adet
-                        </small>
-                    </div>
-                </div>
-            </div>
+        <div class="overview-metric">
+            <i class="bi bi-box-seam" aria-hidden="true"></i>
+            <span>Toplam Sipariş Adedi</span>
+            <strong>{{ stats.avg_response|floatformat:0 }}</strong>
         </div>
-    </div>
+    </section>
+    <section class="storage-summary" aria-labelledby="saklama-title">
+        <div class="overview-section-head">
+            <h2 id="saklama-title">Lastik Saklama</h2>
+            <a href="{% url 'dashboard:lastik_saklama' %}">Kayıtları gör <i class="bi bi-arrow-up-right"></i></a>
+        </div>
+        <dl class="storage-values">
+            <div><dt>Toplam Plaka</dt><dd>{{ saklama.toplam_plaka }}</dd></div>
+            <div><dt><i class="bi bi-snow saklama-kis"></i> Kışlık Lastik</dt><dd>{{ saklama.toplam_kislik }}</dd></div>
+            <div><dt><i class="bi bi-sun-fill saklama-yaz"></i> Yazlık Lastik</dt><dd>{{ saklama.toplam_yazlik }}</dd></div>
+        </dl>
+        <div class="saklama-bar" aria-hidden="true">
+            <span style="flex-grow:{{ saklama.toplam_kislik|stringformat:'d' }}"></span>
+            <span style="flex-grow:{{ saklama.toplam_yazlik|stringformat:'d' }}"></span>
+        </div>
+    </section>
 </div>
-
-
+<section class="overview-shortcuts" aria-labelledby="shortcut-title">
+    <div class="overview-section-head">
+        <h2 id="shortcut-title">Hızlı erişim</h2>
+        <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#hizliErisimModal">
+            <i class="bi bi-sliders me-1"></i> Özelleştir
+        </button>
+    </div>
+    <div id="hizliErisimKartlar"></div>
+</section>
 
 <!-- Additional Charts Row -->
 <div class="row g-4 mb-4">
@@ -165,11 +144,17 @@
     </div>
 </div>
 
-<!-- Son Finance İşlemleri bölümü kaldırıldı -->
+</div>
 {% endblock %}
 
 {% block extra_css %}
 <style>
+    .saklama-icon { display:grid; place-items:center; width:3.5rem; height:3.5rem; border-radius:1rem; background:var(--bs-primary-bg-subtle); color:var(--bs-primary); font-size:1.5rem; }
+    .saklama-kis { color:#429bda; }
+    .saklama-yaz { color:#e69b26; }
+    .saklama-bar { display:flex; height:12px; background:var(--bs-tertiary-bg); border-radius:20px; overflow:hidden; }
+    .saklama-bar span:first-child { background:#429bda; }
+    .saklama-bar span:last-child { background:#e69b26; }
     /* Quick Action Cards */
     .quick-action-card {
         border: none;
@@ -323,6 +308,22 @@
 
     /* Dashboard Mobile Responsive Styles */
     @media (max-width: 768px) {
+
+        .admin-main > .container-fluid {
+            padding-inline: .75rem !important;
+        }
+
+        .admin-main .row > *, .stats-card .flex-grow-1 {
+            min-width: 0;
+        }
+
+        .stats-card .flex-grow-1 {
+            overflow-wrap: anywhere;
+        }
+
+        .admin-main canvas {
+            max-width: 100%;
+        }
 
         /* Quick Action kartlar mobilde 2 sütun - daha küçük */
         .quick-action-card .card-body {
@@ -553,6 +554,60 @@
             touch-action: manipulation;
         }
     }
+
+    .admin-main > .container-fluid:has(.dashboard-overview) { padding-top: 1.4rem !important; }
+    .dashboard-overview {
+        --panel: var(--bs-card-bg, var(--bs-body-bg));
+        --line: var(--bs-border-color);
+        --accent: var(--bs-primary);
+    }
+    html[data-bs-theme="light"] .admin-wrapper:has(.dashboard-overview) {
+        --mes-page: #e0e4e8;
+        --mes-chrome: #e6e9ec;
+        --mes-surface: #edf0f2;
+        --mes-border: #c7cdd3;
+    }
+    html[data-bs-theme="light"] .dashboard-overview {
+        --panel: var(--mes-surface);
+        --line: var(--mes-border);
+        --accent: #494185;
+    }
+    .overview-heading h1 { font-size:clamp(1.6rem, 2.6vw, 2.2rem); font-weight:700; letter-spacing:-.035em; margin:0 0 1rem; }
+    .overview-summary { display:grid; grid-template-columns:1.15fr 1fr; gap:1rem; }
+    .order-summary, .storage-summary {
+        background:var(--panel); border:1px solid var(--line); border-radius:16px;
+        padding:clamp(1rem, 2vw, 1.6rem); min-width:0;
+    }
+    .order-summary { display:grid; grid-template-columns:1.3fr 1fr; align-items:center; }
+    html[data-bs-theme="light"] .order-summary { background:linear-gradient(115deg,#e0e1f0,#ececf2); border-color:#c5c6d8; }
+    .overview-metric { display:grid; gap:.35rem; min-width:0; }
+    .overview-metric + .overview-metric { border-left:1px solid var(--line); padding-left:clamp(.65rem,2vw,1.8rem); }
+    .overview-metric i { font-size:1.2rem; color:var(--accent); }
+    .overview-metric span,.storage-values dt { font-size:.84rem; font-weight:500; }
+    .overview-metric strong { font-size:clamp(1.35rem,2.5vw,2.6rem); line-height:1.15; letter-spacing:-.045em; font-variant-numeric:tabular-nums; }
+    .overview-section-head { display:flex; align-items:center; justify-content:space-between; gap:.5rem; }
+    .overview-section-head h2 { font-size:1.1rem; font-weight:650; margin:0; }
+    .overview-section-head a { font-size:.82rem; color:var(--accent); font-weight:600; }
+    .storage-values { display:grid; grid-template-columns:repeat(3,1fr); gap:.5rem; margin:1rem 0 .6rem; }
+    .storage-values dd { margin:0; font-size:1.6rem; font-weight:650; }
+    .storage-summary .saklama-bar { height:6px; }
+    .overview-shortcuts { margin:1.5rem 0; }
+    #hizliErisimKartlar { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.65rem; margin-top:.65rem; }
+    .overview-shortcut { display:flex; align-items:center; gap:.7rem; background:var(--panel); color:var(--bs-body-color); text-decoration:none;
+        border:1px solid var(--line); border-radius:12px; padding:.85rem; }
+    .overview-shortcut:is(:hover,:focus-visible) { border-color:var(--accent); color:var(--bs-body-color); }
+    .shortcut-symbol { display:grid; place-items:center; flex:0 0 2.25rem; height:2.25rem; border-radius:10px; background:var(--bs-primary-bg-subtle); color:var(--accent); }
+    .overview-shortcut strong,.overview-shortcut small { display:block; }
+    .overview-shortcut strong { font-size:.94rem; }
+    .overview-shortcut small { font-size:.78rem; }
+    .overview-shortcut .bi-chevron-right { margin-inline-start:auto; font-size:.75rem; }
+    html[data-bs-theme="light"] .dashboard-overview .card:not([class*="bg-"]):not(.quick-action-card) > .card-header {
+        background:transparent; border-bottom:1px solid var(--line); padding:.9rem 1.2rem;
+    }
+    .dashboard-overview .card { border-radius:14px; }
+    @media (max-width:1100px) { #hizliErisimKartlar { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+    @media (max-width:900px) { .overview-summary { grid-template-columns:1fr; } }
+    @media (max-width:560px) { #hizliErisimKartlar { grid-template-columns:1fr; } }
 </style>
 {% endblock %}
 
@@ -1311,7 +1366,7 @@
 
 <script>
 // ─── Hızlı Erişim Kutucukları ───────────────────────────────
-const HIZLI_KEY = 'mestakip_hizli_erisim';
+const HIZLI_KEY = 'mesdia_hizli_erisim';
 const MAX_KART = 999;
 
 // Sistemdeki tüm sayfalar
@@ -1338,7 +1393,7 @@ const VARSAYILAN = ['yeni_siparis', 'islem_ekle', 'kasa', 'siparisler'];
 
 function secilenleriOku() {
     try {
-        const kayit = localStorage.getItem(HIZLI_KEY);
+        const kayit = localStorage.getItem(HIZLI_KEY) ?? localStorage.getItem('mestakip_hizli_erisim');
         if (kayit) return JSON.parse(kayit);
     } catch(e) {}
     return [...VARSAYILAN];
@@ -1351,29 +1406,16 @@ function secilenleriyaz(liste) {
 function kartlariRender() {
     const secili = secilenleriOku();
     const container = document.getElementById('hizliErisimKartlar');
-    const renkler = ['bg-primary','bg-success','bg-info','bg-warning'];
     container.innerHTML = '';
-    secili.slice(0, MAX_KART).forEach((id, idx) => {
+    secili.slice(0, MAX_KART).forEach(id => {
         const sayfa = TUM_SAYFALAR.find(s => s.id === id);
         if (!sayfa) return;
-        const renk = renkler[idx] || sayfa.renk;
         container.innerHTML += `
-        <div class="col-xl-3 col-lg-4 col-md-6">
-            <div class="card quick-action-card ${renk} text-white h-100">
-                <div class="card-body d-flex align-items-center">
-                    <div class="flex-shrink-0 me-3">
-                        <div class="quick-action-icon">
-                            <i class="bi ${sayfa.ikon}"></i>
-                        </div>
-                    </div>
-                    <div class="flex-grow-1">
-                        <h6 class="card-title mb-1">${sayfa.baslik}</h6>
-                        <small class="opacity-75">${sayfa.alt}</small>
-                    </div>
-                    <a href="${sayfa.url}" class="stretched-link"></a>
-                </div>
-            </div>
-        </div>`;
+            <a class="overview-shortcut" href="${sayfa.url}">
+                <i class="bi ${sayfa.ikon} shortcut-symbol" aria-hidden="true"></i>
+                <span><strong>${sayfa.baslik}</strong><small>${sayfa.alt}</small></span>
+                <i class="bi bi-chevron-right" aria-hidden="true"></i>
+            </a>`;
     });
 }
 

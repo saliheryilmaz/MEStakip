@@ -1,0 +1,66 @@
+.mesbul-abonelik-yonetim { --slate-50:var(--bs-tertiary-bg); --slate-100:var(--bs-secondary-bg); --slate-200:var(--bs-border-color);
+  --slate-400:#94A3B8; --slate-600:var(--bs-secondary-color); --slate-700:var(--bs-body-color); --slate-900:var(--bs-body-color);
+  --white:#FFFFFF; --orange:#6366f1; --orange-dark:#4f46e5;
+  --green:#059669; --red:#DC2626; --yellow:#D97706; }
+.mesbul-abonelik-yonetim .header { background:rgba(20,20,24,.97);backdrop-filter:blur(12px);box-shadow:0 1px 0 rgba(255,255,255,.06),0 4px 24px rgba(0,0,0,.35);height:72px;display:flex;align-items:center;padding:0 2rem;position:sticky;top:0;z-index:100 }
+.mesbul-abonelik-yonetim .header-inner { max-width:1100px;margin:0 auto;width:100%;display:flex;align-items:center;justify-content:space-between }
+.mesbul-abonelik-yonetim .logo-link { display:flex;align-items:center;gap:.875rem;text-decoration:none }
+.mesbul-abonelik-yonetim .logo-img { width:38px;height:38px;border-radius:9px;object-fit:cover;box-shadow:0 0 0 1px rgba(255,255,255,.1) }
+.mesbul-abonelik-yonetim .logo-name { color:var(--bs-secondary-bg);font-size:1.0625rem;font-weight:700;letter-spacing:-0.02em }
+.mesbul-abonelik-yonetim .back-btn { display:inline-flex;align-items:center;gap:.4rem;color:#94A3B8;font-size:.8125rem;font-weight:500;text-decoration:none;padding:.375rem .75rem;border:1px solid rgba(255,255,255,.08);border-radius:7px;transition:all .2s }
+.mesbul-abonelik-yonetim .back-btn:hover { color:var(--bs-secondary-bg);border-color:rgba(255,255,255,.18);background:rgba(255,255,255,.06) }
+.mesbul-abonelik-yonetim .page { max-width:1100px;margin:0 auto;padding:2rem 1.5rem }
+.mesbul-abonelik-yonetim .page-title { font-size:1.375rem;font-weight:700;letter-spacing:-.02em;margin-bottom:.375rem;color:var(--bs-body-color) }
+.mesbul-abonelik-yonetim .page-sub { font-size:.9375rem;color:var(--bs-secondary-color);margin-bottom:2rem }
+.mesbul-abonelik-yonetim .stats { display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:2rem }
+.mesbul-abonelik-yonetim .stat-card { background:var(--bs-body-bg);border:1px solid var(--bs-border-color);border-radius:14px;padding:1.25rem 1.5rem;box-shadow:0 2px 8px rgba(15,23,42,.05);transition:box-shadow .2s,border-color .2s }
+.mesbul-abonelik-yonetim .stat-card:hover { box-shadow:0 4px 16px rgba(15,23,42,.09);border-color:#FDDCC9 }
+.mesbul-abonelik-yonetim .stat-label { font-size:.6875rem;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.1em;margin-bottom:.375rem }
+.mesbul-abonelik-yonetim .stat-val { font-size:1.75rem;font-weight:700;font-family:"JetBrains Mono",monospace;color:var(--bs-body-color) }
+.mesbul-abonelik-yonetim .stat-val.green { color:#059669 }
+.mesbul-abonelik-yonetim .stat-val.red { color:#DC2626 }
+.mesbul-abonelik-yonetim .stat-val.gray { color:#CBD5E1 }
+.mesbul-abonelik-yonetim .card { background:var(--bs-body-bg);border:1px solid var(--bs-border-color);border-radius:14px;overflow:hidden;box-shadow:0 2px 12px rgba(15,23,42,.06) }
+.mesbul-abonelik-yonetim table { width:100%;border-collapse:collapse }
+.mesbul-abonelik-yonetim thead th { font-size:.6875rem;font-weight:700;color:var(--bs-secondary-color);text-transform:uppercase;letter-spacing:.08em;padding:.875rem 1.25rem;text-align:left;border-bottom:1.5px solid var(--bs-secondary-bg);background:#FAFBFC;white-space:nowrap }
+.mesbul-abonelik-yonetim tbody tr { border-bottom:1px solid var(--bs-secondary-bg);transition:background .12s }
+.mesbul-abonelik-yonetim tbody tr:last-child { border-bottom:none }
+.mesbul-abonelik-yonetim tbody tr:hover { background:#FFF8F5 }
+.mesbul-abonelik-yonetim td { padding:.875rem 1.25rem;font-size:.875rem;vertical-align:middle;color:var(--bs-body-color) }
+.mesbul-abonelik-yonetim .badge { display:inline-flex;align-items:center;gap:.3rem;font-size:.75rem;font-weight:600;padding:.2rem .625rem;border-radius:100px }
+.mesbul-abonelik-yonetim .badge-green { background:#DCFCE7;color:#166534;border:1px solid #BBF7D0 }
+.mesbul-abonelik-yonetim .badge-red { background:#FEE2E2;color:#991B1B;border:1px solid #FECACA }
+.mesbul-abonelik-yonetim .badge-gray { background:var(--bs-secondary-bg);color:var(--bs-secondary-color);border:1px solid var(--bs-border-color) }
+.mesbul-abonelik-yonetim .badge-yellow { background:#FEF9C3;color:#854D0E;border:1px solid #FEF08A }
+.mesbul-abonelik-yonetim .form-row { display:flex;align-items:center;gap:.5rem;flex-wrap:wrap }
+.mesbul-abonelik-yonetim .form-select, .mesbul-abonelik-yonetim .form-input { background:var(--bs-tertiary-bg);border:1.5px solid var(--bs-border-color);border-radius:8px;padding:.375rem .75rem;font-size:.8125rem;font-family:inherit;color:var(--bs-body-color);outline:none;transition:border-color .2s,box-shadow .2s }
+.mesbul-abonelik-yonetim .form-select:focus, .mesbul-abonelik-yonetim .form-input:focus { border-color:#6366f1;box-shadow:0 0 0 3px rgba(232,93,38,.08) }
+.mesbul-abonelik-yonetim .form-select option { background:var(--bs-body-bg);color:var(--bs-body-color) }
+.mesbul-abonelik-yonetim .form-input { width:130px }
+.mesbul-abonelik-yonetim .form-check { display:flex;align-items:center;gap:.3rem;font-size:.8125rem;color:var(--bs-body-color) }
+.mesbul-abonelik-yonetim .form-check input { accent-color:#6366f1;width:15px;height:15px }
+.mesbul-abonelik-yonetim .btn-save { background:#6366f1;border:none;border-radius:8px;padding:.4rem .875rem;color:#fff;font-size:.8125rem;font-weight:600;font-family:inherit;cursor:pointer;transition:opacity .2s;white-space:nowrap;box-shadow:0 2px 8px rgba(232,93,38,.25) }
+.mesbul-abonelik-yonetim .btn-save:hover { opacity:.9 }
+.mesbul-abonelik-yonetim .add-user-card { background:var(--bs-body-bg);border:1px solid var(--bs-border-color);border-radius:14px;padding:1.5rem;margin-bottom:1.5rem;box-shadow:0 2px 12px rgba(15,23,42,.06) }
+.mesbul-abonelik-yonetim .add-user-title { font-size:.9375rem;font-weight:700;margin-bottom:1.25rem;display:flex;align-items:center;gap:.5rem;color:var(--bs-body-color) }
+.mesbul-abonelik-yonetim .add-user-grid { display:grid;grid-template-columns:1fr 1fr 1fr;gap:.75rem;margin-bottom:.75rem }
+.mesbul-abonelik-yonetim .field-group { display:flex;flex-direction:column;gap:.375rem }
+.mesbul-abonelik-yonetim .field-label { font-size:.625rem;font-weight:700;color:var(--bs-secondary-color);text-transform:uppercase;letter-spacing:.1em }
+.mesbul-abonelik-yonetim .field-ctrl { background:var(--bs-tertiary-bg);border:1.5px solid var(--bs-border-color);border-radius:8px;padding:.6875rem .75rem;font-size:.9375rem;font-family:inherit;color:var(--bs-body-color);outline:none;transition:border-color .2s,box-shadow .2s;width:100% }
+.mesbul-abonelik-yonetim .field-ctrl:focus { border-color:#6366f1;box-shadow:0 0 0 3px rgba(232,93,38,.08) }
+.mesbul-abonelik-yonetim .field-ctrl::placeholder { color:#CBD5E1 }
+.mesbul-abonelik-yonetim .add-user-footer { display:flex;align-items:center;gap:.75rem;flex-wrap:wrap }
+.mesbul-abonelik-yonetim .btn-add { background:linear-gradient(135deg,#6366f1 0%,#F97316 100%);border:none;border-radius:8px;padding:.6875rem 1.25rem;color:#fff;font-size:.875rem;font-weight:700;font-family:inherit;cursor:pointer;transition:opacity .2s;box-shadow:0 4px 16px rgba(232,93,38,.3) }
+.mesbul-abonelik-yonetim .btn-add:hover { opacity:.9 }
+.mesbul-abonelik-yonetim .form-error { background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;padding:.625rem .875rem;font-size:.875rem;color:#DC2626;margin-bottom:.75rem }
+.mesbul-abonelik-yonetim .user-col { display:flex;align-items:center;gap:.625rem }
+.mesbul-abonelik-yonetim .avatar { width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,#6366f1,#4f46e5);display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;color:#fff;flex-shrink:0;text-transform:uppercase }
+@media(max-width:990px) {
+.mesbul-abonelik-yonetim .add-user-grid { grid-template-columns:1fr 1fr }
+}
+@media(max-width:990px) {
+.mesbul-abonelik-yonetim .stats { grid-template-columns:repeat(2,1fr) }
+.mesbul-abonelik-yonetim .form-row { gap:.375rem }
+.mesbul-abonelik-yonetim .form-input { width:110px }
+.mesbul-abonelik-yonetim thead th:nth-child(3), .mesbul-abonelik-yonetim .td-plan { display:none }
+}

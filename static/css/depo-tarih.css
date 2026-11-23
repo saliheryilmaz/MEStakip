@@ -1,0 +1,30 @@
+#tarihPanel {
+    position: fixed; inset: auto; margin: 0; padding: 0; width: min(760px, calc(100vw - 24px));
+    max-height: calc(100dvh - 24px); overflow: auto; color: var(--bs-body-color);
+    background: var(--bs-body-bg); border: 1px solid var(--bs-border-color); border-radius: 14px;
+    box-shadow: 0 12px 40px #0003;
+}
+.tarih-layout,.tarih-inputs,.tarih-months,.tarih-footer,.tarih-nav {display:flex;gap:12px}
+.tarih-presets {display:grid;align-content:start;gap:3px;padding:12px;background:var(--bs-tertiary-bg);min-width:118px}
+.tarih-presets button,.tarih-nav button,.tarih-grid button {border:0;border-radius:6px;background:transparent;color:inherit}
+.tarih-presets button {text-align:left;padding:6px 10px}
+.tarih-main {padding:16px;flex:1;min-width:0}
+.tarih-inputs label,.tarih-months section {flex:1;min-width:0}
+.tarih-inputs label {font-size:.82rem;font-weight:600}
+.tarih-inputs input {width:100%;margin-top:4px}
+.tarih-nav {justify-content:space-between;margin:14px 0 -30px;position:relative;pointer-events:none}
+.tarih-nav button {pointer-events:auto;width:32px;height:30px;font-size:20px}
+.tarih-months h6 {text-align:center;line-height:30px;margin-bottom:6px}
+.tarih-grid {display:grid;grid-template-columns:repeat(7,1fr);text-align:center}
+.tarih-grid small {color:var(--bs-secondary-color);padding:4px 0}
+.tarih-grid button {min-height:32px;padding:0}
+.tarih-grid .between,.tarih-presets button:hover,.tarih-grid button:hover {background:var(--bs-primary-bg-subtle)}
+.tarih-grid .edge,.tarih-presets button[aria-pressed=true] {background:var(--bs-primary);color:white}
+.tarih-footer {align-items:center;border-top:1px solid var(--bs-border-color);padding:12px 16px}
+.tarih-footer span {margin-right:auto;font-size:.85rem}
+@media(max-width:640px){
+    .tarih-layout {display:block}
+    .tarih-presets {grid-template-columns:repeat(4,1fr);font-size:.8rem}
+    .tarih-presets button {text-align:center;padding:6px 0}
+    .tarih-months section+section {display:none}
+}

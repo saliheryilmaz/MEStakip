@@ -14,7 +14,7 @@ from django.core.management.base import BaseCommand, CommandError
 
 
 class Command(BaseCommand):
-    help = 'DİA\'dan cari listesini MEStakip\'e senkronize eder'
+    help = 'DİA\'dan cari listesini MesDia\'ya senkronize eder'
 
     def add_arguments(self, parser) -> None:
         parser.add_argument(

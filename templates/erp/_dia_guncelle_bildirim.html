@@ -1,0 +1,45 @@
+<!-- Toast bildirimi -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+    <div id="syncToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+            <i class="bi bi-info-circle me-2 text-primary"></i>
+            <strong class="me-auto">Sync</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body" id="syncToastBody">Göreve gönderildi.</div>
+    </div>
+</div>
+<script>
+function syncBaslat(buton) {
+    if (!confirm('MesRapor01 çağrısı kontör tüketebilir. DİA verileri güncellensin mi?')) return;
+    buton.disabled = true;
+
+    fetch("{% url 'erp:sync_baslat' %}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': '{{ csrf_token }}',
+        },
+        body: 'modul=mes_rapor'
+    })
+    .then(r => r.json())
+    .then(data => {
+        const body = document.getElementById('syncToastBody');
+        if (data.basarili) {
+            body.textContent = `✓ ${data.mesaj}`;
+        } else {
+            body.textContent = `✗ Hata: ${data.hata}`;
+        }
+        const toast = new bootstrap.Toast(document.getElementById('syncToast'));
+        toast.show();
+        // 2 saniye sonra sayfayı yenile
+        if (data.basarili) setTimeout(() => location.reload(), 2000);
+        else buton.disabled = false;
+    })
+    .catch(err => {
+        document.getElementById('syncToastBody').textContent = 'Bağlantı hatası: ' + err;
+        new bootstrap.Toast(document.getElementById('syncToast')).show();
+        buton.disabled = false;
+    });
+}
+</script>

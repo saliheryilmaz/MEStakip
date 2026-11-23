@@ -1,0 +1,46 @@
+.mesbul-abonelik-bitti .card { background: var(--bs-body-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: 12px;
+    padding: 2.5rem 2rem;
+    max-width: 440px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 2px 12px rgba(15,23,42,.08); }
+.mesbul-abonelik-bitti .icon { font-size: 3rem;
+    margin-bottom: 1.25rem; }
+.mesbul-abonelik-bitti h1 { font-size: 1.375rem;
+    font-weight: 700;
+    margin-bottom: .75rem;
+    letter-spacing: -.02em; }
+.mesbul-abonelik-bitti p { font-size: .9375rem;
+    color: var(--bs-secondary-color);
+    line-height: 1.6;
+    margin-bottom: 1.75rem; }
+.mesbul-abonelik-bitti .info-box { background: #FFF7ED;
+    border: 1px solid #FED7AA;
+    border-radius: 8px;
+    padding: .875rem 1rem;
+    font-size: .875rem;
+    color: #92400E;
+    margin-bottom: 1.75rem;
+    text-align: left; }
+.mesbul-abonelik-bitti .btn { display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    background: #6366f1;
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    padding: .75rem 1.5rem;
+    font-size: .9375rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background .2s; }
+.mesbul-abonelik-bitti .btn:hover { background: #4f46e5; }
+.mesbul-abonelik-bitti .logout-link { display: block;
+    margin-top: 1rem;
+    font-size: .8125rem;
+    color: #94A3B8;
+    text-decoration: none; }
+.mesbul-abonelik-bitti .logout-link:hover { color: var(--bs-secondary-color); }

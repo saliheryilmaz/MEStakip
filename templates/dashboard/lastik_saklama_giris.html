@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Lastik Giriş - Mestakip{% endblock %}
+{% block title %}Lastik Giriş - MesDia{% endblock %}
 {% block page_name %}lastik_saklama{% endblock %}
 
 {% block content %}
@@ -15,6 +15,8 @@
     </a>
 </div>
 
+{% if geri_donen_setler %}<details class="card mb-3"><summary class="card-header">Önceki sezonun seti geri geldi</summary>
+<div class="list-group list-group-flush">{% for set in geri_donen_setler %}<a class="list-group-item list-group-item-action" href="{% url 'dashboard:otel_kontrol' set.pk %}">{{ set.musteri_adi }} · {{ set.plaka }} · {{ set.get_mevsim_display }} · {{ set.ebat }} → Sezon kontrolü</a>{% endfor %}</div></details>{% endif %}
 <form method="post" id="girisForm">
 {% csrf_token %}
 

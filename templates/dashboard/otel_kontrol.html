@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block title %}Sezon kontrolü · MesDia{% endblock %}
+{% block content %}
+<header class="d-flex flex-wrap gap-2 justify-content-between mb-3"><div><h1 class="h3">Sezon kontrolü</h1><p>{{ item.musteri_adi }} · {{ item.plaka }} · {{ item.get_mevsim_display }} · {{ item.get_durum_display }}{% if item.depo %} · {{ item.depo }}{% endif %}</p></div><div><a class="btn btn-outline-secondary" href="{% url 'dashboard:lastik_saklama_detay' item.pk %}">Otel kaydı</a> <a class="btn btn-outline-primary" href="{% url 'dashboard:otel_plan' %}">Stok planı</a></div></header>
+{% if prev %}<section class="card mb-3"><div class="card-body"><h2 class="h5">Depolama değerlendirmesi</h2>
+<p><strong>{{ prev.oneri_etiketi }}</strong> · {{ prev.gerekce }}</p><p>Hedef sezon · {{ prev.hedef|date:"F Y" }}</p>
+<form method="post" action="{% url 'dashboard:otel_karar' item.pk %}" class="d-flex flex-wrap align-items-center gap-2">{% csrf_token %}<input type="hidden" name="kontrol" value="{{ prev.pk }}">
+{% if not prev.karar %}<label for="karar">Fiziksel kontrol sonrası personel kararı</label><select required class="form-select w-auto" id="karar" name="islem"><option value="">Karar seçin</option><option value="sakla">Depolanabilir</option><option value="izle">Depola · son sezon olabilir</option><option value="degistir">Değişim · depolama dışı bırak</option></select>
+{% if item.durum == 'teslim_edildi' %}<label for="raf">Tekrar depolanacaksa raf</label><select class="form-select w-auto" name="depo" id="raf"><option value="">Raf seçin</option>{% for d in depolar %}<option value="{{ d.pk }}" {% if d.pk == item.depo_id %}selected{% endif %}>{{ d }}</option>{% endfor %}</select>{% endif %}
+<button class="btn btn-primary">Kararı onayla</button>
+{% else %}<p>Personel kararı · {{ prev.karar_etiketi }} · {{ prev.karar_veren }}</p>{% endif %}</form>
+{% if prev.talep_var %}<form method="post" class="d-flex flex-wrap gap-2 mt-2" action="{% url 'dashboard:otel_karar' item.pk %}">{% csrf_token %}<input type="hidden" name="kontrol" value="{{ prev.pk }}">
+{% if not prev.bildirildi %}<button class="btn btn-outline-primary" name="islem" value="bildirildi">Bilgi verildi</button>{% else %}<span>Bilgi verildi</span>{% endif %}
+{% if not prev.onaylandi %}<button class="btn btn-outline-success" name="islem" value="onaylandi">Müşteri değişimi onayladı</button>{% elif not prev.karsilandi %}<button class="btn btn-success" name="islem" value="karsilandi">İhtiyaç karşılandı</button>{% endif %}</form>{% endif %}
+</div></section>{% endif %}
+{% if item.durum != 'degisim' %}<details class="card mb-3" {% if not prev or request.method == 'POST' %}open{% endif %}><summary class="card-header fw-semibold">Yeni ölçüm kaydet</summary><form class="card-body" method="post" enctype="multipart/form-data">{% csrf_token %}
+<input type="hidden" name="previous" value="{{ prev.pk|default:0 }}">
+<p>Önceki kayıt · {{ before_date|date:"d.m.Y" }}{% if before_km != None %} · {{ before_km }} km{% endif %}</p>
+{{ form.as_p }}<div class="row g-3">{% for r in rows %}<div class="col-12 col-md-6 col-xl-3"><fieldset class="border rounded p-3 h-100"><legend class="h6">Lastik {{ forloop.counter }}</legend>{{ r.as_p }}</fieldset></div>{% endfor %}</div>
+<button class="btn btn-primary mt-3">Ölçümü kaydet ve değerlendir</button></form></details>{% endif %}
+<section class="card"><div class="card-body"><h2 class="h5">Ölçüm geçmişi</h2>
+<p class="small">Tahmin, önceki ölçümlerin aynı lastiğe ait olduğu varsayımıyla gelecek kullanım sezonu sonunu gösterir. Yaz için 7 ay, kış için 5 ay, dört mevsim için 12 ay kullanım varsayılır. Kilometre yoksa geçen süre kullanılır. 3 mm satın alma planlama eşiğidir.</p>
+{% for c in history %}<h3 class="h6 mt-3">{{ c.tarih|date:"d.m.Y" }} · {{ c.km|default_if_none:"—" }} km · {{ c.oneri_etiketi }}</h3>
+<div class="table-responsive"><table class="table table-sm"><thead><tr><th>Lastik</th><th>Ebat / DOT</th><th>Diş</th><th>Fiziksel durum</th><th>mm/km</th><th>mm/10.000 km</th><th>Yıllık km</th><th>Sezon sonu tahmini</th><th>3 mm planlama eşiğine tahmini süre</th></tr></thead><tbody>
+{% for t in c.lastikler %}<tr><td>{{ t.sira }} · {{ t.marka }} {{ t.model }}</td><td>{{ t.ebat }} · {{ t.dot|default:"—" }}</td><td>{{ t.mm|default_if_none:"—" }} mm</td><td>{% for flag in t.bulgular %}{% if flag == 'normal' %}Belirgin kusur yok{% elif flag == 'catlak' %}Çatlak{% elif flag == 'duzensiz' %}Düzensiz aşınma{% else %}{{ flag|capfirst }}{% endif %}{% if not forloop.last %}, {% endif %}{% empty %}Kontrol bekliyor{% endfor %}</td><td>{{ t.mm_km|default_if_none:"—" }}</td><td>{{ t.mm_10000|default_if_none:"—" }}</td><td>{{ t.yillik_km|default_if_none:"—" }}</td><td>{% if t.tahmin != None %}{{ t.tahmin }} mm · {{ t.yontem }}{% else %}Veri yetersiz{% endif %}</td><td>{% if t.plan_ay != None %}{{ t.plan_ay }} ay{% if t.plan_km != None %} · {{ t.plan_km }} araç km{% endif %}{% else %}—{% endif %}</td></tr>{% endfor %}
+</tbody></table></div>{% for p in c.fotograflar.all %}<a href="{{ p.resim.url }}">Lastik {{ p.sira }} fotoğrafı</a> {% endfor %}
+{% empty %}<p>Otel girişindeki ölçümler{% if before_date %} · {{ before_date|date:"d.m.Y" }}{% endif %}</p>{% for t in baseline %}<div>{{ t.sira }} · {{ t.marka }} {{ t.model }} · {{ t.ebat }} · DOT {{ t.dot|default:"—" }} · {{ t.mm|default_if_none:"—" }} mm</div>{% endfor %}{% endfor %}
+</div></section>
+<style>fieldset p input:not([type=checkbox]),.card-body>p>input{display:block;width:100%;padding:.45rem;border:1px solid var(--bs-border-color);border-radius:.4rem;background:var(--bs-body-bg);color:var(--bs-body-color)}fieldset legend{float:none;width:auto}</style>
+{% endblock %}

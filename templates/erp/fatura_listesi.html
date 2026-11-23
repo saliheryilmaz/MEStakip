@@ -1,5 +1,29 @@
 {% extends "base.html" %}
-{% load turkish_format %}
+{% load turkish_format static %}
+{% block extra_css %}{{ block.super }}<link rel="stylesheet" href="{% static 'css/depo-tarih.css' %}">
+<style>
+    .fatura-tablosu { font-size: 1.0625rem; }
+    .fatura-tablosu thead th,
+    .fatura-tablosu .btn-sm { font-size: .9375rem; }
+    .fatura-tablosu :is(.small, small, code) { font-size: .9375rem; }
+
+    .fatura-aciklama-formu {
+        width: clamp(11rem, 16vw, 18rem);
+        max-width: calc(100vw - 3rem);
+        display: grid;
+        justify-items: end;
+        gap: .375rem;
+    }
+    .fatura-aciklama-formu textarea {
+        width: 100%;
+        min-height: 2.5rem;
+        line-height: 1.5;
+        font-size: 1rem;
+        field-sizing: content;
+        resize: vertical;
+    }
+</style>
+{% endblock %}
 {% block title %}Malzeme Hareketleri{% endblock %}
 {% block page_name %}fatura_listesi{% endblock %}
 
@@ -9,14 +33,7 @@
         <h4 class="fw-bold mb-1"><i class="bi bi-receipt me-2 text-primary"></i>Malzeme Hareketleri</h4>
         <p class="text-muted mb-0">DİA fatura kalemleri — alış ve satış hareketleri</p>
     </div>
-    <div class="d-flex gap-2">
-        <button class="btn btn-outline-primary btn-sm" onclick="faturaSync(false, this)">
-            <i class="bi bi-arrow-repeat me-1"></i>DİA'dan Çek
-        </button>
-        <button class="btn btn-outline-secondary btn-sm" onclick="faturaSync(true, this)">
-            <i class="bi bi-arrow-clockwise me-1"></i>Tam Sync
-        </button>
-    </div>
+    {% include "erp/_dia_guncelle_buton.html" %}
 </div>
 
 <!-- Özet kartlar -->
@@ -63,15 +80,10 @@
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-md-2">
-                <input type="date" name="baslangic" value="{{ baslangic }}" class="form-control form-control-sm">
-            </div>
-            <div class="col-md-2">
-                <input type="date" name="bitis" value="{{ bitis }}" class="form-control form-control-sm">
-            </div>
+            {% include "erp/_tarih_araligi.html" %}
             <div class="col-md-1">
                 <select name="kategori" class="form-select form-select-sm">
-                    <option value="">Kategori</option>
+                    <option value="">Grup adı</option>
                     {% for item in kategoriler %}
                     <option value="{{ item }}" {% if kategori == item %}selected{% endif %}>{{ item }}</option>
                     {% endfor %}
@@ -108,64 +120,81 @@
 <!-- Tablo -->
 <div class="card border-0 shadow-sm">
     <div class="table-responsive">
-        <table class="table table-hover mb-0">
+        <table class="table table-hover mb-0 fatura-tablosu">
             <thead class="table-light">
                 <tr>
                     <th>Tarih</th>
+                    <th>Fiş Numarası</th>
                     <th>Fatura No</th>
                     <th>Kanal</th>
                     <th>Cari</th>
+                    <th>Ürün kodu</th>
                     <th>Marka</th>
-                    <th>Kategori</th>
-                    <th>Ürün Kod</th>
                     <th>Ürün</th>
+                    <th>Grup adı</th>
                     <th>DOT</th>
                     <th class="text-end">Adet</th>
-                    <th class="text-end">Prim</th>
                     <th class="text-end">Maliyet</th>
-                    <th>Birim</th>
-                    <th class="text-end">İskonto</th>
                     <th class="text-end">Fiyat</th>
                     <th class="text-end">Tutar</th>
                     <th>Ödeme Planı</th>
-                    <th>Bölge</th>
+                    <th>Açıklama</th>
                 </tr>
             </thead>
             <tbody>
                 {% for kalem in sayfa %}
                 <tr>
                     <td class="text-muted small">{{ kalem.fatura.tarih|date:"d.m.Y"|default:"—" }}</td>
+                    <td>
+                        {% if kalem.fatura.belge_no %}
+                        <button type="button" class="btn btn-link btn-sm p-0 fw-semibold"
+                                data-bs-toggle="modal" data-bs-target="#faturaAracModal"
+                                data-fis-no="{{ kalem.fatura.belge_no }}"
+                                {% if kalem.depo_fisi %}
+                                data-arac-bilgisi
+                                data-plaka="{{ kalem.depo_fisi.plaka }}"
+                                data-marka="{{ kalem.depo_fisi.arac_marka }}"
+                                data-model="{{ kalem.depo_fisi.arac_model }}"
+                                data-km="{{ kalem.depo_fisi.kilometre|floatformat:'0g' }}"
+                                {% endif %}>
+                            {{ kalem.fatura.belge_no }}
+                        </button>
+                        {% else %}—{% endif %}
+                    </td>
                     <td><code class="text-muted">{{ kalem.fatura.fis_no|default:kalem.fatura.belge_no|default:"—" }}</code></td>
                     <td class="text-muted small">{{ kalem.kanal|default:"—" }}</td>
                     <td>
                         <div class="fw-semibold small">{{ kalem.fatura.cari_unvan|default:"—"|truncatechars:30 }}</div>
                         {% if kalem.fatura.cari_kodu %}<small class="text-muted">{{ kalem.fatura.cari_kodu }}</small>{% endif %}
                     </td>
+                    <td><code class="text-success">{{ kalem.uretici_kodu|default:"—" }}</code></td>
                     <td class="text-muted small">{{ kalem.marka|default:"—" }}</td>
-                    <td class="text-muted small">{{ kalem.kategori|default:"—" }}</td>
-                    <td><code class="text-success">{{ kalem.stok_kodu|default:"—" }}</code></td>
                     <td class="fw-semibold">{{ kalem.stok_adi|default:"—" }}</td>
+                    <td class="text-muted small">{{ kalem.kategori|default:"—" }}</td>
                     <td class="text-muted small">{{ kalem.dot|default:"—" }}</td>
                     <td class="text-end fw-bold">{{ kalem.miktar|floatformat:0 }}</td>
-                    <td class="text-end text-muted">{{ kalem.prim|turkish_format }}</td>
                     <td class="text-end text-muted">{{ kalem.maliyet|turkish_format }}</td>
-                    <td class="text-muted small">{{ kalem.birim|default:"—" }}</td>
-                    <td class="text-end text-muted">{{ kalem.indirim|turkish_format }}</td>
                     <td class="text-end text-muted">{{ kalem.birim_fiyat|turkish_format }}</td>
                     <td class="text-end fw-bold {% if kalem.fatura.tur == 'S' %}text-success{% elif kalem.fatura.tur == 'A' %}text-danger{% endif %}">
                         {{ kalem.tutar|turkish_format }}
                     </td>
                     <td class="text-muted small">{{ kalem.odeme_plani|default:"—" }}</td>
-                    <td class="text-muted small">{{ kalem.bolge|default:kalem.depo|default:"—" }}</td>
+                    <td>
+                        <form method="post" class="fatura-aciklama-formu">
+                            {% csrf_token %}
+                            <input type="hidden" name="kalem_id" value="{{ kalem.pk|stringformat:'d' }}">
+                            <textarea name="manuel_aciklama" rows="1" class="form-control"
+                                      aria-label="Satır açıklaması" placeholder="Açıklama yaz">{{ kalem.manuel_aciklama }}</textarea>
+                            <button type="submit" class="btn btn-outline-primary btn-sm">Kaydet</button>
+                        </form>
+                    </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="18" class="text-center text-muted py-5">
+                    <td colspan="16" class="text-center text-muted py-5">
                         <i class="bi bi-receipt fs-3 d-block mb-2"></i>
                         Kayıt bulunamadı.<br>
-                        <button class="btn btn-primary btn-sm mt-2" onclick="faturaSync(false, this)">
-                            <i class="bi bi-arrow-repeat me-1"></i>DİA'dan Çek
-                        </button>
+
                     </td>
                 </tr>
                 {% endfor %}
@@ -201,55 +230,8 @@
     {% endif %}
 </div>
 
-<!-- Toast -->
-<div class="position-fixed bottom-0 end-0 p-3" style="z-index:11">
-    <div id="syncToast" class="toast" role="alert">
-        <div class="toast-header">
-            <i class="bi bi-receipt me-2 text-primary"></i>
-            <strong class="me-auto">Fatura Sync</strong>
-            <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
-        </div>
-        <div class="toast-body" id="syncToastBody">İşlem başlatılıyor...</div>
-    </div>
-</div>
+{% include "erp/_dia_guncelle_bildirim.html" %}
+{% include "erp/_fis_arac_modal.html" %}
 {% endblock %}
 
-{% block extra_js %}
-<script>
-function faturaSync(tam, btn) {
-    const orijinal = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Çekiliyor...';
-    const params = new URLSearchParams({
-        tam: tam,
-        kalem_cek: true,
-        baslangic: document.querySelector('[name="baslangic"]')?.value || '',
-        bitis: document.querySelector('[name="bitis"]')?.value || ''
-    });
-
-    fetch("{% url 'erp:fatura_sync' %}", {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'X-CSRFToken': '{{ csrf_token }}'
-        },
-        body: params.toString()
-    })
-    .then(r => r.json())
-    .then(data => {
-        document.getElementById('syncToastBody').textContent = data.mesaj || data.hata;
-        new bootstrap.Toast(document.getElementById('syncToast')).show();
-        if (data.basarili) setTimeout(() => location.reload(), 1500);
-    })
-    .catch(() => {
-        document.getElementById('syncToastBody').textContent = 'Bağlantı hatası.';
-        new bootstrap.Toast(document.getElementById('syncToast')).show();
-    })
-    .finally(() => {
-        btn.disabled = false;
-        btn.innerHTML = orijinal;
-    });
-}
-</script>
-{% csrf_token %}
-{% endblock %}
+{% block extra_js %}{{ block.super }}<script src="{% static 'js/depo-tarih.js' %}" defer></script>{% endblock %}

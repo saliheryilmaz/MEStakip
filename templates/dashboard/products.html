@@ -3,7 +3,7 @@
 {% load l10n %}
 {% load turkish_format %}
 
-{% block title %}Products - Mestakip{% endblock %}
+{% block title %}Products - MesDia{% endblock %}
 {% block page_name %}products{% endblock %}
 
 {% block extra_css %}
@@ -96,9 +96,9 @@
                 </div>
                 <form class="d-flex gap-2 products-filter-form" method="get">
                     <input type="date" class="form-control form-control-sm" name="baslangic_tarih"
-                        value="{{ baslangic_tarih }}">
+                        value="{{ baslangic_tarih|date:'Y-m-d' }}">
                     <input type="date" class="form-control form-control-sm" name="bitis_tarih"
-                        value="{{ bitis_tarih }}">
+                        value="{{ bitis_tarih|date:'Y-m-d' }}">
                     <button class="btn btn-sm btn-outline-primary" type="submit">
                         <i class="bi bi-funnel me-1"></i>Filtrele
                     </button>
@@ -116,8 +116,8 @@
                                     <div>
                                         <p class="text-muted mb-1 small">
                                             Toplam Gelir
-                                            {% if gun_ozeti.servis_merkez_toplam.excel_hizmet and gun_ozeti.servis_merkez_toplam.excel_hizmet > 0 %}
-                                            <i class="bi bi-file-earmark-excel text-info ms-1" title="Excel hizmet gelirleri dahil"></i>
+                                            {% if gun_ozeti.servis_merkez_toplam.dia_hizmet and gun_ozeti.servis_merkez_toplam.dia_hizmet > 0 %}
+                                            <i class="bi bi-receipt text-info ms-1" title="DİA hizmet gelirleri dahil"></i>
                                             {% endif %}
                                         </p>
                                         <h3 class="mb-0 text-success">{{ gun_ozeti.servis_merkez_toplam.gelir|turkish_lira }}</h3>
@@ -168,7 +168,7 @@
                                             Toplam Nakit
                                             <i class="bi bi-info-circle text-info ms-1" title="Servis + Merkez Satış Nakit Toplamı"></i>
                                         </p>
-                                        {% with servis_nakit=gun_ozeti.nakit_toplam merkez_nakit=excel_odeme_toplamlari.Nakit|default:0 %}
+                                        {% with servis_nakit=gun_ozeti.nakit_toplam merkez_nakit=odeme_toplamlari.Nakit|default:0 %}
                                         {% with toplam_nakit=servis_nakit|add:merkez_nakit %}
                                         <h3 class="mb-0 text-info">{{ toplam_nakit|turkish_lira }}</h3>
                                         {% endwith %}
@@ -253,15 +253,15 @@
                     </div>
                 </div>
                 
-                <!-- Excel Hizmet Tutarları -->
-                {% if gun_ozeti.servis_merkez_toplam.excel_hizmet and gun_ozeti.servis_merkez_toplam.excel_hizmet > 0 %}
+                <!-- DİA Hizmet Tutarları -->
+                {% if gun_ozeti.servis_merkez_toplam.dia_hizmet and gun_ozeti.servis_merkez_toplam.dia_hizmet > 0 %}
                 <div class="row g-3 mt-2">
                     <div class="col-12">
                         <div class="alert alert-info d-flex align-items-center" role="alert">
-                            <i class="bi bi-file-earmark-excel me-2"></i>
+                            <i class="bi bi-receipt me-2"></i>
                             <div>
-                                <strong>Excel Hizmet Gelirleri:</strong> 
-                                <span class="fw-bold text-success">{{ gun_ozeti.servis_merkez_toplam.excel_hizmet|turkish_lira }}</span>
+                                <strong>DİA Hizmet Gelirleri:</strong>
+                                <span class="fw-bold text-success">{{ gun_ozeti.servis_merkez_toplam.dia_hizmet|turkish_lira }}</span>
                                 <small class="text-muted ms-2">(Servis Toplamlarına dahil edilmiştir)</small>
                             </div>
                         </div>
@@ -470,7 +470,7 @@
     </div>
 </div>
 
-<!-- Excel Ödeme Şekillerine Göre Toplamlar -->
+<!-- DİA Ödeme Şekillerine Göre Toplamlar -->
 <div class="row g-4 mt-1">
     <div class="col-12">
         <div class="card">
@@ -480,7 +480,7 @@
             <div class="card-body">
                 <div class="row g-3">
                     <div class="col-md-2">
-                        {% with nakit_tutar=excel_odeme_toplamlari.Nakit|default:0 %}
+                        {% with nakit_tutar=odeme_toplamlari.Nakit|default:0 %}
                         <a href="{% url 'dashboard:income_expense_report' %}?hareket_tipi=gelir&kasa_adi=merkez-satis{% if baslangic_tarih %}&baslangic_tarih={{ baslangic_tarih|date:'Y-m-d' }}{% endif %}{% if bitis_tarih %}&bitis_tarih={{ bitis_tarih|date:'Y-m-d' }}{% endif %}" class="text-decoration-none">
                         <div class="card {% if nakit_tutar >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10" style="cursor:pointer;" title="Merkez Satış Gelir detaylarını görüntüle">
                             <div class="card-body text-center">
@@ -492,7 +492,7 @@
                         {% endwith %}
                     </div>
                     <div class="col-md-2">
-                        {% with kredi_karti_tutar=excel_odeme_toplamlari.Kredi_Karti|default:0 %}
+                        {% with kredi_karti_tutar=odeme_toplamlari.Kredi_Karti|default:0 %}
                         <a href="{% url 'dashboard:income_expense_report' %}?hareket_tipi=gelir&kasa_adi=merkez-satis{% if baslangic_tarih %}&baslangic_tarih={{ baslangic_tarih|date:'Y-m-d' }}{% endif %}{% if bitis_tarih %}&bitis_tarih={{ bitis_tarih|date:'Y-m-d' }}{% endif %}" class="text-decoration-none">
                         <div class="card {% if kredi_karti_tutar >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10" style="cursor:pointer;" title="Merkez Satış Gelir detaylarını görüntüle">
                             <div class="card-body text-center">
@@ -504,7 +504,7 @@
                         {% endwith %}
                     </div>
                     <div class="col-md-2">
-                        {% with cari_tutar=excel_odeme_toplamlari.Cari|default:0 %}
+                        {% with cari_tutar=odeme_toplamlari.Cari|default:0 %}
                         <a href="{% url 'dashboard:income_expense_report' %}?hareket_tipi=gelir&kasa_adi=merkez-satis{% if baslangic_tarih %}&baslangic_tarih={{ baslangic_tarih|date:'Y-m-d' }}{% endif %}{% if bitis_tarih %}&bitis_tarih={{ bitis_tarih|date:'Y-m-d' }}{% endif %}" class="text-decoration-none">
                         <div class="card {% if cari_tutar >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10" style="cursor:pointer;" title="Merkez Satış Gelir detaylarını görüntüle">
                             <div class="card-body text-center">
@@ -516,7 +516,7 @@
                         {% endwith %}
                     </div>
                     <div class="col-md-2">
-                        {% with sanal_pos_tutar=excel_odeme_toplamlari.Sanal_Pos|default:0 %}
+                        {% with sanal_pos_tutar=odeme_toplamlari.Sanal_Pos|default:0 %}
                         <a href="{% url 'dashboard:income_expense_report' %}?hareket_tipi=gelir&kasa_adi=merkez-satis{% if baslangic_tarih %}&baslangic_tarih={{ baslangic_tarih|date:'Y-m-d' }}{% endif %}{% if bitis_tarih %}&bitis_tarih={{ bitis_tarih|date:'Y-m-d' }}{% endif %}" class="text-decoration-none">
                         <div class="card {% if sanal_pos_tutar >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10" style="cursor:pointer;" title="Merkez Satış Gelir detaylarını görüntüle">
                             <div class="card-body text-center">
@@ -528,7 +528,7 @@
                         {% endwith %}
                     </div>
                     <div class="col-md-2">
-                        {% with banka_havale_tutar=excel_odeme_toplamlari.Banka_Havale|default:0 %}
+                        {% with banka_havale_tutar=odeme_toplamlari.Banka_Havale|default:0 %}
                         <a href="{% url 'dashboard:income_expense_report' %}?hareket_tipi=gelir&kasa_adi=merkez-satis{% if baslangic_tarih %}&baslangic_tarih={{ baslangic_tarih|date:'Y-m-d' }}{% endif %}{% if bitis_tarih %}&bitis_tarih={{ bitis_tarih|date:'Y-m-d' }}{% endif %}" class="text-decoration-none">
                         <div class="card {% if banka_havale_tutar >= 0 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10" style="cursor:pointer;" title="Merkez Satış Gelir detaylarını görüntüle">
                             <div class="card-body text-center">
@@ -545,175 +545,24 @@
     </div>
 </div>
 
-<!-- Excel Verileri Bölümü -->
-    <div class="row g-4 mt-1">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="bi bi-file-earmark-excel me-2"></i>Merkez Satış İş Akışı - (Excel)
-                        {% if baslangic_tarih and bitis_tarih %}
-                        - {{ baslangic_tarih|date:'d.m.Y' }} / {{ bitis_tarih|date:'d.m.Y' }}
-                        {% elif baslangic_tarih %}
-                        - {{ baslangic_tarih|date:'d.m.Y' }} Sonrası
-                        {% elif bitis_tarih %}
-                        - {{ bitis_tarih|date:'d.m.Y' }} Öncesi
-                        {% else %}
-                        - {{ secilen_tarih|date:'d F Y l' }}
-                        {% endif %}
-                    </h5>
-                </div>
-                <div class="card-body">
-                    {% if secilen_gun_excel %}
-                    <div class="mb-4">
-                        <div class="d-flex align-items-center mb-3">
-                            <h6 class="mb-0 me-3">
-                                <i class="bi bi-calendar3 me-1"></i>
-                                {% if baslangic_tarih and bitis_tarih %}
-                                {{ baslangic_tarih|date:'d.m.Y' }} - {{ bitis_tarih|date:'d.m.Y' }}
-                                {% elif baslangic_tarih %}
-                                {{ baslangic_tarih|date:'d.m.Y' }} Sonrası
-                                {% elif bitis_tarih %}
-                                {{ bitis_tarih|date:'d.m.Y' }} Öncesi
-                                {% else %}
-                                {{ secilen_tarih|date:'d.m.Y' }}
-                                {% endif %}
-                            </h6>
-                            <span class="badge bg-primary">{{ secilen_gun_excel|length }} dosya</span>
-                        </div>
-
-                        {% for dosya in secilen_gun_excel %}
-                        <div class="card border-start border-primary border-3 mb-3">
-                            <div class="card-header bg-light py-2">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <strong>{{ dosya.dosya_adi }}</strong>
-                                        <small class="text-muted ms-2">{{ dosya.yukleme_tarihi|date:'H:i' }}</small>
-                                    </div>
-                                    <div class="d-flex align-items-center gap-2">
-                                        <span class="badge bg-info">{{ dosya.satirlar.count }} kayıt</span>
-                                        <form method="post" action="{% url 'dashboard:excel_dosya_sil' dosya.id %}" class="d-inline">
-                                            {% csrf_token %}
-                                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                                            <button type="submit" class="btn btn-outline-danger btn-sm" 
-                                                    title="Excel dosyasını sil"
-                                                    onclick="return confirm('{{ dosya.dosya_adi }} dosyasını ve tüm kayıtlarını silmek istediğinize emin misiniz?');">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </form>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="card-body p-0">
-                                {% if dosya.satirlar.all %}
-                                <div class="table-responsive">
-                                    <table class="table table-sm table-hover mb-0">
-                                        <thead class="table-dark">
-                                            <tr>
-                                                <th>Tarih</th>
-                                                <th>Fatura No</th>
-                                                <th>Müşteri</th>
-                                                <th>Kategori</th>
-                                                <th>Marka</th>
-                                                <th>Ürün</th>
-                                                <th>Tutar</th>
-                                                <th>Ödeme Şekli</th>
-                                                <th>REF</th>
-                                                
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {% for satir in dosya.satirlar.all %}
-                                            <tr>
-                                                <td>
-                                                    <span class="badge bg-primary">{{ satir.tarih|date:'d.m.Y' }}</span>
-                                                </td>
-                                                <td>
-                                                    <code class="text-info">{{ satir.faturano }}</code>
-                                                </td>
-                                                <td>
-                                                    <span class="fw-semibold">{{ satir.musteri }}</span>
-                                                </td>
-                                                <td>
-                                                    {% if satir.kategori %}
-                                                    {% if 'hizmet' in satir.kategori|lower %}
-                                                    <span class="badge bg-success">{{ satir.kategori }}</span>
-                                                    {% else %}
-                                                    <span class="badge bg-info">{{ satir.kategori }}</span>
-                                                    {% endif %}
-                                                    {% else %}
-                                                    <span class="text-muted">-</span>
-                                                    {% endif %}
-                                                </td>
-                                                <td>{{ satir.marka|default:"-" }}</td>
-                                                <td>{{ satir.urun|truncatechars:30 }}</td>
-                                                <td>
-                                                    <span class="text-warning fw-bold">{{ satir.tutar|turkish_lira }}</span>
-                                                </td>
-                                                <td>
-                                                    {% if satir.odeme_sekli %}
-                                                    {% if 'nakit' in satir.odeme_sekli|lower %}
-                                                    <span class="badge bg-success">{{ satir.odeme_sekli }}</span>
-                                                    {% elif 'kart' in satir.odeme_sekli|lower or 'pos' in satir.odeme_sekli|lower or 'kuveyttürk' in satir.odeme_sekli|lower %}
-                                                    <span class="badge bg-primary">{{ satir.odeme_sekli }}</span>
-                                                    {% elif 'cari' in satir.odeme_sekli|lower %}
-                                                    <span class="badge bg-info">{{ satir.odeme_sekli }}</span>
-                                                    {% elif 'havale' in satir.odeme_sekli|lower %}
-                                                    <span class="badge bg-warning">{{ satir.odeme_sekli }}</span>
-                                                    {% else %}
-                                                    <span class="badge bg-secondary">{{ satir.odeme_sekli }}</span>
-                                                    {% endif %}
-                                                    {% else %}
-                                                    <span class="text-muted">-</span>
-                                                    {% endif %}
-                                                </td>
-                                                <td>
-                                                    {% if satir.ref %}
-                                                    <span class="badge bg-info text-white">{{ satir.ref }}</span>
-                                                    {% else %}
-                                                    <span class="text-muted">-</span>
-                                                    {% endif %}
-                                                </td>
-                                            </tr>
-                                            {% endfor %}
-                                        </tbody>
-                                    </table>
-                                </div>
-                                {% else %}
-                                <div class="p-3 text-center text-muted">
-                                    <i class="bi bi-inbox"></i> Bu dosyada kayıt bulunamadı
-                                </div>
-                                {% endif %}
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                    {% else %}
-                    <div class="text-center text-muted py-5">
-                        <i class="bi bi-calendar-x display-4 d-block mb-3"></i>
-                        {% if baslangic_tarih and bitis_tarih %}
-                        <h5>{{ baslangic_tarih|date:'d.m.Y' }} - {{ bitis_tarih|date:'d.m.Y' }} arasında Excel verisi
-                            yok</h5>
-                        <p>Bu tarih aralığında yüklenmiş Excel dosyası bulunmuyor.</p>
-                        {% elif baslangic_tarih %}
-                        <h5>{{ baslangic_tarih|date:'d.m.Y' }} sonrasında Excel verisi yok</h5>
-                        <p>Bu tarihten sonra yüklenmiş Excel dosyası bulunmuyor.</p>
-                        {% elif bitis_tarih %}
-                        <h5>{{ bitis_tarih|date:'d.m.Y' }} öncesinde Excel verisi yok</h5>
-                        <p>Bu tarihten önce yüklenmiş Excel dosyası bulunmuyor.</p>
-                        {% else %}
-                        <h5>{{ secilen_tarih|date:'d.m.Y' }} tarihinde Excel verisi yok</h5>
-                        <p>Bu tarihte yüklenmiş Excel dosyası bulunmuyor.</p>
-                        {% endif %}
-                        <a href="{% url 'dashboard:finance' %}" class="btn btn-primary">
-                            <i class="bi bi-plus-circle me-1"></i>Excel Dosyası Yükle
-                        </a>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
+<section class="card mt-4">
+    <div class="card-header"><h5 class="card-title mb-0">Günlük Malzeme Hareketleri</h5></div>
+    {% regroup hareketler by fatura.tarih as gunler %}
+    {% for gun in gunler %}
+    <div class="card-body">
+        <h6>{{ gun.grouper|date:"d.m.Y" }} <span class="badge bg-secondary">{{ gun.list|length }} kayıt</span></h6>
+        <div class="table-responsive"><table class="table table-hover align-middle mb-0">
+            <thead><tr><th>Fatura No</th><th>Müşteri</th><th>Grup</th><th>Marka</th><th>Ürün</th><th class="text-end">Tutar</th><th>Ödeme Planı</th><th>Açıklama</th></tr></thead>
+            <tbody>{% for kalem in gun.list %}
+                <tr><td>{{ kalem.fatura.fis_no }}</td><td>{{ kalem.fatura.cari_unvan }}</td>
+                    <td>{{ kalem.kategori|default:"—" }}</td><td>{{ kalem.marka|default:"—" }}</td><td>{{ kalem.stok_adi }}</td>
+                    <td class="text-end text-nowrap">{{ kalem.tutar|turkish_lira_symbol }}</td><td>{{ kalem.odeme_plani|default:"—" }}</td>
+                    <td>{{ kalem.manuel_aciklama|default:kalem.fatura.aciklama|default:"—" }}</td></tr>
+            {% endfor %}</tbody>
+        </table></div>
     </div>
+    {% empty %}<p class="card-body mb-0">Seçilen tarih için senkronize edilmiş satış hareketi bulunamadı.</p>{% endfor %}
+</section>
 
     <!-- Merkez Ekstra İşlemleri -->
     <div class="row g-4 mt-1">
@@ -725,7 +574,7 @@
                     </h5>
                     <div class="d-flex align-items-center gap-3">
                         <span class="badge bg-primary">{{ merkez_ekstra_islemler|length }} kayıt</span>
-                        <span class="fw-semibold text-success">Toplam: {{ merkez_ekstra_toplam|turkish_lira }}</span>
+                        <span class="fw-semibold text-success">Toplam: {{ merkez_ekstra_toplam|turkish_format }} TL</span>
                     </div>
                 </div>
                 <div class="card-body">
@@ -763,11 +612,11 @@
                                             {{ tx.get_kasa_adi_display }}
                                         </span>
                                     </td>
-                                    <td>{% if tx.nakit > 0 %}{{ tx.nakit|turkish_lira }}{% else %}-{% endif %}</td>
+                                    <td>{% if tx.nakit > 0 %}{{ tx.nakit|turkish_format }} TL{% else %}-{% endif %}</td>
                                     <td>{% if tx.kredi_karti > 0 %}{{ tx.kredi_karti|turkish_lira }}{% else %}-{% endif %}</td>
                                     <td>{% if tx.cari > 0 %}{{ tx.cari|turkish_lira }}{% else %}-{% endif %}</td>
                                     <td>{% if tx.sanal_pos > 0 %}{{ tx.sanal_pos|turkish_lira }}{% else %}-{% endif %}</td>
-                                    <td>{% if tx.mehmet_havale > 0 %}{{ tx.mehmet_havale|turkish_lira }}{% else %}-{% endif %}</td>
+                                    <td>{% if tx.mehmet_havale > 0 %}{{ tx.mehmet_havale|turkish_format }} TL{% else %}-{% endif %}</td>
                                     <td>{% if tx.banka_havale > 0 %}{{ tx.banka_havale|turkish_lira }}{% else %}-{% endif %}</td>
                                     <td>{% if tx.canta_cikis|default:0 > 0 %}{{ tx.canta_cikis|turkish_lira }}{% else %}-{% endif %}</td>
                                     <td>
@@ -841,11 +690,11 @@
                                 </div>
                             </div>
                             <div class="d-flex flex-wrap gap-2 small">
-                                {% if tx.nakit > 0 %}<span>💰 {{ tx.nakit|turkish_lira }}</span>{% endif %}
+                                {% if tx.nakit > 0 %}<span>💰 {{ tx.nakit|turkish_format }} TL</span>{% endif %}
                                 {% if tx.kredi_karti > 0 %}<span>💳 {{ tx.kredi_karti|turkish_lira }}</span>{% endif %}
                                 {% if tx.cari > 0 %}<span>🏢 {{ tx.cari|turkish_lira }}</span>{% endif %}
                                 {% if tx.sanal_pos > 0 %}<span>📱 {{ tx.sanal_pos|turkish_lira }}</span>{% endif %}
-                                {% if tx.mehmet_havale > 0 %}<span>🏦 M: {{ tx.mehmet_havale|turkish_lira }}</span>{% endif %}
+                                {% if tx.mehmet_havale > 0 %}<span>🏦 M: {{ tx.mehmet_havale|turkish_format }} TL</span>{% endif %}
                                 {% if tx.banka_havale > 0 %}<span>🏦 B: {{ tx.banka_havale|turkish_lira }}</span>{% endif %}
                             </div>
                             {% if tx.aciklama %}<div class="small text-muted mt-1">{{ tx.aciklama|truncatechars:60 }}</div>{% endif %}

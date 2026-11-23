@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}{{ cari.unvan }} · Tahsilat profili{% endblock %}
+{% block content %}
+<a class="small" href="{% url 'erp:tahsilat_merkezi' %}">← Tahsilat Merkezi</a>
+<h1 class="h3 mt-3">{{ cari.unvan }}</h1>
+<p>{{ profil.model }} · Açık bakiye <strong>{{ cari.bakiye|floatformat:"2g" }} ₺</strong></p>
+<div class="row g-3">
+<section class="col-lg-6"><div class="card p-3">
+<h2 class="h5">Ödeme alışkanlığı</h2>
+{% if profil.mutabakat_farki %}<p class="alert alert-warning">Son ekstre bakiyesi cari kartla uyuşmuyor. DİA aktarımını kontrol edin.</p>{% endif %}
+<dl><dt>Bu ay satış / tahsilat</dt><dd>{% if profil.aylik_satis != None %}{{ profil.aylik_satis|floatformat:"2g" }} ₺ / {{ profil.aylik_tahsilat|floatformat:"2g" }} ₺{% else %}Ekstre yok{% endif %}</dd><dt>Geçmişte ödeme görülen gün</dt><dd>{{ profil.odeme_gunu }}</dd><dt>Ödeme günü başına ortalama tahsilat</dt><dd>{% if profil.ortalama_odeme %}{{ profil.ortalama_odeme|floatformat:"2g" }} ₺{% else %}—{% endif %}</dd><dt>Tipik bakiye kapatma süresi</dt><dd>{% if profil.kapatma_gunu != None %}{{ profil.kapatma_gunu }} gün{% else %}—{% endif %}</dd><dt>Son ödeme</dt><dd>{{ profil.son_odeme|default:"—" }}</dd><dt>Beklenen sonraki ödeme</dt><dd>{{ profil.beklenti|default:"Tahmin için yeterli düzen yok" }}</dd><dt>Son DİA aktarımı</dt><dd>{{ profil.kaynak_tarihi|default:"Bilinmiyor" }}</dd></dl>
+{% if profil.gecmis %}<h3 class="h6">Davranış geçmişi</h3><ul>{% for degisim in profil.gecmis %}<li>{{ degisim }}</li>{% endfor %}</ul>{% endif %}
+<p class="small">Beklenen ödeme tarihi geçmiş hareketlerden hesaplanır. Takip uyarısı bu tarihten üç gün sonra başlar.</p>
+<a href="{% url 'erp:cari_ekstre' cari.pk %}?getir=1">Cari ekstreyi incele →</a>{% if faturalar %}<h3 class="h6 mt-4">Son satış faturaları</h3>{% for f in faturalar %}<div class="border-top py-2">{{ f.tarih|date:"d.m.Y" }} · {{ f.fis_no }} <strong>{{ f.toplam|floatformat:"2g" }}</strong></div>{% endfor %}{% endif %}</div></section>
+<section class="col-lg-6"><div class="card p-3"><h2 class="h5">Tahsilat görüşmesi</h2><form method="post">{% csrf_token %}{{ form.as_p }}<button class="btn btn-primary">Görüşmeyi kaydet</button></form>
+{% for g in gorusmeler %}<div class="border-top mt-3 pt-2"><small>{{ g.zaman|date:"d.m.Y H:i" }} · {{ g.kullanici }}</small><p class="mb-0">{{ g.not_metni }}</p>{% if g.tekrar_ara %}<small>Tekrar ara · {{ g.tekrar_ara|date:"d.m.Y" }}</small>{% endif %}</div>{% endfor %}</div></section></div>
+{% endblock %}

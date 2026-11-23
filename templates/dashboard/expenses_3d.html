@@ -1,7 +1,7 @@
 ﻿{% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Gider Analizi - Mestakip{% endblock %}
+{% block title %}Gider Analizi - MesDia{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -32,7 +32,7 @@
         <div style="position: relative; width: 100%; height: 560px;">
           <canvas id="expensesChart"></canvas>
         </div>
-        <small class="text-muted d-block mt-2">İpucu: Legend’dan kategori gizleyip gösterebilirsin.</small>
+        <small class="text-muted d-block mt-2">Aylık detayları görmek için grafikte bir sütuna veya kategori adına tıklayın.</small>
       </div>
     </div>
   </div>
@@ -77,13 +77,31 @@
     </div>
   </div>
 </div>
+<section class="card mt-4" aria-labelledby="expense-detail-title">
+  <div class="card-header d-flex flex-wrap gap-3 align-items-center justify-content-between">
+    <div><h5 id="expense-detail-title" class="card-title mb-1">Gider kalemi × ay</h5>
+      <small class="text-muted" id="expense-selection" aria-live="polite"></small></div>
+    <div class="d-flex gap-3 align-items-center">
+      <button type="button" class="btn btn-sm btn-outline-secondary" id="expense-reset" hidden>Tüm kategoriler</button>
+      <label class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" id="expense-cents"> Kuruş</label>
+    </div>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm align-middle text-nowrap text-end mb-0" style="font-variant-numeric:tabular-nums">
+      <thead><tr id="expense-head"><th class="text-start"><button class="btn btn-link btn-sm" data-sort="name">Kalem</button></th></tr></thead>
+      <tbody id="expense-body"></tbody><tfoot class="table-active fw-bold" id="expense-foot"></tfoot>
+    </table>
+  </div>
+</section>
+{{ expense_rows|json_script:"expense-rows" }}
+{{ chart_categories|json_script:"chart-categories" }}
 {% endblock %}
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script>
   const months = {{ months_json|safe }};
-  const categories = {{ categories_json|safe }};
+  const categories = JSON.parse(document.getElementById('chart-categories').textContent);
   const zMatrix = {{ z_json|safe }};
 
   function getCookie(name) {
@@ -104,6 +122,90 @@
   let chartInstance = null;
   let activeCategory = null; // null = tümü göster
 
+  const expenseRows = JSON.parse(document.getElementById('expense-rows').textContent);
+  let sortKey = 'total', ascending = false;
+
+  function selectExpense(category) {
+    activeCategory = activeCategory === category ? null : category;
+    if (chartInstance) {
+      if (chartInstance.data.datasets.length > categories.length) chartInstance.data.datasets.pop();
+      if (activeCategory && !categories.includes(activeCategory)) {
+        const values = months.map(() => 0);
+        expenseRows.filter(item => item.category === activeCategory).forEach(item =>
+          item.values.forEach((value,i) => values[i] += value / 100));
+        chartInstance.data.datasets.push({label:activeCategory, data:values, backgroundColor:palette(categories.length), stack:'expenses'});
+      }
+      categories.forEach((name, i) => chartInstance.setDatasetVisibility(i, !activeCategory || name === activeCategory));
+      chartInstance.update();
+    }
+    renderDetails();
+  }
+
+  function renderDetails() {
+    const grouped = new Map();
+    for (const item of expenseRows) {
+      if (activeCategory && activeCategory !== item.category) continue;
+      const name = activeCategory ? item.name : item.category;
+      if (!grouped.has(name)) grouped.set(name, months.map(() => 0));
+      item.values.forEach((value, i) => grouped.get(name)[i] += value);
+    }
+    const rows = Array.from(grouped, ([name, values]) => ({
+      name, values, total: values.reduce((a,b) => a+b, 0)
+    }));
+    rows.sort((a,b) => (ascending ? 1 : -1) * (sortKey === 'total' ? a.total-b.total : a.name.localeCompare(b.name,'tr')));
+    const body = document.getElementById('expense-body');
+    const foot = document.getElementById('expense-foot');
+    body.replaceChildren();
+    foot.replaceChildren();
+    const digits = document.getElementById('expense-cents').checked ? 2 : 0;
+    const money = new Intl.NumberFormat('tr-TR', {minimumFractionDigits:digits, maximumFractionDigits:digits});
+    const amount = cents => money.format(cents / 100);
+    const totals = months.map(() => 0);
+    const grand = rows.reduce((sum,row) => sum + row.total, 0);
+    for (const row of rows) {
+      const tr = body.insertRow();
+      const label = tr.insertCell();
+      label.className = 'text-start';
+      if (!activeCategory) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn btn-link btn-sm p-0';
+        btn.textContent = row.name;
+        btn.onclick = () => selectExpense(row.name);
+        label.append(btn);
+      } else label.textContent = row.name;
+      const max = Math.max(...row.values);
+      row.values.forEach((value,i) => {
+        const cell = tr.insertCell();
+        cell.textContent = value ? amount(value) : '–';
+        if (value && max > 0) cell.style.backgroundColor = 'rgba(224,88,109,' + (0.04 + 0.2 * value/max) + ')';
+        totals[i] += value;
+      });
+      const share = grand ? row.total / grand : 0;
+      const cell = tr.insertCell();
+      const pct = document.createElement('small');
+      pct.className = 'text-muted me-2';
+      pct.textContent = share.toLocaleString('tr-TR',{style:'percent',maximumFractionDigits:1});
+      cell.append(pct, amount(row.total));
+    }
+    if (!rows.length) {
+      const cell = body.insertRow().insertCell();
+      cell.colSpan = months.length + 2;
+      cell.className = 'text-center text-muted py-3';
+      cell.textContent = 'Bu dönemde gider kaydı bulunamadı.';
+    }
+    const tr = foot.insertRow();
+    tr.insertCell().textContent = 'Aylık toplam';
+    totals.forEach(value => tr.insertCell().textContent = amount(value));
+    tr.insertCell().textContent = amount(grand) + ' ₺';
+    document.getElementById('expense-selection').textContent = (activeCategory || 'Tüm kategoriler') + ' · ' + rows.length + ' kalem';
+    document.getElementById('expense-reset').hidden = !activeCategory;
+    document.querySelectorAll('[data-sort]').forEach(btn => {
+      btn.parentElement.setAttribute('aria-sort', btn.dataset.sort !== sortKey ? 'none' : ascending ? 'ascending' : 'descending');
+      btn.textContent = (btn.dataset.sort === 'name' ? 'Kalem' : 'Toplam') + (btn.dataset.sort === sortKey ? (ascending ? ' ▴' : ' ▾') : '');
+    });
+  }
+
   function renderChart() {
     const ctx = document.getElementById('expensesChart');
     if (!ctx) return;
@@ -121,30 +223,16 @@
       type: 'bar',
       data: { labels: months, datasets },
       options: {
+        onClick: (_event, points) => {
+          if (points.length) selectExpense(chartInstance.data.datasets[points[0].datasetIndex].label);
+        },
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
           legend: {
             position: 'bottom',
             onClick: function(e, legendItem, legend) {
-              const clickedLabel = legendItem.text;
-              const chart = legend.chart;
-
-              if (activeCategory === clickedLabel) {
-                // Aynı kategoriye tekrar basıldıysa tümünü göster
-                activeCategory = null;
-                chart.data.datasets.forEach((ds) => {
-                  chart.setDatasetVisibility(chart.data.datasets.indexOf(ds), true);
-                });
-              } else {
-                // Sadece tıklanan kategoriyi göster, diğerlerini gizle
-                activeCategory = clickedLabel;
-                chart.data.datasets.forEach((ds) => {
-                  const idx = chart.data.datasets.indexOf(ds);
-                  chart.setDatasetVisibility(idx, ds.label === clickedLabel);
-                });
-              }
-              chart.update();
+              selectExpense(legendItem.text);
             },
             labels: {
               generateLabels: function(chart) {
@@ -221,7 +309,24 @@
   }
 
   document.addEventListener('DOMContentLoaded', function() {
-    renderChart();
+    const head = document.getElementById('expense-head');
+    for (const month of months) {
+      const th = document.createElement('th');
+      th.textContent = new Intl.DateTimeFormat('tr-TR',{month:'short', year:'2-digit',timeZone:'UTC'}).format(new Date(month + '-01T00:00:00Z'));
+      head.append(th);
+    }
+    const totalHeader = document.createElement('th');
+    totalHeader.innerHTML = '<button type="button" class="btn btn-link btn-sm" data-sort="total">Toplam</button>';
+    head.append(totalHeader);
+    head.querySelectorAll('[data-sort]').forEach(btn => btn.onclick = () => {
+      ascending = sortKey === btn.dataset.sort ? !ascending : btn.dataset.sort === 'name';
+      sortKey = btn.dataset.sort;
+      renderDetails();
+    });
+    document.getElementById('expense-reset').onclick = () => selectExpense(null);
+    document.getElementById('expense-cents').onchange = renderDetails;
+    renderDetails();
+    if (typeof Chart !== 'undefined') renderChart();
     document.getElementById('btn-ai').addEventListener('click', fetchInsights);
   });
 </script>

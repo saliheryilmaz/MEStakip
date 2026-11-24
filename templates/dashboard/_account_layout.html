@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'account-settings.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="account-page">
+    <header class="account-heading">
+        <h1>{% block account_title %}{% endblock %}</h1>
+        <p class="text-body-secondary mb-0">{% block account_description %}{% endblock %}</p>
+    </header>
+
+    <nav class="account-nav" aria-label="Hesap yönetimi">
+        <a href="{% url 'dashboard:settings' %}" {% if request.resolver_match.url_name == 'settings' %}aria-current="page"{% endif %}>
+            <i class="bi bi-person-gear" aria-hidden="true"></i> Ayarlar
+        </a>
+        <a href="{% url 'dashboard:security' %}" {% if request.resolver_match.url_name == 'security' %}aria-current="page"{% endif %}>
+            <i class="bi bi-shield-lock" aria-hidden="true"></i> Güvenlik
+        </a>
+    </nav>
+
+    {% if account_notice %}
+    <div class="alert alert-success" role="status">{{ account_notice }}</div>
+    {% endif %}
+
+    {% block account_content %}{% endblock %}
+</div>
+{% endblock %}

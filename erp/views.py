@@ -31,9 +31,14 @@ from erp.models import Cari, CariTip, Depo, StokKart, DepoFisi, DepoFisiKalemi, 
 @login_required
 def dia_durum(request):
     """DİA bağlantı durumu ve son sync özetleri."""
-    from dia_integration.models import DiaBaglanti
+    from django.conf import settings
 
-    baglanti = DiaBaglanti.objects.filter(is_aktif=True).first()
+    baglanti = {
+        'sunucu_kodu': settings.DIA_SERVER_CODE,
+        'kullanici_adi': settings.DIA_USERNAME,
+        'firma_kodu': settings.DIA_FIRMA_KODU,
+        'donem_kodu': settings.DIA_DONEM_KODU,
+    }
     son_sync_loglar = SyncLog.objects.order_by('-baslangic')[:10]
 
     son_syncler = {

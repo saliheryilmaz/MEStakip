@@ -159,6 +159,17 @@
 <div class="card border-success mb-4">
     <div class="card-body">
         <h6 class="fw-bold mb-3 text-success"><i class="bi bi-check-circle me-1"></i>Teslim Onayı</h6>
+        {{ form.non_field_errors }}
+        <div class="row g-3 mb-3">
+            {% for field in form %}
+            <div class="col-md-6">
+                {{ field.label_tag }}
+                {{ field }}
+                {{ field.errors }}
+            </div>
+            {% endfor %}
+        </div>
+        <p class="small text-muted">Aşınma veya hasar nedeniyle saklanmayan seti seçin. Kayıtlı set yoksa ebat ve adedi girin.</p>
         <div class="mb-3">
             <label class="form-label fw-semibold">Teslim Notu (opsiyonel)</label>
             <textarea name="aciklama" class="form-control" rows="2" placeholder="Teslim sırasında bir not eklemek ister misiniz?"></textarea>

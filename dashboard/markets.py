@@ -1,7 +1,9 @@
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
+import logging
 from math import isfinite
 from urllib.parse import quote
+from zoneinfo import ZoneInfo
 
 import requests
 from django.contrib.auth.decorators import login_required
@@ -9,32 +11,78 @@ from django.core.cache import cache
 from django.shortcuts import render
 from django.views.decorators.http import require_GET
 
+GRAM_GOLD = "GRA"
+logger = logging.getLogger(__name__)
+QUOTE_ERRORS = (requests.RequestException, KeyError, IndexError, ValueError, TypeError, OverflowError)
+MARKET_STRIP_KEY = "dashboard-market-strip:v5"
 INSTRUMENTS = (
     ("Euro", "EURTRY=X", "₺", "currency-euro", "primary"),
     ("Dolar", "TRY=X", "₺", "currency-dollar", "success"),
     ("BIST 100", "XU100.IS", "puan", "graph-up", "info"),
-    ("Altın", "GC=F", "$/ons · vadeli", "gem", "warning"),
+    ("Gram Altın", GRAM_GOLD, "₺ · satış", "gem", "warning"),
     ("Gümüş", "SI=F", "$/ons · vadeli", "gem", "secondary"),
 )
+
+
+def _truncgil_gram_gold():
+    response = requests.get("https://finans.truncgil.com/v4/today.json", timeout=4)
+    response.raise_for_status()
+    payload = response.json()
+    return payload[GRAM_GOLD]["Selling"], payload["Update_Date"]
+
+
+def _gramhane_gram_gold():
+    response = requests.get("https://api.gramhane.com/v1/prices.json", timeout=4)
+    response.raise_for_status()
+    payload = response.json()
+    if payload["meta"]["status"] != "success":
+        raise ValueError("Gramhane did not return a quote")
+    return payload["kurlar"]["ALTIN"]["satis"], payload["meta"]["tarih"]
+
+
+def _gram_gold_quote():
+    for source, fetch in (("Trunçgil Finans", _truncgil_gram_gold), ("Gramhane", _gramhane_gram_gold)):
+        try:
+            amount, updated_at = fetch()
+            price = float(amount)
+            if not isfinite(price) or price <= 0:
+                raise ValueError("Invalid price")
+            timestamp = datetime.fromisoformat(updated_at)
+            if timestamp.tzinfo is None:
+                timestamp = timestamp.replace(tzinfo=ZoneInfo("Europe/Istanbul"))
+        except QUOTE_ERRORS as error:
+            logger.warning("Gram altın verisi alınamadı (%s): %s", source, type(error).__name__)
+            continue
+        return price, timestamp, source
+    raise ValueError("Gram gold sources unavailable")
+
+
+def _yahoo_quote(symbol):
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{quote(symbol)}"
+    response = requests.get(url, params={"range": "1d", "interval": "1d"},
+                            headers={"User-Agent": "Mozilla/5.0"}, timeout=4)
+    response.raise_for_status()
+    meta = response.json()["chart"]["result"][0]["meta"]
+    return float(meta["regularMarketPrice"]), datetime.fromtimestamp(meta["regularMarketTime"], timezone.utc)
 
 
 def _quote(instrument):
     name, symbol, unit, icon, color = instrument
     key = f"market-quote:v1:{symbol}"
     row = dict(name=name, unit=unit, icon=icon, color=color)
-    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{quote(symbol)}"
     try:
-        response = requests.get(url, params={"range": "1d", "interval": "1d"},
-                                headers={"User-Agent": "Mozilla/5.0"}, timeout=4)
-        response.raise_for_status()
-        meta = response.json()["chart"]["result"][0]["meta"]
-        price = float(meta["regularMarketPrice"])
+        if symbol == GRAM_GOLD:
+            price, timestamp, source = _gram_gold_quote()
+        else:
+            price, timestamp = _yahoo_quote(symbol)
+            source = ""
         if not isfinite(price) or price <= 0:
             raise ValueError("Invalid price")
         data = {"price": format(price, ",.2f").translate(str.maketrans(",.", ".,")),
-                "timestamp": datetime.fromtimestamp(meta["regularMarketTime"], timezone.utc)}
-    except (requests.RequestException, KeyError, IndexError, ValueError, TypeError, OverflowError):
-        return {**row, **(cache.get(key) or {})}
+                "timestamp": timestamp, "source": source}
+    except QUOTE_ERRORS:
+        cached = cache.get(key) or {}
+        return {**row, **cached, "stale": symbol == GRAM_GOLD and bool(cached)}
     cache.set(key, data, 7 * 86400)
     return {**row, **data}
 
@@ -42,9 +90,10 @@ def _quote(instrument):
 @login_required
 @require_GET
 def market_strip(request):
-    rows = cache.get("dashboard-market-strip:v2")
+    rows = cache.get(MARKET_STRIP_KEY)
     if rows is None:
         with ThreadPoolExecutor(max_workers=len(INSTRUMENTS)) as pool:
             rows = list(pool.map(_quote, INSTRUMENTS))
-        cache.set("dashboard-market-strip:v2", rows, 300)
+        gold = next(row for row in rows if row["name"] == "Gram Altın")
+        cache.set(MARKET_STRIP_KEY, rows, 30 if not gold.get("price") or gold.get("stale") else 300)
     return render(request, "dashboard/_market_strip.html", {"quotes": rows})

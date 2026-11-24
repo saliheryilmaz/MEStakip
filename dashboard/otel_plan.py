@@ -118,8 +118,17 @@ def plan(tarih, bitis=None):
     unchecked = 0
     sets = LastikOteli.objects.prefetch_related("kontroller", "lastikler").order_by("pk")
     for item in sets:
+        if item.plan_sonucu in (LastikOteli.PlanSonucu.ARAC_SATISI, LastikOteli.PlanSonucu.MUSTERI_ALDI):
+            continue
         check = next(iter(item.kontroller.all()), None)
-        if check:
+        if item.plan_sonucu == LastikOteli.PlanSonucu.DEGISIM:
+            rows = ilk_satirlar(item)
+            due = sezon(item.cikis_tarihi or tarih, item.mevsim)
+            if check and check.hedef != due:
+                check = None
+            if check and check.karsilandi:
+                continue
+        elif check:
             if check.karsilandi or (check.karar or check.oneri) not in ("izle", "degistir"):
                 continue
             rows, due = check.lastikler, check.hedef

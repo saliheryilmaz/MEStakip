@@ -411,6 +411,25 @@ def _plan_record_queries(question, history, key, model, timeout):
 
 def answer_question(user, question, history):
     normalized = " ".join(question.lower().split()).rstrip(".?!")
+    storage = re.fullmatch(
+        r"(?:saklamada(?:ki)?|lastik otelinde(?:ki)?|lastik saklamada(?:ki)?) "
+        r"(?:toplam )?(?:kaç (?:adet )?(?P<before>yazlık|kışlık|dört mevsim|4 mevsim) lastik(?: var)?|"
+        r"(?P<after>yazlık|kışlık|dört mevsim|4 mevsim) lastik (?:sayısı|adedi|kaç adet)(?: kaç| nedir)?)",
+        normalized,
+    )
+    if storage:
+        season = storage["before"] or storage["after"]
+        name = "get_tire_storage"
+        data = execute_tool(name, '{"status":"depoda","limit":1}', user)
+        if "hata" in data:
+            return _unavailable("unverified", "MesDia Lastik Oteli", [])
+        code = {"yazlık": "yaz", "kışlık": "kis"}.get(season, "dort_mevsim")
+        count = next((row["lastik"] for row in data["mevsim_bazinda"] if row["mevsim"] == code), 0)
+        title, route = _source(name)
+        return {"text": f"Saklamada **{count} adet {season} lastik** var.",
+                "status": "ready", "model": "MesDia Lastik Oteli", "used_groq": False,
+                "sources": [{"title": title, "url": reverse(route), "tool": name,
+                             "ok": True, "checked_at": timezone.now().isoformat()}]}
     if normalized.replace("i̇", "i") == (
         "dia sıfır lastik stoklarını marka ve miktarlarıyla göster. veriler ne zaman güncellenmiş"
     ):

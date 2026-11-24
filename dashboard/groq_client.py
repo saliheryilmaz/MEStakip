@@ -78,7 +78,8 @@ def groq_chat_completion(*, messages, model=None, api_key=None,
     endpoint = "https://api.groq.com/openai/v1/chat/completions"
     headers = {"Content-Type": "application/json", "Accept": "application/json", "User-Agent": "MesDia/2.0"}
     if local:
-        endpoint = "http://127.0.0.1:11434/api/chat"
+        base_url = os.environ.get("OLLAMA_BASE_URL", "").strip() or "http://127.0.0.1:11434"
+        endpoint = base_url.rstrip("/") + "/api/chat"
         payload = _ollama_payload(messages, model, tools, tool_choice, temperature, max_tokens)
     else:
         headers["Authorization"] = f"Bearer {api_key}"

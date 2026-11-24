@@ -1,11 +1,13 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django import forms as django_forms
 from django.http import JsonResponse, HttpResponse, HttpResponseRedirect
 from django.contrib import messages
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import SESSION_KEY, authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.db import transaction as db_transaction
 from django.db.models import Q
 from django.contrib.auth.models import User
+from django.contrib.sessions.models import Session
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db.models import Q, Sum, Count, F, Case, When, DecimalField, IntegerField
@@ -21,11 +23,15 @@ from django.views.decorators.http import require_POST, require_http_methods
 from decimal import Decimal
 from .models import Siparis, UserProfile, Notification, Transaction, TransactionCategory, Event, MalzemeHareketi, MalzemeDosya, CikmaLastik, JokerSatisDosya, JokerSatisHareketi, LastikModelBilgisi, Quotation, GarantiBelgesi, FiloArac
 from .models import SiparisKapora
-from .forms import YeniSiparisForm, SiparisForm, TransactionForm, MalzemeExcelUploadForm
+from .forms import (
+    AccountPasswordForm, AccountProfileForm, AccountRevokeSessionsForm, AccountStartPageForm,
+    MalzemeExcelUploadForm, SiparisForm, TransactionForm, YeniSiparisForm,
+)
 # pandas removed - using openpyxl instead
 from collections import defaultdict
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.dateparse import parse_date
+from django.utils.http import url_has_allowed_host_and_scheme
 from .utils import parse_decimal_value, format_tire_size, normalize_turkish_text, create_turkish_search_variants
 from functools import wraps
 from django.conf import settings
@@ -3190,83 +3196,62 @@ def kategoriler(request):
 
 @login_required
 def settings(request):
-    """Settings sayfası"""
-    from django.contrib.auth import update_session_auth_hash
-    
-    success_message = None
-    error_message = None
+    action = request.POST.get("action", "profile") if request.method == "POST" else None
+    if action == "password":
+        return security(request)
 
-    if request.method == 'POST':
-        action = request.POST.get('action', 'profile')
+    profile = getattr(request.user, "userprofile", None)
+    if profile is None:
+        profile, _ = UserProfile.objects.get_or_create(user=request.user)
+    form = AccountProfileForm(request.POST if action == "profile" else None, instance=request.user)
+    start_form = AccountStartPageForm(profile, request.POST if action == "start_page" else None)
+    if form.is_bound and form.is_valid():
+        user = form.save(commit=False)
+        user.save(update_fields=form.Meta.fields)
+        request.session["account_settings_notice"] = "Profil bilgileri güncellendi."
+        return redirect("dashboard:settings")
+    if start_form.is_bound and start_form.is_valid():
+        profile.start_page = start_form.cleaned_data["start_page"]
+        profile.save(update_fields=["start_page", "updated_at"])
+        request.session["account_settings_notice"] = "Açılış sayfası kaydedildi."
+        return redirect("dashboard:settings")
+    return render(request, "dashboard/settings.html", {
+        "form": form, "start_form": start_form, "profile": profile,
+        "account_notice": request.session.pop("account_settings_notice", ""),
+        "can_manage_users": not profile.is_misafir()
+        and (profile.is_admin() or request.user.is_superuser or request.user.is_staff),
+    })
 
-        if action == 'profile':
-            email = request.POST.get('email', '').strip()
-            first_name = request.POST.get('first_name', '').strip()
-            last_name = request.POST.get('last_name', '').strip()
-            request.user.email = email
-            request.user.first_name = first_name
-            request.user.last_name = last_name
-            request.user.save()
-            success_message = 'Profil bilgileri güncellendi.'
-
-        elif action == 'password':
-            current_password = request.POST.get('current_password', '')
-            new_password = request.POST.get('new_password', '')
-            confirm_password = request.POST.get('confirm_password', '')
-            if not request.user.check_password(current_password):
-                error_message = 'Mevcut şifre hatalı.'
-            elif new_password != confirm_password:
-                error_message = 'Yeni şifreler eşleşmiyor.'
-            elif len(new_password) < 6:
-                error_message = 'Yeni şifre en az 6 karakter olmalıdır.'
-            else:
-                request.user.set_password(new_password)
-                request.user.save()
-                update_session_auth_hash(request, request.user)
-                success_message = 'Şifre başarıyla değiştirildi.'
-
-    context = {
-        'page_title': 'Ayarlar',
-        'success_message': success_message,
-        'error_message': error_message,
-    }
-    return render(request, 'dashboard/settings.html', context)
 
 @login_required
 def security(request):
-    """Security sayfası"""
-    from django.contrib.auth import update_session_auth_hash
+    action = request.POST.get("action", "password") if request.method == "POST" else None
+    form = AccountPasswordForm(request.user, data=request.POST if action == "password" else None)
+    revoke_form = AccountRevokeSessionsForm(request.user, data=request.POST if action == "revoke_sessions" else None)
+    sessions = Session.objects.filter(expire_date__gt=timezone.now())
+    current_key = request.session.session_key
+    if form.is_bound and form.is_valid():
+        user = form.save()
+        update_session_auth_hash(request, user)
+        request.session["account_security_notice"] = "Şifren güncellendi."
+        return redirect("dashboard:security")
+    if revoke_form.is_bound and revoke_form.is_valid():
+        user_id = str(request.user.pk)
+        keys = [
+            session.session_key for session in sessions.exclude(session_key=current_key).iterator()
+            if session.get_decoded().get(SESSION_KEY) == user_id
+        ]
+        count, _ = sessions.filter(session_key__in=keys).delete()
+        request.session["account_security_notice"] = (
+            f"{count} diğer oturum kapatıldı." if count else "Hesabında kapatılacak başka oturum yok."
+        )
+        return redirect("dashboard:security")
+    return render(request, "dashboard/security.html", {
+        "form": form, "revoke_form": revoke_form,
+        "session_expiry": sessions.filter(session_key=current_key).values_list("expire_date", flat=True).first(),
+        "account_notice": request.session.pop("account_security_notice", ""),
+    })
 
-    success_message = None
-    error_message = None
-
-    if request.method == 'POST':
-        current_password = request.POST.get('current_password', '')
-        new_password = request.POST.get('new_password', '')
-        confirm_password = request.POST.get('confirm_password', '')
-
-        if not request.user.check_password(current_password):
-            error_message = 'Mevcut şifre hatalı.'
-        elif new_password != confirm_password:
-            error_message = 'Yeni şifreler eşleşmiyor.'
-        elif len(new_password) < 8:
-            error_message = 'Yeni şifre en az 8 karakter olmalıdır.'
-        else:
-            request.user.set_password(new_password)
-            request.user.save()
-            update_session_auth_hash(request, request.user)
-            success_message = 'Şifre başarıyla güncellendi.'
-
-    # Son giriş bilgisi
-    last_login = request.user.last_login
-
-    context = {
-        'page_title': 'Güvenlik',
-        'success_message': success_message,
-        'error_message': error_message,
-        'last_login': last_login,
-    }
-    return render(request, 'dashboard/security.html', context)
 
 @login_required
 def help(request):
@@ -3699,10 +3684,15 @@ def export_checked_excel(request):
     wb.save(response)
     return response
 
+def _account_start_page(user):
+    profile = getattr(user, "userprofile", None)
+    return profile.permitted_start_page() if profile else UserProfile.StartPage.DASHBOARD
+
+
 def login_view(request):
     """Kullanıcı giriş sayfası"""
     if request.user.is_authenticated:
-        return redirect('dashboard:index')
+        return redirect(_account_start_page(request.user))
     
     if request.method == 'POST':
         username = request.POST.get('username')
@@ -3713,8 +3703,12 @@ def login_view(request):
             if user is not None:
                 login(request, user)
                 messages.success(request, f'Hoş geldiniz, {user.first_name or user.username}!')
-                next_url = request.GET.get('next', 'dashboard:index')
-                return redirect(next_url)
+                next_url = request.GET.get("next")
+                if next_url and url_has_allowed_host_and_scheme(
+                    next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure(),
+                ):
+                    return redirect(next_url)
+                return redirect(_account_start_page(user))
             else:
                 messages.error(request, 'Kullanıcı adı veya şifre hatalı!')
         else:
@@ -7155,16 +7149,10 @@ from .models import LastikOteli, LastikDepo, LastikOteliHareket
 
 
 def _lastik_saklama_ozeti():
-    def mevsim_adedi(mevsim):
-        filtre = Q(mevsim=mevsim)
-        return Count('lastikler', filter=filtre) + Sum(
-            'adet', filter=filtre & Q(lastikler__isnull=True), default=0,
-        )
-
     return LastikOteli.objects.filter(durum='depoda').aggregate(
         toplam_plaka=Count('plaka', distinct=True),
-        toplam_kislik=mevsim_adedi('kis'),
-        toplam_yazlik=mevsim_adedi('yaz'),
+        toplam_kislik=LastikOteli.lastik_adedi('kis'),
+        toplam_yazlik=LastikOteli.lastik_adedi('yaz'),
     )
 
 
@@ -7312,7 +7300,6 @@ def lastik_saklama_giris(request):
 
     context = {
         'depolar': depolar,
-        'geri_donen_setler': LastikOteli.objects.filter(durum='teslim_edildi').order_by('plaka'),
         'mevsim_choices': LastikOteli.MEVSIM_CHOICES,
         'bugun': timezone.now().date().isoformat(),
         'lastik_sayilari': range(1, 9),
@@ -7348,29 +7335,109 @@ def lastik_saklama_detay(request, kayit_id):
     return render(request, 'dashboard/lastik_saklama_detay.html', context)
 
 
+class SaklamaTeslimForm(django_forms.Form):
+    sonuc = django_forms.ChoiceField(required=False, label="Saklama sonucu", choices=[
+        ("", "Normal teslim / mevsim değişimi"),
+        *LastikOteli.PlanSonucu.choices,
+    ])
+    cikan_set = django_forms.ModelChoiceField(queryset=LastikOteli.objects.none(), required=False,
+                                     label="Araçtan sökülen kayıtlı set")
+    ebat = django_forms.CharField(max_length=50, required=False, label="Sökülen setin ebadı")
+    adet = django_forms.IntegerField(min_value=1, max_value=8, required=False, label="Sökülen lastik adedi")
+
+    def __init__(self, *args, kayit, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.opposite_season = {"yaz": "kis", "kis": "yaz"}.get(kayit.mevsim)
+        if kayit.plaka and self.opposite_season:
+            self.fields["cikan_set"].queryset = LastikOteli.objects.filter(
+                plaka__iexact=kayit.plaka, musteri_adi__iexact=kayit.musteri_adi,
+                musteri_telefon=kayit.musteri_telefon, mevsim=self.opposite_season,
+                durum="teslim_edildi", plan_sonucu="",
+            )
+        for field in self.fields.values():
+            field.widget.attrs["class"] = (
+                "form-select" if isinstance(field.widget, django_forms.Select) else "form-control"
+            )
+
+    def clean(self):
+        data = super().clean()
+        if data.get("sonuc") == LastikOteli.PlanSonucu.DEGISIM:
+            if not self.opposite_season:
+                raise django_forms.ValidationError("Bu işlemde sökülen setin yaz veya kış mevsimi belirlenemedi.")
+            if not data.get("cikan_set") and not (data.get("ebat") and data.get("adet")):
+                raise django_forms.ValidationError("Sökülen kayıtlı seti seçin veya ebat ve adet girin.")
+        if (data.get("sonuc") == LastikOteli.PlanSonucu.MUSTERI_ALDI
+                and not data.get("cikan_set") and self.fields["cikan_set"].queryset.exists()):
+            self.add_error("cikan_set", "Saklanmadan alınan kayıtlı seti seçin.")
+        return data
+
+
 @login_required
+@misafir_forbidden
 @db_transaction.atomic
 def lastik_saklama_cikis(request, kayit_id):
     """Lastik teslim etme (çıkış)."""
     kayit = get_object_or_404(LastikOteli.objects.select_for_update().prefetch_related('lastikler'), pk=kayit_id, durum='depoda')
 
-    if request.method == 'POST':
+    form = SaklamaTeslimForm(request.POST if request.method == "POST" else None, kayit=kayit)
+    if request.method == 'POST' and form.is_valid():
+        sonuc = form.cleaned_data["sonuc"]
+        cikan_set = form.cleaned_data["cikan_set"]
+        today = timezone.localdate()
+        if cikan_set and sonuc in (LastikOteli.PlanSonucu.DEGISIM, LastikOteli.PlanSonucu.MUSTERI_ALDI):
+            cikan_set = form.fields["cikan_set"].queryset.select_for_update().filter(pk=cikan_set.pk).first()
+            if cikan_set is None:
+                form.add_error("cikan_set", "Setin durumu değişti. Güncel seti seçin.")
+                return render(request, "dashboard/lastik_saklama_cikis.html", {"kayit": kayit, "form": form})
         kayit.durum = 'teslim_edildi'
-        kayit.cikis_tarihi = timezone.now().date()
+        kayit.cikis_tarihi = today
         aciklama = request.POST.get('aciklama', '').strip()
+        if sonuc != LastikOteli.PlanSonucu.DEGISIM and not (
+            sonuc == LastikOteli.PlanSonucu.MUSTERI_ALDI and cikan_set
+        ):
+            kayit.plan_sonucu = sonuc or kayit.plan_sonucu
         kayit.save()
 
+        if sonuc == LastikOteli.PlanSonucu.DEGISIM:
+            if cikan_set:
+                cikan_set.durum = "degisim"
+                cikan_set.plan_sonucu = sonuc
+                cikan_set.cikis_tarihi = today
+                cikan_set.save(update_fields=["durum", "plan_sonucu", "cikis_tarihi"])
+            else:
+                cikan_set = LastikOteli.objects.create(
+                    musteri_adi=kayit.musteri_adi, musteri_telefon=kayit.musteri_telefon,
+                    plaka=kayit.plaka, arac_marka_model=kayit.arac_marka_model,
+                    arac_kilometre=kayit.arac_kilometre, model_yili=kayit.model_yili,
+                    mevsim=form.opposite_season, ebat=form.cleaned_data["ebat"], adet=form.cleaned_data["adet"],
+                    durum="degisim", plan_sonucu=sonuc, giris_tarihi=today, cikis_tarihi=today,
+                    olusturan=request.user,
+                )
+            LastikOteliHareket.objects.create(
+                kayit=cikan_set, hareket_tipi="guncelleme", yapan=request.user,
+                aciklama=cikan_set.get_plan_sonucu_display(),
+            )
+        elif sonuc == LastikOteli.PlanSonucu.ARAC_SATISI and kayit.plaka:
+            LastikOteli.objects.filter(plaka__iexact=kayit.plaka, musteri_adi__iexact=kayit.musteri_adi,
+                                      musteri_telefon=kayit.musteri_telefon).exclude(pk=kayit.pk).update(plan_sonucu=sonuc)
+        elif sonuc == LastikOteli.PlanSonucu.MUSTERI_ALDI and cikan_set:
+            cikan_set.plan_sonucu = sonuc
+            cikan_set.save(update_fields=["plan_sonucu"])
+
+        note = " · ".join(part for part in (
+            "Lastik teslim edildi.", dict(LastikOteli.PlanSonucu.choices).get(sonuc), aciklama,
+        ) if part)
         LastikOteliHareket.objects.create(
             kayit=kayit,
             hareket_tipi='cikis',
-            aciklama=aciklama or f"Lastik teslim edildi.",
+            aciklama=note,
             yapan=request.user,
         )
 
         messages.success(request, f"{kayit.musteri_adi} – {kayit.plaka} lastikleri teslim edildi.")
         return redirect('dashboard:lastik_saklama')
 
-    return render(request, 'dashboard/lastik_saklama_cikis.html', {'kayit': kayit})
+    return render(request, 'dashboard/lastik_saklama_cikis.html', {'kayit': kayit, 'form': form})
 
 
 @login_required

@@ -1,285 +1,94 @@
-{% extends 'base.html' %}
-{% load static %}
+{% extends 'dashboard/_account_layout.html' %}
+{% load tz %}
 
-{% block title %}Güvenlik Ayarları - MesDia{% endblock %}
+{% block title %}Güvenlik · MesDia{% endblock %}
 {% block page_name %}security{% endblock %}
+{% block account_title %}Güvenlik{% endblock %}
+{% block account_description %}Şifreni güncelle, son giriş zamanını kontrol et ve diğer cihazlardaki oturumları kapat.{% endblock %}
 
-{% block extra_css %}
-<style>
-    .security-card {
-        border-radius: 12px;
-        border: none;
-        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);
-        margin-bottom: 1.5rem;
-    }
-    .security-card .card-header {
-        background-color: transparent;
-        border-bottom: 1px solid rgba(0,0,0,0.05);
-        padding: 1.25rem 1.5rem;
-    }
-    [data-bs-theme="dark"] .security-card .card-header { border-bottom-color: rgba(255,255,255,0.05); }
-    .icon-box {
-        width: 48px; height: 48px; border-radius: 10px;
-        display: flex; align-items: center; justify-content: center; font-size: 1.5rem;
-    }
-    .icon-box.primary { background-color: rgba(99,102,241,0.1); color: #6366f1; }
-    .icon-box.success { background-color: rgba(16,185,129,0.1); color: #10b981; }
-    .icon-box.warning { background-color: rgba(245,158,11,0.1); color: #f59e0b; }
-    .icon-box.danger  { background-color: rgba(239,68,68,0.1);  color: #ef4444; }
-    .strength-bar { height: 6px; border-radius: 3px; transition: width 0.3s; }
-</style>
-{% endblock %}
-
-{% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h1 class="h3 mb-1 fw-bold">Güvenlik Ayarları</h1>
-        <p class="text-muted mb-0">Hesabınızın güvenliğini yönetin.</p>
-    </div>
-</div>
-
-{% if success_message %}
-<div class="alert alert-success alert-dismissible fade show" role="alert">
-    <i class="bi bi-check-circle me-2"></i>{{ success_message }}
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-</div>
-{% endif %}
-{% if error_message %}
-<div class="alert alert-danger alert-dismissible fade show" role="alert">
-    <i class="bi bi-exclamation-circle me-2"></i>{{ error_message }}
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-</div>
-{% endif %}
-
-<div class="row g-4">
-    <!-- Sol Kolon -->
-    <div class="col-lg-8">
-
-        <!-- Şifre Değiştir -->
-        <div class="card security-card">
-            <div class="card-header d-flex align-items-center">
-                <div class="icon-box primary me-3">
-                    <i class="bi bi-shield-lock"></i>
-                </div>
-                <div>
-                    <h5 class="card-title mb-0 fw-bold">Şifre Değiştir</h5>
-                    <small class="text-muted">Güvenliğiniz için şifrenizi düzenli yenileyin.</small>
-                </div>
-            </div>
-            <div class="card-body p-4">
-                <form method="post" action="{% url 'dashboard:security' %}">
-                    {% csrf_token %}
-                    <div class="mb-3">
-                        <label for="currentPassword" class="form-label">Mevcut Şifre</label>
+{% block account_content %}
+<div class="account-grid">
+    <section class="card account-card" aria-labelledby="password-heading">
+        <div class="card-body">
+            <header class="account-section-heading">
+                <span class="account-icon"><i class="bi bi-key" aria-hidden="true"></i></span>
+                <h2 id="password-heading">Şifre değiştir</h2>
+            </header>
+            <form method="post" action="{% url 'dashboard:security' %}">
+                {% csrf_token %}
+                {{ form.non_field_errors }}
+                <div class="d-grid gap-3">
+                    {% for field in form %}
+                    <div>
+                        <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
                         <div class="input-group">
-                            <span class="input-group-text"><i class="bi bi-key"></i></span>
-                            <input type="password" class="form-control" id="currentPassword"
-                                   name="current_password" placeholder="Şu anki şifrenizi girin" required>
-                            <button class="btn btn-outline-secondary" type="button"
-                                    onclick="togglePw('currentPassword',this)">
-                                <i class="bi bi-eye"></i>
-                            </button>
+                            {{ field }}
+                            <button type="button" class="btn btn-outline-secondary"
+                                    aria-controls="{{ field.id_for_label }}" aria-pressed="false"
+                                    aria-label="{{ field.label }} alanındaki şifreyi göster"
+                                    data-password-toggle hidden><i class="bi bi-eye" aria-hidden="true"></i></button>
                         </div>
+                        {% if field.help_text %}<div class="form-text" id="{{ field.auto_id }}_helptext">{{ field.help_text }}</div>{% endif %}
+                        {{ field.errors }}
                     </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="newPassword" class="form-label">Yeni Şifre</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="bi bi-lock"></i></span>
-                                <input type="password" class="form-control" id="newPassword"
-                                       name="new_password" placeholder="Yeni şifre" required minlength="8"
-                                       oninput="checkStrength(this.value)">
-                                <button class="btn btn-outline-secondary" type="button"
-                                        onclick="togglePw('newPassword',this)">
-                                    <i class="bi bi-eye"></i>
-                                </button>
-                            </div>
-                            <div class="mt-2">
-                                <div class="bg-light rounded" style="height:6px;">
-                                    <div id="strengthBar" class="strength-bar bg-danger" style="width:0%;"></div>
-                                </div>
-                                <small id="strengthText" class="text-muted"></small>
-                            </div>
-                            <div class="form-text">En az 8 karakter olmalıdır.</div>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="confirmPassword" class="form-label">Yeni Şifre (Tekrar)</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
-                                <input type="password" class="form-control" id="confirmPassword"
-                                       name="confirm_password" placeholder="Yeni şifreyi onayla" required minlength="8">
-                                <button class="btn btn-outline-secondary" type="button"
-                                        onclick="togglePw('confirmPassword',this)">
-                                    <i class="bi bi-eye"></i>
-                                </button>
-                            </div>
-                            <div id="matchMsg" class="form-text"></div>
-                        </div>
-                    </div>
-                    <div class="d-flex justify-content-end mt-2">
-                        <button type="submit" class="btn btn-primary px-4">
-                            <i class="bi bi-shield-check me-1"></i> Şifreyi Güncelle
-                        </button>
-                    </div>
-                </form>
-            </div>
+                    {% endfor %}
+                </div>
+                <button class="btn btn-primary mt-4" type="submit">Şifreyi güncelle</button>
+            </form>
         </div>
+    </section>
 
-        <!-- Son Giriş Aktivitesi -->
-        <div class="card security-card">
-            <div class="card-header d-flex align-items-center">
-                <div class="icon-box warning me-3">
-                    <i class="bi bi-clock-history"></i>
-                </div>
-                <div>
-                    <h5 class="card-title mb-0 fw-bold">Son Giriş Bilgisi</h5>
-                    <small class="text-muted">Hesabınıza yapılan son girişi görüntüleyin.</small>
-                </div>
-            </div>
-            <div class="list-group list-group-flush">
-                <!-- Aktif Oturum -->
-                <div class="list-group-item d-flex align-items-center justify-content-between py-3">
-                    <div class="d-flex align-items-center">
-                        <i class="bi bi-laptop fs-3 text-secondary me-3"></i>
-                        <div>
-                            <h6 class="mb-0">{{ request.user.username }}</h6>
-                            <small class="text-muted">Aktif oturum</small>
-                        </div>
-                    </div>
-                    <span class="badge bg-success">Şu an aktif</span>
-                </div>
-                <!-- Son Giriş -->
-                {% if last_login %}
-                <div class="list-group-item d-flex align-items-center justify-content-between py-3">
-                    <div class="d-flex align-items-center">
-                        <i class="bi bi-calendar-check fs-3 text-secondary me-3"></i>
-                        <div>
-                            <h6 class="mb-0">Son Giriş Zamanı</h6>
-                            <small class="text-muted">{{ last_login|date:"d.m.Y H:i" }}</small>
-                        </div>
-                    </div>
-                </div>
+    <div class="account-stack">
+    <section class="card account-card" aria-labelledby="session-heading">
+        <div class="card-body">
+            <header class="account-section-heading">
+                <span class="account-icon"><i class="bi bi-clock-history" aria-hidden="true"></i></span>
+                <h2 id="session-heading">Oturum bilgileri</h2>
+            </header>
+            <dl class="account-facts mb-4">
+                <div><dt>Kullanıcı adı</dt><dd>{{ user.username }}</dd></div>
+                <div><dt>Hesaba son giriş</dt><dd>{% if user.last_login %}<time datetime="{{ user.last_login|date:'c' }}">{{ user.last_login|timezone:"Europe/Istanbul"|date:"d.m.Y H:i" }} TSİ</time>{% else %}Kayıt yok{% endif %}</dd></div>
+                {% if session_expiry %}
+                <div><dt>Bu oturumun geçerlilik süresi</dt><dd><time datetime="{{ session_expiry|date:'c' }}">{{ session_expiry|timezone:"Europe/Istanbul"|date:"d.m.Y H:i" }} TSİ</time></dd></div>
                 {% endif %}
-                <!-- Çıkış Yap -->
-                <div class="list-group-item d-flex align-items-center justify-content-between py-3">
-                    <div class="d-flex align-items-center">
-                        <i class="bi bi-box-arrow-right fs-3 text-danger me-3"></i>
-                        <div>
-                            <h6 class="mb-0 text-danger">Oturumu Kapat</h6>
-                            <small class="text-muted">Sistemden güvenli çıkış yapın.</small>
-                        </div>
-                    </div>
-                    <a href="{% url 'dashboard:logout' %}" class="btn btn-sm btn-outline-danger">
-                        <i class="bi bi-box-arrow-right me-1"></i> Çıkış Yap
-                    </a>
-                </div>
-            </div>
+            </dl>
+            <a href="{% url 'dashboard:logout' %}" class="btn btn-outline-danger"><i class="bi bi-box-arrow-right me-1" aria-hidden="true"></i> Bu oturumdan çık</a>
         </div>
+    </section>
 
-    </div>
-
-    <!-- Sağ Kolon -->
-    <div class="col-lg-4">
-
-        <!-- Hesap Bilgileri -->
-        <div class="card security-card">
-            <div class="card-header">
-                <h5 class="card-title mb-0 fw-bold">Hesap Bilgileri</h5>
-            </div>
-            <div class="card-body p-4">
-                <div class="mb-3">
-                    <small class="text-muted d-block mb-1">Kullanıcı Adı</small>
-                    <strong>{{ request.user.username }}</strong>
-                </div>
-                <div class="mb-3">
-                    <small class="text-muted d-block mb-1">E-Posta</small>
-                    <strong>{{ request.user.email|default:"—" }}</strong>
-                </div>
-                <div class="mb-3">
-                    <small class="text-muted d-block mb-1">Ad Soyad</small>
-                    <strong>{{ request.user.get_full_name|default:"—" }}</strong>
-                </div>
-                <div>
-                    <small class="text-muted d-block mb-1">Üyelik Tarihi</small>
-                    <strong>{{ request.user.date_joined|date:"d.m.Y" }}</strong>
-                </div>
-            </div>
+    <section class="card account-card" aria-labelledby="revoke-heading">
+        <div class="card-body">
+            <header class="account-section-heading">
+                <span class="account-icon"><i class="bi bi-laptop" aria-hidden="true"></i></span>
+                <h2 id="revoke-heading">Diğer oturumları kapat</h2>
+            </header>
+            <p class="text-body-secondary">Diğer cihaz ve tarayıcılardaki MesDia oturumlarını kapatır. Bu oturum açık kalır.</p>
+            <form method="post" action="{% url 'dashboard:security' %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="revoke_sessions">
+                {{ revoke_form.non_field_errors }}
+                <label class="form-label" for="{{ revoke_form.password.id_for_label }}">{{ revoke_form.password.label }}</label>
+                {{ revoke_form.password }}
+                {{ revoke_form.password.errors }}
+                <button type="submit" class="btn btn-outline-danger mt-3">Diğer oturumları kapat</button>
+            </form>
         </div>
-
-        <!-- Şifre İpuçları -->
-        <div class="card security-card">
-            <div class="card-header">
-                <h5 class="card-title mb-0 fw-bold">
-                    <i class="bi bi-lightbulb text-warning me-2"></i>Güvenlik İpuçları
-                </h5>
-            </div>
-            <div class="card-body p-4">
-                <ul class="list-unstyled mb-0 small text-muted">
-                    <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>En az 8 karakter kullanın</li>
-                    <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Büyük ve küçük harf karıştırın</li>
-                    <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Rakam ve sembol ekleyin</li>
-                    <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Farklı platformlarda aynı şifreyi kullanmayın</li>
-                    <li><i class="bi bi-check-circle text-success me-2"></i>Şifrenizi 3 ayda bir yenileyin</li>
-                </ul>
-            </div>
-        </div>
-
+    </section>
     </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-function togglePw(inputId, btn) {
-    const input = document.getElementById(inputId);
-    const icon = btn.querySelector('i');
-    if (input.type === 'password') {
-        input.type = 'text';
-        icon.className = 'bi bi-eye-slash';
-    } else {
-        input.type = 'password';
-        icon.className = 'bi bi-eye';
-    }
-}
-
-function checkStrength(val) {
-    const bar = document.getElementById('strengthBar');
-    const txt = document.getElementById('strengthText');
-    let score = 0;
-    if (val.length >= 8) score++;
-    if (/[A-Z]/.test(val)) score++;
-    if (/[0-9]/.test(val)) score++;
-    if (/[^A-Za-z0-9]/.test(val)) score++;
-
-    const levels = [
-        { w: '25%', cls: 'bg-danger',  label: 'Çok zayıf' },
-        { w: '50%', cls: 'bg-warning', label: 'Zayıf' },
-        { w: '75%', cls: 'bg-info',    label: 'Orta' },
-        { w: '100%',cls: 'bg-success', label: 'Güçlü' },
-    ];
-    const lvl = levels[Math.max(0, score - 1)] || levels[0];
-    bar.style.width = val.length ? lvl.w : '0%';
-    bar.className = 'strength-bar ' + (val.length ? lvl.cls : 'bg-danger');
-    txt.textContent = val.length ? lvl.label : '';
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-    const newPw = document.getElementById('newPassword');
-    const confirmPw = document.getElementById('confirmPassword');
-    const matchMsg = document.getElementById('matchMsg');
-
-    function checkMatch() {
-        if (!confirmPw.value) { matchMsg.textContent = ''; return; }
-        if (newPw.value === confirmPw.value) {
-            matchMsg.innerHTML = '<span class="text-success"><i class="bi bi-check-circle me-1"></i>Şifreler eşleşiyor</span>';
-            confirmPw.setCustomValidity('');
-        } else {
-            matchMsg.innerHTML = '<span class="text-danger"><i class="bi bi-x-circle me-1"></i>Şifreler eşleşmiyor</span>';
-            confirmPw.setCustomValidity('Şifreler eşleşmiyor');
-        }
-    }
-    newPw.addEventListener('input', checkMatch);
-    confirmPw.addEventListener('input', checkMatch);
-});
+    document.querySelectorAll('[data-password-toggle]').forEach(button => {
+        const input = document.getElementById(button.getAttribute('aria-controls'));
+        button.hidden = false;
+        button.addEventListener('click', () => {
+            const visible = input.type === 'password';
+            input.type = visible ? 'text' : 'password';
+            button.setAttribute('aria-pressed', String(visible));
+            button.querySelector('i').className = visible ? 'bi bi-eye-slash' : 'bi bi-eye';
+        });
+    });
 </script>
 {% endblock %}

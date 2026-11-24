@@ -1,9 +1,9 @@
 {% load tz %}
 {% for item in quotes %}
-<div class="market-item"{% if item.timestamp %} title="{{ item.timestamp|timezone:"Europe/Istanbul"|date:"d.m.Y H:i" }} TSİ"{% endif %}>
+<div class="market-item"{% if item.timestamp %} title="{{ item.timestamp|timezone:"Europe/Istanbul"|date:"d.m.Y H:i" }} TSİ{% if item.source %} · {{ item.source }}{% endif %}"{% endif %}>
     <span class="market-label"><i class="bi bi-{{ item.icon }} text-{{ item.color }}" aria-hidden="true"></i> {{ item.name }}</span>
     {% if item.price %}
-    <div><strong>{{ item.price }}</strong> <small>{{ item.unit }}</small></div>
+    <div><strong>{{ item.price }}</strong> <small>{{ item.unit }}{% if item.stale %} · son kayıt{% endif %}</small></div>
 
     {% else %}
     <small>Veri alınamadı</small>

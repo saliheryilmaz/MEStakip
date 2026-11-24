@@ -1186,53 +1186,42 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const themeToggleButton = document.querySelector('[data-theme-toggle]');
-            const htmlElement = document.documentElement;
+            const themeChoices = document.querySelectorAll('[data-theme-choice]');
+            const systemTheme = window.matchMedia('(prefers-color-scheme: dark)');
+            const savedTheme = localStorage.getItem('theme');
+            let preference = localStorage.getItem('theme-mode') === 'auto'
+                ? 'auto' : savedTheme === 'dark' ? 'dark' : 'light';
 
-            // Set initial theme from localStorage
-            const savedTheme = localStorage.getItem('theme') || 'light';
-            htmlElement.setAttribute('data-bs-theme', savedTheme);
-            if (savedTheme === 'light') document.body.classList.add('theme-light');
-
-            // Update button icon based on current theme
-            updateThemeIcon(savedTheme);
-
-            if (themeToggleButton) {
-                themeToggleButton.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    // The bundled template also delegates this click on document.
-                    e.stopPropagation();
-
-                    const currentTheme = htmlElement.getAttribute('data-bs-theme');
-                    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-
-                    // Apply new theme
-                    htmlElement.setAttribute('data-bs-theme', newTheme);
-                    localStorage.setItem('theme', newTheme);
-
-                    // Body class ile override uygula
-                    if (newTheme === 'light') {
-                        document.body.classList.add('theme-light');
-                    } else {
-                        document.body.classList.remove('theme-light');
-                    }
-
-                    // Update button icon
-                    updateThemeIcon(newTheme);
-                });
+            function applyTheme() {
+                const theme = preference === 'auto'
+                    ? (systemTheme.matches ? 'dark' : 'light') : preference;
+                document.documentElement.setAttribute('data-bs-theme', theme);
+                document.body.classList.toggle('theme-light', theme === 'light');
+                localStorage.setItem('theme', theme);
+                const icon = themeToggleButton?.querySelector('i');
+                if (icon) icon.className = theme === 'light' ? 'bi bi-sun-fill' : 'bi bi-moon-fill';
+                themeChoices.forEach(choice => { choice.checked = choice.value === preference; });
             }
 
-            function updateThemeIcon(theme) {
-                if (themeToggleButton) {
-                    const icon = themeToggleButton.querySelector('i');
-                    if (icon) {
-                        if (theme === 'light') {
-                            icon.className = 'bi bi-sun-fill';
-                        } else {
-                            icon.className = 'bi bi-moon-fill';
-                        }
-                    }
-                }
+            function setThemePreference(value) {
+                preference = value;
+                localStorage.setItem('theme-mode', value);
+                applyTheme();
             }
+
+            applyTheme();
+            systemTheme.addEventListener('change', () => {
+                if (preference === 'auto') applyTheme();
+            });
+            themeChoices.forEach(choice => {
+                choice.addEventListener('change', () => setThemePreference(choice.value));
+            });
+            themeToggleButton?.addEventListener('click', event => {
+                event.preventDefault();
+                // The bundled template also delegates this click on document.
+                event.stopPropagation();
+                setThemePreference(document.documentElement.dataset.bsTheme === 'light' ? 'dark' : 'light');
+            });
         });
     </script>
 

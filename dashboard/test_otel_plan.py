@@ -91,6 +91,59 @@ class OtelPlanTest(TestCase):
         UserProfile.objects.update_or_create(user=self.user, defaults={"role":"misafir"})
         self.assertEqual(self.client.get(reverse("dashboard:otel_plan")).status_code, 302)
 
+    def test_plan_panel_lists_legacy_set_without_creating_demand(self):
+        item = LastikOteli.objects.create(
+            musteri_adi="Ölçümü aktarılmamış müşteri", plaka="34ESKI01",
+            mevsim="yaz", giris_tarihi=date(2026, 11, 1), adet=4, ebat="205/55R16",
+        )
+        response = self.client.get(reverse("dashboard:otel_plan"))
+        self.assertContains(response, item.musteri_adi)
+        self.assertContains(response, reverse("dashboard:lastik_saklama_detay", args=[item.pk]))
+        self.assertNotContains(response, "İlk kontrolü gir")
+        self.assertFalse(response.context["data"]["ihtiyac"])
+        self.assertFalse(item.kontroller.exists())
+
+    def test_winter_delivery_plans_only_the_removed_worn_summer_set(self):
+        self.winter.durum = "depoda"
+        self.winter.save(update_fields=["durum"])
+        uri = reverse("dashboard:lastik_saklama_cikis", args=[self.winter.pk])
+        with patch("django.utils.timezone.localdate", return_value=date(2027, 12, 1)):
+            response = self.client.post(uri, {"sonuc": "degisim", "cikan_set": self.set.pk})
+        self.assertEqual(response.status_code, 302)
+        self.set.refresh_from_db()
+        self.winter.refresh_from_db()
+        self.assertEqual((self.set.durum, self.winter.durum), ("degisim", "teslim_edildi"))
+        row, = plan(date(2027, 12, 1))["ihtiyac"]
+        self.assertEqual((row["id"], row["hedef"], row["adet"], row["onay"]), (
+            self.set.pk, "2028-05-01", 4, False,
+        ))
+
+    def test_vehicle_sale_excludes_prior_risk_without_changing_other_customer(self):
+        self.winter.durum = "depoda"
+        self.winter.save(update_fields=["durum"])
+        unrelated = self.make_set("yaz")
+        unrelated.musteri_adi = "Yeni mal sahibi"
+        unrelated.save(update_fields=["musteri_adi"])
+        self.submit()
+        self.assertTrue(plan(date(2027, 12, 1))["ihtiyac"])
+        uri = reverse("dashboard:lastik_saklama_cikis", args=[self.winter.pk])
+        self.assertEqual(self.client.post(uri, {"sonuc": "arac_satisi"}).status_code, 302)
+        self.assertFalse(plan(date(2027, 12, 1))["ihtiyac"])
+        unrelated.refresh_from_db()
+        self.assertEqual(unrelated.plan_sonucu, "")
+
+    def test_customer_takes_removed_set_without_stock_demand(self):
+        self.winter.durum = "depoda"
+        self.winter.save(update_fields=["durum"])
+        self.submit()
+        uri = reverse("dashboard:lastik_saklama_cikis", args=[self.winter.pk])
+        self.assertEqual(self.client.post(uri, {"sonuc": "musteri_aldi", "cikan_set": self.set.pk}).status_code, 302)
+        self.set.refresh_from_db()
+        self.winter.refresh_from_db()
+        self.assertEqual(self.set.plan_sonucu, "musteri_aldi")
+        self.assertEqual(self.winter.plan_sonucu, "")
+        self.assertFalse(plan(date(2027, 12, 1))["ihtiyac"])
+
     def test_report_combines_sizes_and_allocates_existing_stock_once(self):
         # Twelve customers, four tires each, including legacy single-size records.
         for i in range(12):

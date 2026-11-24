@@ -125,7 +125,7 @@ def get_tire_storage(query="", status="depoda", limit=12):
     return _result(qs, ("plaka", "musteri_adi", "mevsim", "adet", "durum", "depo__ad", "depo__raf"),
                    "dashboard:lastik_saklama", limit,
                    plaka_sayisi=qs.exclude(plaka="").values("plaka").distinct().count(),
-                   mevsim_bazinda=list(qs.order_by().values("mevsim").annotate(lastik=Sum("adet"))))
+                   mevsim_bazinda=list(qs.order_by().values("mevsim").annotate(lastik=LastikOteli.lastik_adedi())))
 
 
 @_safe

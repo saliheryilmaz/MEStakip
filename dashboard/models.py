@@ -7,6 +7,14 @@ import json
 
 class UserProfile(models.Model):
     """Kullanıcı profil modeli - rol yönetimi için"""
+
+    class StartPage(models.TextChoices):
+        DASHBOARD = "dashboard:index", "Dashboard"
+        MESBUL = "mesbul:index", "MesBul"
+        STOCK = "erp:stok_listesi", "DİA stok"
+        ORDERS = "dashboard:elements", "Siparişler"
+        STORAGE = "dashboard:lastik_saklama", "Lastik Saklama"
+        USED_TIRES = "dashboard:cikma_lastikler", "Çıkma Lastikler"
     
     ROLE_CHOICES = [
         ('admin', 'Admin'),
@@ -16,6 +24,7 @@ class UserProfile(models.Model):
     
     user = models.OneToOneField(User, on_delete=models.CASCADE, verbose_name="Kullanıcı")
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='yonetici', verbose_name="Rol")
+    start_page = models.CharField(max_length=32, choices=StartPage.choices, default=StartPage.DASHBOARD)
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Oluşturulma Tarihi")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Güncellenme Tarihi")
     
@@ -25,6 +34,17 @@ class UserProfile(models.Model):
     
     def __str__(self):
         return f"{self.user.username} - {self.get_role_display()}"
+
+    def start_page_choices(self):
+        if self.is_misafir():
+            return [(key, label) for key, label in self.StartPage.choices
+                    if key in (self.StartPage.USED_TIRES, self.StartPage.STOCK)]
+        return self.StartPage.choices
+
+    def permitted_start_page(self):
+        if self.start_page in dict(self.start_page_choices()):
+            return self.start_page
+        return self.StartPage.USED_TIRES if self.is_misafir() else self.StartPage.DASHBOARD
     
     def is_admin(self):
         """Admin rolü kontrolü"""
@@ -1042,6 +1062,14 @@ class LastikDepo(models.Model):
 class LastikOteli(models.Model):
     """Müşteriye ait saklanan lastik seti."""
 
+    @staticmethod
+    def lastik_adedi(mevsim=None):
+        filtre = models.Q(mevsim=mevsim) if mevsim else models.Q()
+        return models.Count("lastikler", filter=filtre or None) + models.Sum(
+            "adet", filter=filtre & models.Q(lastikler__isnull=True), default=0,
+        )
+
+
     MEVSIM_CHOICES = [
         ('kis', 'Kış'),
         ('yaz', 'Yaz'),
@@ -1053,6 +1081,11 @@ class LastikOteli(models.Model):
         ('teslim_edildi', 'Teslim Edildi'),
         ('degisim', 'Değişim nedeniyle depolama dışı'),
     ]
+
+    class PlanSonucu(models.TextChoices):
+        DEGISIM = "degisim", "Aşınma veya hasar nedeniyle saklanmadı"
+        ARAC_SATISI = "arac_satisi", "Araç satışı"
+        MUSTERI_ALDI = "musteri_aldi", "Müşteri saklamadan aldı"
 
     # Müşteri bilgisi
     musteri_adi = models.CharField(max_length=200, verbose_name="Müşteri Adı")
@@ -1084,6 +1117,7 @@ class LastikOteli(models.Model):
 
     # Durum
     durum = models.CharField(max_length=20, choices=DURUM_CHOICES, default='depoda', verbose_name="Durum")
+    plan_sonucu = models.CharField(max_length=16, choices=PlanSonucu.choices, blank=True)
 
     # Tarihler
     giris_tarihi = models.DateField(verbose_name="Giriş Tarihi")

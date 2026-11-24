@@ -1,12 +1,12 @@
-/* Soft neutral surfaces for light mode; dark mode keeps its existing palette. */
+/* Shared Dashboard palette for the light theme. */
 html[data-bs-theme="light"] {
-    --mes-page: #d2dfe9;
-    --mes-surface: #dadcde;
-    --mes-surface-raised: #e5e6e7;
-    --mes-chrome: #d2d4d6;
-    --mes-border: #bcbec0;
+    --mes-page: #e0e4e8;
+    --mes-surface: #edf0f2;
+    --mes-surface-raised: #f3f5f7;
+    --mes-chrome: #e6e9ec;
+    --mes-border: #c7cdd3;
     --bs-body-bg: var(--mes-page);
-    --bs-body-bg-rgb: 210, 223, 233;
+    --bs-body-bg-rgb: 224, 228, 232;
     --bs-body-color: #000;
     --bs-body-color-rgb: 0, 0, 0;
     --bs-heading-color: var(--bs-body-color);
@@ -14,10 +14,10 @@ html[data-bs-theme="light"] {
     --bs-secondary-color-rgb: var(--bs-body-color-rgb);
     --bs-tertiary-color: var(--bs-body-color);
     --bs-tertiary-color-rgb: var(--bs-body-color-rgb);
-    --bs-secondary-bg: #caccce;
-    --bs-secondary-bg-rgb: 202, 204, 206;
-    --bs-tertiary-bg: #d2d4d6;
-    --bs-tertiary-bg-rgb: 210, 212, 214;
+    --bs-secondary-bg: #d9e0e7;
+    --bs-secondary-bg-rgb: 217, 224, 231;
+    --bs-tertiary-bg: var(--mes-chrome);
+    --bs-tertiary-bg-rgb: 230, 233, 236;
     --bs-border-color: var(--mes-border);
     --bs-border-color-translucent: rgba(37, 42, 50, 0.16);
     --bs-emphasis-color: var(--bs-body-color);
@@ -91,7 +91,7 @@ html[data-bs-theme="light"] .form-select,
 html[data-bs-theme="light"] .input-group-text {
     background-color: var(--mes-surface-raised);
     color: var(--bs-body-color);
-    border-color: #abaeb1;
+    border-color: var(--mes-border);
 }
 
 html[data-bs-theme="light"] .form-control::placeholder { color: var(--bs-body-color); opacity: 1; }
@@ -119,11 +119,7 @@ html[data-bs-theme="light"] .table-light {
 html[data-bs-theme="light"] .table thead th {
     background-color: var(--mes-chrome) !important;
     color: var(--bs-body-color) !important;
-    border-color: #abaeb1 !important;
-}
-
-html[data-bs-theme="light"] thead.table-dark th {
-    background-color: #c5c7c9 !important;
+    border-color: var(--mes-border) !important;
 }
 
 html[data-bs-theme="light"] .dropdown-menu,

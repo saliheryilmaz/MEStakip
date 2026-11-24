@@ -11,7 +11,6 @@
         <p class="text-muted small mb-0">{{ kayit.musteri_adi }} – {{ kayit.plaka }}</p>
     </div>
     <div class="d-flex gap-2">
-<a href="{% url 'dashboard:otel_kontrol' kayit.pk %}" class="btn btn-primary">Sezon kontrolü</a>
         {% if kayit.durum == 'depoda' %}
         <a href="{% url 'dashboard:lastik_saklama_cikis' kayit.pk %}" class="btn btn-success">
             <i class="bi bi-box-arrow-up me-1"></i>Teslim Et

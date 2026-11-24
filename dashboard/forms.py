@@ -1,9 +1,68 @@
 from django import forms
+from django.contrib.auth.forms import PasswordChangeForm
+from django.contrib.auth.models import User
 from django.utils import timezone
 from .models import Transaction, TransactionCategory
 from decimal import Decimal
 from .models import Siparis, SiparisKapora
 from .models import MalzemeHareketi
+
+
+class AccountProfileForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ("first_name", "last_name", "email")
+        labels = {"first_name": "Ad", "last_name": "Soyad", "email": "E-posta adresi"}
+        widgets = {
+            "first_name": forms.TextInput(attrs={"class": "form-control", "autocomplete": "given-name"}),
+            "last_name": forms.TextInput(attrs={"class": "form-control", "autocomplete": "family-name"}),
+            "email": forms.EmailInput(attrs={"class": "form-control", "autocomplete": "email"}),
+        }
+
+
+class AccountPasswordForm(PasswordChangeForm):
+    def __init__(self, user, data=None):
+        if data is not None:
+            data = data.copy()
+            for current, legacy in (
+                ("old_password", "current_password"),
+                ("new_password1", "new_password"),
+                ("new_password2", "confirm_password"),
+            ):
+                if current not in data and legacy in data:
+                    data[current] = data[legacy]
+        super().__init__(user, data=data)
+        self.fields["old_password"].label = "Mevcut şifre"
+        self.fields["new_password1"].label = "Yeni şifre"
+        self.fields["new_password2"].label = "Yeni şifre (tekrar)"
+        for field in self.fields.values():
+            field.widget.attrs["class"] = "form-control"
+
+
+class AccountStartPageForm(forms.Form):
+    start_page = forms.ChoiceField(label="Girişten sonra açılacak sayfa",
+                                  widget=forms.Select(attrs={"class": "form-select"}))
+
+    def __init__(self, profile, data=None):
+        super().__init__(data=data, initial={"start_page": profile.permitted_start_page()})
+        self.fields["start_page"].choices = profile.start_page_choices()
+
+
+class AccountRevokeSessionsForm(forms.Form):
+    password = forms.CharField(
+        label="Mevcut şifre", strip=False,
+        widget=forms.PasswordInput(attrs={"class": "form-control", "autocomplete": "current-password"}),
+    )
+
+    def __init__(self, user, data=None):
+        self.user = user
+        super().__init__(data=data, auto_id="revoke_%s")
+
+    def clean_password(self):
+        password = self.cleaned_data["password"]
+        if not self.user.check_password(password):
+            raise forms.ValidationError("Mevcut şifre hatalı.")
+        return password
 
 
 class TransactionForm(forms.ModelForm):

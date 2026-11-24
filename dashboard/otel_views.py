@@ -48,8 +48,9 @@ def panel(request):
         raise Http404
     report = get_object_or_404(OtelPlanRaporu, pk=report_id) if report_id else None
     data = report.icerik if report else plan(timezone.localdate())
+    sets = LastikOteli.objects.order_by("plaka", "mevsim") if not report else ()
     return render(request, "dashboard/otel_plan.html", dict(data=data, report=report,
-                  reports=OtelPlanRaporu.objects.order_by("-tarih"), sets=LastikOteli.objects.order_by("plaka", "mevsim")))
+                  reports=OtelPlanRaporu.objects.order_by("-tarih"), sets=sets))
 
 
 @login_required

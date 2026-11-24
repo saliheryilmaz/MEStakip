@@ -16,7 +16,8 @@
     });
 
     form.addEventListener('submit', () => {
-        const raw = size.value.trim();
+        const raw = size.value.trim().replace(/\s+/g, '');
+        size.value = raw;
         if (!/^\d{3}\/\d{2}R\d{2}[A-Z]?$/i.test(raw)) {
             const digits = raw.replace(/\D/g, '');
             const compact = raw.match(/^(\d{3})(\d{2})R(\d{2}[A-Z]?)$/i);

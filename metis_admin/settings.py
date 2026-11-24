@@ -10,6 +10,8 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
+MESBUL_STOK_TOKEN = os.getenv("MESBUL_STOK_TOKEN", "").strip()
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # ---------------------------------------------------------------------------

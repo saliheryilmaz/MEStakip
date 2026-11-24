@@ -7,6 +7,7 @@ app_name = 'mesbul'
 
 urlpatterns = [
     path('', views.AramaView.as_view(), name='index'),
+    path('api/stok/', views.stok_api, name='stok_api'),
     path('arama/', views.AramaView.as_view(), name='arama'),
     path('sonuclar/', views.SonuclarView.as_view(), name='sonuclar'),
     path('abonelikler/', views.AbonelikYonetimView.as_view(), name='abonelik_yonetim'),

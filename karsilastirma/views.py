@@ -2,11 +2,17 @@ import hashlib
 import re
 import json
 import unicodedata
+from types import SimpleNamespace
+from secrets import compare_digest
 from uuid import uuid4
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from django.shortcuts import render, redirect, get_object_or_404
+from django.template.loader import render_to_string
+from django.db.models import Q
+from erp.models import StokKart, StokDurum, StokKartTur
+from dashboard.otel_plan import dot_yili
 from django.views import View
 from django.http import JsonResponse, StreamingHttpResponse
 from django.core.cache import cache
@@ -18,7 +24,7 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.utils import timezone
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 
 from .uspa_servis        import uspa_ara
 from .keskin_servis      import keskin_ara
@@ -410,6 +416,59 @@ def _onizleme_eslesir(urun, marka, mevsim, min_dot):
     return not min_dot or not yil or yil.group() >= min_dot
 
 
+def _yerel_stok(ebat, marka):
+    # Ebat yalnızca açıklamada veya stok kodunda yer alabiliyor.
+    ayirici = r"[\s/-]*"
+    jant_ayirici = r"\s*(?:Z?R|[/ -])?\s*"
+    parcalar = re.fullmatch(
+        rf"(\d{{3}}){ayirici}(\d{{2}}){jant_ayirici}(\d{{2}}(?:\.5)?)([A-Z]?)",
+        ebat, re.I,
+    )
+    if not parcalar:
+        return []
+    en, oran, jant, ek = map(re.escape, parcalar.groups())
+    desen = rf"(^|[^0-9]){en}{ayirici}{oran}{jant_ayirici}{jant}{ek}([^0-9.]|$)"
+    stoklar = StokKart.objects.filter(
+        Q(aciklama__iregex=desen) | Q(stok_kodu__iregex=desen),
+        durum=StokDurum.AKTIF, gercek_stok__gt=0,
+    ).exclude(tur=StokKartTur.HIZMET).order_by("-gercek_stok", "stok_kodu")
+    sonuc = []
+    marka_filtresi = (_normalize_marka(marka) or "").casefold()
+    for stok in stoklar:
+        ad = _normalize_marka(stok.marka) or ""
+        if marka_filtresi not in ad.casefold():
+            continue
+        yil = dot_yili(stok.ozel_kod1.strip())
+        sonuc.append(SimpleNamespace(
+            pk=stok.pk, model=stok.aciklama or stok.stok_kodu, marka=ad,
+            mevsim=stok.mevsim, dot=str(yil or ""), adet=stok.gercek_stok,
+            satis_fiyati=stok.fiyat2 if stok.fiyat2 > 0 else None,
+        ))
+    return sonuc
+
+
+@require_GET
+def stok_api(request):
+    token = settings.MESBUL_STOK_TOKEN
+    auth = request.headers.get("Authorization", "")
+    if not token or not compare_digest(auth.encode(), f"Bearer {token}".encode()):
+        return JsonResponse({"hata": "Yetkisiz erişim"}, status=401)
+    ebat = request.GET.get("ebat", "").strip()
+    if not ebat or len(ebat) > 32:
+        return JsonResponse({"hata": "Lastik ebadı gerekli"}, status=400)
+    marka = request.GET.get("marka", "").strip()
+    mevsim = request.GET.get("mevsim", "").strip()
+    min_dot = request.GET.get("min_dot", "").strip()
+    urunler = [
+        {k: getattr(u, k) for k in ("model", "marka", "mevsim", "dot", "adet", "satis_fiyati")}
+        for u in _yerel_stok(ebat, marka)
+        if _onizleme_eslesir(u, "", mevsim, min_dot)
+    ]
+    response = JsonResponse({"para_birimi": "TRY", "urunler": urunler})
+    response["Cache-Control"] = "private, no-store"
+    return response
+
+
 def _arama_akisi(request, sorgu):
     ebat, marka, mevsim, min_dot = sorgu
     marka = _normalize_marka(marka).casefold() if marka else ""
@@ -420,7 +479,11 @@ def _arama_akisi(request, sorgu):
         return json.dumps(veri, ensure_ascii=False) + "\n"
 
     def akit():
-        yield satir({"basladi": True})
+        yerel = _yerel_stok(ebat, sorgu[1])
+        secilen = [u for u in yerel if _onizleme_eslesir(u, "", mevsim, min_dot)]
+        yield satir({"basladi": True, "yerel_html": render_to_string(
+            "karsilastirma/_yerel_stok.html", {"yerel_stok": secilen, "onizleme": True}
+        )})
         urunler, hatalar, en_ucuzlar = [], [], []
         for grup, hata, biten, toplam in _toptanci_yanitlari(ebat, "", ""):
             urunler.extend(grup)
@@ -544,7 +607,8 @@ class SonuclarView(AbonelikGerekli, View):
                 key = s.marka.lower().strip()
                 if key not in _marka_dict:
                     _marka_dict[key] = s.marka
-        marka_listesi = sorted(_marka_dict.values())
+        yerel_stok = _yerel_stok(ebat, marka)
+        marka_listesi = sorted(set(_marka_dict.values()) | {u.marka for u in yerel_stok if u.marka})
 
         # İskonto bilgilerini dict olarak hazırla: {toptanci_adi: iskonto_metni}
         iskontolar = {
@@ -555,6 +619,7 @@ class SonuclarView(AbonelikGerekli, View):
 
         return render(request, self.template_name, {
             "sonuclar":           sonuclar,
+            "yerel_stok":         yerel_stok,
             "ebat":               ebat,
             "marka":              marka,
             "mevsim":             mevsim,

@@ -170,6 +170,8 @@
 
 <!-- MAIN -->
 <div class="main">
+  {% include "karsilastirma/_yerel_stok.html" %}
+  <h2 class="h6">Toptancı teklifleri</h2>
 
   {% if hatali_toptancilar and not demo_mod %}
   <div class="hata-banner" role="status">
@@ -354,7 +356,7 @@
   {% else %}
   <div class="empty">
     <div class="icon">🔍</div>
-    <p>{{ ebat }} için sonuç bulunamadı</p>
+    <p>{{ ebat }} için toptancı teklifi bulunamadı</p>
     <a href="{% url 'mesbul:index' %}" class="btn btn-outline-secondary btn-sm mt-2">Tekrar ara</a>
   </div>
   {% endif %}
@@ -387,6 +389,21 @@ function filterRows() {
   const minDot = Number(document.getElementById('dot-filter').value);
   const rows = document.querySelectorAll('.data-row');
   const visible = [];
+
+  const local = document.getElementById('mesbul-own-stock');
+  if (local) {
+    let hasMatch = false;
+    local.querySelectorAll('[data-local-product]').forEach(row => {
+      const v = row.dataset;
+      const match = (!brands.length || brands.includes(v.marka))
+        && (!seasons.length || seasons.includes(mesbulSeason(v.mevsim)))
+        && (!model || v.model.toLocaleLowerCase('tr').includes(model))
+        && (!minDot || !v.dot || Number(v.dot) >= minDot);
+      row.hidden = !match;
+      hasMatch ||= match;
+    });
+    local.hidden = !hasMatch;
+  }
 
   rows.forEach(row => {
     const values = row.dataset;

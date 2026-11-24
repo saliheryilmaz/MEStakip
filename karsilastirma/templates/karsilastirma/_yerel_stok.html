@@ -1,0 +1,18 @@
+{% if yerel_stok %}
+<section class="card p-3 mb-3 border-success" {% if not onizleme %}id="mesbul-own-stock"{% endif %} aria-label="Meslas Otomotiv stokları">
+  <h2 class="h5 mb-1"><i class="bi bi-shop me-2 text-success" aria-hidden="true"></i>Meslas Otomotiv</h2>
+  <p class="small text-body-secondary mb-2">Eldeki lastikler · DİA stok kaydı</p>
+  <ul class="list-unstyled mb-0">
+    {% for u in yerel_stok %}
+    <li class="border-top py-2" data-local-product data-marka="{{ u.marka }}" data-model="{{ u.model }}" data-mevsim="{{ u.mevsim }}" data-dot="{{ u.dot }}">
+      <div class="d-flex align-items-baseline justify-content-between gap-2">
+        <a class="fw-semibold" href="{% url 'erp:stok_detay' u.pk %}">{{ u.model }}</a>
+        <strong class="text-nowrap">{{ u.adet|floatformat:"-4" }} adet</strong>
+      </div>
+      <small>{{ u.marka }}{% if u.mevsim %} · {{ u.mevsim }}{% endif %}{% if u.dot %} · DOT {{ u.dot }}{% endif %}</small>
+      <div class="small">Nakit satış · {% if u.satis_fiyati %}<strong>{{ u.satis_fiyati|floatformat:"2g" }} ₺ / adet</strong>{% else %}Fiyat girilmemiş{% endif %}</div>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}

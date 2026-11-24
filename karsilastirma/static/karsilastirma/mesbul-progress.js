@@ -11,7 +11,8 @@
         const panel = document.createElement('section');
         panel.className = 'card p-3 my-2 text-start';
         panel.hidden = true;
-        panel.append(summary, list);
+        const local = document.createElement('div');
+        panel.append(local, summary, list);
         const anchor = form.closest('.mesbul-results-search, .hata-banner') || form;
         anchor.after(panel);
         let busy = false;
@@ -23,6 +24,7 @@
             button.disabled = true;
             const data = new FormData(form);
             panel.hidden = false;
+            local.replaceChildren();
             list.replaceChildren();
             summary.textContent = 'İlk teklifler bekleniyor…';
             const status = document.getElementById('mesbul-search-status');
@@ -49,6 +51,7 @@
                     while ((end = buffer.indexOf('\n')) >= 0) {
                         const update = JSON.parse(buffer.slice(0, end));
                         buffer = buffer.slice(end + 1);
+                        if (update.yerel_html) local.innerHTML = update.yerel_html;
                         if (update.hazir) {
                             // Gönderim sırasında değişen form alanları arama sonucunu değiştirmesin.
                             const finalForm = document.createElement('form');

@@ -12,38 +12,41 @@ from django.shortcuts import render
 from django.views.decorators.http import require_GET
 
 GRAM_GOLD = "GRA"
+GRAM_SILVER = "GUMUS"
+GRAM_METALS = (GRAM_GOLD, GRAM_SILVER)
 logger = logging.getLogger(__name__)
 QUOTE_ERRORS = (requests.RequestException, KeyError, IndexError, ValueError, TypeError, OverflowError)
-MARKET_STRIP_KEY = "dashboard-market-strip:v5"
+MARKET_STRIP_KEY = "dashboard-market-strip:v6"
 INSTRUMENTS = (
     ("Euro", "EURTRY=X", "₺", "currency-euro", "primary"),
     ("Dolar", "TRY=X", "₺", "currency-dollar", "success"),
     ("BIST 100", "XU100.IS", "puan", "graph-up", "info"),
     ("Gram Altın", GRAM_GOLD, "₺ · satış", "gem", "warning"),
-    ("Gümüş", "SI=F", "$/ons · vadeli", "gem", "secondary"),
+    ("Gram Gümüş", GRAM_SILVER, "₺/g · satış", "gem", "secondary"),
 )
 
 
-def _truncgil_gram_gold():
+def _truncgil_gram(symbol):
     response = requests.get("https://finans.truncgil.com/v4/today.json", timeout=4)
     response.raise_for_status()
     payload = response.json()
-    return payload[GRAM_GOLD]["Selling"], payload["Update_Date"]
+    return payload[symbol]["Selling"], payload["Update_Date"]
 
 
-def _gramhane_gram_gold():
+def _gramhane_gram(symbol):
     response = requests.get("https://api.gramhane.com/v1/prices.json", timeout=4)
     response.raise_for_status()
     payload = response.json()
     if payload["meta"]["status"] != "success":
         raise ValueError("Gramhane did not return a quote")
-    return payload["kurlar"]["ALTIN"]["satis"], payload["meta"]["tarih"]
+    key = "ALTIN" if symbol == GRAM_GOLD else symbol
+    return payload["kurlar"][key]["satis"], payload["meta"]["tarih"]
 
 
-def _gram_gold_quote():
-    for source, fetch in (("Trunçgil Finans", _truncgil_gram_gold), ("Gramhane", _gramhane_gram_gold)):
+def _gram_quote(symbol):
+    for source, fetch in (("Trunçgil Finans", _truncgil_gram), ("Gramhane", _gramhane_gram)):
         try:
-            amount, updated_at = fetch()
+            amount, updated_at = fetch(symbol)
             price = float(amount)
             if not isfinite(price) or price <= 0:
                 raise ValueError("Invalid price")
@@ -51,10 +54,10 @@ def _gram_gold_quote():
             if timestamp.tzinfo is None:
                 timestamp = timestamp.replace(tzinfo=ZoneInfo("Europe/Istanbul"))
         except QUOTE_ERRORS as error:
-            logger.warning("Gram altın verisi alınamadı (%s): %s", source, type(error).__name__)
+            logger.warning("%s verisi alınamadı (%s): %s", symbol, source, type(error).__name__)
             continue
         return price, timestamp, source
-    raise ValueError("Gram gold sources unavailable")
+    raise ValueError("Gram metal sources unavailable")
 
 
 def _yahoo_quote(symbol):
@@ -71,8 +74,8 @@ def _quote(instrument):
     key = f"market-quote:v1:{symbol}"
     row = dict(name=name, unit=unit, icon=icon, color=color)
     try:
-        if symbol == GRAM_GOLD:
-            price, timestamp, source = _gram_gold_quote()
+        if symbol in GRAM_METALS:
+            price, timestamp, source = _gram_quote(symbol)
         else:
             price, timestamp = _yahoo_quote(symbol)
             source = ""
@@ -82,7 +85,7 @@ def _quote(instrument):
                 "timestamp": timestamp, "source": source}
     except QUOTE_ERRORS:
         cached = cache.get(key) or {}
-        return {**row, **cached, "stale": symbol == GRAM_GOLD and bool(cached)}
+        return {**row, **cached, "stale": symbol in GRAM_METALS and bool(cached)}
     cache.set(key, data, 7 * 86400)
     return {**row, **data}
 
@@ -94,6 +97,7 @@ def market_strip(request):
     if rows is None:
         with ThreadPoolExecutor(max_workers=len(INSTRUMENTS)) as pool:
             rows = list(pool.map(_quote, INSTRUMENTS))
-        gold = next(row for row in rows if row["name"] == "Gram Altın")
-        cache.set(MARKET_STRIP_KEY, rows, 30 if not gold.get("price") or gold.get("stale") else 300)
+        retry = any(not row.get("price") or row.get("stale") for instrument, row in zip(INSTRUMENTS, rows)
+                    if instrument[1] in GRAM_METALS)
+        cache.set(MARKET_STRIP_KEY, rows, 30 if retry else 300)
     return render(request, "dashboard/_market_strip.html", {"quotes": rows})

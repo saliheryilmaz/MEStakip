@@ -11,19 +11,6 @@
  {% for r in reports %}<option value="{{ r.pk }}" {% if report.pk == r.pk %}selected{% endif %}>{{ r.tarih|date:"d.m.Y" }} · 6 aylık rapor</option>{% endfor %}</select>
  <button class="btn btn-outline-primary">Göster</button>
 </form>
-{% if not report %}
-<section class="card mb-4"><div class="card-body">
-<h2 class="h5">Lastik Oteli setleri</h2>
-<p>Lastik Oteli kayıtları burada otomatik görünür. Satın alma planına yalnızca değişim riski veya ihtiyacı belirlenen setler girer.</p>
-<div class="table-responsive"><table class="table align-middle mb-0">
-<thead><tr><th>Müşteri / plaka</th><th>Mevsim</th><th>Ebat</th><th>Depolama durumu</th><th>Saklama sonucu</th></tr></thead>
-<tbody>{% for k in sets %}
-<tr><td>{{ k.musteri_adi }} · {{ k.plaka|default:"—" }}</td><td>{{ k.get_mevsim_display }}</td><td>{{ k.ebat|default:"—" }}</td><td>{{ k.get_durum_display }}</td>
-<td><a href="{% url 'dashboard:lastik_saklama_detay' k.pk %}">{{ k.get_plan_sonucu_display|default:"Kaydı aç" }}</a></td></tr>
-{% empty %}<tr><td colspan="5">Lastik Oteli’nde henüz set yok.</td></tr>{% endfor %}</tbody>
-</table></div>
-</div></section>
-{% endif %}
 <section class="card mb-4"><div class="card-body">
 <h2 class="h5">Satın alma planı</h2>
 <p>{{ data.musteri }} müşteri için açık ihtiyaç{% if data.kontrolsuz %} · {{ data.kontrolsuz }} set saklama verileriyle değerlendirildi{% endif %}</p>

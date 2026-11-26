@@ -5,6 +5,7 @@ from unittest.mock import patch
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import translation
 
 from erp.models import StokKart
 from .models import LastikDepo, LastikOteli, LastikOteliLastik, OtelPlanRaporu, UserProfile
@@ -27,6 +28,23 @@ class OtelPlanTest(TestCase):
             LastikOteliLastik.objects.create(kayit=item, sira=i, marka="Test", desen="A", dot="2022",
                                             ebat="205/55R16", dis_derinligi=7)
         return item
+
+    def test_duzenle_dis_derinligi_turkce_formda_korunur(self):
+        url = reverse("dashboard:lastik_saklama_duzenle", args=[self.set.pk])
+        depths = ["5.5", "0.0", "7.0", ""]
+        payload = {"adet": "4", "plaka": self.set.plaka, "musteri_adi": self.set.musteri_adi}
+        for pos, depth in enumerate(depths, 1):
+            self.set.lastikler.filter(sira=pos).update(dis_derinligi=depth or None)
+            payload[f"lastik_{pos}_dis"] = depth
+            payload[f"lastik_{pos}_marka"] = "Test"
+
+        with translation.override("tr"):
+            response = self.client.get(url)
+            for pos, depth in enumerate(depths, 1):
+                self.assertRegex(response.content.decode(), rf'name="lastik_{pos}_dis"[^>]*value="{depth}"')
+            self.assertEqual(self.client.post(url, payload).status_code, 302)
+        self.assertEqual(list(self.set.lastikler.order_by("sira").values_list("dis_derinligi", flat=True)),
+                         [Decimal("5.5"), Decimal("0"), Decimal("7"), None])
 
     def submit(self, condition="balon", km="80000"):
         form = dict(previous="0", tarih="2027-12-01", km=km)
@@ -91,14 +109,16 @@ class OtelPlanTest(TestCase):
         UserProfile.objects.update_or_create(user=self.user, defaults={"role":"misafir"})
         self.assertEqual(self.client.get(reverse("dashboard:otel_plan")).status_code, 302)
 
-    def test_plan_panel_lists_legacy_set_without_creating_demand(self):
+    def test_plan_panel_omits_storage_list_without_creating_demand(self):
         item = LastikOteli.objects.create(
             musteri_adi="Ölçümü aktarılmamış müşteri", plaka="34ESKI01",
             mevsim="yaz", giris_tarihi=date(2026, 11, 1), adet=4, ebat="205/55R16",
         )
         response = self.client.get(reverse("dashboard:otel_plan"))
-        self.assertContains(response, item.musteri_adi)
-        self.assertContains(response, reverse("dashboard:lastik_saklama_detay", args=[item.pk]))
+        self.assertNotContains(response, item.musteri_adi)
+        self.assertNotContains(response, "Lastik Oteli setleri")
+        self.assertContains(response, "Satın alma planı")
+        self.assertContains(response, "Müşteri ihtiyaçları")
         self.assertNotContains(response, "İlk kontrolü gir")
         self.assertFalse(response.context["data"]["ihtiyac"])
         self.assertFalse(item.kontroller.exists())

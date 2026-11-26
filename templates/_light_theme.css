@@ -1,12 +1,13 @@
 /* Shared Dashboard palette for the light theme. */
 html[data-bs-theme="light"] {
-    --mes-page: #e0e4e8;
+    --mes-page: #f7fafc;
     --mes-surface: #edf0f2;
     --mes-surface-raised: #f3f5f7;
     --mes-chrome: #e6e9ec;
     --mes-border: #c7cdd3;
     --bs-body-bg: var(--mes-page);
-    --bs-body-bg-rgb: 224, 228, 232;
+    --bs-body-bg-rgb: 247, 250, 252;
+    --bs-body-font-weight: 500;
     --bs-body-color: #000;
     --bs-body-color-rgb: 0, 0, 0;
     --bs-heading-color: var(--bs-body-color);
@@ -33,6 +34,15 @@ html[data-bs-theme="light"] .admin-main > .container-fluid,
 html[data-bs-theme="light"] .admin-wrapper {
     background: var(--mes-page) !important;
     color: var(--bs-body-color);
+}
+
+html[data-bs-theme="light"] body {
+    font-weight: var(--bs-body-font-weight);
+}
+
+html[data-bs-theme="light"] .form-label,
+html[data-bs-theme="light"] .table thead th {
+    font-weight: 600;
 }
 
 html[data-bs-theme="light"] .admin-header,

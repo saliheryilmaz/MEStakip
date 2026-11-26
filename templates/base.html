@@ -702,6 +702,11 @@
                             </a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'kar_zarar' %}active{% endif %}" href="{% url 'erp:kar_zarar' %}">
+                                <i class="bi bi-graph-up-arrow me-1"></i><span>Kâr / Zarar Analizi</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link {% if request.resolver_match.url_name == 'sync_loglar' %}active{% endif %}"
                                 href="{% url 'erp:sync_loglar' %}">
                                 <i class="bi bi-clock-history me-1"></i>

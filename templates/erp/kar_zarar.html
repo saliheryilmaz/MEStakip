@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% load turkish_format %}
+{% block title %}Kâr / Zarar Analizi · MesDia{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3">Kâr / Zarar Analizi</h1>
+<form method="get" class="card card-body mb-3">
+  <div class="row g-2 align-items-end">
+    <label class="col-sm-6 col-lg-2">Görünüm<select class="form-select" name="gorunum"><option value="urun">Ürün bazlı</option><option value="fatura" {% if fatura %}selected{% endif %}>Fatura bazlı</option></select></label>
+    <label class="col-sm-6 col-lg-2">Başlangıç<input class="form-control" type="date" name="baslangic" value="{{ form.baslangic.value|default:'' }}"></label>
+    <label class="col-sm-6 col-lg-2">Bitiş<input class="form-control" type="date" name="bitis" value="{{ form.bitis.value|default:'' }}"></label>
+    <label class="col-sm-6 col-lg-4">Ürün, cari veya fatura ara<input class="form-control" name="q" maxlength="200" value="{{ form.q.value|default:'' }}"></label>
+    <div class="col-lg-2"><button class="btn btn-primary w-100">Analizi göster</button></div>
+  </div>
+</form>
+{% if form.errors %}<div role="alert" class="alert alert-warning">Filtreleri kontrol edin. {{ form.non_field_errors }}{% for field in form %}{{ field.errors }}{% endfor %}</div>{% else %}
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3"><div class="card card-body h-100"><small>Alış tutarı</small><strong class="fs-5">{{ toplam.alis|turkish_format }} ₺</strong></div></div>
+  <div class="col-6 col-lg-3"><div class="card card-body h-100"><small>Satış tutarı</small><strong class="fs-5">{{ toplam.satis|turkish_format }} ₺</strong></div></div>
+  <div class="col-6 col-lg-3"><div class="card card-body h-100"><small>Brüt kâr / zarar</small><strong class="fs-5">{% if toplam.kar != None %}{{ toplam.kar|turkish_format }} ₺{% else %}—{% endif %}</strong></div></div>
+  <div class="col-6 col-lg-3"><div class="card card-body h-100"><small>Brüt kâr marjı</small><strong class="fs-5">{% if toplam.marj != None %}%{{ toplam.marj|turkish_format }}{% else %}—{% endif %}</strong></div></div>
+</div>
+{% if toplam.eksik %}<p class="alert alert-warning">{{ toplam.eksik }} satış veya iade kaleminde maliyet ya da miktar eksik. İlgili toplamların kârı hesaplanamadı.</p>{% endif %}
+{% if haric %}<p>{{ haric }} kalem, işlem yönü belirlenemediği için kapsam dışında.</p>{% endif %}
+<div class="card">
+  <div class="card-header"><h2 class="h5 mb-0">{% if fatura %}Fatura{% else %}Ürün{% endif %} bazında kârlılık</h2></div>
+  <div class="table-responsive"><table class="table align-middle mb-0">
+    <thead><tr><th>{% if fatura %}Fatura / Cari{% else %}Ürün / Stok kodu{% endif %}</th><th class="text-end">Alış ₺</th><th class="text-end">Satış ₺</th><th class="text-end">Satılanın maliyeti ₺</th><th class="text-end">Brüt kâr ₺</th><th class="text-end">Marj</th></tr></thead>
+    <tbody>{% for r in sayfa %}<tr><td><strong>{{ r.ad }}</strong><small class="d-block">{{ r.detay }}</small>{% if r.eksik %}<small class="d-block">Maliyet veya miktar eksik</small>{% elif r.tahmini %}<small class="d-block">Ortalama alış maliyeti kullanıldı</small>{% endif %}</td>
+      <td class="text-end">{{ r.alis|turkish_format }}</td><td class="text-end">{{ r.satis|turkish_format }}</td>
+      <td class="text-end">{% if r.kar != None %}{{ r.maliyet|turkish_format }}{% else %}—{% endif %}</td><td class="text-end fw-semibold {% if r.kar < 0 %}text-danger{% endif %}">{% if r.kar != None %}{{ r.kar|turkish_format }}{% else %}—{% endif %}</td>
+      <td class="text-end">{% if r.marj != None %}%{{ r.marj|turkish_format }}{% else %}—{% endif %}</td></tr>
+    {% empty %}<tr><td colspan="6" class="text-center py-4">Seçilen kapsamda alış veya satış kalemi bulunamadı.</td></tr>{% endfor %}</tbody>
+  </table></div>
+  {% if sayfa.has_other_pages %}<nav class="card-footer d-flex gap-3">{% if sayfa.has_previous %}<a href="?{{ params }}&amp;sayfa={{ sayfa.previous_page_number }}">Önceki</a>{% endif %}{{ sayfa.number }} / {{ sayfa.paginator.num_pages }}{% if sayfa.has_next %}<a href="?{{ params }}&amp;sayfa={{ sayfa.next_page_number }}">Sonraki</a>{% endif %}</nav>{% endif %}
+</div>
+<p class="small mt-3">Hesaplama, DİA’dan aktarılan tarihli fatura kalemi tutarlarını kullanır. Alış ve satış iadeleri ilgili tutardan düşülür. Brüt kâr, satış tutarından satılan miktarın maliyeti çıkarılarak hesaplanır. İşletme giderleri ve ayrıca bir KDV düzeltmesi hesaba katılmaz.</p>
+{% if toplam.tahmini %}<p class="small">{{ toplam.tahmini }} kalemde birim maliyet için aynı stok ve birimin önceki günlere ait alışlarının miktar ağırlıklı ortalaması kullanıldı. Bu kalemleri içeren kâr tahminidir.</p>{% endif %}
+{% endif %}
+{% endblock %}

@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from .karlilik import kar_zarar
 
 app_name = 'erp'
 
@@ -27,6 +28,7 @@ urlpatterns = [
     path('sync/loglar/', views.sync_loglar, name='sync_loglar'),
 
     # Fatura / Malzeme Hareket
+    path('kar-zarar/', kar_zarar, name='kar_zarar'),
     path('fatura/', views.fatura_listesi, name='fatura_listesi'),
     path('fatura/sync/', views.fatura_sync, name='fatura_sync'),
 

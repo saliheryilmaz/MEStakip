@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static l10n %}
 
 {% block title %}Kayıt Düzenle - MesDia{% endblock %}
 {% block page_name %}lastik_saklama{% endblock %}
@@ -161,7 +161,7 @@
                         <td><input type="text" name="lastik_{{ l.sira }}_marka" class="form-control form-control-sm border-0 bg-transparent" value="{{ l.marka }}"></td>
                         <td><input type="text" name="lastik_{{ l.sira }}_ebat" class="form-control form-control-sm border-0 bg-transparent" value="{{ l.ebat }}" placeholder="205/55R16"></td>
                         <td><input type="text" name="lastik_{{ l.sira }}_dot" class="form-control form-control-sm border-0 bg-transparent" value="{{ l.dot }}"></td>
-                        <td><input type="number" name="lastik_{{ l.sira }}_dis" class="form-control form-control-sm border-0 bg-transparent" step="0.1" value="{{ l.dis_derinligi }}"></td>
+                        <td><input type="number" name="lastik_{{ l.sira }}_dis" class="form-control form-control-sm border-0 bg-transparent" step="0.1" value="{{ l.dis_derinligi|default_if_none:''|unlocalize }}"></td>
                         <td>
                             <select name="lastik_{{ l.sira }}_jant" class="form-select form-select-sm border-0 bg-transparent">
                                 <option value="">–</option>
